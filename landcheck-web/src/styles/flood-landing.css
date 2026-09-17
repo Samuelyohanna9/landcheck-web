@@ -8,6 +8,11 @@
   color: #0e2b4a;
   background: #f5f7fa;
   min-height: 100dvh;
+  /* Same navy + orange brand as Hazard Analysis itself - the shared nav dropdown (navbar.css)
+     picks these up instead of a generic color. */
+  --lc-dropdown-bg: #0a1228;
+  --lc-dropdown-border: rgba(224, 123, 0, 0.35);
+  --lc-dropdown-hover: rgba(224, 123, 0, 0.16);
 }
 
 /* ── Navigation ── */

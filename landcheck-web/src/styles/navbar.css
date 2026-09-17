@@ -109,8 +109,11 @@
   gap: 2px;
   min-width: 200px;
   padding: 6px;
-  background: #0a1228;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  /* Falls back to the plain navy every page had before - each page's own stylesheet sets these
+     three custom properties on its root wrapper class to its own brand color instead, so the menu
+     never reads as a mismatched color patch dropped onto a differently-themed hero. */
+  background: var(--lc-dropdown-bg, #0a1228);
+  border: 1px solid var(--lc-dropdown-border, rgba(255, 255, 255, 0.14));
   border-radius: 12px;
   box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
 }
@@ -131,7 +134,7 @@
 
 .lc-nav-group-menu button:hover,
 .lc-nav--overlay .lc-nav-group-menu button:hover {
-  background: rgba(255, 255, 255, 0.09);
+  background: var(--lc-dropdown-hover, rgba(255, 255, 255, 0.1));
   color: #fff;
 }
 

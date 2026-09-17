@@ -1,7 +1,8 @@
-import { Suspense, lazy, useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { isSurveyAuthed } from "../auth/surveyAuth";
+import { NAV_GROUPS } from "../components/NavBar";
 import {
   prefetchSurveyPlanPreviewStep,
   prefetchSurveyPlanRoute,
@@ -116,6 +117,8 @@ export default function SurveyPlanLanding() {
   const navigate = useNavigate();
   const [signInOpen, setSignInOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const desktopNavRef = useRef<HTMLElement>(null);
   const [totalPlotsGenerated, setTotalPlotsGenerated] = useState<number | null>(null);
   const signedIn = isSurveyAuthed();
   const closeMenu = () => setMenuOpen(false);
@@ -130,6 +133,21 @@ export default function SurveyPlanLanding() {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [menuOpen]);
+
+  // Same outside-click/Escape dismissal as the shared NavBar's own Products/Company dropdown.
+  useEffect(() => {
+    if (!openGroup) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (desktopNavRef.current && !desktopNavRef.current.contains(event.target as Node)) setOpenGroup(null);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") setOpenGroup(null); };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openGroup]);
 
   useEffect(() => {
     scheduleSurveyPlanIdlePrefetch();
@@ -191,11 +209,35 @@ export default function SurveyPlanLanding() {
         >
           <span /><span /><span />
         </button>
-        <nav className="spl-nav-links" aria-label="Survey navigation">
+        <nav className="spl-nav-links" aria-label="Survey navigation" ref={desktopNavRef}>
           <a href="#features">Features</a>
           <a href="#workflow">Workflow</a>
           <a href="#for-surveyors">For Surveyors</a>
           <a href="#for-estates">For Estates</a>
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label} className="spl-nav-group">
+              <button
+                type="button"
+                aria-haspopup="true"
+                aria-expanded={openGroup === group.label}
+                onClick={() => setOpenGroup((prev) => (prev === group.label ? null : group.label))}
+              >
+                {group.label}
+                <svg className="spl-nav-group-caret" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                </svg>
+              </button>
+              {openGroup === group.label && (
+                <div className="spl-nav-group-menu" role="menu">
+                  {group.items.map((item) => (
+                    <a key={item.route} href={item.route} role="menuitem" onClick={() => setOpenGroup(null)}>
+                      {item.label}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
           {signedIn ? (
             <Link to="/dashboard">Dashboard</Link>
           ) : (
@@ -217,6 +259,16 @@ export default function SurveyPlanLanding() {
           <a href="#workflow" className="spl-mobile-item" onClick={closeMenu}>Workflow</a>
           <a href="#for-surveyors" className="spl-mobile-item" onClick={closeMenu}>For Surveyors</a>
           <a href="#for-estates" className="spl-mobile-item" onClick={closeMenu}>For Estates</a>
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label} className="spl-mobile-group">
+              <span className="spl-mobile-group-label">{group.label}</span>
+              {group.items.map((item) => (
+                <a key={item.route} href={item.route} className="spl-mobile-item" onClick={closeMenu}>
+                  {item.label}
+                </a>
+              ))}
+            </div>
+          ))}
           {signedIn ? (
             <Link to="/dashboard" className="spl-mobile-item" onClick={closeMenu}>Dashboard</Link>
           ) : (

@@ -8,6 +8,11 @@
   color: #0e2b4a;
   background: #fff;
   min-height: 100dvh;
+  /* This page's own brand accent (the orange bar under the hero heading, the CTA buttons) - the
+     shared nav dropdown (navbar.css) picks these up instead of a generic color. */
+  --lc-dropdown-bg: #0a1228;
+  --lc-dropdown-border: rgba(224, 123, 0, 0.35);
+  --lc-dropdown-hover: rgba(224, 123, 0, 0.16);
 }
 
 /* ── Navigation ── */
