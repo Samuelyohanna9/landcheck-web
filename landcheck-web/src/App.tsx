@@ -240,15 +240,14 @@ function RouteScrollManager() {
 }
 
 // Suspense's fallback for every lazy route below - shown any time a route's own JS chunk is
-// still downloading (first visit to a page, or a slow connection re-fetching after a deploy),
-// which used to just render nothing. Picks the branded animation matching whichever product the
-// path belongs to, so navigating into Survey Plan, Hazard Analysis, or any Green surface (Work,
-// sponsor dashboards, merchant, public pages) shows that product's own loading identity instead
-// of a blank screen while its tab/page is prepared; anything else (landing, admin, etc.) still
-// falls back to nothing rather than guessing a brand that doesn't apply.
+// still downloading (first visit to a page, or a slow connection re-fetching after a deploy).
+// Public product landings intentionally stay free of the in-app loading animation. The branded
+// fallback remains available for the actual Survey, Hazard, and Green workspaces.
 function RouteLoadingFallback() {
   const { pathname } = useLocation();
-  const path = pathname.toLowerCase();
+  const path = pathname.toLowerCase().replace(/\/+$/, "") || "/";
+
+  if (["/survey", "/flood", "/green-partners"].includes(path)) return null;
 
   let Animation: typeof SurveyLoadingAnimation | null = null;
   if (path.startsWith("/survey")) {
