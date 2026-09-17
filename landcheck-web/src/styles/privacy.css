@@ -273,3 +273,398 @@
     flex-direction: column;
   }
 }
+
+/* Estate landing page treatment for the privacy notice and consent prompts. */
+.privacy-policy-page {
+  --privacy-ink: #102a27;
+  --privacy-navy: #0a1228;
+  --privacy-slate: #5d6f69;
+  --privacy-teal: #16816e;
+  --privacy-paper: #f5f3eb;
+  --privacy-line: rgba(16, 42, 39, .18);
+  min-height: 100vh;
+  padding: 0;
+  background: var(--privacy-paper);
+  color: var(--privacy-ink);
+  font-family: "Aptos", "Segoe UI", Arial, sans-serif;
+}
+
+.privacy-policy-header {
+  display: block;
+  width: min(1120px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 30px 0 64px;
+}
+
+.privacy-policy-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--privacy-line);
+}
+
+.privacy-policy-brand,
+.privacy-policy-footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--privacy-teal);
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-decoration: none;
+}
+
+.privacy-policy-brand img {
+  display: block;
+  width: 120px;
+  height: auto;
+}
+
+.privacy-policy-brand span,
+.privacy-policy-footer-brand span {
+  white-space: nowrap;
+}
+
+.privacy-back-btn {
+  min-height: 40px;
+  padding: 0 15px;
+  border: 1px solid var(--privacy-line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--privacy-ink);
+  font: 700 .74rem/1 "Aptos", "Segoe UI", Arial, sans-serif;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.privacy-back-btn:hover {
+  border-color: var(--privacy-ink);
+  background: rgba(16, 42, 39, .06);
+}
+
+.privacy-policy-heading {
+  max-width: 800px;
+  margin-top: 66px;
+}
+
+.privacy-policy-eyebrow,
+.privacy-modal-eyebrow {
+  margin: 0;
+  color: var(--privacy-teal);
+  font: 700 .68rem/1.5 "Aptos", "Segoe UI", Arial, sans-serif;
+  letter-spacing: .17em;
+  text-transform: uppercase;
+}
+
+.privacy-policy-header h1 {
+  margin: 14px 0 0;
+  color: var(--privacy-ink);
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  font-size: clamp(2.55rem, 6vw, 4.8rem);
+  font-weight: 500;
+  letter-spacing: -.055em;
+  line-height: 1.02;
+  text-wrap: balance;
+}
+
+.privacy-policy-meta {
+  margin: 18px 0 0;
+  color: var(--privacy-slate);
+  font-size: .82rem;
+  line-height: 1.5;
+}
+
+.privacy-policy-card {
+  width: min(920px, calc(100% - 48px));
+  max-width: none;
+  margin: 0 auto;
+  padding: 0 0 88px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.privacy-policy-card > section:first-child {
+  max-width: 760px;
+  padding: 0 0 34px;
+  border-bottom: 1px solid var(--privacy-line);
+}
+
+.privacy-policy-card > section:first-child p,
+.privacy-policy-section > p {
+  margin: 0;
+  color: var(--privacy-slate);
+  font-size: .96rem;
+  line-height: 1.75;
+}
+
+.privacy-policy-card > section:first-child p + p {
+  margin-top: 14px;
+}
+
+.privacy-policy-section + .privacy-policy-section {
+  display: grid;
+  grid-template-columns: minmax(190px, .72fr) minmax(0, 1.7fr);
+  gap: 34px;
+  margin-top: 0;
+  padding: 31px 0;
+  border-top: 0;
+  border-bottom: 1px solid var(--privacy-line);
+}
+
+.privacy-policy-section h2 {
+  margin: 0;
+  color: var(--privacy-ink);
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  font-size: 1.58rem;
+  font-weight: 500;
+  letter-spacing: -.035em;
+  line-height: 1.15;
+}
+
+.privacy-policy-section ul {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+  list-style: none;
+  color: var(--privacy-slate);
+  font-size: .88rem;
+  line-height: 1.65;
+}
+
+.privacy-policy-section li {
+  position: relative;
+  padding-left: 17px;
+}
+
+.privacy-policy-section li::before {
+  content: "";
+  position: absolute;
+  top: .72em;
+  left: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--privacy-teal);
+}
+
+.privacy-policy-section:last-child > p {
+  margin: 0 0 8px;
+}
+
+.privacy-policy-section:last-child > p:last-child {
+  margin-bottom: 0;
+}
+
+.privacy-policy-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 28px max(24px, calc((100vw - 1120px) / 2));
+  border-top: 1px solid rgba(255, 255, 255, .08);
+  background: var(--privacy-navy);
+  color: rgba(244, 247, 242, .55);
+  font-size: .75rem;
+}
+
+.privacy-policy-footer-brand {
+  color: #69d7b0;
+}
+
+.privacy-policy-footer-brand img {
+  display: block;
+  width: 100px;
+  height: auto;
+  filter: brightness(0) invert(1);
+  opacity: .85;
+}
+
+.privacy-policy-footer a:not(.privacy-policy-footer-brand) {
+  color: rgba(244, 247, 242, .65);
+  text-decoration: none;
+}
+
+.privacy-policy-footer a:not(.privacy-policy-footer-brand):hover {
+  color: #fff;
+}
+
+.privacy-banner {
+  padding: 13px max(20px, calc((100vw - 1120px) / 2));
+  background: var(--privacy-navy);
+  border-bottom: 1px solid rgba(105, 215, 176, .3);
+  backdrop-filter: none;
+}
+
+.privacy-banner-copy strong {
+  color: #f4f3eb;
+  font: 700 .68rem/1.5 "Aptos", "Segoe UI", Arial, sans-serif;
+  letter-spacing: .15em;
+}
+
+.privacy-banner-copy span {
+  color: rgba(244, 247, 242, .72);
+  font-size: .78rem;
+}
+
+.privacy-banner-actions a,
+.privacy-inline-link {
+  color: #69d7b0;
+}
+
+.privacy-banner-actions button,
+.privacy-inline-btn {
+  border: 1px solid #69d7b0;
+  border-radius: 0;
+  background: #167c60;
+  color: #fff;
+  font: 700 .72rem/1 "Aptos", "Segoe UI", Arial, sans-serif;
+}
+
+.privacy-modal-backdrop {
+  background: rgba(10, 18, 40, .58);
+  backdrop-filter: blur(5px);
+}
+
+.privacy-modal-card {
+  width: min(620px, 100%);
+  padding: 28px 30px 24px;
+  border: 1px solid var(--privacy-line);
+  border-top: 3px solid var(--privacy-teal);
+  border-radius: 2px;
+  background: var(--privacy-paper);
+  color: var(--privacy-ink);
+  box-shadow: 0 26px 60px rgba(10, 18, 40, .28);
+}
+
+.privacy-modal-card h2 {
+  margin: 10px 0 0;
+  color: var(--privacy-ink);
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  font-size: 1.8rem;
+  font-weight: 500;
+  letter-spacing: -.035em;
+  line-height: 1.12;
+}
+
+.privacy-modal-summary,
+.privacy-modal-footnote,
+.privacy-inline-note {
+  color: var(--privacy-slate);
+}
+
+.privacy-modal-list {
+  color: var(--privacy-slate);
+}
+
+.privacy-modal-footnote a {
+  color: var(--privacy-teal);
+}
+
+.privacy-modal-actions {
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.privacy-btn {
+  min-height: 40px;
+  padding: 0 13px;
+  border-radius: 0;
+  font: 700 .73rem/1 "Aptos", "Segoe UI", Arial, sans-serif;
+}
+
+.privacy-btn.subtle {
+  border: 1px solid var(--privacy-line);
+  background: transparent;
+  color: var(--privacy-ink);
+}
+
+.privacy-btn.primary {
+  border: 1px solid var(--privacy-ink);
+  background: var(--privacy-ink);
+  color: #fff;
+}
+
+.privacy-checkbox-row {
+  padding: 13px 0;
+  border: 0;
+  border-top: 1px solid var(--privacy-line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.privacy-checkbox-row label {
+  color: var(--privacy-ink);
+}
+
+.privacy-policy-page :focus-visible {
+  outline: 2px solid #58bc9d;
+  outline-offset: 3px;
+}
+
+@media (max-width: 720px) {
+  .privacy-policy-header {
+    width: calc(100% - 40px);
+    padding: 22px 0 54px;
+  }
+
+  .privacy-policy-nav {
+    align-items: flex-start;
+  }
+
+  .privacy-policy-brand {
+    gap: 5px;
+    font-size: .56rem;
+  }
+
+  .privacy-policy-brand img {
+    width: 104px;
+  }
+
+  .privacy-policy-heading {
+    margin-top: 50px;
+  }
+
+  .privacy-policy-header h1 {
+    font-size: clamp(2.35rem, 12vw, 3.5rem);
+  }
+
+  .privacy-policy-card {
+    width: calc(100% - 40px);
+    padding-bottom: 62px;
+  }
+
+  .privacy-policy-section + .privacy-policy-section {
+    grid-template-columns: 1fr;
+    gap: 13px;
+    padding: 25px 0;
+  }
+
+  .privacy-policy-section h2 {
+    font-size: 1.4rem;
+  }
+
+  .privacy-policy-footer {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 26px 20px;
+  }
+
+  .privacy-modal-card {
+    padding: 23px 18px 18px;
+  }
+
+  .privacy-modal-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .privacy-btn {
+    width: 100%;
+  }
+}

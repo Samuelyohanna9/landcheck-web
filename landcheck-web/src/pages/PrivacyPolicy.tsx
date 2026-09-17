@@ -1,66 +1,95 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { PRIVACY_CONSENT_VERSION } from "../privacy/privacyConsent";
+import "../styles/estate-portal.css";
 import "../styles/privacy.css";
 
 const policySections = [
   {
-    title: "What LandCheck Processes",
+    title: "Products covered by this notice",
     points: [
-      "Public-site interactions, essential browser storage, and map requests needed to operate the website.",
-      "Survey-plan and operational records entered by users, including project names, coordinates, notes, and generated outputs.",
-      "LandCheck Green field records such as tree locations, maintenance notes, timestamps, GPS captures, and photos.",
-      "LandCheck Work records such as staff profiles, custodian details, organization data, task reviews, allocations, exports, and audit history.",
+      "LandCheck Estates helps estate companies manage boundaries, layouts, approved plots, blocks, customers, allocations, payments, commissions, survey outputs, and public estate websites.",
+      "LandCheck Survey handles coordinates, scanned plans, georeferencing, AI-assisted digitising, custom or automatic subdivision, geometry review, survey-plan templates, and exports.",
+      "LandCheck Green supports tree sponsorship and field operations, including planting, maintenance, evidence capture, monitoring, and environmental reporting.",
+      "LandCheck Work supports organization administration, staff and custodian workflows, review queues, project records, reports, exports, and audit history.",
+      "LandCheck also provides public websites, map services, feedback and support channels, and hazard or flood-risk analysis where those features are enabled.",
     ],
   },
   {
-    title: "Mobile App Permissions and Device Data",
+    title: "Information users and organizations provide",
     points: [
-      "Location permission is used to capture tree, maintenance, and project coordinates while the user is actively recording field work.",
-      "Camera and photo-library access are used only so users can attach evidence photos to tree and maintenance records.",
-      "Notifications may be used for operational prompts or field follow-up messages where enabled on the device.",
-      "The mobile app may temporarily cache records, photos, and queued sync actions locally on the device so field work can continue offline and sync when connectivity returns.",
+      "Account and company details such as names, email addresses, phone numbers, roles, organization information, workspace details, and login records.",
+      "Estate and land information such as estate names, locations, descriptions, boundaries, blocks, plot numbers, areas, addresses, prices, statuses, layout criteria, roads, reserves, and approved geometry.",
+      "Survey information such as coordinate points, station names, control points, scanned plans, georeferencing details, digitised features, surveyor details, notes, templates, and generated PDF, CAD, GIS, or coordinate outputs.",
+      "Customer and reservation information such as a buyer's name, phone number, email address, message, selected plot, reservation status, allocation details, payment status, and follow-up history.",
+      "Subscription, billing, payment, commission, receipt, and installment-plan information entered or managed through an organization workspace. The public Estate reservation page does not take customer payment.",
+      "Green and Work information such as tree records, GPS captures, photos, field notes, task assignments, staff or custodian details, reviews, and supporting documents.",
     ],
   },
   {
-    title: "Why the Data Is Processed",
+    title: "Public Estate websites and reservations",
     points: [
-      "To operate LandCheck Green and LandCheck Work for project monitoring, assignment, reporting, and evidence review.",
-      "To generate survey-plan, monitoring, donor, custodian, and carbon-report outputs requested by users.",
-      "To support product security, audit trails, troubleshooting, and platform improvement.",
+      "An estate company chooses what to publish. A public Estate website may show its name, logo, introduction, location, contact details, payment-plan information, and approved plot information.",
+      "Published plot information can include the plot number, block, boundary, land area, address, availability status, and price when the estate company chooses to show it.",
+      "Visitors can browse the live layout and satellite map, select an available plot, and send a short reservation request to the estate company.",
+      "Reservation details are sent to the estate company's workspace and may trigger notifications for its staff to contact the prospective customer. The customer's personal details are not displayed publicly as part of the plot map.",
+      "The estate company is responsible for the accuracy of published land information, prices, documentation statements, contact details, and reservation terms. Status changes made in the workspace may update the public page.",
     ],
   },
   {
-    title: "Sensitive Operational Data",
+    title: "How LandCheck uses the information",
     points: [
-      "GPS coordinates and timestamps are used to verify where planting or maintenance activity happened.",
-      "Photos and notes are used as evidence for project review, supervision, and reporting.",
-      "Contact details for staff, custodians, and organizations are used only for program operations, coordination, and account management.",
+      "To provide accounts, workspaces, maps, plot registers, public Estate websites, reservations, customer follow-up, allocations, payment records, reports, survey plans, and field workflows.",
+      "To process uploaded coordinates and scanned plans, assist with georeferencing or digitising, suggest layouts or subdivisions, and produce requested outputs. Automated results must be reviewed by the responsible professional before approval or use.",
+      "To send operational messages such as reservation alerts, welcome or follow-up emails, account messages, service notices, and support responses where enabled.",
+      "To protect accounts, enforce permissions, maintain audit trails, investigate errors or abuse, provide support, and improve reliability and product performance.",
+      "To manage subscriptions and organization access, including plan status, usage, billing records, and platform administration.",
     ],
   },
   {
-    title: "Storage, Hosting, and Sharing",
+    title: "Location, device, and field data",
     points: [
-      "Operational records are processed through LandCheck application services and supporting cloud infrastructure used for hosting, storage, map delivery, and report generation.",
-      "Evidence photos, generated reports, and uploaded assets may be stored in managed object storage used by LandCheck for platform operations.",
-      "LandCheck does not sell user data. Data is shared only where necessary to operate the platform for the organization using it, to provide infrastructure services, or to comply with law.",
-      "Organization administrators and authorized reviewers may access records created by users working in their organization or project scope.",
+      "Location permission is used by LandCheck Green and related field workflows to capture coordinates when a user is actively recording planting, maintenance, or project activity.",
+      "Camera and photo-library access are used when users attach evidence photos to Green, Work, survey, or other supported records.",
+      "Notifications may be used for operational prompts, reservation alerts, review tasks, or field follow-up where the user or organization enables them.",
+      "The mobile app may temporarily cache records, photos, and queued sync actions locally so field work can continue offline and sync when connectivity returns.",
+      "Map views may send approximate or project location information to map and tile providers needed to display the selected map layer.",
     ],
   },
   {
-    title: "Legal and Compliance Position",
+    title: "Cookies and browser storage",
     points: [
-      "LandCheck is implementing privacy controls aligned with consent-based processing expectations under GDPR-style principles and the Nigeria Data Protection Act (NDPA).",
-      "Users are required to confirm they are authorized before capturing GPS, photos, or personal/contact data in the product.",
-      "Only data necessary for the relevant workflow should be entered into the platform.",
+      "Essential storage keeps secure navigation, login state, consent choices, and core page behavior working.",
+      "Experience media storage may enable richer presentation features such as background media or optional visual enhancements.",
+      "Measurement and reliability storage may help LandCheck understand page usage and service reliability when enabled. It is not used for advertising.",
+      "You can accept all categories, keep essential storage only, or customize optional categories through the cookie controls. Changing optional preferences does not disable essential site functions.",
     ],
   },
   {
-    title: "Retention and Access",
+    title: "Storage, hosting, and sharing",
     points: [
-      "Operational records, review history, and exports may be retained as long as needed for project administration, reporting, or audit accountability.",
-      "Organizations should review user access regularly and deactivate users who no longer require access.",
-      "If you need correction, access, export, or deletion support for data controlled through LandCheck, contact LandCheck using the details below.",
-      "Where an account is provisioned by an organization administrator, account closure or deletion requests may also need to be coordinated through that organization.",
+      "LandCheck processes records through its application services and supporting infrastructure used for hosting, storage, authentication, map delivery, email, notifications, and report generation.",
+      "Uploaded plans, images, evidence photos, documents, generated reports, and other assets may be stored in managed storage used to provide the requested workflow.",
+      "LandCheck does not sell personal data. Information is shared only as needed to provide the requested service, operate infrastructure, support an organization, display information that an estate company has chosen to publish, or comply with law.",
+      "For organization-managed workspaces, the estate company, project organization, or authorized administrator controls access to the records created within its workspace. Authorized staff, reviewers, surveyors, estate administrators, and service providers may access information needed for their assigned work.",
+      "For customer reservations, the estate company is normally the organization receiving and following up the enquiry. LandCheck provides the system that collects and routes the request.",
+    ],
+  },
+  {
+    title: "Responsibilities and legal position",
+    points: [
+      "LandCheck acts as a platform provider for organization-managed records. The organization using the platform remains responsible for deciding why it collects personal data, publishing appropriate notices, setting access permissions, and responding to its customers or field participants.",
+      "Organizations and users must have authority to upload land records, coordinates, photos, customer information, or other personal data, and should collect only what is necessary for the relevant workflow.",
+      "LandCheck supports consent and other lawful processing controls, including records of consent version, scope, source application, actor, organization, and time. Organizations remain responsible for obtaining any additional permissions required for their work.",
+      "AI-assisted extraction, layout suggestions, maps, and other automated tools are decision-support features. They do not replace a licensed surveyor, town planner, legal review, statutory approval, or independent verification.",
+    ],
+  },
+  {
+    title: "Retention, access, and requests",
+    points: [
+      "Operational records, reservation history, payment records, review history, exports, and audit events may be retained as long as needed for administration, customer follow-up, reporting, service security, or accountability.",
+      "Organizations should review workspace access regularly and deactivate users who no longer need access.",
+      "You may request access, correction, export, or deletion support for personal data controlled through LandCheck. Some requests may need to be coordinated with the organization that collected or manages the data.",
+      "LandCheck may retain limited information where necessary to meet legal, security, fraud-prevention, dispute-resolution, or audit obligations.",
     ],
   },
 ];
@@ -69,27 +98,35 @@ export default function PrivacyPolicy() {
   const navigate = useNavigate();
 
   return (
-    <div className="privacy-policy-page">
+    <div className="privacy-policy-page estate-portal">
       <header className="privacy-policy-header">
-        <button type="button" className="privacy-back-btn" onClick={() => navigate(-1)}>
-          Back
-        </button>
-        <div>
-          <p className="privacy-policy-eyebrow">LandCheck Privacy Policy</p>
-          <h1>Privacy and Data Processing Notice</h1>
-          <p className="privacy-policy-meta">Consent version: {PRIVACY_CONSENT_VERSION}</p>
+        <div className="privacy-policy-nav">
+          <Link to="/estates" className="privacy-policy-brand" aria-label="LandCheck Estates home">
+            <img src="/logo.svg" alt="LandCheck" width="120" height="33" />
+            <span>PRIVACY</span>
+          </Link>
+          <button type="button" className="privacy-back-btn" onClick={() => navigate(-1)}>
+            Back
+          </button>
+        </div>
+        <div className="privacy-policy-heading">
+          <p className="privacy-policy-eyebrow">LandCheck privacy policy</p>
+          <h1>Privacy and data, clearly handled.</h1>
+          <p className="privacy-policy-meta">Last updated: September 17, 2026 · Consent version: {PRIVACY_CONSENT_VERSION}</p>
         </div>
       </header>
 
       <main className="privacy-policy-card">
         <section>
           <p>
-            This notice explains how LandCheck handles public-site, survey, Green, and Work data. It is written for
-            users, partner organizations, and field teams using the platform in Nigeria and similar jurisdictions.
+            This notice explains how LandCheck handles information across its public websites and connected products. It
+            is written for estate companies, surveyors, organizations, customers, field teams, and visitors using the
+            platform in Nigeria and similar jurisdictions.
           </p>
           <p>
-            It applies to the LandCheck website, LandCheck Green mobile and PWA experiences, and LandCheck Work
-            administration workflows.
+            It applies to LandCheck Estates, public Estate websites and reservation pages, LandCheck Survey, LandCheck
+            Green mobile and web experiences, LandCheck Work administration workflows, hazard or flood-risk tools, and
+            related support and feedback pages.
           </p>
         </section>
 
@@ -108,9 +145,18 @@ export default function PrivacyPolicy() {
           <h2>Contact</h2>
           <p>LandCheck Geospatial Technologies Limited</p>
           <p>Email: landchecktech@gmail.com</p>
-          <p>For privacy, access, correction, or deletion requests, contact the address above and reference your organization and project.</p>
+          <p>For privacy, access, correction, or deletion requests, contact the address above and reference your organization, estate, project, or reservation.</p>
         </section>
       </main>
+
+      <footer className="privacy-policy-footer">
+        <Link to="/estates" className="privacy-policy-footer-brand" aria-label="LandCheck Estates home">
+          <img src="/logo.svg" alt="LandCheck" width="100" height="34" loading="lazy" />
+          <span>ESTATES</span>
+        </Link>
+        <span>LandCheck Geospatial Technologies Limited</span>
+        <a href="mailto:landchecktech@gmail.com">landchecktech@gmail.com</a>
+      </footer>
     </div>
   );
 }
