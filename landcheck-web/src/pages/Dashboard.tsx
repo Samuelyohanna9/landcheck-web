@@ -128,6 +128,40 @@ const formatDate = (value: string | null) => {
   return date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
 };
 
+function WorkflowIcon({ category }: { category: WorkflowCategory }) {
+  if (category === "hazard_analysis") {
+    return (
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+        <path d="M10 2.8 18 17H2L10 2.8Z" strokeLinejoin="round" />
+        <path d="M10 7.2v4.4M10 14.3v.1" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (category === "georeference") {
+    return (
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+        <circle cx="10" cy="10" r="6.5" />
+        <circle cx="10" cy="10" r="2.1" />
+        <path d="M10 1.5v3M10 15.5v3M1.5 10h3M15.5 10h3" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (category === "subdivision") {
+    return (
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+        <rect x="3" y="3" width="14" height="14" rx="1.5" />
+        <path d="M10 3v14M3 10h14" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+      <path d="M4 7V4h3M16 7V4h-3M4 13v3h3M16 13v3h-3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 10h12" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 const georefStatusLabel = (status: string) => {
   if (status === "digitized") return "Completed";
   if (status === "georeferenced") return "In Progress";
@@ -198,6 +232,9 @@ function NewWorkMenu({ onNavigate }: { onNavigate: (category: WorkflowCategory) 
                     onNavigate(category);
                   }}
                 >
+                  <span className="new-work-option-icon">
+                    <WorkflowIcon category={category} />
+                  </span>
                   <span className={`work-badge ${CATEGORY_META[category].accentClass}`}>
                     {CATEGORY_META[category].short}
                   </span>
@@ -295,6 +332,61 @@ function SupportModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
   );
 }
 
+function WorkItemOptions({
+  item,
+  onOpen,
+  onDelete,
+  deleting,
+}: {
+  item: WorkItem;
+  onOpen: () => void;
+  onDelete?: () => void;
+  deleting?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const optionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (optionsRef.current && !optionsRef.current.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    return () => document.removeEventListener("mousedown", closeOnOutsideClick);
+  }, [open]);
+
+  return (
+    <div className="workspace-project-options" ref={optionsRef}>
+      <button
+        type="button"
+        className="workspace-project-options-trigger"
+        aria-label={`Options for ${item.title}`}
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span>Options</span>
+        <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path d="M5 7.5 10 12.5l5-5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {open && (
+        <div className="workspace-project-options-menu" role="menu">
+          <button type="button" role="menuitem" onClick={() => { setOpen(false); onOpen(); }}>
+            <span>Open work</span>
+            <span aria-hidden="true">&#8599;</span>
+          </button>
+          {onDelete && (
+            <button type="button" role="menuitem" className="is-danger" disabled={deleting} onClick={() => { setOpen(false); onDelete(); }}>
+              <span>{deleting ? "Deleting..." : "Delete session"}</span>
+              <span aria-hidden="true">&#10005;</span>
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const session = getSurveyAuthSession();
@@ -310,6 +402,7 @@ export default function Dashboard() {
   const [deleting, setDeleting] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
   const [deletingGeorefId, setDeletingGeorefId] = useState<string | null>(null);
+  const [plotTags, setPlotTags] = useState<Record<number, string>>({});
 
   const warmSurveyPlanEntry = () => {
     void prefetchSurveyPlanRoute();
@@ -502,6 +595,49 @@ export default function Dashboard() {
     }
   };
 
+  const handleBulkExport = () => {
+    const selected = items.filter((item) => item.plotId != null && selectedIds.has(item.plotId));
+    if (!selected.length) {
+      toast("Select at least one plot record to export.");
+      return;
+    }
+    const csvEscape = (value: string) => `"${value.replaceAll('"', '""')}"`;
+    const rows = [
+      ["Title", "Type", "Location", "Status", "Created"],
+      ...selected.map((item) => [
+        item.title,
+        CATEGORY_META[item.category].label,
+        item.subtitle || "",
+        item.statusLabel,
+        formatDate(item.createdAt) || "",
+      ]),
+    ];
+    const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\n");
+    const downloadUrl = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = "landcheck-work-export.csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(downloadUrl);
+    toast.success(`Exported ${selected.length} work record${selected.length === 1 ? "" : "s"}.`);
+  };
+
+  const handleBulkTag = () => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    const tag = window.prompt("Add a tag to the selected plot records", plotTags[ids[0]] || "Review");
+    if (!tag?.trim()) return;
+    const cleanTag = tag.trim().slice(0, 32);
+    setPlotTags((current) => {
+      const next = { ...current };
+      ids.forEach((id) => { next[id] = cleanTag; });
+      return next;
+    });
+    toast.success(`Tagged ${ids.length} plot record${ids.length === 1 ? "" : "s"}.`);
+  };
+
   const handleDeleteGeoref = async (sessionId: string, title: string) => {
     const confirmed = window.confirm(`Delete "${title}"? This can't be undone.`);
     if (!confirmed) return;
@@ -668,6 +804,9 @@ export default function Dashboard() {
                         <span className={`work-badge ${meta.accentClass}`} title={meta.tooltip}>
                           {meta.short}
                         </span>
+                        {item.plotId != null && plotTags[item.plotId] && (
+                          <span className="workspace-project-tag">{plotTags[item.plotId]}</span>
+                        )}
                       </span>
                       <span className="workspace-project-meta">
                         {item.subtitle && <span>{item.subtitle}</span>}
@@ -684,33 +823,33 @@ export default function Dashboard() {
                     >
                       {item.statusLabel}
                     </span>
-                    <button
-                      className="workspace-project-action"
-                      title={
-                        item.category === "hazard_analysis"
-                          ? "Open this analysis report"
-                          : item.statusBucket === "completed"
-                            ? "Open the finished document"
-                            : "Continue this draft"
-                      }
-                      onClick={() => openItem(item)}
-                    >
-                      {item.category === "georeference" || item.category === "hazard_analysis"
-                        ? "Open"
-                        : item.statusBucket === "completed"
-                          ? "Open"
-                          : "Continue"}
-                    </button>
-                    {item.category === "georeference" && item.sessionId && (
+                    <div className="workspace-project-actions">
                       <button
-                        className="workspace-project-action workspace-project-action-danger"
-                        title="Delete this georeference session"
-                        disabled={deletingGeorefId === item.sessionId}
-                        onClick={() => handleDeleteGeoref(item.sessionId as string, item.title)}
+                        className="workspace-project-action"
+                        title={
+                          item.category === "hazard_analysis"
+                            ? "Open this analysis report"
+                            : item.statusBucket === "completed"
+                              ? "Open the finished document"
+                              : "Continue this draft"
+                        }
+                        onClick={() => openItem(item)}
                       >
-                        {deletingGeorefId === item.sessionId ? "..." : "Delete"}
+                        {item.category === "georeference" || item.category === "hazard_analysis"
+                          ? "Open"
+                          : item.statusBucket === "completed"
+                            ? "Open"
+                            : "Continue"}
                       </button>
-                    )}
+                      <WorkItemOptions
+                        item={item}
+                        onOpen={() => openItem(item)}
+                        onDelete={item.category === "georeference" && item.sessionId
+                          ? () => handleDeleteGeoref(item.sessionId as string, item.title)
+                          : undefined}
+                        deleting={item.sessionId ? deletingGeorefId === item.sessionId : false}
+                      />
+                    </div>
                   </div>
                 );
               })}
@@ -743,8 +882,14 @@ export default function Dashboard() {
 
       {selectedIds.size > 0 && (
         <div className="workspace-bulk-bar">
-          <span>{selectedIds.size} selected</span>
+          <span className="workspace-bulk-summary"><strong>{selectedIds.size}</strong> selected</span>
           <div className="workspace-bulk-bar-actions">
+            <button type="button" className="workspace-bulk-export" onClick={handleBulkExport} disabled={deleting}>
+              Export
+            </button>
+            <button type="button" className="workspace-bulk-tag" onClick={handleBulkTag} disabled={deleting}>
+              Tag
+            </button>
             <button type="button" className="workspace-bulk-cancel" onClick={clearSelection} disabled={deleting}>
               Cancel
             </button>
@@ -753,6 +898,22 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
+      )}
+
+      {selectedIds.size === 0 && (
+        <button
+          type="button"
+          className="dashboard-fab"
+          aria-label="Create a new survey plan"
+          onMouseEnter={warmSurveyPlanEntry}
+          onFocus={warmSurveyPlanEntry}
+          onTouchStart={warmSurveyPlanEntry}
+          onClick={() => goToNewWork("survey_plan")}
+        >
+          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+          </svg>
+        </button>
       )}
 
       <SupportModal isOpen={supportOpen} onClose={() => setSupportOpen(false)} />
