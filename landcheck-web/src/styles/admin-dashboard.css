@@ -453,6 +453,25 @@
   color: #fbbf24;
 }
 
+.hazard-usage-section > .section-head > span {
+  flex-shrink: 0;
+  color: #94a3b8;
+  font-size: 0.78rem;
+}
+
+.hazard-usage-section .template-usage-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.hazard-usage-section .template-usage-row small {
+  grid-column: 1 / -1;
+  margin-top: 0.25rem;
+  color: #94a3b8;
+  font-size: 0.72rem;
+}
+
 .stat-card {
   display: flex;
   align-items: center;
