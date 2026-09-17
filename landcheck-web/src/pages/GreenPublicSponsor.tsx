@@ -22,6 +22,7 @@ import { claimGreenSponsorGuestAccount } from "../auth/greenAuth";
 import GpsIcon from "../components/GpsIcon";
 import SocialLinks from "../components/SocialLinks";
 import "../styles/green-public-sponsor.css";
+import "../styles/public-landing.css";
 import { useDeferredMount } from "../hooks/useDeferredMount";
 import { useLowBandwidthMode } from "../hooks/useLowBandwidthMode";
 
@@ -370,7 +371,7 @@ export default function GreenPublicSponsor() {
   const paymentFailed = returnState?.status === "failed";
 
   return (
-    <div className="gps-page">
+    <div className="gps-page public-landing">
       {/* ─── Shop-style top bar ─── */}
       <header className="gps-topbar">
         <button
