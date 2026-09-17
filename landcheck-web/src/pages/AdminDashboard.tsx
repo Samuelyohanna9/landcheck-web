@@ -123,6 +123,45 @@ type AiFeatureUsageGroup = {
   users: AiFeatureUsageEntry[];
 };
 
+type HazardUsageUser = {
+  user_id: number | null;
+  email: string | null;
+  full_name: string | null;
+  is_anonymous: boolean;
+  total_runs: number;
+  completed_runs: number;
+  failed_runs: number;
+  today_runs: number;
+  last_used_at: string | null;
+};
+
+type HazardUsage = {
+  summary: {
+    total_runs: number;
+    completed_runs: number;
+    failed_runs: number;
+    active_runs: number;
+    today_runs: number;
+  };
+  by_hazard: Array<{
+    hazard_type: string;
+    total_runs: number;
+    completed_runs: number;
+    failed_runs: number;
+  }>;
+  users: HazardUsageUser[];
+  recent: Array<{
+    job_id: string;
+    hazard_type: string;
+    output_type: string;
+    status: string;
+    created_at: string | null;
+    user_id: number | null;
+    email: string | null;
+    full_name: string | null;
+  }>;
+};
+
 type OsmOverpassCountryUsage = {
   country_hint: string;
   total_calls: number;
@@ -193,6 +232,7 @@ export default function AdminDashboard() {
   const [surveyUsers, setSurveyUsers] = useState<SurveyUser[]>([]);
   const [expandedSurveyUserId, setExpandedSurveyUserId] = useState<number | null>(null);
   const [aiFeatureUsage, setAiFeatureUsage] = useState<AiFeatureUsageGroup[]>([]);
+  const [hazardUsage, setHazardUsage] = useState<HazardUsage | null>(null);
   const [georeferenceSessions, setGeoreferenceSessions] = useState<GeoreferenceSession[]>([]);
   const [surveyActivity, setSurveyActivity] = useState<SurveyActivityEvent[]>([]);
   const [osmOverpassUsage, setOsmOverpassUsage] = useState<OsmOverpassCountryUsage[]>([]);
@@ -223,9 +263,10 @@ export default function AdminDashboard() {
           api.get("/analytics/survey-activity"),
           api.get("/analytics/osm-overpass-usage"),
           api.get("/analytics/ai-feature-usage"),
+          api.get("/analytics/hazard-usage"),
         ]);
 
-        const [analyticsRes, dailyRes, feedbackRes, plotsRes, feedbackListRes, surveyUsersRes, georefSessionsRes, surveyActivityRes, osmOverpassRes, aiFeatureUsageRes] = results;
+        const [analyticsRes, dailyRes, feedbackRes, plotsRes, feedbackListRes, surveyUsersRes, georefSessionsRes, surveyActivityRes, osmOverpassRes, aiFeatureUsageRes, hazardUsageRes] = results;
 
         if (analyticsRes.status === "fulfilled") {
           setAnalytics(analyticsRes.value.data);
@@ -264,6 +305,9 @@ export default function AdminDashboard() {
           const data = aiFeatureUsageRes.value.data;
           setAiFeatureUsage(Array.isArray(data?.features) ? data.features : []);
         }
+        if (hazardUsageRes.status === "fulfilled") {
+          setHazardUsage(hazardUsageRes.value.data as HazardUsage);
+        }
       } catch (err) {
         console.error("Failed to fetch analytics:", err);
       } finally {
@@ -286,6 +330,7 @@ export default function AdminDashboard() {
     setSurveyActivity([]);
     setOsmOverpassUsage([]);
     setAiFeatureUsage([]);
+    setHazardUsage(null);
     setLoading(false);
   };
 
@@ -313,6 +358,24 @@ export default function AdminDashboard() {
       export_downloaded: "Export downloaded",
     };
     return labels[event.event_type] || event.event_type.replace(/_/g, " ");
+  };
+
+  const formatHazardType = (value?: string | null) => {
+    const labels: Record<string, string> = {
+      flood: "Flood",
+      erosion: "Erosion",
+      lulc: "Land cover",
+    };
+    return labels[String(value || "").toLowerCase()] || String(value || "Unknown").replace(/_/g, " ");
+  };
+
+  const formatHazardOutput = (value?: string | null) => {
+    const labels: Record<string, string> = {
+      preview: "Preview",
+      pdf: "PDF report",
+      "gis-export": "GIS export",
+    };
+    return labels[String(value || "").toLowerCase()] || String(value || "Unknown");
   };
 
   const renderFeatureSummary = (plot: PlotDetail) => {
@@ -784,6 +847,144 @@ export default function AdminDashboard() {
                   )}
                 </div>
               ))
+            )}
+          </section>
+
+          <section className="usage-monitor-section hazard-usage-section">
+            <div className="section-head">
+              <div>
+                <h2>Hazard Analysis Usage</h2>
+                <p>Monitor flood, erosion, and land-cover analyses run through the Survey workspace.</p>
+              </div>
+              <span>{hazardUsage?.users.length || 0} user profiles</span>
+            </div>
+
+            {!hazardUsage ? (
+              <div className="usage-empty">Hazard usage data is not available right now.</div>
+            ) : (
+              <>
+                <div className="usage-summary-grid">
+                  <div className="usage-stat-card">
+                    <span className="usage-stat-label">Total analyses</span>
+                    <span className="usage-stat-value">{hazardUsage.summary.total_runs}</span>
+                  </div>
+                  <div className="usage-stat-card">
+                    <span className="usage-stat-label">Completed</span>
+                    <span className="usage-stat-value">{hazardUsage.summary.completed_runs}</span>
+                  </div>
+                  <div className="usage-stat-card">
+                    <span className="usage-stat-label">Today</span>
+                    <span className="usage-stat-value">{hazardUsage.summary.today_runs}</span>
+                  </div>
+                  <div className="usage-stat-card">
+                    <span className="usage-stat-label">Active</span>
+                    <span className="usage-stat-value">{hazardUsage.summary.active_runs}</span>
+                  </div>
+                  <div className="usage-stat-card">
+                    <span className="usage-stat-label">Failed</span>
+                    <span className="usage-stat-value">{hazardUsage.summary.failed_runs}</span>
+                  </div>
+                </div>
+
+                <div className="usage-monitor-grid">
+                  <div className="usage-panel">
+                    <div className="usage-panel-head">
+                      <h3>Usage by Survey user</h3>
+                      <span>Identified and anonymous runs</span>
+                    </div>
+                    {hazardUsage.users.length === 0 ? (
+                      <div className="usage-empty">No hazard analysis has been run yet.</div>
+                    ) : (
+                      <div className="survey-users-table-wrap">
+                        <table className="survey-users-table">
+                          <thead>
+                            <tr>
+                              <th>User</th>
+                              <th>Total</th>
+                              <th>Completed</th>
+                              <th>Failed</th>
+                              <th>Today</th>
+                              <th>Last used</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {hazardUsage.users.map((entry) => (
+                              <tr key={entry.is_anonymous ? "anonymous" : `user-${entry.user_id}`}>
+                                <td>
+                                  {entry.is_anonymous
+                                    ? "Anonymous visitor"
+                                    : entry.email || `User #${entry.user_id}`}
+                                  {!entry.is_anonymous && entry.full_name ? ` (${entry.full_name})` : ""}
+                                </td>
+                                <td>{entry.total_runs}</td>
+                                <td>{entry.completed_runs}</td>
+                                <td>{entry.failed_runs}</td>
+                                <td>{entry.today_runs}</td>
+                                <td>{formatDateTime(entry.last_used_at)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="usage-side-stack">
+                    <div className="usage-panel compact">
+                      <div className="usage-panel-head">
+                        <h3>Analysis types</h3>
+                        <span>All outputs</span>
+                      </div>
+                      {hazardUsage.by_hazard.length === 0 ? (
+                        <div className="usage-empty">No analysis types recorded.</div>
+                      ) : (
+                        <div className="template-usage-list">
+                          {hazardUsage.by_hazard.map((row) => (
+                            <div key={row.hazard_type} className="template-usage-row">
+                              <span>{formatHazardType(row.hazard_type)}</span>
+                              <strong>{row.total_runs}</strong>
+                              <small>{row.completed_runs} complete / {row.failed_runs} failed</small>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="usage-panel compact">
+                      <div className="usage-panel-head">
+                        <h3>Recent analyses</h3>
+                        <span>Latest 100</span>
+                      </div>
+                      {hazardUsage.recent.length === 0 ? (
+                        <div className="usage-empty">No recent analyses.</div>
+                      ) : (
+                        <div className="survey-users-table-wrap">
+                          <table className="survey-users-table">
+                            <thead>
+                              <tr>
+                                <th>Type</th>
+                                <th>Output</th>
+                                <th>Status</th>
+                                <th>Time</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {hazardUsage.recent.slice(0, 12).map((entry) => (
+                                <tr key={entry.job_id}>
+                                  <td>{formatHazardType(entry.hazard_type)}</td>
+                                  <td>{formatHazardOutput(entry.output_type)}</td>
+                                  <td>{entry.status}</td>
+                                  <td>{formatDateTime(entry.created_at)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
           </section>
 
