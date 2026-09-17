@@ -489,6 +489,10 @@ export default function HazardAnalysis() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [gateOpen, setGateOpen] = useState(false);
+  // Distinguishes the run-gate (2nd anonymous run - has a real analysis to resume after login)
+  // from a plain "My Dashboard" / "Sign in" click (nothing to resume, just wants to sign in and
+  // land on /dashboard) - both share the one SignupGateModal instance below.
+  const [gateHasPendingRun, setGateHasPendingRun] = useState(false);
   const [hazardType, setHazardType] = useState<HazardType>("flood");
   const [manualPoints, setManualPoints] = useState<ManualPoint[]>([
     { station: "A", lng: 0, lat: 0 },
@@ -756,6 +760,7 @@ export default function HazardAnalysis() {
       // automatically the instant sign-in completes, then open the same Google/email modal
       // Survey Plan's own export gate uses.
       setPendingHazardRun({ hazardType, requestBody });
+      setGateHasPendingRun(true);
       setGateOpen(true);
       return;
     }
@@ -955,36 +960,60 @@ export default function HazardAnalysis() {
       <SignupGateModal
         isOpen={gateOpen}
         onClose={() => setGateOpen(false)}
-        hasPendingAction
-        readyTitle="Your free analysis is ready"
-        readyIntro="Create a free account to keep running analyses and save your reports. No long forms — just continue with Google or email."
-        resumePath="/hazard-analysis?resume=1"
+        hasPendingAction={gateHasPendingRun}
+        readyTitle={gateHasPendingRun ? "Your free analysis is ready" : undefined}
+        readyIntro={
+          gateHasPendingRun
+            ? "Create a free account to keep running analyses and save your reports. No long forms — just continue with Google or email."
+            : undefined
+        }
+        resumePath={gateHasPendingRun ? "/hazard-analysis?resume=1" : undefined}
       />
 
       <header className="hazard-header">
         <button className="back-btn" onClick={() => navigate("/")}>Back</button>
         <h1 className="hazard-title">Hazard Risk Analysis</h1>
-        <div className="hazard-type-tabs">
+        <div className="hazard-header-right">
+          <div className="hazard-type-tabs">
+            <button
+              type="button"
+              className={`hazard-type-tab ${hazardType === "flood" ? "active" : ""}`}
+              onClick={() => { setHazardType("flood"); setShowLiveMap(false); }}
+            >
+              Flood Risk
+            </button>
+            <button
+              type="button"
+              className={`hazard-type-tab ${hazardType === "erosion" ? "active" : ""}`}
+              onClick={() => { setHazardType("erosion"); setShowLiveMap(false); }}
+            >
+              Erosion Risk
+            </button>
+            <button
+              type="button"
+              className={`hazard-type-tab ${hazardType === "lulc" ? "active" : ""}`}
+              onClick={() => { setHazardType("lulc"); setShowLiveMap(false); }}
+            >
+              Land Use Land Cover
+            </button>
+          </div>
           <button
             type="button"
-            className={`hazard-type-tab ${hazardType === "flood" ? "active" : ""}`}
-            onClick={() => { setHazardType("flood"); setShowLiveMap(false); }}
+            className="hazard-dashboard-link"
+            title={isSurveyAuthed() ? "My Dashboard" : "Sign in"}
+            onClick={() => {
+              if (isSurveyAuthed()) {
+                navigate("/dashboard");
+                return;
+              }
+              setGateHasPendingRun(false);
+              setGateOpen(true);
+            }}
           >
-            Flood Risk
-          </button>
-          <button
-            type="button"
-            className={`hazard-type-tab ${hazardType === "erosion" ? "active" : ""}`}
-            onClick={() => { setHazardType("erosion"); setShowLiveMap(false); }}
-          >
-            Erosion Risk
-          </button>
-          <button
-            type="button"
-            className={`hazard-type-tab ${hazardType === "lulc" ? "active" : ""}`}
-            onClick={() => { setHazardType("lulc"); setShowLiveMap(false); }}
-          >
-            Land Use Land Cover
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+            </svg>
+            {isSurveyAuthed() ? "My Dashboard" : "Sign in"}
           </button>
         </div>
       </header>
