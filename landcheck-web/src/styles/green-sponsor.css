@@ -3247,3 +3247,631 @@
   .gs-grove-header { border-radius: 0; margin-bottom: 12px; }
   .gs-featured-game-emoji { font-size: 34px; }
 }
+
+/* ============================================================
+   PWA dashboard refinement
+   ============================================================ */
+
+.green-sponsor-page {
+  --gc-bg: #f8fafc;
+  --gc-surface: #ffffff;
+  --gc-border: rgba(148, 163, 184, 0.34);
+  --gc-text: #0f172a;
+  --gc-text-muted: #475569;
+  --gc-text-light: #64748b;
+  background: #f8fafc;
+  overscroll-behavior-y: contain;
+  overflow-x: clip;
+}
+
+.green-sponsor-page button,
+.green-sponsor-page a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.green-sponsor-page button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.green-sponsor-header-card,
+.green-sponsor-page > .green-sponsor-banner,
+.gs-evidence-strip {
+  width: min(calc(100% - 32px), 1240px);
+}
+
+.gs-pull-refresh {
+  position: fixed;
+  top: -38px;
+  left: 50%;
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 12px;
+  border: 1px solid rgba(31, 143, 73, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 5px 16px rgba(15, 23, 42, 0.12);
+  color: var(--gc-brand-mid);
+  font-size: 11px;
+  font-weight: 800;
+  pointer-events: none;
+  transition: transform 0.18s ease;
+}
+
+.gs-pull-refresh.is-refreshing {
+  color: var(--gc-brand);
+}
+
+.gs-project-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.28fr) minmax(320px, 0.82fr);
+  grid-template-areas:
+    "metrics rewards"
+    "actions rewards"
+    "projects checkout"
+    "projects impact"
+    "orders impact"
+    "support support";
+  gap: 16px;
+  width: min(calc(100% - 32px), 1240px);
+  margin: 0 auto;
+  align-items: start;
+}
+
+.gs-project-workspace > .green-sponsor-metric-list,
+.gs-project-workspace > .green-sponsor-hero-actions,
+.gs-project-workspace > .green-sponsor-panel,
+.gs-project-workspace > .green-sponsor-content-grid {
+  width: auto;
+  max-width: none;
+  margin: 0 !important;
+}
+
+.gs-project-workspace > .green-sponsor-content-grid {
+  display: contents;
+  padding: 0;
+}
+
+.gs-project-metrics { grid-area: metrics; }
+.gs-project-actions { grid-area: actions; }
+.gs-points-hub { grid-area: rewards; }
+.gs-projects-panel { grid-area: projects; }
+.gs-checkout-panel { grid-area: checkout; }
+.gs-impact-panel { grid-area: impact; }
+.gs-orders-panel { grid-area: orders; }
+.gs-project-workspace > .gs-support-card { grid-area: support; }
+
+.gs-project-workspace > .green-sponsor-panel,
+.gs-project-workspace .green-sponsor-content-grid > .green-sponsor-panel {
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  transition: box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.gs-project-workspace > .green-sponsor-panel:hover,
+.gs-project-workspace .green-sponsor-content-grid > .green-sponsor-panel:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.09);
+}
+
+.gs-project-metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.gs-project-metrics .green-sponsor-metric-card {
+  min-height: 94px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.gs-project-metrics .green-sponsor-metric-card strong,
+.green-sponsor-metric-card strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.gs-project-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-self: start;
+}
+
+.gs-project-actions .green-sponsor-secondary-btn,
+.gs-orders-panel .green-sponsor-secondary-btn,
+.green-sponsor-page .green-sponsor-panel .green-sponsor-secondary-btn {
+  justify-content: center;
+  color: var(--gc-text);
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+}
+
+.gs-project-actions .green-sponsor-secondary-btn:hover,
+.gs-orders-panel .green-sponsor-secondary-btn:hover,
+.green-sponsor-page .green-sponsor-panel .green-sponsor-secondary-btn:hover {
+  color: var(--gc-brand-dark);
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.gs-points-hub {
+  padding: 20px;
+  border-color: #e7c675 !important;
+  background: linear-gradient(155deg, #ffffff 0%, #fffdf7 100%) !important;
+}
+
+.gs-points-hub .green-sponsor-panel-heading {
+  margin-bottom: 14px;
+}
+
+.gs-tier-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid #86efac;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.gs-tier-badge.gold {
+  border-color: #f5c451;
+  background: #fffbeb;
+  color: #a16207;
+}
+
+.gs-referral-card {
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 8px 18px rgba(6, 78, 59, 0.14);
+}
+
+.gs-referral-code {
+  font-variant-numeric: tabular-nums;
+}
+
+.gs-referral-actions {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.gs-referral-btn {
+  min-height: 40px;
+  border-radius: 10px;
+  padding-inline: 14px;
+}
+
+.gs-referral-btn.primary {
+  background: #059669;
+  border-color: #059669;
+}
+
+.gs-referral-btn.primary:hover {
+  background: #047857;
+}
+
+.gs-unlocks-section {
+  gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
+}
+
+.gs-merch-grid {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 2px 2px 8px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+}
+
+.gs-merch-card {
+  flex: 0 0 180px;
+  min-height: 190px;
+  scroll-snap-align: start;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px 12px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.gs-impact-panel .green-sponsor-metric-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gs-checkout-panel {
+  position: sticky;
+  top: 16px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.gs-checkout-panel .green-sponsor-field,
+.gs-checkout-sheet .green-sponsor-field {
+  position: relative;
+  gap: 0;
+}
+
+.gs-checkout-panel .green-sponsor-field > span,
+.gs-checkout-sheet .green-sponsor-field > span {
+  position: absolute;
+  top: -7px;
+  left: 9px;
+  z-index: 1;
+  padding: 0 4px;
+  background: var(--gc-surface);
+  color: var(--gc-text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.gs-checkout-panel .green-sponsor-field input,
+.gs-checkout-panel .green-sponsor-field select,
+.gs-checkout-panel .green-sponsor-field textarea,
+.gs-checkout-sheet .green-sponsor-field input,
+.gs-checkout-sheet .green-sponsor-field select,
+.gs-checkout-sheet .green-sponsor-field textarea {
+  min-height: 50px;
+  padding: 18px 12px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.gs-checkout-panel .green-sponsor-field textarea,
+.gs-checkout-sheet .green-sponsor-field textarea {
+  min-height: 76px;
+}
+
+.gs-checkout-panel .green-sponsor-field input:focus,
+.gs-checkout-panel .green-sponsor-field select:focus,
+.gs-checkout-panel .green-sponsor-field textarea:focus,
+.gs-checkout-sheet .green-sponsor-field input:focus,
+.gs-checkout-sheet .green-sponsor-field select:focus,
+.gs-checkout-sheet .green-sponsor-field textarea:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+}
+
+.gs-checkout-action-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.gs-checkout-action-footer .gs-checkout-note {
+  margin: 0;
+  border: 1px solid #dbeafe;
+  background: #f8fafc;
+  color: #334155;
+  font-variant-numeric: tabular-nums;
+}
+
+.gs-checkout-action-footer .green-sponsor-primary-btn {
+  min-height: 50px;
+  background: #059669;
+  border-radius: 10px;
+  box-shadow: 0 8px 16px rgba(5, 150, 105, 0.18);
+}
+
+.gs-checkout-action-footer .green-sponsor-primary-btn:hover {
+  background: #047857;
+}
+
+.gs-orders-panel .green-sponsor-order-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.gs-orders-panel .green-sponsor-order-card {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-left: 3px solid #f59e0b;
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.gs-orders-panel .green-sponsor-order-head strong,
+.gs-orders-panel .green-sponsor-order-head p,
+.gs-orders-panel .green-sponsor-order-meta {
+  font-variant-numeric: tabular-nums;
+}
+
+.gs-orders-panel .green-sponsor-order-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.gs-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+  color: var(--gc-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.gs-pagination button {
+  min-height: 34px;
+  padding: 6px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #ffffff;
+  color: var(--gc-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.gs-pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+@media (max-width: 959px) {
+  .gs-project-workspace {
+    display: flex;
+    flex-direction: column;
+    width: min(calc(100% - 24px), 760px);
+  }
+
+  .gs-project-workspace > .green-sponsor-metric-list,
+  .gs-project-workspace > .green-sponsor-hero-actions,
+  .gs-project-workspace > .green-sponsor-panel,
+  .gs-project-workspace > .green-sponsor-content-grid {
+    width: 100%;
+  }
+
+  .gs-project-workspace > .green-sponsor-content-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(290px, 0.82fr);
+    gap: 12px;
+  }
+
+  .gs-project-workspace > .green-sponsor-content-grid > .green-sponsor-panel {
+    width: 100%;
+    margin: 0 !important;
+  }
+
+  .gs-checkout-panel {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 767px) {
+  .green-sponsor-page {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom));
+  }
+
+  .green-sponsor-header-card {
+    width: 100%;
+    margin-top: 0;
+    border-radius: 0 0 18px 18px;
+    padding: 14px 14px 16px;
+  }
+
+  .green-sponsor-header-brand {
+    min-width: 0;
+  }
+
+  .green-sponsor-header-copy {
+    min-width: 0;
+  }
+
+  .green-sponsor-header-copy h1,
+  .green-sponsor-header-copy p {
+    overflow-wrap: anywhere;
+  }
+
+  .green-sponsor-header-right {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .green-sponsor-stat-pill {
+    padding: 5px 8px;
+    font-size: 10px;
+  }
+
+  .gs-evidence-strip {
+    width: calc(100% - 24px);
+    justify-content: start;
+    flex-wrap: nowrap;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 12px;
+    margin-bottom: 12px;
+    border-radius: 16px;
+    scroll-snap-type: x mandatory;
+  }
+
+  .gs-evidence-item {
+    flex: 0 0 92px;
+    scroll-snap-align: start;
+  }
+
+  .gs-project-workspace {
+    width: calc(100% - 24px);
+    gap: 12px;
+  }
+
+  .gs-project-workspace > .green-sponsor-content-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .gs-project-workspace > .green-sponsor-content-grid > .green-sponsor-checkout-panel {
+    display: none !important;
+  }
+
+  .gs-project-workspace .green-sponsor-panel {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .gs-project-metrics {
+    gap: 8px;
+  }
+
+  .gs-project-metrics .green-sponsor-metric-card {
+    min-height: 82px;
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .gs-project-actions {
+    gap: 8px;
+  }
+
+  .gs-project-actions .green-sponsor-secondary-btn {
+    min-height: 46px;
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+
+  .gs-projects-panel .green-sponsor-project-grid {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 2px 2px 8px;
+    scroll-snap-type: x mandatory;
+  }
+
+  .gs-projects-panel .green-sponsor-project-card {
+    flex: 0 0 min(88vw, 330px);
+    scroll-snap-align: start;
+  }
+
+  .gs-orders-panel .green-sponsor-order-list {
+    grid-template-columns: 1fr;
+  }
+
+  .gs-checkout-sheet {
+    overscroll-behavior-y: contain;
+  }
+
+  .gs-checkout-sheet .gs-checkout-action-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    margin-inline: -16px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 -8px 20px rgba(15, 23, 42, 0.08);
+  }
+
+  .green-sponsor-bottom-nav {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transform: none;
+    width: 100%;
+    min-height: 72px;
+    padding: 7px 8px calc(7px + env(safe-area-inset-bottom));
+    border: 0;
+    border-top: 1px solid #e2e8f0;
+    border-radius: 0;
+    z-index: 50;
+    box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.1);
+  }
+
+  .green-sponsor-bottom-tab {
+    min-height: 58px;
+    padding: 6px 2px 7px;
+    border-radius: 12px;
+    font-size: 10px;
+  }
+
+  .green-sponsor-bottom-tab-icon-wrap {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .green-sponsor-page {
+    --gc-bg: #0f172a;
+    --gc-surface: #111827;
+    --gc-border: rgba(148, 163, 184, 0.28);
+    --gc-text: #f8fafc;
+    --gc-text-muted: #cbd5e1;
+    --gc-text-light: #94a3b8;
+    background: #0f172a;
+  }
+
+  .green-sponsor-header-card,
+  .gs-project-workspace > .green-sponsor-panel,
+  .gs-project-workspace .green-sponsor-content-grid > .green-sponsor-panel,
+  .gs-project-metrics .green-sponsor-metric-card,
+  .gs-merch-card,
+  .gs-pagination button,
+  .green-sponsor-bottom-nav {
+    background: #111827;
+    border-color: rgba(148, 163, 184, 0.28);
+    color: #f8fafc;
+  }
+
+  .gs-points-hub {
+    background: linear-gradient(155deg, #111827 0%, #172018 100%) !important;
+  }
+
+  .green-sponsor-project-card,
+  .green-sponsor-order-card,
+  .gs-unlocks-section {
+    background: #1e293b;
+    border-color: rgba(148, 163, 184, 0.28);
+  }
+
+  .gs-project-actions .green-sponsor-secondary-btn,
+  .gs-orders-panel .green-sponsor-secondary-btn,
+  .green-sponsor-page .green-sponsor-panel .green-sponsor-secondary-btn,
+  .gs-checkout-panel .green-sponsor-field input,
+  .gs-checkout-panel .green-sponsor-field select,
+  .gs-checkout-panel .green-sponsor-field textarea,
+  .gs-checkout-sheet .green-sponsor-field input,
+  .gs-checkout-sheet .green-sponsor-field select,
+  .gs-checkout-sheet .green-sponsor-field textarea {
+    background: #1e293b;
+    border-color: rgba(148, 163, 184, 0.4);
+    color: #f8fafc;
+  }
+
+  .gs-checkout-panel .green-sponsor-field > span,
+  .gs-checkout-sheet .green-sponsor-field > span,
+  .gs-checkout-action-footer .gs-checkout-note,
+  .gs-checkout-sheet .gs-checkout-action-footer {
+    background: #111827;
+  }
+
+  .gs-checkout-action-footer {
+    border-top-color: rgba(148, 163, 184, 0.28);
+  }
+
+  .gs-pull-refresh {
+    background: rgba(17, 24, 39, 0.96);
+    border-color: rgba(52, 211, 153, 0.35);
+  }
+}
