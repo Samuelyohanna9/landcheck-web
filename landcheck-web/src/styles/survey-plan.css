@@ -2160,6 +2160,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 0.35rem;
+  padding-bottom: 5.75rem;
   scrollbar-gutter: stable;
 }
 
@@ -2167,6 +2168,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 0.35rem;
+  padding-bottom: 5.75rem;
   scrollbar-gutter: stable;
 }
 
@@ -2354,16 +2356,22 @@
 
 /* Action Bar */
 .action-bar {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
+  position: fixed;
+  left: max(0.6rem, calc((100vw - 1920px) / 2 + 0.6rem));
+  bottom: max(0.6rem, env(safe-area-inset-bottom));
+  z-index: 120;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 1rem;
-  margin-top: auto;
-  padding: 0.85rem 0 0.35rem;
-  background: linear-gradient(180deg, transparent 0%, var(--survey-ink-800) 28%);
+  width: min(380px, calc(100vw - 1.2rem));
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0.65rem;
+  border: 1px solid var(--survey-ink-border-strong, rgba(214, 223, 210, 0.14));
+  border-radius: 16px;
+  background: var(--survey-ink-800);
+  box-shadow: 0 14px 32px rgba(2, 9, 17, 0.2);
 }
 
 .action-bar-hint {
@@ -7368,5 +7376,21 @@ button.geo-h-step:focus-visible {
 
   .survey-h-step-label {
     display: none;
+  }
+}
+
+/* Keep the workflow controls attached to the viewport on narrow screens. This prevents a
+   horizontally overflowing map, table, or preview from carrying the next-step action off-screen. */
+@media (max-width: 900px) {
+  .survey-container .action-bar {
+    left: 0.6rem;
+    width: calc(100vw - 1.2rem);
+    bottom: max(0.6rem, env(safe-area-inset-bottom));
+  }
+
+  .survey-container .step-panel .panel-left,
+  .survey-container .preview-panel .panel-left,
+  .survey-container .export-panel .panel-left {
+    padding-bottom: 8.75rem;
   }
 }
