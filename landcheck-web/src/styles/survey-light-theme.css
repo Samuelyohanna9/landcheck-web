@@ -948,6 +948,58 @@
   color: #475569;
 }
 
+/* Stronger light-mode hierarchy for preview status, template guidance, and detected features. */
+:root[data-workspace-theme="light"] .survey-container .preview-stale-banner {
+  background: #fffbeb;
+  border-color: #f59e0b;
+  color: #92400e;
+}
+
+:root[data-workspace-theme="light"] .survey-container .preview-stale-banner svg {
+  color: #b45309;
+}
+
+:root[data-workspace-theme="light"] .survey-container .preview-stale-banner strong {
+  color: #78350f;
+}
+
+:root[data-workspace-theme="light"] .survey-container .template-news-ticker {
+  background: linear-gradient(90deg, #dcfce7, #ecfdf5);
+  border-bottom-color: #86efac;
+  color: #065f46;
+}
+
+:root[data-workspace-theme="light"] .survey-container .template-news-ticker-contact {
+  border-color: #10b981;
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container .template-picker-badge {
+  border-color: #f59e0b;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+:root[data-workspace-theme="light"] .survey-container .template-picker-badge:hover {
+  border-color: #d97706;
+  background: #fef3c7;
+  color: #78350f;
+}
+
+:root[data-workspace-theme="light"] .survey-container .template-hint {
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container.is-preview-step .features-bar {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+:root[data-workspace-theme="light"] .survey-container.is-preview-step .feature-chip {
+  border-color: #cbd5e1;
+  background: #ffffff;
+}
+
 /* Export step cards and downloads use their own legacy dark surfaces. Keep file-type accents,
    but give the documents area the same white-card hierarchy as the rest of the light workspace. */
 :root[data-workspace-theme="light"] .survey-container .export-section {
