@@ -704,6 +704,250 @@
   color: #475569;
 }
 
+/* Survey preview controls use a separate legacy stylesheet with dark, translucent defaults.
+   Keep the light workspace consistent from the detected-feature strip through the preview canvas. */
+:root[data-workspace-theme="light"] .survey-container .survey-preview-container {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .template-news-ticker {
+  background: linear-gradient(90deg, #e6f6ec, #f0fdf4);
+  border-bottom: 1px solid #cdeedb;
+  color: #065f46;
+}
+
+:root[data-workspace-theme="light"] .survey-container .template-news-ticker-contact {
+  background: #ffffff;
+  border-color: #86efac;
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container .template-news-ticker-contact:hover {
+  background: #ecfdf5;
+}
+
+:root[data-workspace-theme="light"] .survey-container .preview-ribbon {
+  background: #ffffff;
+  border-bottom-color: #e4e8ec;
+  box-shadow: inset 0 -1px 0 rgba(16, 24, 39, 0.04);
+}
+
+:root[data-workspace-theme="light"] .survey-container .ribbon-group {
+  background: #f8fafc;
+  border-color: #dbe4ea;
+  box-shadow: 0 1px 2px rgba(16, 24, 39, 0.04);
+}
+
+:root[data-workspace-theme="light"] .survey-container .ribbon-label {
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container .ribbon-select,
+:root[data-workspace-theme="light"] .survey-container .beacon-style-picker-btn,
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-picker-btn,
+:root[data-workspace-theme="light"] .survey-container .ribbon-appearance-btn {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .ribbon-select:hover,
+:root[data-workspace-theme="light"] .survey-container .beacon-style-picker-btn:hover:not(:disabled),
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-picker-btn:hover,
+:root[data-workspace-theme="light"] .survey-container .ribbon-appearance-btn:hover {
+  border-color: #059669;
+  background: #f0fdf4;
+  color: #065f46;
+}
+
+:root[data-workspace-theme="light"] .survey-container .ribbon-select:focus,
+:root[data-workspace-theme="light"] .survey-container .beacon-style-picker-btn:focus-visible,
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-picker-btn:focus-visible {
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.14);
+  outline: none;
+}
+
+:root[data-workspace-theme="light"] .survey-container .ribbon-select option {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .beacon-style-picker-chevron,
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-picker-chevron {
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container .beacon-style-popover,
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-popover,
+:root[data-workspace-theme="light"] .survey-container .color-palette-popover,
+:root[data-workspace-theme="light"] .survey-container .hatch-pattern-popover {
+  background: #ffffff;
+  border-color: #dbe4ea;
+  box-shadow: 0 16px 34px rgba(16, 24, 39, 0.16), 0 2px 8px rgba(16, 24, 39, 0.08);
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .beacon-style-option,
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-option,
+:root[data-workspace-theme="light"] .survey-container .hatch-pattern-option,
+:root[data-workspace-theme="light"] .survey-container .color-palette-custom {
+  color: #334155;
+}
+
+:root[data-workspace-theme="light"] .survey-container .beacon-style-option:hover,
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-option:hover,
+:root[data-workspace-theme="light"] .survey-container .hatch-pattern-option:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .beacon-style-option.active,
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-option.active,
+:root[data-workspace-theme="light"] .survey-container .hatch-pattern-option.active {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+:root[data-workspace-theme="light"] .survey-container .color-palette-popover-label,
+:root[data-workspace-theme="light"] .survey-container .hatch-pattern-picker-chevron {
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container .color-palette-custom {
+  border-top-color: #e4e8ec;
+}
+
+:root[data-workspace-theme="light"] .survey-container .preview-header {
+  background: #ffffff;
+  border-bottom-color: #e4e8ec;
+}
+
+:root[data-workspace-theme="light"] .survey-container .preview-toggle,
+:root[data-workspace-theme="light"] .survey-container .zoom-controls,
+:root[data-workspace-theme="light"] .survey-container .preview-zoom-overlay {
+  background: #ffffff;
+  border: 1px solid #dbe4ea;
+  box-shadow: 0 4px 12px rgba(16, 24, 39, 0.1);
+}
+
+:root[data-workspace-theme="light"] .survey-container .toggle-btn,
+:root[data-workspace-theme="light"] .survey-container .zoom-btn {
+  color: #475569;
+}
+
+:root[data-workspace-theme="light"] .survey-container .toggle-btn:hover,
+:root[data-workspace-theme="light"] .survey-container .zoom-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .toggle-btn.active {
+  background: #059669;
+  color: #ffffff;
+}
+
+:root[data-workspace-theme="light"] .survey-container .zoom-level {
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .zoom-btn.reset {
+  border-left-color: #dbe4ea;
+}
+
+:root[data-workspace-theme="light"] .survey-container .preview-paper {
+  background-color: #ffffff;
+}
+
+:root[data-workspace-theme="light"] .survey-container .preview-footer,
+:root[data-workspace-theme="light"] .survey-container .preview-tip,
+:root[data-workspace-theme="light"] .survey-container .preview-loading,
+:root[data-workspace-theme="light"] .survey-container .preview-empty {
+  color: #475569;
+}
+
+:root[data-workspace-theme="light"] .survey-container .topo-source-bar,
+:root[data-workspace-theme="light"] .survey-container .height-toggle-bar {
+  background: #fffbeb;
+  border-bottom-color: #fde68a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .topo-source-toggle {
+  background: #ffffff;
+  border: 1px solid #dbe4ea;
+}
+
+:root[data-workspace-theme="light"] .survey-container .topo-source-label,
+:root[data-workspace-theme="light"] .survey-container .topo-source-hint,
+:root[data-workspace-theme="light"] .survey-container .height-toggle-hint {
+  color: #475569;
+}
+
+:root[data-workspace-theme="light"] .survey-container .topo-source-btn {
+  color: #475569;
+}
+
+:root[data-workspace-theme="light"] .survey-container .topo-source-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .topo-source-btn.active {
+  background: #059669;
+  color: #ffffff;
+}
+
+:root[data-workspace-theme="light"] .survey-container .topo-source-btn .no-data-badge {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+:root[data-workspace-theme="light"] .survey-container .contour-interval-bar {
+  border-top-color: #fcd34d;
+}
+
+:root[data-workspace-theme="light"] .survey-container .height-toggle-slider {
+  background: #cbd5e1;
+}
+
+:root[data-workspace-theme="light"] .survey-container .height-toggle input:checked + .height-toggle-slider {
+  background: #059669;
+}
+
+:root[data-workspace-theme="light"] .survey-container .height-toggle-label {
+  color: #92400e;
+}
+
+:root[data-workspace-theme="light"] .survey-container .features-bar {
+  background: #f8fafc;
+  border-color: #dbe4ea;
+  color: #475569;
+}
+
+:root[data-workspace-theme="light"] .survey-container .features-bar-label {
+  color: #475569;
+}
+
+:root[data-workspace-theme="light"] .survey-container .feature-chip {
+  background: #ffffff;
+  border-color: #dbe4ea;
+  color: #0f172a;
+  box-shadow: 0 1px 2px rgba(16, 24, 39, 0.03);
+}
+
+:root[data-workspace-theme="light"] .survey-container .feature-chip svg {
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container .chip-count {
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .chip-label {
+  color: #475569;
+}
+
 /* Georeference's locally-scoped tokens are remapped to the same Estate surfaces and ink. */
 :root[data-workspace-theme="light"] .survey-container .georef-workspace-redesign {
   --geo-border: #dbe4ea;
