@@ -1,8 +1,18 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import { getWorkspaceTheme } from "./utils/workspaceTheme";
 
 import "./index.css";
+
+if (typeof document !== "undefined") {
+  const initialWorkspaceTheme = getWorkspaceTheme();
+  document.documentElement.dataset.workspaceTheme = initialWorkspaceTheme;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute(
+    "content",
+    initialWorkspaceTheme === "light" ? "#F8FAFC" : "#0F172A",
+  );
+}
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

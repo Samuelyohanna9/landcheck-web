@@ -5,6 +5,7 @@ import { api, withRetry, extractApiErrorMessage } from "../api/client";
 import toast, { Toaster } from "react-hot-toast";
 import {
   consumePendingSurveyDownload,
+  getSurveyAuthSession,
   isSurveyAuthed,
   type PendingSurveyDownload,
 } from "../auth/surveyAuth";
@@ -30,8 +31,15 @@ import {
   loadSurveyPlanDraft,
   saveSurveyPlanDraft,
 } from "../offline/surveyPlanDraft";
+import {
+  applyWorkspaceTheme,
+  getWorkspaceTheme,
+  subscribeWorkspaceTheme,
+  type WorkspaceTheme,
+} from "../utils/workspaceTheme";
 import "../styles/survey-tokens.css";
 import "../styles/survey-plan.css";
+import "../styles/survey-light-theme.css";
 
 const SurveyPreview = lazyWithChunkRecovery(() => import("../components/SurveyPreview"));
 const SignupGateModal = lazyWithChunkRecovery(() => import("../components/SignupGateModal"));
@@ -710,9 +718,50 @@ function parseStationNames(value: string | null): string[] {
   }
 }
 
+const initialsForUser = (fullName: string | null | undefined, email: string | undefined) => {
+  const name = (fullName || "").trim();
+  if (name) {
+    const parts = name.split(/\s+/).filter(Boolean);
+    return (parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : parts[0].slice(0, 2)).toUpperCase();
+  }
+  return (email?.trim()[0] || "LC").toUpperCase();
+};
+
+function SurveyThemeToggle({ theme, onToggle }: { theme: WorkspaceTheme; onToggle: () => void }) {
+  const nextTheme = theme === "light" ? "dark" : "light";
+  return (
+    <button
+      type="button"
+      className="survey-theme-toggle"
+      role="switch"
+      aria-checked={theme === "light"}
+      aria-label={`Switch to ${nextTheme} mode`}
+      title={`Switch to ${nextTheme} mode`}
+      onClick={onToggle}
+    >
+      {theme === "light" ? (
+        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M16.6 12.4A6.7 6.7 0 017.6 3.4a6.7 6.7 0 109 9z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+        </svg>
+      ) : (
+        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <circle cx="10" cy="10" r="3.2" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.3 4.3l1.4 1.4M14.3 14.3l1.4 1.4M15.7 4.3l-1.4 1.4M5.7 14.3l-1.4 1.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        </svg>
+      )}
+      <span>{theme === "light" ? "Light" : "Dark"}</span>
+    </button>
+  );
+}
+
 export default function SurveyPlan() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const surveyUser = getSurveyAuthSession()?.user;
+  const surveyUserInitials = initialsForUser(surveyUser?.full_name, surveyUser?.email);
+  const [theme, setTheme] = useState<WorkspaceTheme>(getWorkspaceTheme);
+  useEffect(() => applyWorkspaceTheme(theme), [theme]);
+  useEffect(() => subscribeWorkspaceTheme(setTheme), []);
   const estateWorkspaceLoadedRef = useRef<string | null>(null);
   // This session was opened for one specific Estate-assigned plot (via ?estate_survey_plot=...),
   // never removed from the URL for the life of the session - so it doubles as "are we in Estate
@@ -4933,10 +4982,15 @@ export default function SurveyPlan() {
               }
             }}
           >
-            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fillRule="evenodd" d="M10 9a4 4 0 100-8 4 4 0 000 8zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-            </svg>
+            {isSurveyAuthed() ? (
+              <span className="survey-top-bar-avatar" aria-hidden="true">{surveyUserInitials}</span>
+            ) : (
+              <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fillRule="evenodd" d="M10 9a4 4 0 100-8 4 4 0 000 8zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+              </svg>
+            )}
           </button>
+          <SurveyThemeToggle theme={theme} onToggle={() => setTheme((current) => current === "dark" ? "light" : "dark")} />
           {!isEstateLayoutImport && (
             <button type="button" className="geo-top-bar-btn" onClick={handleStartNewPlan}>
               Start new plan
@@ -5028,10 +5082,15 @@ export default function SurveyPlan() {
               }
             }}
           >
-            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fillRule="evenodd" d="M10 9a4 4 0 100-8 4 4 0 000 8zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-            </svg>
+            {isSurveyAuthed() ? (
+              <span className="survey-top-bar-avatar" aria-hidden="true">{surveyUserInitials}</span>
+            ) : (
+              <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fillRule="evenodd" d="M10 9a4 4 0 100-8 4 4 0 000 8zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+              </svg>
+            )}
           </button>
+          <SurveyThemeToggle theme={theme} onToggle={() => setTheme((current) => current === "dark" ? "light" : "dark")} />
           {!isEstateSurveySession && (
             <button type="button" className="survey-top-bar-btn" onClick={handleStartNewPlan}>
               New plan
