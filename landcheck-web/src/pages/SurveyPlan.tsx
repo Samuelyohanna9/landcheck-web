@@ -5217,7 +5217,7 @@ export default function SurveyPlan() {
               <button type="button" className="draft-banner-btn draft-banner-btn--ghost" onClick={() => setShowDraftRecoveryBanner(false)}>
                 Dismiss
               </button>
-              <button type="button" className="draft-banner-btn draft-banner-btn--primary" onClick={handleStartNewPlan}>
+              <button type="button" className="geo-btn geo-btn-primary draft-banner-btn draft-banner-btn--primary" onClick={handleStartNewPlan}>
                 Start New Plan
               </button>
             </div>

@@ -231,6 +231,17 @@
   box-shadow: 0 16px 28px rgba(193, 122, 63, 0.3);
 }
 
+/* Draft recovery actions use the same primary CTA treatment as the workflow step actions. */
+.survey-sync-banner .draft-banner-btn--primary.geo-btn-primary {
+  box-shadow: none;
+  transform: none;
+}
+
+.survey-sync-banner .draft-banner-btn--primary.geo-btn-primary:hover:not(:disabled) {
+  box-shadow: none;
+  transform: none;
+}
+
 .survey-sync-banner.syncing {
   border-color: rgba(59, 130, 246, 0.35);
   background: rgba(11, 20, 32, 0.88);
@@ -5641,6 +5652,274 @@ select.field-error {
   .survey-subtitle {
     font-size: 0.64rem;
     line-height: 1.28;
+  }
+}
+
+/* Georeference coordinate views stay compact in the workspace. The full-width table is available
+   through the coordinate viewer below, so narrow screens should never be forced into a sideways
+   scroll just to inspect the active feature. */
+.survey-container.is-georeference-flow .georef-feature-table,
+.survey-container.is-georeference-flow .georef-coordinate-table,
+.survey-container.is-georeference-flow .georef-coordinate-mini-table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.survey-container.is-georeference-flow .georef-feature-table-wrap,
+.survey-container.is-georeference-flow .georef-coordinate-table-wrap,
+.survey-container.is-georeference-flow .georef-coordinate-mini-table-wrap {
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.survey-container.is-georeference-flow .georef-feature-table th,
+.survey-container.is-georeference-flow .georef-feature-table td,
+.survey-container.is-georeference-flow .georef-coordinate-table th,
+.survey-container.is-georeference-flow .georef-coordinate-table td,
+.survey-container.is-georeference-flow .georef-coordinate-mini-table th,
+.survey-container.is-georeference-flow .georef-coordinate-mini-table td {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.survey-container.is-georeference-flow .georef-coordinate-mini-table th:first-child,
+.survey-container.is-georeference-flow .georef-coordinate-mini-table td:first-child {
+  width: 18%;
+}
+
+.survey-container.is-georeference-flow .georef-coordinate-mini-table th:not(:first-child),
+.survey-container.is-georeference-flow .georef-coordinate-mini-table td:not(:first-child) {
+  width: 41%;
+}
+
+.geo-table-view-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  margin-top: 0.55rem;
+  padding: 0.45rem 0.78rem;
+  border: 1px solid var(--geo-border-strong, #cbd5e1);
+  border-radius: 9px;
+  background: var(--geo-surface-2, #16283a);
+  color: var(--geo-text-primary, #f8fafc);
+  font-size: 0.75rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.geo-table-view-btn:hover,
+.geo-table-view-btn:focus-visible {
+  border-color: var(--geo-accent, #25c77a);
+  background: var(--geo-surface-3, #18372d);
+  color: var(--geo-accent-strong, #8ff0bb);
+  outline: none;
+}
+
+.georef-image-stage-viewport {
+  touch-action: none;
+  overscroll-behavior: contain;
+}
+
+.georef-image-stage {
+  user-select: none;
+}
+
+.geo-canvas-toolbar {
+  max-width: calc(100% - 1.5rem);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.geo-canvas-toolbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Full-screen coordinate viewer. It intentionally owns its table overflow, so the underlying GIS
+   workspace never grows wider and every coordinate remains reachable on small displays. */
+.georef-coordinate-table-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: clamp(0.75rem, 3vw, 2.25rem);
+  background: rgba(2, 8, 15, 0.68);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.georef-coordinate-table-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(1180px, 100%);
+  max-height: min(88vh, 820px);
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  border-radius: 20px;
+  background: #0f1b28;
+  color: #f8fafc;
+  box-shadow: 0 28px 80px rgba(2, 6, 23, 0.48);
+}
+
+.georef-coordinate-table-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+}
+
+.georef-coordinate-table-modal-kicker {
+  display: block;
+  margin-bottom: 0.3rem;
+  color: #5eead4;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.georef-coordinate-table-modal-header h2 {
+  margin: 0;
+  color: inherit;
+  font-size: clamp(1rem, 2vw, 1.35rem);
+}
+
+.georef-coordinate-table-modal-header p {
+  margin: 0.35rem 0 0;
+  color: #b7c5d4;
+  font-size: 0.82rem;
+}
+
+.georef-coordinate-table-modal-close {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.44);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.georef-coordinate-table-modal-close:hover,
+.georef-coordinate-table-modal-close:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+  outline: none;
+}
+
+.georef-coordinate-table-modal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem clamp(1rem, 3vw, 1.5rem);
+  color: #b7c5d4;
+  font-size: 0.75rem;
+}
+
+.georef-coordinate-table-modal-meta span {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 999px;
+}
+
+.georef-coordinate-table-modal-table-wrap {
+  min-height: 0;
+  overflow: auto;
+  margin: 0 clamp(1rem, 3vw, 1.5rem);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 12px;
+}
+
+.georef-coordinate-table-modal-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-variant-numeric: tabular-nums;
+}
+
+.georef-coordinate-table-modal-table th,
+.georef-coordinate-table-modal-table td {
+  padding: 0.72rem 0.8rem;
+  text-align: left;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.georef-coordinate-table-modal-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #172536;
+  color: #cbd5e1;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.georef-coordinate-table-modal-table td {
+  color: #f8fafc;
+  font-size: 0.8rem;
+}
+
+.georef-coordinate-table-modal-table tbody tr:hover {
+  background: rgba(37, 199, 122, 0.1);
+}
+
+.georef-coordinate-table-modal-empty {
+  padding: 2rem 1rem;
+  color: #b7c5d4;
+  text-align: center;
+}
+
+.georef-coordinate-table-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 1rem clamp(1rem, 3vw, 1.5rem);
+}
+
+@media (max-width: 640px) {
+  .survey-container.is-georeference-flow .georef-feature-table th,
+  .survey-container.is-georeference-flow .georef-feature-table td,
+  .survey-container.is-georeference-flow .georef-coordinate-table th,
+  .survey-container.is-georeference-flow .georef-coordinate-table td,
+  .survey-container.is-georeference-flow .georef-coordinate-mini-table th,
+  .survey-container.is-georeference-flow .georef-coordinate-mini-table td {
+    padding: 0.48rem 0.42rem;
+    font-size: 0.68rem;
+  }
+
+  .georef-coordinate-table-modal-backdrop {
+    padding: 0;
+  }
+
+  .georef-coordinate-table-modal {
+    width: 100%;
+    max-height: 100%;
+    min-height: 100%;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .georef-coordinate-table-modal-table-wrap {
+    flex: 1;
+    margin-inline: 0.75rem;
+  }
+
+  .georef-coordinate-table-modal-table {
+    min-width: 640px;
   }
 }
 

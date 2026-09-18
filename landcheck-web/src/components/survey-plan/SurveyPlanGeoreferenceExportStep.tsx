@@ -1,6 +1,7 @@
-import { memo, type ReactNode } from "react";
+import { memo, useState, type ReactNode } from "react";
 import type { GeoreferenceFeature, GeoreferenceSession } from "../../types/surveyGeoreference";
 import { getCoordinateSystemLabel } from "../../utils/coordinateConverter";
+import GeoreferenceCoordinateTableModal, { type CoordinateTableRow } from "./GeoreferenceCoordinateTableModal";
 
 type StakingPreviewRow = {
   station: string;
@@ -49,6 +50,7 @@ function SurveyPlanGeoreferenceExportStep({
   onDownloadCsv,
   onContinueToSurvey,
 }: Props) {
+  const [coordinateTableOpen, setCoordinateTableOpen] = useState(false);
   const polygonCount = features.filter((feature) => feature.feature_type === "polygon").length;
   const pointCount = features.filter((feature) => feature.feature_type === "point").length;
   const lineCount = features.filter((feature) => feature.feature_type === "line").length;
@@ -95,6 +97,17 @@ function SurveyPlanGeoreferenceExportStep({
 
   const savedFeatureCount = polygonCount + lineCount + pointCount;
   const hasExportableFeature = savedFeatureCount > 0;
+  const coordinateTableRows: CoordinateTableRow[] = stakingPreviewRows.map((row) => ({
+    id: `${row.station}-${row.feature}`,
+    cells: [
+      row.station,
+      row.feature,
+      formatCoordinateValue(row.easting, 4),
+      formatCoordinateValue(row.northing, 4),
+      formatCoordinateValue(row.longitude, 6),
+      formatCoordinateValue(row.latitude, 6),
+    ],
+  }));
 
   return (
     <div className="step-panel georef-step-panel georef-workspace-redesign export-panel">
@@ -209,6 +222,11 @@ function SurveyPlanGeoreferenceExportStep({
           <div className="geo-panel-heading">
             <h2>DGPS sheet preview</h2>
             <p>Preview the first exported rows before download.</p>
+            {stakingPreviewRows.length ? (
+              <button type="button" className="geo-table-view-btn" onClick={() => setCoordinateTableOpen(true)}>
+                View full coordinate table
+              </button>
+            ) : null}
           </div>
           <div className="geo-canvas-wrap geo-canvas-wrap--scroll">
             {stakingPreviewRows.length ? (
@@ -262,6 +280,22 @@ function SurveyPlanGeoreferenceExportStep({
           </div>
         </section>
       </div>
+
+      <GeoreferenceCoordinateTableModal
+        isOpen={coordinateTableOpen}
+        onClose={() => setCoordinateTableOpen(false)}
+        title="DGPS coordinate table"
+        subtitle={`${stakingPreviewRows.length} export row${stakingPreviewRows.length === 1 ? "" : "s"} in ${readyCoordinateSystem}.`}
+        columns={[
+          { key: "station", label: "Station" },
+          { key: "feature", label: "Feature" },
+          { key: "easting", label: "Easting" },
+          { key: "northing", label: "Northing" },
+          { key: "longitude", label: "Longitude" },
+          { key: "latitude", label: "Latitude" },
+        ]}
+        rows={coordinateTableRows}
+      />
     </div>
   );
 }

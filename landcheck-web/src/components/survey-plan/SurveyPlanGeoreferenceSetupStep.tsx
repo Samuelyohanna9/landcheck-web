@@ -6,6 +6,7 @@ import { useFloatingCardAtPoint } from "../../utils/useFloatingPopoverPosition";
 import { useFullscreenToggle } from "../../utils/useFullscreenToggle";
 import SurveyLoadingAnimation from "../SurveyLoadingAnimation";
 import CoordinateSystemSelect from "../CoordinateSystemSelect";
+import GeoreferenceCoordinateTableModal, { type CoordinateTableRow } from "./GeoreferenceCoordinateTableModal";
 import type { GeoreferenceSession, GeoreferenceTransform } from "../../types/surveyGeoreference";
 import {
   COUNTRY_MAP_VIEW,
@@ -90,7 +91,7 @@ function SurveyPlanGeoreferenceSetupStep({
   const mapControlMarkerRefs = useRef<any[]>([]);
   const lastCountryRef = useRef<string | null>(null);
   const pendingRasterRef = useRef<string | null>(null);
-  const dragStateRef = useRef<{ startX: number; startY: number; panX: number; panY: number; moved: boolean } | null>(null);
+  const dragStateRef = useRef<{ pointerId: number; startX: number; startY: number; panX: number; panY: number; moved: boolean } | null>(null);
   const suppressNextImageClickRef = useRef(false);
   const controlPointRefs = useRef<Record<string, HTMLElement | null>>({});
   const editFirstFieldRef = useRef<HTMLInputElement | null>(null);
@@ -141,6 +142,7 @@ function SurveyPlanGeoreferenceSetupStep({
   const [imageZoom, setImageZoom] = useState(MIN_STAGE_ZOOM);
   const [imagePan, setImagePan] = useState({ x: 0, y: 0 });
   const [draggingStage, setDraggingStage] = useState(false);
+  const [coordinateTableOpen, setCoordinateTableOpen] = useState(false);
   const [cursorSample, setCursorSample] = useState<{
     pixelX: number;
     pixelY: number;
@@ -794,8 +796,8 @@ function SurveyPlanGeoreferenceSetupStep({
   }, [mapReady, overlayRasterUrl, session?.overlay?.corners, session?.id]);
 
   useEffect(() => {
-    const handlePointerMove = (event: MouseEvent) => {
-      if (!dragStateRef.current || imageZoom <= MIN_STAGE_ZOOM) return;
+    const handlePointerMove = (event: PointerEvent) => {
+      if (!dragStateRef.current || dragStateRef.current.pointerId !== event.pointerId || imageZoom <= MIN_STAGE_ZOOM) return;
       const deltaX = event.clientX - dragStateRef.current.startX;
       const deltaY = event.clientY - dragStateRef.current.startY;
       if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
@@ -806,8 +808,8 @@ function SurveyPlanGeoreferenceSetupStep({
       setImagePan(clampStagePan({ x: dragStateRef.current.panX + deltaX, y: dragStateRef.current.panY + deltaY }));
     };
 
-    const handlePointerUp = () => {
-      if (!dragStateRef.current) return;
+    const handlePointerUp = (event: PointerEvent) => {
+      if (!dragStateRef.current || dragStateRef.current.pointerId !== event.pointerId) return;
       dragStateRef.current = null;
       setDraggingStage(false);
       window.setTimeout(() => {
@@ -815,18 +817,22 @@ function SurveyPlanGeoreferenceSetupStep({
       }, 0);
     };
 
-    window.addEventListener("mousemove", handlePointerMove);
-    window.addEventListener("mouseup", handlePointerUp);
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerUp);
     return () => {
-      window.removeEventListener("mousemove", handlePointerMove);
-      window.removeEventListener("mouseup", handlePointerUp);
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerUp);
     };
   }, [clampStagePan, imageZoom]);
 
-  const handleStageMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+  const handleStagePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0 || imageZoom <= MIN_STAGE_ZOOM) return;
     event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
     dragStateRef.current = {
+      pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
       panX: imagePan.x,
@@ -841,7 +847,7 @@ function SurveyPlanGeoreferenceSetupStep({
     updateStageZoomAtClientPoint(imageZoom + direction, event.clientX, event.clientY);
   };
 
-  const handleStagePointerMove = (event: React.MouseEvent<HTMLDivElement>) => {
+  const handleStagePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     const liveMetrics =
       getRasterStageMetrics(
         imageStageRef.current,
@@ -922,6 +928,18 @@ function SurveyPlanGeoreferenceSetupStep({
         top: stagePosition ? `${stagePosition.topPercent}%` : "0%",
       };
     });
+
+  const coordinateTableRows: CoordinateTableRow[] = controlPoints.map((point) => ({
+    id: point.id,
+    cells: [
+      point.label || "Control point",
+      formatGroundValue(Number(point.ground_x)),
+      formatGroundValue(Number(point.ground_y)),
+      formatPixelValue(Number(point.image_x)),
+      formatPixelValue(Number(point.image_y)),
+      pointIsReady(point) ? "Ready" : "Needs input",
+    ],
+  }));
 
   return (
     <div className="step-panel georef-step-panel georef-workspace-redesign">
@@ -1220,6 +1238,11 @@ function SurveyPlanGeoreferenceSetupStep({
                   );
                 })}
                   </div>
+                  {controlPoints.length > 0 ? (
+                    <button type="button" className="geo-table-view-btn" onClick={() => setCoordinateTableOpen(true)}>
+                      View coordinate table
+                    </button>
+                  ) : null}
                   {placementStage === "awaiting-raster" ? (
                     <div className="georef-placement-status">
                       <p className="geo-section-hint">Click the point on the survey plan.</p>
@@ -1349,9 +1372,9 @@ function SurveyPlanGeoreferenceSetupStep({
                 className={`georef-image-stage georef-image-stage--zoomable${imageZoom > MIN_STAGE_ZOOM ? " is-zoomed" : ""}${draggingStage ? " is-dragging" : ""}`}
                 ref={imageStageRef}
                 onClick={handleRasterClick}
-                onMouseDown={handleStageMouseDown}
-                onMouseMove={handleStagePointerMove}
-                onMouseLeave={() => setCursorSample(null)}
+                onPointerDown={handleStagePointerDown}
+                onPointerMove={handleStagePointerMove}
+                onPointerLeave={() => setCursorSample(null)}
                 style={{ transform: `translate(${imagePan.x}px, ${imagePan.y}px) scale(${imageZoom})` }}
               >
                 {rasterObjectUrl ? (
@@ -1549,6 +1572,21 @@ function SurveyPlanGeoreferenceSetupStep({
             document.body,
           )
         : null}
+      <GeoreferenceCoordinateTableModal
+        isOpen={coordinateTableOpen}
+        onClose={() => setCoordinateTableOpen(false)}
+        title="Control point coordinates"
+        subtitle={`${controlPoints.length} ground control point${controlPoints.length === 1 ? "" : "s"} in ${effectiveCoordinateLabel}.`}
+        columns={[
+          { key: "point", label: "Point" },
+          { key: "x", label: coordinateXLabel },
+          { key: "y", label: coordinateYLabel },
+          { key: "pixel-x", label: "Pixel X" },
+          { key: "pixel-y", label: "Pixel Y" },
+          { key: "status", label: "Status" },
+        ]}
+        rows={coordinateTableRows}
+      />
     </div>
   );
 }
