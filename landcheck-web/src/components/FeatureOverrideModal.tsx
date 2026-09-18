@@ -980,6 +980,7 @@ export default function FeatureOverrideModal({
   const drawRef = useRef<any>(null);
   const mapboxglRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const editorCardRef = useRef<HTMLDivElement>(null);
   const plottingStageRef = useRef<HTMLDivElement>(null);
   const activeDrawFeatureId = useRef<string | null>(null);
   const plottingPanRef = useRef<{ active: boolean; lastX: number; lastY: number; moved: boolean }>({
@@ -1078,6 +1079,72 @@ export default function FeatureOverrideModal({
   const [showRightSidebar, setShowRightSidebar] = useState(true);
   const [showEditorHelp, setShowEditorHelp] = useState(false);
   const [showTraversePanel, setShowTraversePanel] = useState(false);
+  const [isMobilePortrait, setIsMobilePortrait] = useState(false);
+  const [showMobileOrientationPrompt, setShowMobileOrientationPrompt] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsMobilePortrait(false);
+      setShowMobileOrientationPrompt(false);
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(max-width: 760px) and (orientation: portrait)");
+    const syncViewport = () => setIsMobilePortrait(mediaQuery.matches);
+    syncViewport();
+    mediaQuery.addEventListener?.("change", syncViewport);
+    window.addEventListener("resize", syncViewport);
+
+    return () => {
+      mediaQuery.removeEventListener?.("change", syncViewport);
+      window.removeEventListener("resize", syncViewport);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && isMobilePortrait) {
+      setShowMobileOrientationPrompt(true);
+    } else if (!isMobilePortrait) {
+      setShowMobileOrientationPrompt(false);
+    }
+  }, [isOpen, isMobilePortrait]);
+
+  const releaseMobileOrientation = () => {
+    try {
+      const orientation = window.screen.orientation as unknown as { unlock?: () => void };
+      orientation.unlock?.();
+      if (document.fullscreenElement === editorCardRef.current) {
+        void document.exitFullscreen?.();
+      }
+    } catch {
+      // Fullscreen and orientation APIs are optional on mobile browsers.
+    }
+  };
+
+  const requestMobileLandscape = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await editorCardRef.current?.requestFullscreen?.();
+      }
+    } catch {
+      // Fullscreen may be unavailable even when orientation locking is supported.
+    }
+    try {
+      const orientation = window.screen.orientation as unknown as {
+        lock?: (value: "landscape") => Promise<void>;
+      };
+      await orientation.lock?.("landscape");
+    } catch {
+      // The browser may require an installed PWA or may not support orientation locking.
+    } finally {
+      setShowMobileOrientationPrompt(false);
+    }
+  };
+
+  const handleEditorClose = () => {
+    releaseMobileOrientation();
+    onClose();
+  };
   // Committed-feature undo/redo (separate from undoLastVertex, which only pops a point while
   // actively mid-drawing). Snapshot-based rather than a command-pattern action list - the
   // featureCollections shape is already the single source of truth for committed features, so a
@@ -2666,6 +2733,10 @@ export default function FeatureOverrideModal({
 
   const handlePlottingFeatureSelect = useCallback(
     (nextFeatureType: FeatureType, feature: any, descriptor?: Partial<FeatureRecord>) => {
+      if (plottingPanRef.current.moved) {
+        plottingPanRef.current.moved = false;
+        return;
+      }
       importGeometryIntoEditor(feature?.geometry, nextFeatureType, feature?.properties || {}, descriptor);
       setActiveTool("select");
     },
@@ -2941,44 +3012,124 @@ export default function FeatureOverrideModal({
 
   const handlePlottingTouchStart = useCallback(
     (event: React.TouchEvent<SVGSVGElement>) => {
-      if (basemapMode !== "plotting" || event.touches.length !== 2) return;
-      const { dist, localX, localY } = getPlottingTouchMidpoint(event.currentTarget, event.touches);
-      plottingPanRef.current.active = false;
-      setPlottingPanActive(false);
-      setPlottingCamera((previous) => {
-        plottingPinchRef.current = {
-          dist,
-          zoom: previous.zoom,
-          worldX: (localX - previous.offsetX) / previous.zoom,
-          worldY: (localY - previous.offsetY) / previous.zoom,
+      if (basemapMode !== "plotting") return;
+      if (event.touches.length === 2) {
+        const { dist, localX, localY } = getPlottingTouchMidpoint(event.currentTarget, event.touches);
+        plottingPanRef.current.active = false;
+        setPlottingPanActive(false);
+        setPlottingCamera((previous) => {
+          plottingPinchRef.current = {
+            dist,
+            zoom: previous.zoom,
+            worldX: (localX - previous.offsetX) / previous.zoom,
+            worldY: (localY - previous.offsetY) / previous.zoom,
+          };
+          return previous;
+        });
+        return;
+      }
+      if (event.touches.length !== 1) return;
+
+      const touch = event.touches[0];
+      const mouseLikeEvent = {
+        currentTarget: event.currentTarget,
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        button: 0,
+        preventDefault: () => event.preventDefault(),
+      } as unknown as ReactMouseEvent<SVGSVGElement>;
+      handlePlottingMouseDown(mouseLikeEvent);
+
+      // A single finger pans the plotting sheet in select mode. A tap still falls through to
+      // the normal click handlers, while a moved gesture is ignored by feature selection.
+      if (activeTool === "select" && !selectionMode && boundaryDragRef.current === null && selectedVertexDragRef.current === null) {
+        const pointer = getPlottingPointer(event.currentTarget, touch.clientX, touch.clientY);
+        plottingPanRef.current = {
+          active: true,
+          lastX: pointer.x,
+          lastY: pointer.y,
+          moved: false,
         };
-        return previous;
-      });
+        setPlottingPanActive(false);
+      }
     },
-    [basemapMode, getPlottingTouchMidpoint]
+    [
+      activeTool,
+      basemapMode,
+      getPlottingPointer,
+      getPlottingTouchMidpoint,
+      handlePlottingMouseDown,
+      selectionMode,
+    ]
   );
 
   const handlePlottingTouchMove = useCallback(
     (event: React.TouchEvent<SVGSVGElement>) => {
-      if (basemapMode !== "plotting" || event.touches.length !== 2 || !plottingPinchRef.current) return;
-      const pinch = plottingPinchRef.current;
-      if (pinch.dist <= 0) return;
-      const { dist, localX, localY } = getPlottingTouchMidpoint(event.currentTarget, event.touches);
-      const nextZoom = Math.min(PLOTTING_ZOOM_MAX, Math.max(PLOTTING_ZOOM_MIN, pinch.zoom * (dist / pinch.dist)));
-      setPlottingCamera({
-        zoom: nextZoom,
-        offsetX: localX - pinch.worldX * nextZoom,
-        offsetY: localY - pinch.worldY * nextZoom,
-      });
+      if (basemapMode !== "plotting") return;
+      if (event.touches.length === 2 && plottingPinchRef.current) {
+        const pinch = plottingPinchRef.current;
+        if (pinch.dist <= 0) return;
+        const { dist, localX, localY } = getPlottingTouchMidpoint(event.currentTarget, event.touches);
+        const nextZoom = Math.min(PLOTTING_ZOOM_MAX, Math.max(PLOTTING_ZOOM_MIN, pinch.zoom * (dist / pinch.dist)));
+        event.preventDefault();
+        setPlottingCamera({
+          zoom: nextZoom,
+          offsetX: localX - pinch.worldX * nextZoom,
+          offsetY: localY - pinch.worldY * nextZoom,
+        });
+        return;
+      }
+      if (event.touches.length !== 1) return;
+      if (
+        boundaryDragRef.current === null &&
+        selectedVertexDragRef.current === null &&
+        !plottingPanRef.current.active &&
+        !selectionDrag
+      ) {
+        return;
+      }
+      const touch = event.touches[0];
+      const mouseLikeEvent = {
+        currentTarget: event.currentTarget,
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        preventDefault: () => event.preventDefault(),
+      } as unknown as ReactMouseEvent<SVGSVGElement>;
+      event.preventDefault();
+      handlePlottingMouseMove(mouseLikeEvent);
     },
-    [basemapMode, getPlottingTouchMidpoint]
+    [basemapMode, getPlottingTouchMidpoint, handlePlottingMouseMove, selectionDrag]
   );
 
-  const handlePlottingTouchEnd = useCallback((event: React.TouchEvent<SVGSVGElement>) => {
-    if (event.touches.length < 2) {
+  const handlePlottingTouchEnd = useCallback(
+    (event: React.TouchEvent<SVGSVGElement>) => {
+      if (event.touches.length >= 2) return;
       plottingPinchRef.current = null;
-    }
-  }, []);
+
+      const isDraggingVertex = boundaryDragRef.current !== null || selectedVertexDragRef.current !== null;
+      const isSelectingShape = Boolean(selectionDrag);
+      const moved = plottingPanRef.current.moved;
+      if (isDraggingVertex || isSelectingShape) {
+        plottingPanRef.current.moved = true;
+        const mouseLikeEvent = {
+          currentTarget: event.currentTarget,
+          preventDefault: () => event.preventDefault(),
+        } as unknown as ReactMouseEvent<SVGSVGElement>;
+        handlePlottingMouseUp(mouseLikeEvent);
+        return;
+      }
+
+      if (plottingPanRef.current.active) {
+        plottingPanRef.current.active = false;
+        setPlottingPanActive(false);
+      }
+      if (moved) {
+        // Leave this flag for the follow-up synthetic click so it cannot select a feature after a pan.
+        plottingPanRef.current.moved = true;
+      }
+    },
+    [handlePlottingMouseUp, selectionDrag]
+  );
 
   const handlePlottingMouseLeave = useCallback(() => {
     if (boundaryDragRef.current !== null) {
@@ -3655,7 +3806,7 @@ export default function FeatureOverrideModal({
             <CadIcon name="inspector" />
           </button>
           <span className="cad-toolbar-divider" />
-          <button type="button" className="cad-icon-btn cad-icon-btn--close" title="Close editor" onClick={onClose}>
+          <button type="button" className="cad-icon-btn cad-icon-btn--close" title="Close editor" onClick={handleEditorClose}>
             <CadIcon name="close" />
           </button>
         </div>
@@ -3869,7 +4020,10 @@ export default function FeatureOverrideModal({
 
   function renderInspector() {
     return (
-      <aside className="cad-editor-inspector" style={{ display: showRightSidebar ? "flex" : "none" }}>
+      <aside
+        className={`cad-editor-inspector cad-editor-inspector--${inspectorMode}`}
+        style={{ display: showRightSidebar ? "flex" : "none" }}
+      >
         <div className="cad-panel-head cad-inspector-head">
           <strong>
             {inspectorMode === "draw"
@@ -4310,7 +4464,7 @@ export default function FeatureOverrideModal({
 
   return (
     <div className="feature-override-modal">
-      <div className="feature-override-card cad-editor-card">
+      <div ref={editorCardRef} className="feature-override-card cad-editor-card">
         {renderAppBar()}
 
         <div className="cad-editor-body">
@@ -4927,6 +5081,26 @@ export default function FeatureOverrideModal({
 
         {renderStatusBar()}
       </div>
+
+      {showMobileOrientationPrompt && (
+        <div className="cad-mobile-orientation-overlay" role="dialog" aria-modal="true" aria-labelledby="cad-mobile-orientation-title">
+          <div className="cad-mobile-orientation-dialog">
+            <div className="cad-mobile-orientation-glyph" aria-hidden="true" />
+            <span className="cad-mobile-orientation-kicker">Mobile editing</span>
+            <h2 id="cad-mobile-orientation-title">Turn your phone sideways</h2>
+            <p>
+              Landscape gives you more room to select features, draw vertices, and review the editing panel. We will request
+              landscape mode when your browser supports it.
+            </p>
+            <button type="button" className="cad-mobile-orientation-primary" onClick={requestMobileLandscape}>
+              Rotate phone &amp; continue
+            </button>
+            <button type="button" className="cad-mobile-orientation-secondary" onClick={() => setShowMobileOrientationPrompt(false)}>
+              Continue in portrait
+            </button>
+          </div>
+        </div>
+      )}
 
       {showEditorHelp && (
         <div className="cad-confirm-overlay cad-help-overlay" role="dialog" aria-modal="true" onClick={() => setShowEditorHelp(false)}>
