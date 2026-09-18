@@ -1294,3 +1294,244 @@
     transition: none;
   }
 }
+
+/* CSV import preview: replace the modal's legacy ink surfaces with the same crisp light
+   treatment used by the rest of the Survey workspace. */
+:root[data-workspace-theme="light"] .csv-modal-overlay {
+  background: rgba(15, 23, 42, 0.3);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+:root[data-workspace-theme="light"] .csv-modal {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.2), 0 4px 14px rgba(15, 23, 42, 0.08);
+}
+
+:root[data-workspace-theme="light"] .csv-modal-header,
+:root[data-workspace-theme="light"] .csv-modal-footer {
+  border-color: #e2e8f0;
+  background: #ffffff;
+}
+
+:root[data-workspace-theme="light"] .csv-modal-header h3 {
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .csv-modal-close {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+}
+
+:root[data-workspace-theme="light"] .csv-modal-close:hover,
+:root[data-workspace-theme="light"] .csv-modal-close:focus-visible {
+  border-color: #94a3b8;
+  background: #f8fafc;
+  color: #0f172a;
+  outline: none;
+}
+
+:root[data-workspace-theme="light"] .csv-modal-body {
+  background: #ffffff;
+}
+
+:root[data-workspace-theme="light"] .column-mapping {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+:root[data-workspace-theme="light"] .csv-coord-system-row {
+  border-color: #10b981;
+  background: #ecfdf5;
+}
+
+:root[data-workspace-theme="light"] .csv-coord-system-label span,
+:root[data-workspace-theme="light"] .mapping-row label,
+:root[data-workspace-theme="light"] .mapping-select label {
+  color: #475569;
+}
+
+:root[data-workspace-theme="light"] .csv-coord-system-label em {
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .mapping-row label {
+  color: #334155;
+}
+
+:root[data-workspace-theme="light"] .mapping-select label .required {
+  color: #b91c1c;
+}
+
+:root[data-workspace-theme="light"] .mapping-select select {
+  color-scheme: light;
+  border-color: #cbd5e1;
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%2364758b' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5.5 7.5 10 12l4.5-4.5'/%3E%3C/svg%3E");
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .mapping-select select:hover {
+  border-color: #94a3b8;
+  background-color: #f8fafc;
+}
+
+:root[data-workspace-theme="light"] .mapping-select select:focus-visible,
+:root[data-workspace-theme="light"] .mapping-select select:focus {
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.14);
+  outline: none;
+}
+
+:root[data-workspace-theme="light"] .mapping-select select.error {
+  border-color: #ef4444;
+}
+
+:root[data-workspace-theme="light"] .mapping-select select option {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .csv-preview-table-wrapper {
+  border-color: #cbd5e1;
+  background: #ffffff;
+}
+
+:root[data-workspace-theme="light"] .csv-preview-table th,
+:root[data-workspace-theme="light"] .csv-preview-table td {
+  border-color: #e2e8f0;
+}
+
+:root[data-workspace-theme="light"] .csv-preview-table th {
+  background: #f8fafc;
+  color: #475569;
+}
+
+:root[data-workspace-theme="light"] .csv-preview-table td {
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .csv-preview-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+:root[data-workspace-theme="light"] .csv-preview-table .row-num,
+:root[data-workspace-theme="light"] .csv-more-rows,
+:root[data-workspace-theme="light"] .csv-boundary-count {
+  color: #64748b;
+}
+
+:root[data-workspace-theme="light"] .csv-preview-table .col-station {
+  background: #faf5ff;
+}
+
+:root[data-workspace-theme="light"] .csv-preview-table .col-easting {
+  background: #eff6ff;
+}
+
+:root[data-workspace-theme="light"] .csv-preview-table .col-northing {
+  background: #ecfdf5;
+}
+
+:root[data-workspace-theme="light"] .csv-preview-table .col-height {
+  background: #fffbeb;
+}
+
+:root[data-workspace-theme="light"] .col-tag.station {
+  color: #5b21b6;
+  background: #ede9fe;
+}
+
+:root[data-workspace-theme="light"] .col-tag.easting {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+:root[data-workspace-theme="light"] .col-tag.northing {
+  color: #047857;
+  background: #d1fae5;
+}
+
+:root[data-workspace-theme="light"] .col-tag.height,
+:root[data-workspace-theme="light"] .height-badge {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+:root[data-workspace-theme="light"] .csv-info {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1e40af;
+}
+
+:root[data-workspace-theme="light"] .csv-info.height-info {
+  border-color: #fbbf24;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+:root[data-workspace-theme="light"] .csv-error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+:root[data-workspace-theme="light"] .csv-boundary-intro {
+  color: #475569;
+}
+
+:root[data-workspace-theme="light"] .csv-boundary-actions {
+  border-bottom-color: #cbd5e1;
+}
+
+:root[data-workspace-theme="light"] .csv-boundary-action-btn {
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .csv-boundary-action-btn:hover {
+  border-color: #6ee7b7;
+  background: #d1fae5;
+}
+
+:root[data-workspace-theme="light"] .csv-preview-table tbody tr.spot-only-row {
+  background: #eff6ff;
+}
+
+:root[data-workspace-theme="light"] .csv-preview-table tbody tr.spot-only-row:hover {
+  background: #dbeafe;
+}
+
+:root[data-workspace-theme="light"] .csv-modal-footer {
+  box-shadow: 0 -8px 18px rgba(15, 23, 42, 0.04);
+}
+
+:root[data-workspace-theme="light"] .csv-btn-cancel {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+}
+
+:root[data-workspace-theme="light"] .csv-btn-cancel:hover,
+:root[data-workspace-theme="light"] .csv-btn-cancel:focus-visible {
+  border-color: #94a3b8;
+  background: #f8fafc;
+  color: #0f172a;
+  outline: none;
+}
+
+:root[data-workspace-theme="light"] .csv-btn-confirm {
+  background: #059669;
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(5, 150, 105, 0.22);
+}
+
+:root[data-workspace-theme="light"] .csv-btn-confirm:hover:not(:disabled),
+:root[data-workspace-theme="light"] .csv-btn-confirm:focus-visible:not(:disabled) {
+  background: #047857;
+  outline: none;
+}
