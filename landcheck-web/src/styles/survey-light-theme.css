@@ -1535,3 +1535,79 @@
   background: #047857;
   outline: none;
 }
+
+/* These three picker menus are portaled to document.body, so they need theme rules that are not
+   scoped through .survey-container. Keep the selected row blue and the hover row mint, matching
+   the native workflow selects. */
+:root[data-workspace-theme="light"] .beacon-style-popover,
+:root[data-workspace-theme="light"] .north-arrow-style-popover,
+:root[data-workspace-theme="light"] .hatch-pattern-popover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 16px 34px rgba(16, 24, 39, 0.16), 0 2px 8px rgba(16, 24, 39, 0.08);
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .beacon-style-option,
+:root[data-workspace-theme="light"] .north-arrow-style-option,
+:root[data-workspace-theme="light"] .hatch-pattern-option {
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .beacon-style-option:hover,
+:root[data-workspace-theme="light"] .north-arrow-style-option:hover,
+:root[data-workspace-theme="light"] .hatch-pattern-option:hover {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+:root[data-workspace-theme="light"] .beacon-style-option.active,
+:root[data-workspace-theme="light"] .north-arrow-style-option.active,
+:root[data-workspace-theme="light"] .hatch-pattern-option.active {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+:root[data-workspace-theme="light"] .beacon-style-option.active .beacon-swatch circle,
+:root[data-workspace-theme="light"] .beacon-style-option.active .beacon-swatch rect,
+:root[data-workspace-theme="light"] .beacon-style-option.active .beacon-swatch polygon,
+:root[data-workspace-theme="light"] .beacon-style-option.active .beacon-swatch line,
+:root[data-workspace-theme="light"] .north-arrow-style-option.active .north-arrow-swatch-stroke,
+:root[data-workspace-theme="light"] .north-arrow-style-option.active .north-arrow-swatch-fill,
+:root[data-workspace-theme="light"] .north-arrow-style-option.active .north-arrow-swatch-fill-alt,
+:root[data-workspace-theme="light"] .hatch-pattern-option.active .hatch-swatch-lines line,
+:root[data-workspace-theme="light"] .hatch-pattern-option.active .hatch-swatch-solid {
+  stroke: #ffffff;
+}
+
+:root[data-workspace-theme="light"] .north-arrow-style-option.active .north-arrow-swatch-fill,
+:root[data-workspace-theme="light"] .north-arrow-style-option.active .north-arrow-swatch-fill-alt,
+:root[data-workspace-theme="light"] .hatch-pattern-option.active .hatch-swatch-lines line,
+:root[data-workspace-theme="light"] .hatch-pattern-option.active .hatch-swatch-solid {
+  fill: #ffffff;
+}
+
+/* Text Styles labels use a legacy parchment color that becomes nearly white on the light panel. */
+:root[data-workspace-theme="light"] .survey-container .appearance-text-header span:nth-child(2),
+:root[data-workspace-theme="light"] .survey-container .appearance-text-header span:nth-child(3) {
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container .appearance-text-row-label {
+  color: #334155;
+  font-weight: 600;
+}
+
+:root[data-workspace-theme="light"] .survey-container .appearance-text-row .ribbon-select {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .appearance-text-row .ribbon-select:hover,
+:root[data-workspace-theme="light"] .survey-container .appearance-text-row .ribbon-select:focus {
+  border-color: #059669;
+  background: #f8fafc;
+  color: #0f172a;
+  outline: none;
+}
