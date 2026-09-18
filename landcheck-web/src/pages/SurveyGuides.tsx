@@ -231,7 +231,7 @@ export default function SurveyGuides() {
           </section>
 
           <div className="survey-guides-notice">
-            <strong>Important:</strong> LandCheck assists with drafting, mapping, and screening. Confirm coordinates, boundaries, approvals, and professional conclusions before relying on any output for a transaction, construction, or regulatory submission.
+            <strong>Important:</strong> LandCheck assists with drafting, mapping, and screening. Please confirm the accuracy of your coordinatesbefore relying on any output.
           </div>
 
           {guideSections.map((section) => (

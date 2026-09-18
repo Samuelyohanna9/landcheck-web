@@ -4959,7 +4959,13 @@ export default function SurveyPlan() {
             : "Not saved yet"}
         </span>
         <div className="geo-top-bar-actions">
-          <button type="button" className="geo-top-bar-icon-btn" title="Help" aria-label="Help">
+          <button
+            type="button"
+            className="geo-top-bar-icon-btn"
+            title="Documentation & Guides"
+            aria-label="Open Documentation & Guides"
+            onClick={() => navigate("/survey/guides")}
+          >
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
               <circle cx="10" cy="10" r="7.25" />
               <path d="M7.8 7.8a2.2 2.2 0 114 1.2c0 1.4-2 1.6-2 3" strokeLinecap="round" />
@@ -5057,7 +5063,13 @@ export default function SurveyPlan() {
           {surveyLastSavedAt ? `Saved ${surveyLastSavedAt.toLocaleTimeString(undefined, { hour12: false })}` : "Unsaved"}
         </span>
         <div className="survey-top-bar-actions">
-          <button type="button" className="survey-top-bar-icon-btn" title="Help" aria-label="Help">
+          <button
+            type="button"
+            className="survey-top-bar-icon-btn"
+            title="Documentation & Guides"
+            aria-label="Open Documentation & Guides"
+            onClick={() => navigate("/survey/guides")}
+          >
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
               <circle cx="10" cy="10" r="7.25" />
               <path d="M7.8 7.8a2.2 2.2 0 114 1.2c0 1.4-2 1.6-2 3" strokeLinecap="round" />
