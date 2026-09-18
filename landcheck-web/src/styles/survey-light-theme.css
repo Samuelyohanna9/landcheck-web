@@ -34,6 +34,16 @@
   color: #059669;
 }
 
+:root[data-workspace-theme="light"] .survey-container .survey-top-bar-brand-logo,
+:root[data-workspace-theme="light"] .survey-container .geo-top-bar-brand-logo {
+  background: #0f6e44;
+}
+
+:root[data-workspace-theme="light"] .survey-container .survey-top-bar-brand-tag,
+:root[data-workspace-theme="light"] .survey-container .geo-top-bar-brand-tag {
+  color: #0f6e44;
+}
+
 :root[data-workspace-theme="light"] .survey-container .survey-top-bar-saved,
 :root[data-workspace-theme="light"] .survey-container .geo-top-bar-saved {
   color: #64748b;

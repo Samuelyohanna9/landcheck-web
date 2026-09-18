@@ -11,8 +11,8 @@ const applyThemeColor = (theme: WorkspaceTheme) => {
 };
 
 export const getWorkspaceTheme = (): WorkspaceTheme => {
-  if (typeof window === "undefined") return "dark";
-  return window.localStorage.getItem(WORKSPACE_THEME_STORAGE_KEY) === "light" ? "light" : "dark";
+  if (typeof window === "undefined") return "light";
+  return window.localStorage.getItem(WORKSPACE_THEME_STORAGE_KEY) === "dark" ? "dark" : "light";
 };
 
 export const applyWorkspaceTheme = (theme: WorkspaceTheme) => {

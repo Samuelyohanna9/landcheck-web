@@ -4948,12 +4948,10 @@ export default function SurveyPlan() {
     <>
       <header className="geo-top-bar">
         <div className="geo-top-bar-brand">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <circle cx="10" cy="10" r="7" />
-            <path d="M10 3v2M10 15v2M3 10h2M15 10h2" />
-            <circle cx="10" cy="10" r="1.6" fill="currentColor" stroke="none" />
-          </svg>
-          <span>{isEstateLayoutImport ? "LandCheck Estates" : "LandCheck Survey"}</span>
+          <span className="geo-top-bar-brand-logo" aria-hidden="true">
+            <img src="/logo.svg" alt="" />
+          </span>
+          <span className="geo-top-bar-brand-tag">SURVEY</span>
         </div>
         <span className="geo-top-bar-saved">
           {georefLastSavedAt
@@ -5050,12 +5048,10 @@ export default function SurveyPlan() {
     <>
       <header className="survey-top-bar">
         <div className="survey-top-bar-brand">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <circle cx="10" cy="10" r="7" />
-            <path d="M10 3v2M10 15v2M3 10h2M15 10h2" />
-            <circle cx="10" cy="10" r="1.6" fill="currentColor" stroke="none" />
-          </svg>
-          <span>{workflowMode === "subdivision" ? "LandCheck Subdivision" : "LandCheck Survey"}</span>
+          <span className="survey-top-bar-brand-logo" aria-hidden="true">
+            <img src="/logo.svg" alt="" />
+          </span>
+          <span className="survey-top-bar-brand-tag">SURVEY</span>
         </div>
         <span className="survey-top-bar-saved">
           {surveyLastSavedAt ? `Saved ${surveyLastSavedAt.toLocaleTimeString(undefined, { hour12: false })}` : "Unsaved"}

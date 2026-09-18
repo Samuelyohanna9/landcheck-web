@@ -7045,16 +7045,33 @@ select.field-error {
 .geo-top-bar-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   color: var(--survey-text-primary, #f5efe2);
   font-size: 0.95rem;
   font-weight: 700;
 }
 
-.geo-top-bar-brand svg {
-  width: 20px;
-  height: 20px;
-  color: var(--survey-copper-500, #20a866);
+.geo-top-bar-brand-logo {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: #0f6e44;
+}
+
+.geo-top-bar-brand-logo img {
+  display: block;
+  width: auto;
+  height: 22px;
+}
+
+.geo-top-bar-brand-tag {
+  color: #6ee7b7;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .geo-top-bar-saved {
@@ -7197,6 +7214,19 @@ button.geo-h-step:focus-visible {
 }
 
 @media (max-width: 640px) {
+  .geo-top-bar-brand-logo {
+    padding: 6px 10px;
+    border-radius: 9px;
+  }
+
+  .geo-top-bar-brand-logo img {
+    height: 18px;
+  }
+
+  .geo-top-bar-brand-tag {
+    font-size: 0.64rem;
+  }
+
   .geo-top-bar-saved {
     display: none;
   }
@@ -7232,16 +7262,33 @@ button.geo-h-step:focus-visible {
 .survey-top-bar-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   color: var(--survey-gis-text-primary);
   font-size: 0.95rem;
   font-weight: 700;
 }
 
-.survey-top-bar-brand svg {
-  width: 20px;
-  height: 20px;
-  color: var(--survey-gis-primary);
+.survey-top-bar-brand-logo {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: #0f6e44;
+}
+
+.survey-top-bar-brand-logo img {
+  display: block;
+  width: auto;
+  height: 22px;
+}
+
+.survey-top-bar-brand-tag {
+  color: #6ee7b7;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .survey-top-bar-saved {
@@ -7366,6 +7413,19 @@ button.geo-h-step:focus-visible {
 }
 
 @media (max-width: 640px) {
+  .survey-top-bar-brand-logo {
+    padding: 6px 10px;
+    border-radius: 9px;
+  }
+
+  .survey-top-bar-brand-logo img {
+    height: 18px;
+  }
+
+  .survey-top-bar-brand-tag {
+    font-size: 0.64rem;
+  }
+
   .survey-top-bar-saved {
     display: none;
   }
