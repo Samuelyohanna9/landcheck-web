@@ -1392,27 +1392,27 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                             className={rowIsActive ? "is-selected" : ""}
                             onClick={() => setSelectedFeatureId(feature.id)}
                           >
-                            <td>
+                            <td data-label="Feature">
                               <strong>
                                 {feature.label}
                                 {feature.label?.startsWith("AI ") && <span className="georef-ai-feature-tag">AI</span>}
                               </strong>
                               <span>{feature.feature_type === "point" ? "Stake control" : feature.feature_type === "line" ? "Alignment" : "Boundary"}</span>
                             </td>
-                            <td>{describeFeatureGeometry(feature)}</td>
-                            <td>
+                            <td data-label="Geometry">{describeFeatureGeometry(feature)}</td>
+                            <td data-label={projectedGroundSystem ? "Grid reference" : "Coordinate reference"}>
                               {firstCoordinate
                                 ? `${coordinateXLabel.split(" ")[0]} ${formatGridCoordinate(firstCoordinate[0], projectedGroundSystem)} / ${coordinateYLabel.split(" ")[0]} ${formatGridCoordinate(firstCoordinate[1], projectedGroundSystem)}`
                                 : "--"}
                             </td>
-                            <td>
+                            <td data-label="Role">
                               {feature.feature_type === "polygon" && feature.is_primary ? (
                                 <span className="georef-table-badge active">Primary parcel</span>
                               ) : (
                                 <span className="georef-table-badge">Saved layer</span>
                               )}
                             </td>
-                            <td>
+                            <td data-label="Actions">
                               <div className="georef-feature-actions">
                                 {feature.feature_type === "polygon" && (
                                   <button
