@@ -948,6 +948,109 @@
   color: #475569;
 }
 
+/* Export step cards and downloads use their own legacy dark surfaces. Keep file-type accents,
+   but give the documents area the same white-card hierarchy as the rest of the light workspace. */
+:root[data-workspace-theme="light"] .survey-container .export-section {
+  background: #f8fafc;
+  border-color: #dbe4ea;
+  box-shadow: 0 1px 2px rgba(16, 24, 39, 0.03);
+}
+
+:root[data-workspace-theme="light"] .survey-container .export-section .section-title,
+:root[data-workspace-theme="light"] .survey-container .export-section .section-desc {
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .export-section .section-desc {
+  color: #475569;
+}
+
+:root[data-workspace-theme="light"] .survey-container .export-card {
+  background: #ffffff;
+  border-color: #dbe4ea;
+  box-shadow: 0 1px 2px rgba(16, 24, 39, 0.04), 0 8px 20px rgba(16, 24, 39, 0.04);
+}
+
+:root[data-workspace-theme="light"] .survey-container .export-card:hover {
+  border-color: #a7f3d0;
+  box-shadow: 0 8px 22px rgba(16, 24, 39, 0.08);
+}
+
+:root[data-workspace-theme="light"] .survey-container .export-info h4 {
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .export-info p {
+  color: #475569;
+}
+
+:root[data-workspace-theme="light"] .survey-container .export-icon.pdf {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+:root[data-workspace-theme="light"] .survey-container .export-icon.ortho {
+  background: #d1fae5;
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container .export-icon.dwg {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+:root[data-workspace-theme="light"] .survey-container .export-icon.calc {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+
+:root[data-workspace-theme="light"] .survey-container .export-icon.topo {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+:root[data-workspace-theme="light"] .survey-container .download-btn {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+:root[data-workspace-theme="light"] .survey-container .download-btn:hover:not(:disabled) {
+  background: #ecfdf5;
+  border-color: #059669;
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container .download-btn:disabled,
+:root[data-workspace-theme="light"] .survey-container .download-btn:disabled:hover {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #64748b;
+}
+
+:root[data-workspace-theme="light"] .survey-container .download-spinner {
+  border-color: #cbd5e1;
+  border-top-color: #059669;
+}
+
+:root[data-workspace-theme="light"] .survey-container .download-progress-track {
+  background: #e2e8f0;
+}
+
+:root[data-workspace-theme="light"] .survey-container .action-bar {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, #ffffff 28%);
+  border-top: 1px solid #e4e8ec;
+}
+
+:root[data-workspace-theme="light"] .survey-container .export-panel .panel-left::-webkit-scrollbar-track {
+  background: #eef2f5;
+}
+
+:root[data-workspace-theme="light"] .survey-container .export-panel .panel-left::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-color: #eef2f5;
+}
+
 /* Georeference's locally-scoped tokens are remapped to the same Estate surfaces and ink. */
 :root[data-workspace-theme="light"] .survey-container .georef-workspace-redesign {
   --geo-border: #dbe4ea;
