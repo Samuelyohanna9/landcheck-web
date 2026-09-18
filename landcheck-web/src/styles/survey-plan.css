@@ -6534,6 +6534,12 @@ select.field-error {
   filter: brightness(1.08);
 }
 
+/* The shared geo button is also used outside the georeference token scope in the draft banner;
+   keep its shape explicit so it matches the pill-shaped Dismiss action in every theme. */
+.survey-sync-banner .draft-banner-btn {
+  border-radius: 999px;
+}
+
 .geo-btn-secondary {
   background: var(--geo-surface-2);
   border-color: var(--geo-border-strong);
