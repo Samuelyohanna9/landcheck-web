@@ -966,10 +966,19 @@
   padding: 0.85rem 1rem;
 }
 
+.survey-container.has-workflow .coord-preview {
+  gap: 0.45rem;
+  padding: 0.6rem 0.75rem;
+}
+
 .coord-preview-summary {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
+}
+
+.survey-container.has-workflow .coord-preview-summary {
+  gap: 0.28rem;
 }
 
 .coord-preview-stat {
@@ -981,6 +990,11 @@
   font-size: 0.68rem;
   font-weight: 600;
   white-space: nowrap;
+}
+
+.survey-container.has-workflow .coord-preview-stat {
+  padding: 0.2rem 0.45rem;
+  font-size: 0.64rem;
 }
 
 .coord-preview-stat.is-valid {
@@ -1000,16 +1014,55 @@
 
 .coord-preview-table-wrap {
   max-height: 260px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   border-radius: 10px;
   border: 1px solid var(--survey-gis-divider, rgba(214, 223, 210, 0.1));
 }
 
 .coord-preview-table {
   width: 100%;
+  min-width: 0;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.74rem;
   font-variant-numeric: tabular-nums;
+}
+
+.coord-preview-table th,
+.coord-preview-table td {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.coord-preview-table th:nth-child(1),
+.coord-preview-table td:nth-child(1) {
+  width: 12%;
+}
+
+.coord-preview-table th:nth-child(2),
+.coord-preview-table td:nth-child(2),
+.coord-preview-table th:nth-child(3),
+.coord-preview-table td:nth-child(3) {
+  width: 23%;
+}
+
+.coord-preview-table th:nth-child(4),
+.coord-preview-table td:nth-child(4) {
+  width: 20%;
+}
+
+.coord-preview-table th:nth-child(5),
+.coord-preview-table td:nth-child(5),
+.coord-preview-table th:nth-child(6),
+.coord-preview-table td:nth-child(6) {
+  width: 11%;
+}
+
+.coord-preview-table td:nth-child(2),
+.coord-preview-table td:nth-child(3) {
+  word-break: break-all;
 }
 
 .coord-preview-table th {
@@ -1025,10 +1078,20 @@
   text-align: left;
 }
 
+.survey-container.has-workflow .coord-preview-table th {
+  padding: 0.34rem 0.35rem;
+  font-size: 0.58rem;
+}
+
 .coord-preview-table td {
   padding: 0.4rem 0.5rem;
   border-top: 1px solid var(--survey-gis-divider, rgba(214, 223, 210, 0.08));
   color: var(--survey-gis-text-primary, #f7f8f3);
+}
+
+.survey-container.has-workflow .coord-preview-table td {
+  padding: 0.34rem 0.35rem;
+  font-size: 0.68rem;
 }
 
 .coord-preview-table tr.has-issue td {
@@ -1043,6 +1106,11 @@
   font-weight: 700;
   background: var(--survey-gis-primary-tint, rgba(60, 207, 133, 0.14));
   color: var(--survey-gis-primary, #3ccf85);
+}
+
+.survey-container.has-workflow .coord-status-pill {
+  padding: 0.12rem 0.32rem;
+  font-size: 0.58rem;
 }
 
 .coord-status-pill.invalid,
