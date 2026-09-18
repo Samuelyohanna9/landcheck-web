@@ -7394,3 +7394,38 @@ button.geo-h-step:focus-visible {
     padding-bottom: 8.75rem;
   }
 }
+
+/* Preview plans need document scrolling when the available viewport is narrow or short. The
+   fixed-height desktop shell otherwise clips the lower half of the rendered plan. Georeference
+   keeps its dedicated map workspace behavior and is intentionally excluded. */
+@media (max-width: 1280px), (max-height: 900px) {
+  .survey-container.is-preview-step:not(.is-georeference-flow) {
+    height: auto;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .survey-container.is-preview-step:not(.is-georeference-flow) .survey-content {
+    flex: 0 0 auto;
+    min-height: 0;
+    overflow: visible;
+    padding-bottom: 9rem;
+  }
+
+  .survey-container.is-preview-step:not(.is-georeference-flow) .preview-panel {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .survey-container.is-preview-step:not(.is-georeference-flow) .preview-panel .panel-left {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .survey-container.is-preview-step:not(.is-georeference-flow) .preview-panel .panel-right {
+    height: 640px;
+    min-height: 640px;
+  }
+}
