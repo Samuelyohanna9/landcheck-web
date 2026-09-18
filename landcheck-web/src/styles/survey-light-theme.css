@@ -575,6 +575,135 @@
   color: #047857;
 }
 
+/* Appearance drawers keep their own dark defaults for the GIS theme. Rebuild the drawer as an
+   Estate-style white surface in light mode, including the backdrop so the plan stays legible. */
+:root[data-workspace-theme="light"] .survey-container .appearance-panel-backdrop {
+  background: rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+:root[data-workspace-theme="light"] .survey-container .appearance-panel {
+  color-scheme: light;
+  background: #ffffff;
+  border-left-color: #dbe4ea;
+  box-shadow: -20px 0 42px rgba(16, 24, 39, 0.16);
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .appearance-panel-header {
+  background: #ffffff;
+  border-bottom-color: #e4e8ec;
+  color: #101827;
+}
+
+:root[data-workspace-theme="light"] .survey-container .appearance-panel-close {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+:root[data-workspace-theme="light"] .survey-container .appearance-panel-close:hover {
+  background: #f1f5f9;
+  border-color: #059669;
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container .appearance-panel-body {
+  background: #ffffff;
+}
+
+:root[data-workspace-theme="light"] .survey-container .appearance-section {
+  border-color: #e4e8ec;
+  background: #f8fafc;
+  box-shadow: 0 1px 2px rgba(16, 24, 39, 0.03);
+}
+
+:root[data-workspace-theme="light"] .survey-container .appearance-section h4 {
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container .road-style-option {
+  border: 1px solid transparent;
+  color: #334155;
+}
+
+:root[data-workspace-theme="light"] .survey-container .road-style-option:hover {
+  background: #eef7f2;
+  color: #065f46;
+}
+
+:root[data-workspace-theme="light"] .survey-container .road-style-option.active {
+  border-color: #86efac;
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+:root[data-workspace-theme="light"] .survey-container .road-style-swatch {
+  color: currentColor;
+}
+
+:root[data-workspace-theme="light"] .survey-container .road-name-row {
+  border-color: #dbe4ea;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(16, 24, 39, 0.03);
+}
+
+:root[data-workspace-theme="light"] .survey-container .road-name-row-label {
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .road-name-row-chip {
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container .road-name-input {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .road-name-input::placeholder {
+  color: #64748b;
+}
+
+:root[data-workspace-theme="light"] .survey-container .road-name-input:focus {
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.14);
+}
+
+:root[data-workspace-theme="light"] .survey-container .road-name-save-btn {
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container .road-name-save-btn:hover:not(:disabled) {
+  border-color: #059669;
+  background: #d1fae5;
+}
+
+:root[data-workspace-theme="light"] .survey-container .road-name-clear-btn {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+:root[data-workspace-theme="light"] .survey-container .road-name-clear-btn:hover:not(:disabled) {
+  border-color: #f87171;
+  background: #fee2e2;
+}
+
+:root[data-workspace-theme="light"] .survey-container .road-names-empty {
+  color: #475569;
+}
+
+:root[data-workspace-theme="light"] .survey-container .road-names-hint {
+  color: #475569;
+}
+
 /* Georeference's locally-scoped tokens are remapped to the same Estate surfaces and ink. */
 :root[data-workspace-theme="light"] .survey-container .georef-workspace-redesign {
   --geo-border: #dbe4ea;
