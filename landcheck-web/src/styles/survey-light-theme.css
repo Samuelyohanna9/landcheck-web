@@ -1091,7 +1091,8 @@
 /* Custom dropdown triggers use the same field dimensions and focus treatment as native selects. */
 :root[data-workspace-theme="light"] .survey-container .cs-select-trigger,
 :root[data-workspace-theme="light"] .survey-container .beacon-style-picker-btn,
-:root[data-workspace-theme="light"] .survey-container .north-arrow-style-picker-btn {
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-picker-btn,
+:root[data-workspace-theme="light"] .survey-container .hatch-pattern-picker-btn {
   background: #ffffff;
   border-color: #cbd5e1;
   color: #0f172a;
@@ -1099,14 +1100,16 @@
 
 :root[data-workspace-theme="light"] .survey-container .cs-select-trigger:hover:not(:disabled),
 :root[data-workspace-theme="light"] .survey-container .beacon-style-picker-btn:hover:not(:disabled),
-:root[data-workspace-theme="light"] .survey-container .north-arrow-style-picker-btn:hover {
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-picker-btn:hover,
+:root[data-workspace-theme="light"] .survey-container .hatch-pattern-picker-btn:hover {
   background: #f8fafc;
   border-color: #94a3b8;
 }
 
 :root[data-workspace-theme="light"] .survey-container .cs-select-trigger:focus-visible,
 :root[data-workspace-theme="light"] .survey-container .beacon-style-picker-btn:focus-visible,
-:root[data-workspace-theme="light"] .survey-container .north-arrow-style-picker-btn:focus-visible {
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-picker-btn:focus-visible,
+:root[data-workspace-theme="light"] .survey-container .hatch-pattern-picker-btn:focus-visible {
   outline: none;
   border-color: #059669;
   box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.14);
@@ -1114,7 +1117,8 @@
 
 :root[data-workspace-theme="light"] .survey-container .cs-select-panel,
 :root[data-workspace-theme="light"] .survey-container .beacon-style-popover,
-:root[data-workspace-theme="light"] .survey-container .north-arrow-style-popover {
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-popover,
+:root[data-workspace-theme="light"] .survey-container .hatch-pattern-popover {
   background: #ffffff;
   border-color: #cbd5e1;
   color: #0f172a;
@@ -1123,20 +1127,23 @@
 
 :root[data-workspace-theme="light"] .survey-container .cs-select-option,
 :root[data-workspace-theme="light"] .survey-container .beacon-style-option,
-:root[data-workspace-theme="light"] .survey-container .north-arrow-style-option {
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-option,
+:root[data-workspace-theme="light"] .survey-container .hatch-pattern-option {
   color: #334155;
 }
 
 :root[data-workspace-theme="light"] .survey-container .cs-select-option:hover,
 :root[data-workspace-theme="light"] .survey-container .beacon-style-option:hover,
-:root[data-workspace-theme="light"] .survey-container .north-arrow-style-option:hover {
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-option:hover,
+:root[data-workspace-theme="light"] .survey-container .hatch-pattern-option:hover {
   background: #f1f5f9;
   color: #0f172a;
 }
 
 :root[data-workspace-theme="light"] .survey-container .cs-select-option.is-selected,
 :root[data-workspace-theme="light"] .survey-container .beacon-style-option.active,
-:root[data-workspace-theme="light"] .survey-container .north-arrow-style-option.active {
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-option.active,
+:root[data-workspace-theme="light"] .survey-container .hatch-pattern-option.active {
   background: #ecfdf5;
   color: #065f46;
 }
