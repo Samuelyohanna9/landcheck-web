@@ -1141,6 +1141,52 @@
   color: #065f46;
 }
 
+/* Scale and paper-size controls contain nested legacy surfaces that otherwise stay dark. */
+:root[data-workspace-theme="light"] .survey-container .scale-input-wrapper {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+:root[data-workspace-theme="light"] .survey-container .scale-prefix,
+:root[data-workspace-theme="light"] .survey-container .scale-helper,
+:root[data-workspace-theme="light"] .survey-container .paper-size-hint {
+  color: #475569;
+}
+
+:root[data-workspace-theme="light"] .survey-container .scale-number-input {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .scale-number-input:focus {
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.14);
+}
+
+:root[data-workspace-theme="light"] .survey-container .scale-preset-btn,
+:root[data-workspace-theme="light"] .survey-container .paper-size-btn {
+  background: #ffffff;
+  border-color: #dbe4ea;
+  color: #334155;
+}
+
+:root[data-workspace-theme="light"] .survey-container .scale-preset-btn:hover,
+:root[data-workspace-theme="light"] .survey-container .paper-size-btn:hover {
+  background: #f0fdf4;
+  border-color: #a7f3d0;
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container .scale-preset-btn.active,
+:root[data-workspace-theme="light"] .survey-container .paper-size-btn.active {
+  background: #ecfdf5;
+  border-color: #6ee7b7;
+  color: #047857;
+  font-weight: 700;
+}
+
 /* Georeference's locally-scoped tokens are remapped to the same Estate surfaces and ink. */
 :root[data-workspace-theme="light"] .survey-container .georef-workspace-redesign {
   --geo-border: #dbe4ea;
