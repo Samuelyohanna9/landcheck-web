@@ -1051,6 +1051,95 @@
   border-color: #eef2f5;
 }
 
+/* Keep every native select in the Survey workspace on the same readable light surface.
+   This also covers selects rendered inside imported workflow steps, not just the main form. */
+:root[data-workspace-theme="light"] .survey-container select {
+  color-scheme: light;
+  background-color: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container select:hover:not(:disabled) {
+  border-color: #94a3b8;
+}
+
+:root[data-workspace-theme="light"] .survey-container select:focus-visible,
+:root[data-workspace-theme="light"] .survey-container select:focus {
+  outline: none;
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.14);
+}
+
+:root[data-workspace-theme="light"] .survey-container select:disabled {
+  background-color: #f8fafc;
+  color: #64748b;
+  border-color: #e2e8f0;
+}
+
+:root[data-workspace-theme="light"] .survey-container select option {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container select option:checked {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+/* Custom dropdown triggers use the same field dimensions and focus treatment as native selects. */
+:root[data-workspace-theme="light"] .survey-container .cs-select-trigger,
+:root[data-workspace-theme="light"] .survey-container .beacon-style-picker-btn,
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-picker-btn {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .cs-select-trigger:hover:not(:disabled),
+:root[data-workspace-theme="light"] .survey-container .beacon-style-picker-btn:hover:not(:disabled),
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-picker-btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+:root[data-workspace-theme="light"] .survey-container .cs-select-trigger:focus-visible,
+:root[data-workspace-theme="light"] .survey-container .beacon-style-picker-btn:focus-visible,
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-picker-btn:focus-visible {
+  outline: none;
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.14);
+}
+
+:root[data-workspace-theme="light"] .survey-container .cs-select-panel,
+:root[data-workspace-theme="light"] .survey-container .beacon-style-popover,
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-popover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+  box-shadow: 0 16px 34px rgba(16, 24, 39, 0.16), 0 2px 8px rgba(16, 24, 39, 0.08);
+}
+
+:root[data-workspace-theme="light"] .survey-container .cs-select-option,
+:root[data-workspace-theme="light"] .survey-container .beacon-style-option,
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-option {
+  color: #334155;
+}
+
+:root[data-workspace-theme="light"] .survey-container .cs-select-option:hover,
+:root[data-workspace-theme="light"] .survey-container .beacon-style-option:hover,
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-option:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .cs-select-option.is-selected,
+:root[data-workspace-theme="light"] .survey-container .beacon-style-option.active,
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-option.active {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
 /* Georeference's locally-scoped tokens are remapped to the same Estate surfaces and ink. */
 :root[data-workspace-theme="light"] .survey-container .georef-workspace-redesign {
   --geo-border: #dbe4ea;
