@@ -12,6 +12,7 @@ import {
   projectRasterPixelToStage,
   type RasterStageMetrics,
 } from "../../utils/georeferenceRasterStage";
+import GeoreferenceCoordinateTableModal, { type CoordinateTableRow } from "./GeoreferenceCoordinateTableModal";
 
 type DraftTool = "point" | "line" | "polygon";
 
@@ -205,7 +206,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
   const rasterImageRef = useRef<HTMLImageElement | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
-  const dragStateRef = useRef<{ startX: number; startY: number; panX: number; panY: number; moved: boolean } | null>(null);
+  const dragStateRef = useRef<{ pointerId: number; startX: number; startY: number; panX: number; panY: number; moved: boolean } | null>(null);
   const suppressNextStageClickRef = useRef(false);
   const suppressNextAutoSelectRef = useRef(false);
   const selectedFeatureSectionRef = useRef<HTMLDivElement | null>(null);
@@ -231,6 +232,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
   const [imageZoom, setImageZoom] = useState(MIN_STAGE_ZOOM);
   const [imagePan, setImagePan] = useState({ x: 0, y: 0 });
   const [draggingStage, setDraggingStage] = useState(false);
+  const [coordinateTableOpen, setCoordinateTableOpen] = useState(false);
   const [aiDigitizing, setAiDigitizing] = useState(false);
   const [aiDigitizeQuotaExhausted, setAiDigitizeQuotaExhausted] = useState(() => {
     try {
@@ -828,6 +830,16 @@ function SurveyPlanGeoreferenceWorkspaceStep({
     null;
 
   const selectedFeatureCoordinateRows = selectedStageFeature?.points || [];
+  const coordinateTableRows: CoordinateTableRow[] = selectedFeatureCoordinateRows.map((point) => ({
+    id: `${selectedStageFeature?.id || "feature"}-${point.index}`,
+    cells: [
+      selectedStageFeature?.feature_type === "point" ? selectedStageFeature.label : `P${point.index + 1}`,
+      formatGridCoordinate(point.targetX, projectedGroundSystem),
+      formatGridCoordinate(point.targetY, projectedGroundSystem),
+      formatWgs84Coordinate(point.lng),
+      formatWgs84Coordinate(point.lat),
+    ],
+  }));
 
   // Status-bar-only derived values - pure display math over data that's already computed above
   // (selectedStageFeature already reflects the in-progress draft while drawing, since a placed
@@ -880,7 +892,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
     [selectedStageFeature?.id, stageFeatures],
   );
 
-  const handleStagePointerMove = (event: React.MouseEvent<HTMLDivElement>) => {
+  const handleStagePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     const liveMetrics =
       getRasterStageMetrics(
         imageStageRef.current,
@@ -915,8 +927,8 @@ function SurveyPlanGeoreferenceWorkspaceStep({
   };
 
   useEffect(() => {
-    const handlePointerMove = (event: MouseEvent) => {
-      if (!dragStateRef.current || imageZoom <= MIN_STAGE_ZOOM) return;
+    const handlePointerMove = (event: PointerEvent) => {
+      if (!dragStateRef.current || dragStateRef.current.pointerId !== event.pointerId || imageZoom <= MIN_STAGE_ZOOM) return;
       const deltaX = event.clientX - dragStateRef.current.startX;
       const deltaY = event.clientY - dragStateRef.current.startY;
       if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
@@ -927,8 +939,8 @@ function SurveyPlanGeoreferenceWorkspaceStep({
       setImagePan(clampStagePan({ x: dragStateRef.current.panX + deltaX, y: dragStateRef.current.panY + deltaY }));
     };
 
-    const handlePointerUp = () => {
-      if (!dragStateRef.current) return;
+    const handlePointerUp = (event: PointerEvent) => {
+      if (!dragStateRef.current || dragStateRef.current.pointerId !== event.pointerId) return;
       dragStateRef.current = null;
       setDraggingStage(false);
       window.setTimeout(() => {
@@ -936,17 +948,21 @@ function SurveyPlanGeoreferenceWorkspaceStep({
       }, 0);
     };
 
-    window.addEventListener("mousemove", handlePointerMove);
-    window.addEventListener("mouseup", handlePointerUp);
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerUp);
     return () => {
-      window.removeEventListener("mousemove", handlePointerMove);
-      window.removeEventListener("mouseup", handlePointerUp);
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerUp);
     };
   }, [clampStagePan, imageZoom]);
 
-  const handleStageMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+  const handleStagePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0 || imageZoom <= MIN_STAGE_ZOOM) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
     dragStateRef.current = {
+      pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
       panX: imagePan.x,
@@ -1157,15 +1173,8 @@ function SurveyPlanGeoreferenceWorkspaceStep({
     }
   };
 
-  // The full coordinate table lives in the sidebar (not floating over the canvas, which used to
-  // cover the very shape it was describing - see the on-canvas badge below). On a narrow screen
-  // the sidebar is a separate tab, so jump there first; on any width, scroll it into view.
   const jumpToSelectedFeatureTable = () => {
-    setActiveMobileTab("tools");
-    setLeftPanelCollapsed(false);
-    window.requestAnimationFrame(() => {
-      selectedFeatureSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    });
+    setCoordinateTableOpen(true);
   };
 
   return (
@@ -1464,6 +1473,9 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                     ? "Stake point coordinates"
                     : `${selectedFeatureCoordinateRows.length} saved coordinate${selectedFeatureCoordinateRows.length === 1 ? "" : "s"}`}
                 </p>
+                <button type="button" className="geo-table-view-btn" onClick={() => setCoordinateTableOpen(true)}>
+                  View full coordinate table
+                </button>
                 <div className="georef-coordinate-mini-table-wrap">
                   <table className="georef-coordinate-mini-table">
                     <thead>
@@ -1610,9 +1622,9 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                 className={`georef-image-stage georef-image-stage--zoomable${imageZoom > MIN_STAGE_ZOOM ? " is-zoomed" : ""}${draggingStage ? " is-dragging" : ""}`}
                 ref={imageStageRef}
                 onClick={handleStageClick}
-                onMouseDown={handleStageMouseDown}
-                onMouseMove={handleStagePointerMove}
-                onMouseLeave={() => setCursorSample(null)}
+                onPointerDown={handleStagePointerDown}
+                onPointerMove={handleStagePointerMove}
+                onPointerLeave={() => setCursorSample(null)}
                 style={{ transform: `translate(${imagePan.x}px, ${imagePan.y}px) scale(${imageZoom})` }}
               >
                 {effectiveRasterUrl ? (
@@ -1902,6 +1914,21 @@ function SurveyPlanGeoreferenceWorkspaceStep({
           </div>
         </div>
       )}
+
+      <GeoreferenceCoordinateTableModal
+        isOpen={coordinateTableOpen}
+        onClose={() => setCoordinateTableOpen(false)}
+        title={`${selectedStageFeature?.label || "Selected feature"} coordinates`}
+        subtitle={`${selectedFeatureCoordinateRows.length} saved coordinate${selectedFeatureCoordinateRows.length === 1 ? "" : "s"} in ${crsLabel}.`}
+        columns={[
+          { key: "id", label: "ID" },
+          { key: "x", label: coordinateXLabel },
+          { key: "y", label: coordinateYLabel },
+          { key: "longitude", label: "Longitude" },
+          { key: "latitude", label: "Latitude" },
+        ]}
+        rows={coordinateTableRows}
+      />
     </div>
   );
 }
