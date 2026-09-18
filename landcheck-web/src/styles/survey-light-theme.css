@@ -1763,6 +1763,38 @@
   color: #0f172a;
 }
 
+:root[data-workspace-theme="light"] .survey-container .georef-quality-pill {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container .georef-mini-action {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+}
+
+:root[data-workspace-theme="light"] .survey-container .georef-mini-action:hover,
+:root[data-workspace-theme="light"] .survey-container .georef-mini-action:focus-visible {
+  border-color: #059669;
+  background: #ecfdf5;
+  color: #047857;
+  outline: none;
+}
+
+:root[data-workspace-theme="light"] .survey-container .georef-mini-action.active {
+  border-color: #6ee7b7;
+  background: #d1fae5;
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container .georef-mini-action.danger {
+  border-color: #fecdd3;
+  background: #fff1f2;
+  color: #be123c;
+}
+
 :root[data-workspace-theme="light"] .survey-container .georef-export-list li {
   border-color: #dbe4ea;
   background: #f8fafc;
