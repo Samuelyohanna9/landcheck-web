@@ -1379,6 +1379,47 @@
   }
 }
 
+/* The preview can be much narrower than the browser viewport because it shares space with the
+   Survey details panel. Wrap the ribbon based on the available workspace width instead of
+   allowing a hidden horizontal control strip. */
+@media (max-width: 1280px) {
+  .preview-ribbon {
+    align-items: stretch;
+    flex-wrap: wrap;
+    overflow-x: hidden;
+    overflow-y: visible;
+  }
+
+  .ribbon-group {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .beacon-style-picker,
+  .north-arrow-style-picker {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .beacon-style-picker-btn,
+  .north-arrow-style-picker-btn,
+  .ribbon-select {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .ribbon-appearance-btn {
+    flex: 1 1 180px;
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    line-height: 1.15;
+    text-align: left;
+  }
+}
+
 @media (max-width: 640px) {
   .preview-header {
     padding: 0.32rem 0.26rem;
@@ -1409,6 +1450,12 @@
     flex: 1 1 120px;
     min-width: 0;
     max-width: 100%;
+  }
+
+  .ribbon-appearance-btn {
+    flex: 1 1 100%;
+    justify-content: center;
+    text-align: center;
   }
 
   .preview-toggle,
