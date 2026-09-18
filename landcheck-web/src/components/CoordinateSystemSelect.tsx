@@ -47,7 +47,9 @@ export default function CoordinateSystemSelect({ value, onChange, disabled, id }
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <span className="cs-select-trigger-text">{selected?.name || "Select coordinate system"}</span>
+        <span className="cs-select-trigger-text">
+          {selected ? `${selected.name} (${selected.epsgLabel})` : "Select coordinate system"}
+        </span>
         <svg className={`cs-select-caret${open ? " is-open" : ""}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
           <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
         </svg>
@@ -72,8 +74,9 @@ export default function CoordinateSystemSelect({ value, onChange, disabled, id }
                     setOpen(false);
                   }}
                 >
-                  <span className="cs-select-option-name">{sys.name}</span>
-                  <span className="cs-select-option-epsg">{sys.epsgLabel}</span>
+                  <span className="cs-select-option-name">
+                    {sys.name} {sys.epsgLabel ? `(${sys.epsgLabel})` : ""}
+                  </span>
                 </button>
               ))}
             </div>

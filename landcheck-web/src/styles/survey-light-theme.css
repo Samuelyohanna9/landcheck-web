@@ -1119,16 +1119,41 @@
 :root[data-workspace-theme="light"] .survey-container .beacon-style-popover,
 :root[data-workspace-theme="light"] .survey-container .north-arrow-style-popover,
 :root[data-workspace-theme="light"] .survey-container .hatch-pattern-popover {
+  border-radius: 2px;
+  padding: 0.15rem;
   background: #ffffff;
   border-color: #cbd5e1;
   color: #0f172a;
   box-shadow: 0 16px 34px rgba(16, 24, 39, 0.16), 0 2px 8px rgba(16, 24, 39, 0.08);
 }
 
+:root[data-workspace-theme="light"] .survey-container .cs-select-panel {
+  width: max(100%, min(468px, calc(100vw - 1rem)));
+  max-width: calc(100vw - 1rem);
+  box-sizing: border-box;
+}
+
+:root[data-workspace-theme="light"] .survey-container .cs-select-group + .cs-select-group {
+  margin-top: 0.2rem;
+  padding-top: 0.2rem;
+  border-top-color: #e2e8f0;
+}
+
+:root[data-workspace-theme="light"] .survey-container .cs-select-group-label {
+  padding: 0.38rem 0.5rem 0.16rem;
+  color: #0f172a;
+  font-size: 0.82rem;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
 :root[data-workspace-theme="light"] .survey-container .cs-select-option,
 :root[data-workspace-theme="light"] .survey-container .beacon-style-option,
 :root[data-workspace-theme="light"] .survey-container .north-arrow-style-option,
 :root[data-workspace-theme="light"] .survey-container .hatch-pattern-option {
+  border-radius: 2px;
+  justify-content: flex-start;
+  padding: 0.38rem 0.5rem;
   color: #334155;
 }
 
@@ -1144,8 +1169,29 @@
 :root[data-workspace-theme="light"] .survey-container .beacon-style-option.active,
 :root[data-workspace-theme="light"] .survey-container .north-arrow-style-option.active,
 :root[data-workspace-theme="light"] .survey-container .hatch-pattern-option.active {
-  background: #ecfdf5;
-  color: #065f46;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-option.active .north-arrow-swatch-stroke,
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-option.active .north-arrow-swatch-fill,
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-option.active .north-arrow-swatch-fill-alt,
+:root[data-workspace-theme="light"] .survey-container .beacon-style-option.active .beacon-swatch circle,
+:root[data-workspace-theme="light"] .survey-container .beacon-style-option.active .beacon-swatch rect,
+:root[data-workspace-theme="light"] .survey-container .beacon-style-option.active .beacon-swatch polygon,
+:root[data-workspace-theme="light"] .survey-container .beacon-style-option.active .beacon-swatch line {
+  stroke: #ffffff;
+}
+
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-option.active .north-arrow-swatch-fill,
+:root[data-workspace-theme="light"] .survey-container .north-arrow-style-option.active .north-arrow-swatch-fill-alt {
+  fill: #ffffff;
+}
+
+:root[data-workspace-theme="light"] .survey-container .hatch-pattern-option.active .hatch-swatch-lines line,
+:root[data-workspace-theme="light"] .survey-container .hatch-pattern-option.active .hatch-swatch-solid {
+  stroke: #ffffff;
+  fill: #ffffff;
 }
 
 /* Scale and paper-size controls contain nested legacy surfaces that otherwise stay dark. */
@@ -1188,9 +1234,9 @@
 
 :root[data-workspace-theme="light"] .survey-container .scale-preset-btn.active,
 :root[data-workspace-theme="light"] .survey-container .paper-size-btn.active {
-  background: #ecfdf5;
-  border-color: #6ee7b7;
-  color: #047857;
+  background: #2563eb;
+  border-color: #1d4ed8;
+  color: #ffffff;
   font-weight: 700;
 }
 
