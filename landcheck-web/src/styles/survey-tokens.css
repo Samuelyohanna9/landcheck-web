@@ -79,6 +79,51 @@
   --survey-gis-error: #ef5b5b;
 }
 
+/* Estate dashboard light palette. The GIS workspace can use the same preference without
+   changing the darker defaults used for the first paint and for other products. */
+:root[data-workspace-theme="light"] {
+  color-scheme: light;
+  --survey-ink-900: #f3f5f7;
+  --survey-ink-800: #ffffff;
+  --survey-ink-700: #f8fafc;
+  --survey-ink-border: #dbe4ea;
+  --survey-ink-border-strong: #cbd5e1;
+  --survey-copper-300: #047857;
+  --survey-copper-400: #059669;
+  --survey-copper-500: #047857;
+  --survey-copper-600: #065f46;
+  --survey-copper-glow: rgba(5, 150, 105, 0.12);
+  --survey-copper-glow-strong: rgba(5, 150, 105, 0.2);
+  --survey-forest-400: #16a34a;
+  --survey-forest-500: #15803d;
+  --survey-forest-600: #166534;
+  --survey-warning-300: #f59e0b;
+  --survey-warning-400: #d97706;
+  --survey-warning-500: #b45309;
+  --survey-warning-glow: rgba(180, 83, 9, 0.12);
+  --survey-parchment-50: #ffffff;
+  --survey-parchment-100: #f8fafc;
+  --survey-parchment-200: #e2e8f0;
+  --survey-parchment-border: #dbe4ea;
+  --survey-parchment-ink: #0f172a;
+  --survey-text-primary: #0f172a;
+  --survey-text-secondary: #475569;
+  --survey-text-muted: #64748b;
+  --survey-grid-line: rgba(15, 23, 42, 0.045);
+  --survey-gis-bg: #f3f5f7;
+  --survey-gis-panel-bg: #ffffff;
+  --survey-gis-raised-bg: #f8fafc;
+  --survey-gis-hover-bg: #eef7f2;
+  --survey-gis-primary: #059669;
+  --survey-gis-primary-hover: #047857;
+  --survey-gis-primary-tint: #ecfdf5;
+  --survey-gis-text-primary: #0f172a;
+  --survey-gis-text-secondary: #475569;
+  --survey-gis-divider: #dbe4ea;
+  --survey-gis-warning: #b45309;
+  --survey-gis-error: #b91c1c;
+}
+
 /* Faint blueprint/graph-paper grid — apply to large empty ink surfaces */
 .survey-blueprint-grid {
   background-image:

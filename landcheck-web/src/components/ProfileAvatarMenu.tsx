@@ -2,6 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { useFloatingPopoverPosition } from "../utils/useFloatingPopoverPosition";
+import {
+  applyWorkspaceTheme,
+  getWorkspaceTheme,
+  subscribeWorkspaceTheme,
+  type WorkspaceTheme,
+} from "../utils/workspaceTheme";
 import "../styles/profile-avatar-menu.css";
 
 type Props = {
@@ -13,10 +19,6 @@ type Props = {
   onContactSupport?: () => void;
   onSignOut: () => void;
 };
-
-type ThemeMode = "dark" | "light";
-
-const PROFILE_THEME_STORAGE_KEY = "landcheck_workspace_theme";
 
 const getInitials = (fullName: string | null | undefined, email: string) => {
   const name = (fullName || "").trim();
@@ -39,10 +41,7 @@ export default function ProfileAvatarMenu({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [theme, setTheme] = useState<ThemeMode>(() => {
-    if (typeof window === "undefined") return "dark";
-    return window.localStorage.getItem(PROFILE_THEME_STORAGE_KEY) === "light" ? "light" : "dark";
-  });
+  const [theme, setTheme] = useState<WorkspaceTheme>(getWorkspaceTheme);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -54,9 +53,10 @@ export default function ProfileAvatarMenu({
   const planLabel = (planName || "Plan").trim() || "Plan";
 
   useEffect(() => {
-    if (typeof document !== "undefined") document.documentElement.dataset.workspaceTheme = theme;
-    if (typeof window !== "undefined") window.localStorage.setItem(PROFILE_THEME_STORAGE_KEY, theme);
+    applyWorkspaceTheme(theme);
   }, [theme]);
+
+  useEffect(() => subscribeWorkspaceTheme(setTheme), []);
 
   useEffect(() => {
     if (!open) return;

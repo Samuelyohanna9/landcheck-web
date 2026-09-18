@@ -1,0 +1,631 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+
+/* Estate dashboard visual language for the Survey GIS workspace. The root attribute is shared
+   with the dashboard preference, while the .survey-container scope keeps these controls away
+   from public pages and the separate Hazard landing experience. */
+:root[data-workspace-theme="light"] .survey-container {
+  color-scheme: light;
+  background: #f3f5f7;
+  color: #0f172a;
+  font-family: "Inter", var(--survey-font-body), sans-serif;
+}
+
+:root[data-workspace-theme="light"] .survey-container .survey-header,
+:root[data-workspace-theme="light"] .survey-container .survey-top-bar,
+:root[data-workspace-theme="light"] .survey-container .geo-top-bar {
+  background: #ffffff;
+  border-bottom-color: #e4e8ec;
+  box-shadow: 0 1px 2px rgba(16, 24, 39, 0.04);
+}
+
+:root[data-workspace-theme="light"] .survey-container .survey-header-motif {
+  opacity: 0.1;
+  mix-blend-mode: multiply;
+}
+
+:root[data-workspace-theme="light"] .survey-container .survey-title,
+:root[data-workspace-theme="light"] .survey-container .survey-top-bar-brand,
+:root[data-workspace-theme="light"] .survey-container .geo-top-bar-brand {
+  color: #101827;
+}
+
+:root[data-workspace-theme="light"] .survey-container .survey-top-bar-brand svg,
+:root[data-workspace-theme="light"] .survey-container .geo-top-bar-brand svg {
+  color: #059669;
+}
+
+:root[data-workspace-theme="light"] .survey-container .survey-top-bar-saved,
+:root[data-workspace-theme="light"] .survey-container .geo-top-bar-saved {
+  color: #64748b;
+}
+
+:root[data-workspace-theme="light"] .survey-container .survey-top-bar-icon-btn,
+:root[data-workspace-theme="light"] .survey-container .geo-top-bar-icon-btn,
+:root[data-workspace-theme="light"] .survey-container .survey-top-bar-btn,
+:root[data-workspace-theme="light"] .survey-container .geo-top-bar-btn,
+:root[data-workspace-theme="light"] .survey-container .back-btn,
+:root[data-workspace-theme="light"] .survey-container .reset-btn,
+:root[data-workspace-theme="light"] .survey-container .dashboard-link-btn {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+}
+
+:root[data-workspace-theme="light"] .survey-container .survey-top-bar-icon-btn:hover,
+:root[data-workspace-theme="light"] .survey-container .geo-top-bar-icon-btn:hover,
+:root[data-workspace-theme="light"] .survey-container .survey-top-bar-btn:hover,
+:root[data-workspace-theme="light"] .survey-container .geo-top-bar-btn:hover,
+:root[data-workspace-theme="light"] .survey-container .back-btn:hover,
+:root[data-workspace-theme="light"] .survey-container .reset-btn:hover,
+:root[data-workspace-theme="light"] .survey-container .dashboard-link-btn:hover {
+  border-color: #059669;
+  background: #f0fdf4;
+  color: #065f46;
+}
+
+.survey-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--survey-gis-divider);
+  border-radius: 999px;
+  background: var(--survey-gis-raised-bg);
+  color: var(--survey-gis-text-secondary);
+  font: inherit;
+  font-size: 0.69rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+
+.survey-theme-toggle svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+}
+
+.survey-theme-toggle:hover {
+  border-color: var(--survey-gis-primary);
+  color: var(--survey-gis-primary);
+}
+
+.survey-theme-toggle:active {
+  transform: scale(0.96);
+}
+
+:root[data-workspace-theme="light"] .survey-container .survey-theme-toggle {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+}
+
+:root[data-workspace-theme="light"] .survey-container .survey-theme-toggle:hover {
+  border-color: #059669;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.survey-top-bar-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #10b981;
+  color: #052e1b;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+:root[data-workspace-theme="light"] .survey-container .survey-top-bar-avatar {
+  background: #10b981;
+  color: #052e1b;
+}
+
+:root[data-workspace-theme="light"] .survey-container .survey-h-stepper,
+:root[data-workspace-theme="light"] .survey-container .geo-h-stepper {
+  background: #ffffff;
+  border-bottom-color: #e4e8ec;
+  box-shadow: 0 1px 2px rgba(16, 24, 39, 0.03);
+}
+
+:root[data-workspace-theme="light"] .survey-container .survey-h-step,
+:root[data-workspace-theme="light"] .survey-container .geo-h-step {
+  color: #64748b;
+}
+
+:root[data-workspace-theme="light"] .survey-container .survey-h-step-marker,
+:root[data-workspace-theme="light"] .survey-container .geo-h-step-marker {
+  border-color: #cbd5e1;
+  color: #64748b;
+}
+
+:root[data-workspace-theme="light"] .survey-container .survey-h-step-label,
+:root[data-workspace-theme="light"] .survey-container .geo-h-step-label {
+  color: #64748b;
+}
+
+:root[data-workspace-theme="light"] .survey-container .survey-h-step.active,
+:root[data-workspace-theme="light"] .survey-container .geo-h-step.active {
+  border-bottom-color: #059669;
+}
+
+:root[data-workspace-theme="light"] .survey-container .survey-h-step.active .survey-h-step-marker,
+:root[data-workspace-theme="light"] .survey-container .geo-h-step.active .geo-h-step-marker {
+  border-color: #059669;
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container .survey-h-step.active .survey-h-step-label,
+:root[data-workspace-theme="light"] .survey-container .geo-h-step.active .geo-h-step-label,
+:root[data-workspace-theme="light"] .survey-container .survey-h-step.completed .survey-h-step-label,
+:root[data-workspace-theme="light"] .survey-container .geo-h-step.completed .geo-h-step-label {
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .survey-h-step.completed .survey-h-step-marker,
+:root[data-workspace-theme="light"] .survey-container .geo-h-step.completed .geo-h-step-marker {
+  border-color: #059669;
+  background: #059669;
+  color: #ffffff;
+}
+
+:root[data-workspace-theme="light"] .survey-container .survey-subtitle,
+:root[data-workspace-theme="light"] .survey-container .survey-sync-banner span,
+:root[data-workspace-theme="light"] .survey-container .survey-restore-copy,
+:root[data-workspace-theme="light"] .survey-container .mode-select-head p,
+:root[data-workspace-theme="light"] .survey-container .form-section p,
+:root[data-workspace-theme="light"] .survey-container .preview-card p,
+:root[data-workspace-theme="light"] .survey-container .section-desc,
+:root[data-workspace-theme="light"] .survey-container .scale-helper,
+:root[data-workspace-theme="light"] .survey-container .paper-size-hint {
+  color: #475569;
+}
+
+:root[data-workspace-theme="light"] .survey-container .survey-sync-banner,
+:root[data-workspace-theme="light"] .survey-container .draft-status-card,
+:root[data-workspace-theme="light"] .survey-container .survey-restore-card,
+:root[data-workspace-theme="light"] .survey-container .mode-select-shell,
+:root[data-workspace-theme="light"] .survey-container .step-panel,
+:root[data-workspace-theme="light"] .survey-container .preview-panel,
+:root[data-workspace-theme="light"] .survey-container .export-panel,
+:root[data-workspace-theme="light"] .survey-container .form-section,
+:root[data-workspace-theme="light"] .survey-container .preview-card {
+  border-color: #e4e8ec;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(16, 24, 39, 0.04), 0 8px 24px rgba(16, 24, 39, 0.05);
+}
+
+:root[data-workspace-theme="light"] .survey-container .survey-sync-banner,
+:root[data-workspace-theme="light"] .survey-container .draft-status-card {
+  color: #334155;
+}
+
+:root[data-workspace-theme="light"] .survey-container .survey-sync-banner strong,
+:root[data-workspace-theme="light"] .survey-container .survey-restore-title,
+:root[data-workspace-theme="light"] .survey-container .mode-select-head h2,
+:root[data-workspace-theme="light"] .survey-container .section-title,
+:root[data-workspace-theme="light"] .survey-container .preview-card h3 {
+  color: #101827;
+}
+
+:root[data-workspace-theme="light"] .survey-container .mode-select-shell {
+  background: #ffffff;
+}
+
+:root[data-workspace-theme="light"] .survey-container .mode-card {
+  border-color: #e4e8ec;
+  background: #ffffff;
+  color: #101827;
+  box-shadow: 0 1px 2px rgba(16, 24, 39, 0.04), 0 8px 24px rgba(16, 24, 39, 0.05);
+}
+
+:root[data-workspace-theme="light"] .survey-container .mode-card:hover {
+  border-color: #a7f3d0;
+  background: #f7faf8;
+  box-shadow: 0 8px 20px rgba(16, 24, 39, 0.09);
+}
+
+:root[data-workspace-theme="light"] .survey-container .mode-card h3,
+:root[data-workspace-theme="light"] .survey-container .mode-card p,
+:root[data-workspace-theme="light"] .survey-container .mode-card-pill,
+:root[data-workspace-theme="light"] .survey-container .mode-card-cta {
+  color: #334155;
+}
+
+:root[data-workspace-theme="light"] .survey-container .mode-card h3 {
+  color: #101827;
+}
+
+:root[data-workspace-theme="light"] .survey-container .mode-card-route,
+:root[data-workspace-theme="light"] .survey-container .mode-card-pill {
+  border-color: #cdeedb;
+  background: #e6f6ec;
+  color: #0f6e44;
+}
+
+:root[data-workspace-theme="light"] .survey-container .panel-left,
+:root[data-workspace-theme="light"] .survey-container .panel-right {
+  background: #f8fafc;
+}
+
+:root[data-workspace-theme="light"] .survey-container .panel-right {
+  border-color: #e4e8ec;
+}
+
+:root[data-workspace-theme="light"] .survey-container .form-group label,
+:root[data-workspace-theme="light"] .survey-container .features-bar,
+:root[data-workspace-theme="light"] .survey-container .feature-chip {
+  color: #475569;
+}
+
+:root[data-workspace-theme="light"] .survey-container .form-group input,
+:root[data-workspace-theme="light"] .survey-container .form-group select,
+:root[data-workspace-theme="light"] .survey-container .form-group textarea,
+:root[data-workspace-theme="light"] .survey-container .metadata-panel input,
+:root[data-workspace-theme="light"] .survey-container .metadata-panel select,
+:root[data-workspace-theme="light"] .survey-container .metadata-panel textarea {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .form-group input::placeholder,
+:root[data-workspace-theme="light"] .survey-container .form-group textarea::placeholder,
+:root[data-workspace-theme="light"] .survey-container .metadata-panel input::placeholder,
+:root[data-workspace-theme="light"] .survey-container .metadata-panel textarea::placeholder {
+  color: #64748b;
+}
+
+:root[data-workspace-theme="light"] .survey-container .form-group input:focus,
+:root[data-workspace-theme="light"] .survey-container .form-group select:focus,
+:root[data-workspace-theme="light"] .survey-container .form-group textarea:focus,
+:root[data-workspace-theme="light"] .survey-container .metadata-panel input:focus,
+:root[data-workspace-theme="light"] .survey-container .metadata-panel select:focus,
+:root[data-workspace-theme="light"] .survey-container .metadata-panel textarea:focus {
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.14);
+  outline: none;
+}
+
+:root[data-workspace-theme="light"] .survey-container select,
+:root[data-workspace-theme="light"] .survey-container select option {
+  color-scheme: light;
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .btn-primary,
+:root[data-workspace-theme="light"] .survey-container .geo-btn-primary,
+:root[data-workspace-theme="light"] .survey-container .geo-btn-ai {
+  border-color: #047857;
+  background: #059669;
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(5, 150, 105, 0.18);
+}
+
+:root[data-workspace-theme="light"] .survey-container .btn-primary:hover,
+:root[data-workspace-theme="light"] .survey-container .geo-btn-primary:hover:not(:disabled),
+:root[data-workspace-theme="light"] .survey-container .geo-btn-ai:hover:not(:disabled) {
+  background: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container .btn-secondary,
+:root[data-workspace-theme="light"] .survey-container .btn-outline,
+:root[data-workspace-theme="light"] .survey-container .geo-btn-secondary,
+:root[data-workspace-theme="light"] .survey-container .geo-btn-outline {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+}
+
+:root[data-workspace-theme="light"] .survey-container .btn-secondary:hover,
+:root[data-workspace-theme="light"] .survey-container .btn-outline:hover,
+:root[data-workspace-theme="light"] .survey-container .geo-btn-secondary:hover:not(:disabled),
+:root[data-workspace-theme="light"] .survey-container .geo-btn-outline:hover:not(:disabled) {
+  border-color: #059669;
+  background: #f0fdf4;
+  color: #065f46;
+}
+
+/* Coordinate input surfaces */
+:root[data-workspace-theme="light"] .survey-container .coord-input-container {
+  border-color: #e4e8ec;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(16, 24, 39, 0.04), 0 8px 24px rgba(16, 24, 39, 0.05);
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .coord-header,
+:root[data-workspace-theme="light"] .survey-container .coord-system-selector,
+:root[data-workspace-theme="light"] .survey-container .coord-footer {
+  border-color: #e4e8ec;
+  background: #ffffff;
+}
+
+:root[data-workspace-theme="light"] .survey-container .coord-title,
+:root[data-workspace-theme="light"] .survey-container .coord-system-selected-line strong,
+:root[data-workspace-theme="light"] .survey-container .coord-method-panel h4,
+:root[data-workspace-theme="light"] .survey-container .coord-preview-table td,
+:root[data-workspace-theme="light"] .survey-container .coord-manual-simple-row input {
+  color: #101827;
+}
+
+:root[data-workspace-theme="light"] .survey-container .coord-subtitle,
+:root[data-workspace-theme="light"] .survey-container .coord-system-label,
+:root[data-workspace-theme="light"] .survey-container .coord-system-selected-line span,
+:root[data-workspace-theme="light"] .survey-container .coord-system-details,
+:root[data-workspace-theme="light"] .survey-container .coord-method-panel p,
+:root[data-workspace-theme="light"] .survey-container .upload-hint,
+:root[data-workspace-theme="light"] .survey-container .coord-tip,
+:root[data-workspace-theme="light"] .survey-container .coord-manual-simple-head,
+:root[data-workspace-theme="light"] .survey-container .coord-preview-stat {
+  color: #475569;
+}
+
+:root[data-workspace-theme="light"] .survey-container .coord-system-select,
+:root[data-workspace-theme="light"] .survey-container .station-input,
+:root[data-workspace-theme="light"] .survey-container .coord-input,
+:root[data-workspace-theme="light"] .survey-container .coord-field-import-paste-textarea,
+:root[data-workspace-theme="light"] .survey-container .coord-manual-simple-row input {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .station-input::placeholder,
+:root[data-workspace-theme="light"] .survey-container .coord-input::placeholder,
+:root[data-workspace-theme="light"] .survey-container .coord-field-import-paste-textarea::placeholder,
+:root[data-workspace-theme="light"] .survey-container .coord-manual-simple-row input::placeholder {
+  color: #64748b;
+}
+
+:root[data-workspace-theme="light"] .survey-container .coord-system-details-toggle,
+:root[data-workspace-theme="light"] .survey-container .coord-method-secondary-link,
+:root[data-workspace-theme="light"] .survey-container .coord-editor-done-btn {
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container .coord-method-tab,
+:root[data-workspace-theme="light"] .survey-container .coord-field-import-mode-btn,
+:root[data-workspace-theme="light"] .survey-container .coord-preview-stat,
+:root[data-workspace-theme="light"] .survey-container .coord-manual-add-btn {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+}
+
+:root[data-workspace-theme="light"] .survey-container .coord-method-tab:hover,
+:root[data-workspace-theme="light"] .survey-container .coord-field-import-mode-btn:hover,
+:root[data-workspace-theme="light"] .survey-container .coord-preview-row-btn:hover:not(:disabled) {
+  border-color: #a7f3d0;
+  background: #f0fdf4;
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container .coord-method-tab.active,
+:root[data-workspace-theme="light"] .survey-container .coord-field-import-mode-btn.active {
+  border: 2px solid #10b981;
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+:root[data-workspace-theme="light"] .survey-container .coord-method-panel,
+:root[data-workspace-theme="light"] .survey-container .coord-preview,
+:root[data-workspace-theme="light"] .survey-container .coord-manual-simple {
+  background: #ffffff;
+}
+
+:root[data-workspace-theme="light"] .survey-container .coord-point-card,
+:root[data-workspace-theme="light"] .survey-container .coord-preview-table-wrap,
+:root[data-workspace-theme="light"] .survey-container .coord-field-import-table-wrap {
+  border-color: #e4e8ec;
+  background: #ffffff;
+}
+
+:root[data-workspace-theme="light"] .survey-container .coord-point-card:hover {
+  border-color: #a7f3d0;
+  background: #f7faf8;
+}
+
+:root[data-workspace-theme="light"] .survey-container .coord-preview-table th,
+:root[data-workspace-theme="light"] .survey-container .coord-field-import-table th {
+  background: #f8fafc;
+  border-color: #e4e8ec;
+  color: #475569;
+}
+
+:root[data-workspace-theme="light"] .survey-container .coord-preview-table td,
+:root[data-workspace-theme="light"] .survey-container .coord-field-import-table td {
+  border-color: #e4e8ec;
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .coord-method-action-btn,
+:root[data-workspace-theme="light"] .survey-container .coord-field-import-confirm {
+  border-color: #047857;
+  background: #059669;
+  color: #ffffff;
+}
+
+:root[data-workspace-theme="light"] .survey-container .coord-method-action-btn:hover,
+:root[data-workspace-theme="light"] .survey-container .coord-field-import-confirm:hover {
+  background: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container .coord-method-action-btn--outline {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+}
+
+:root[data-workspace-theme="light"] .survey-container .coord-status-pill,
+:root[data-workspace-theme="light"] .survey-container .coord-preview-stat.is-valid {
+  border-color: #a7f3d0;
+  background: #d1fae5;
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container .coord-status-pill.invalid,
+:root[data-workspace-theme="light"] .survey-container .coord-status-pill.duplicate,
+:root[data-workspace-theme="light"] .survey-container .coord-preview-stat.is-error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+:root[data-workspace-theme="light"] .survey-container .coord-status-pill.missing-station,
+:root[data-workspace-theme="light"] .survey-container .coord-preview-stat.is-warning {
+  border-color: #fcd34d;
+  background: #fef3c7;
+  color: #b45309;
+}
+
+/* Custom coordinate-system popup */
+:root[data-workspace-theme="light"] .survey-container .cs-select-trigger,
+:root[data-workspace-theme="light"] .survey-container .cs-select-option,
+:root[data-workspace-theme="light"] .survey-container .cs-select-panel {
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .cs-select-trigger {
+  border-color: #cbd5e1;
+  background: #ffffff;
+}
+
+:root[data-workspace-theme="light"] .survey-container .cs-select-panel {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgba(16, 24, 39, 0.14);
+}
+
+:root[data-workspace-theme="light"] .survey-container .cs-select-group + .cs-select-group {
+  border-top-color: #e4e8ec;
+}
+
+:root[data-workspace-theme="light"] .survey-container .cs-select-group-label,
+:root[data-workspace-theme="light"] .survey-container .cs-select-option-epsg {
+  color: #64748b;
+}
+
+:root[data-workspace-theme="light"] .survey-container .cs-select-option:hover {
+  background: #f1f5f9;
+}
+
+:root[data-workspace-theme="light"] .survey-container .cs-select-option.is-selected {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+/* Mapbox and custom map overlays */
+:root[data-workspace-theme="light"] .survey-container .map-toolbar,
+:root[data-workspace-theme="light"] .survey-container .map-layers-popover,
+:root[data-workspace-theme="light"] .survey-container .map-measure-readout,
+:root[data-workspace-theme="light"] .survey-container .map-area-badge,
+:root[data-workspace-theme="light"] .survey-container .map-empty-state button {
+  border-color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.95);
+  color: #0f172a;
+  box-shadow: 0 8px 20px rgba(16, 24, 39, 0.12);
+}
+
+:root[data-workspace-theme="light"] .survey-container .map-toolbar-btn,
+:root[data-workspace-theme="light"] .survey-container .map-basemap-switch button {
+  color: #475569;
+}
+
+:root[data-workspace-theme="light"] .survey-container .map-toolbar-btn:hover:not(:disabled),
+:root[data-workspace-theme="light"] .survey-container .map-basemap-switch button:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .survey-container .map-toolbar-btn.active,
+:root[data-workspace-theme="light"] .survey-container .map-basemap-switch button.active {
+  background: #d1fae5;
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .survey-container .map-toolbar-divider,
+:root[data-workspace-theme="light"] .survey-container .map-basemap-switch {
+  border-color: #dbe4ea;
+  background: #ffffff;
+}
+
+:root[data-workspace-theme="light"] .survey-container .map-layers-popover strong,
+:root[data-workspace-theme="light"] .survey-container .map-empty-state span,
+:root[data-workspace-theme="light"] .survey-container .map-measure-readout small {
+  color: #475569;
+}
+
+:root[data-workspace-theme="light"] .survey-container .map-selection-action button {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+:root[data-workspace-theme="light"] .survey-container .map-empty-state button:hover:not(:disabled) {
+  border-color: #059669;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+/* Georeference's locally-scoped tokens are remapped to the same Estate surfaces and ink. */
+:root[data-workspace-theme="light"] .survey-container .georef-workspace-redesign {
+  --geo-border: #dbe4ea;
+  --geo-border-strong: #cbd5e1;
+  --geo-accent: #059669;
+  --geo-accent-strong: #047857;
+  --geo-accent-ink: #ffffff;
+  --geo-amber: #b45309;
+  --geo-red: #b91c1c;
+  --geo-surface-0: #f3f5f7;
+  --geo-surface-1: #ffffff;
+  --geo-surface-2: #f8fafc;
+  --geo-surface-3: #eef7f2;
+  --geo-text-primary: #0f172a;
+  --geo-text-secondary: #475569;
+  --geo-text-muted: #64748b;
+}
+
+:root[data-workspace-theme="light"] .survey-container .geo-quality-card,
+:root[data-workspace-theme="light"] .survey-container .geo-tool-btn,
+:root[data-workspace-theme="light"] .survey-container .geo-layers-card,
+:root[data-workspace-theme="light"] .survey-container .geo-field-input,
+:root[data-workspace-theme="light"] .survey-container .geo-layer-row {
+  background: #ffffff;
+}
+
+:root[data-workspace-theme="light"] .survey-container .geo-tool-btn:hover:not(:disabled),
+:root[data-workspace-theme="light"] .survey-container .geo-tool-btn.active,
+:root[data-workspace-theme="light"] .survey-container .geo-field-input:focus-visible {
+  background: #ecfdf5;
+}
+
+@media (max-width: 640px) {
+  .survey-theme-toggle {
+    width: 32px;
+    padding: 0;
+  }
+
+  .survey-theme-toggle span {
+    display: none;
+  }
+
+  .survey-top-bar-avatar {
+    width: 22px;
+    height: 22px;
+    font-size: 0.6rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .survey-theme-toggle {
+    transition: none;
+  }
+}

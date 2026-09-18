@@ -6,6 +6,12 @@ import { api } from "../api/client";
 import { clearSurveyAuthSession, getSurveyAuthSession } from "../auth/surveyAuth";
 import ProfileAvatarMenu from "../components/ProfileAvatarMenu";
 import { useFloatingPopoverPosition } from "../utils/useFloatingPopoverPosition";
+import {
+  applyWorkspaceTheme,
+  getWorkspaceTheme,
+  subscribeWorkspaceTheme,
+  type WorkspaceTheme,
+} from "../utils/workspaceTheme";
 import "../styles/survey-tokens.css";
 import "../styles/dashboard.css";
 import { prefetchSurveyPlanPreviewStep, prefetchSurveyPlanRoute } from "../utils/surveyPlanPrefetch";
@@ -490,6 +496,10 @@ export default function Dashboard() {
   const [deletingGeorefId, setDeletingGeorefId] = useState<string | null>(null);
   const [plotTags, setPlotTags] = useState<Record<number, string>>({});
   const [createWorkOpen, setCreateWorkOpen] = useState(false);
+  const [theme, setTheme] = useState<WorkspaceTheme>(getWorkspaceTheme);
+
+  useEffect(() => applyWorkspaceTheme(theme), [theme]);
+  useEffect(() => subscribeWorkspaceTheme(setTheme), []);
 
   const warmSurveyPlanEntry = () => {
     void prefetchSurveyPlanRoute();
@@ -782,6 +792,27 @@ export default function Dashboard() {
             <span>Help</span>
           </button>
           <NewWorkMenu onNavigate={goToNewWork} onOpenChooser={openWorkChooser} />
+          <button
+            type="button"
+            className="workspace-theme-toggle"
+            role="switch"
+            aria-checked={theme === "light"}
+            aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+            title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+            onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")}
+          >
+            {theme === "light" ? (
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M16.6 12.4A6.7 6.7 0 017.6 3.4a6.7 6.7 0 109 9z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <circle cx="10" cy="10" r="3.2" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.3 4.3l1.4 1.4M14.3 14.3l1.4 1.4M15.7 4.3l-1.4 1.4M5.7 14.3l-1.4 1.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              </svg>
+            )}
+            <span>{theme === "light" ? "Light" : "Dark"}</span>
+          </button>
           {session?.user && (
             <ProfileAvatarMenu
               email={session.user.email}
