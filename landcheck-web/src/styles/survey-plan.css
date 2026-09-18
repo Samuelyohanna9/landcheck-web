@@ -7429,3 +7429,73 @@ button.geo-h-step:focus-visible {
     min-height: 640px;
   }
 }
+
+/* Keep the detected-feature summary compact in the preview sidebar. The three chips are useful
+   context, so keep them together instead of letting the last chip drop below the others. */
+.survey-container.is-preview-step:not(.is-georeference-flow) .features-bar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.survey-container.is-preview-step:not(.is-georeference-flow) .features-bar-items {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.25rem;
+  min-width: 0;
+  width: auto;
+}
+
+.survey-container.is-preview-step:not(.is-georeference-flow) .feature-chip {
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: center;
+  gap: 0.16rem;
+  padding: 0.16rem 0.24rem;
+  white-space: nowrap;
+}
+
+.survey-container.is-preview-step:not(.is-georeference-flow) .feature-chip svg {
+  width: 12px;
+  height: 12px;
+}
+
+.survey-container.is-preview-step:not(.is-georeference-flow) .chip-count {
+  font-size: 0.76rem;
+}
+
+.survey-container.is-preview-step:not(.is-georeference-flow) .chip-label {
+  font-size: 0.59rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .survey-container.is-preview-step:not(.is-georeference-flow) .features-bar {
+    gap: 0.24rem;
+    padding: 0.35rem 0.42rem;
+  }
+
+  .survey-container.is-preview-step:not(.is-georeference-flow) .features-bar-label {
+    font-size: 0.58rem;
+  }
+
+  .survey-container.is-preview-step:not(.is-georeference-flow) .feature-chip {
+    gap: 0.1rem;
+    padding: 0.14rem 0.12rem;
+  }
+
+  .survey-container.is-preview-step:not(.is-georeference-flow) .feature-chip svg {
+    width: 10px;
+    height: 10px;
+  }
+
+  .survey-container.is-preview-step:not(.is-georeference-flow) .chip-count {
+    font-size: 0.68rem;
+  }
+
+  .survey-container.is-preview-step:not(.is-georeference-flow) .chip-label {
+    font-size: 0.52rem;
+  }
+}
