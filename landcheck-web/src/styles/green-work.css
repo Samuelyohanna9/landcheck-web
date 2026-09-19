@@ -6685,8 +6685,42 @@
 .green-work-tree-inspector-grid span { color: var(--gw-muted); }
 .green-work-tree-inspector-grid strong { color: var(--gw-text); }
 
-.green-work-container.has-tree-inspector .green-work-main.map-view-mode {
+.green-work-container.has-tree-inspector-panel .green-work-main.map-view-mode,
+.green-work-container.has-tree-inspector-panel .green-work-main.remote-monitoring-mode {
   padding-right: calc(min(420px, 35vw) + 16px);
+}
+
+.green-work-tree-inspector-empty-state {
+  height: 100%;
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 28px;
+  text-align: center;
+  color: var(--gw-muted);
+}
+
+.green-work-tree-inspector-empty-state svg {
+  width: 28px;
+  height: 28px;
+  color: var(--gw-border-strong);
+  margin-bottom: 6px;
+}
+
+.green-work-tree-inspector-empty-state strong {
+  color: var(--gw-subtext);
+  font-size: 1rem;
+}
+
+.green-work-tree-inspector-empty-state p {
+  max-width: 230px;
+  margin: 0;
+  color: var(--gw-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
 }
 
 .green-work-tree-overlay { display: none; }
@@ -6711,7 +6745,8 @@
     border-radius: 16px 0 0 16px;
   }
 
-  .green-work-container.has-tree-inspector .green-work-main.map-view-mode {
+  .green-work-container.has-tree-inspector-panel .green-work-main.map-view-mode,
+  .green-work-container.has-tree-inspector-panel .green-work-main.remote-monitoring-mode {
     padding-right: 0.2rem;
   }
 }
@@ -6724,6 +6759,42 @@
   .green-work-tree-inspector-body {
     padding: 14px 14px 22px;
   }
+}
+
+@media (min-width: 861px) {
+  .green-work-menu-drawer {
+    padding: 11px 8px 10px;
+    gap: 2px;
+  }
+
+  .green-work-menu-head {
+    margin-bottom: 0;
+    padding: 2px 8px 11px;
+  }
+
+  .green-work-menu-item {
+    min-height: 30px;
+    gap: 7px;
+    padding: 0 8px;
+    font-size: 0.75rem;
+    line-height: 1.2;
+  }
+
+  .green-work-menu-item-icon {
+    width: 14px;
+    height: 14px;
+    flex-basis: 14px;
+  }
+
+  .green-work-menu-item-icon svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .green-work-menu-item-logout { margin-top: 0; }
+  .green-work-menu-group { margin-top: 0.08rem; padding-top: 0.28rem; }
+  .green-work-menu-subhead { font-size: 0.61rem; }
+  .green-work-menu-subproject { margin: 0.06rem 0 0.22rem; font-size: 0.7rem; }
 }
 
 
