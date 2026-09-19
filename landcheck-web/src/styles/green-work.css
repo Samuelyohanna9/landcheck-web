@@ -6144,5 +6144,458 @@
   white-space: pre-wrap;
 }
 
+/* Estate-style Work shell. Keep the domain-specific rules above intact, but give every Work
+   mode one light-first canvas, navigation rail, card language, and responsive scroll contract. */
+.green-work-container {
+  --gw-bg: #f3f5f7;
+  --gw-surface: #ffffff;
+  --gw-surface-muted: #f7f8fa;
+  --gw-border: #e4e8ec;
+  --gw-border-strong: #cbd5e1;
+  --gw-text: #101827;
+  --gw-subtext: #526579;
+  --gw-muted: #6b7685;
+  --gw-brand: #1a8f5a;
+  --gw-brand-dark: #0f6e44;
+  --gw-brand-tint: #e6f6ec;
+  --gw-warning-bg: #fff7e6;
+  --gw-warning-border: #f0d39a;
+  --gw-warning-text: #8a5b00;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 39, 0.04), 0 5px 14px rgba(16, 24, 39, 0.04);
+  --shadow-md: 0 1px 2px rgba(16, 24, 39, 0.04), 0 8px 24px rgba(16, 24, 39, 0.06);
+  min-height: 100dvh;
+  height: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  color: var(--gw-text);
+  background: var(--gw-bg);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.45;
+}
+
+.green-work-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  border-bottom: 1px solid var(--gw-border);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 1px 5px rgba(16, 24, 39, 0.04);
+}
+.green-work-header::after { display: none; }
+.green-work-header-inner {
+  width: min(1880px, calc(100% - 24px));
+  min-height: 62px;
+  padding: 10px 26px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+}
+.green-work-brand { gap: 8px; }
+.green-work-brand img {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--gw-border);
+  border-radius: 9px;
+  background: var(--gw-brand-dark);
+  box-shadow: none;
+}
+.green-work-brand img.green-work-partner-logo {
+  width: 32px;
+  height: 32px;
+  border-color: var(--gw-border);
+  background: var(--gw-surface);
+  box-shadow: none;
+}
+.green-work-title { text-align: left; }
+.green-work-title h1 {
+  color: var(--gw-text);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.green-work-title span { color: var(--gw-muted); font-size: 0.72rem; font-weight: 600; }
+.green-work-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+.green-work-header-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid var(--gw-border);
+  border-radius: 9px;
+  background: var(--gw-surface);
+  color: var(--gw-text);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.green-work-header-btn:hover,
+.green-work-header-btn:focus-visible {
+  background: var(--gw-brand-tint);
+  border-color: #9ed7b6;
+  color: var(--gw-brand-dark);
+  outline: none;
+}
+.green-work-theme-toggle { gap: 5px; }
+.green-work-theme-toggle span { color: var(--gw-brand-dark); font-size: 0.66rem; }
+
+.green-work-toolbar-wrap,
+.green-work-active-hub-wrap,
+.green-work-content { width: min(1880px, calc(100% - 24px)); }
+.green-work-toolbar-wrap { padding: 10px 26px 0; }
+.green-work-toolbar {
+  min-height: 38px;
+  padding: 5px 10px;
+  border: 1px solid var(--gw-border);
+  border-radius: 10px;
+  background: var(--gw-surface);
+  box-shadow: var(--shadow-sm);
+}
+.green-work-toolbar-label { color: var(--gw-brand-dark); font-size: 0.74rem; }
+.green-work-toolbar-context {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--gw-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.green-work-active-hub-wrap { padding: 10px 26px 0; }
+.green-work-active-hub {
+  padding: 8px;
+  border: 1px solid var(--gw-border);
+  border-radius: 12px;
+  background: var(--gw-surface);
+  box-shadow: var(--shadow-sm);
+}
+.green-work-action-grid {
+  display: grid;
+  grid-auto-flow: row;
+  grid-template-columns: repeat(auto-fit, minmax(126px, 1fr));
+  gap: 8px;
+  overflow: visible;
+  padding: 0;
+}
+.green-work-action-card {
+  min-width: 0;
+  min-height: 72px;
+  padding: 8px 7px;
+  border: 1px solid var(--gw-border);
+  border-radius: 10px;
+  background: var(--gw-surface);
+  color: var(--gw-text);
+  box-shadow: none;
+}
+.green-work-action-card:hover {
+  transform: translateY(-1px);
+  border-color: #9ed7b6;
+  background: #fbfefc;
+  box-shadow: var(--shadow-sm);
+}
+.green-work-action-card.active {
+  border: 2px solid var(--gw-brand);
+  background: var(--gw-brand-tint);
+  color: var(--gw-brand-dark);
+  box-shadow: none;
+}
+.green-work-action-card.active .green-work-action-copy > small { color: var(--gw-brand-dark); }
+.green-work-action-card.active .green-work-action-icon { color: var(--gw-brand); }
+.green-work-action-icon { color: var(--gw-brand); }
+.green-work-action-title-row > span:first-child { font-size: 0.72rem; line-height: 1.12; }
+.green-work-action-card .green-work-action-copy > small { color: var(--gw-muted); font-size: 0.58rem; line-height: 1.18; }
+
+.green-work-content {
+  flex: none;
+  min-height: auto;
+  padding: 18px 26px 30px;
+  overflow: visible;
+}
+.green-work-sidebar,
+.green-work-main { min-height: 0; }
+.green-work-sidebar { overflow: visible; }
+.green-work-content.with-sidebar .green-work-sidebar {
+  height: auto;
+  border: 1px solid var(--gw-border);
+  background: var(--gw-surface);
+  box-shadow: var(--shadow-sm);
+  padding: 10px;
+}
+.green-work-main { height: auto; overflow: visible; }
+.green-work-main.single-mode,
+.green-work-main.overview-mode,
+.green-work-main.map-view-mode { overflow: visible; }
+.green-work-card {
+  background: var(--gw-surface);
+  border: 1px solid var(--gw-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+}
+.green-work-card h3,
+.green-work-card h4,
+.green-work-card h5 { color: var(--gw-text); }
+.green-work-note,
+.green-work-chart-context { color: var(--gw-subtext); }
+
+.green-work-card input,
+.green-work-card select,
+.green-work-card textarea {
+  border-color: var(--gw-border-strong);
+  border-radius: 8px;
+  background: var(--gw-surface);
+  color: var(--gw-text);
+}
+.green-work-card input::placeholder,
+.green-work-card textarea::placeholder { color: #8a96a5; }
+.green-work-card input:focus,
+.green-work-card select:focus,
+.green-work-card textarea:focus {
+  border-color: var(--gw-brand);
+  box-shadow: 0 0 0 3px var(--gw-brand-tint);
+  outline: none;
+}
+.green-work-card .btn-primary,
+.green-work-secondary-btn,
+.work-actions button:not(.green-work-danger-btn) {
+  border: 1px solid var(--gw-brand);
+  border-radius: 8px;
+  background: var(--gw-surface);
+  color: var(--gw-brand-dark);
+  font-weight: 700;
+}
+.green-work-card .btn-primary {
+  background: var(--gw-brand);
+  color: #fff;
+}
+.green-work-card .btn-primary:hover { background: var(--gw-brand-dark); color: #fff; }
+.green-work-secondary-btn:hover,
+.work-actions button:not(.green-work-danger-btn):hover { background: var(--gw-brand-tint); }
+.green-work-secondary-btn {
+  min-height: 34px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.green-work-section-heading,
+.green-work-overview-alerts-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.green-work-section-kicker {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--gw-brand-dark);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.green-work-section-heading h3 { margin-bottom: 3px; }
+.green-work-map-overview-card { display: grid; gap: 12px; }
+.green-work-overview-alerts {
+  padding: 12px 14px;
+  border: 1px solid var(--gw-warning-border);
+  border-radius: 10px;
+  background: var(--gw-warning-bg);
+  color: var(--gw-warning-text);
+}
+.green-work-overview-alerts-head { margin-bottom: 6px; align-items: center; }
+.green-work-overview-alerts-head strong { color: #754c00; font-size: 0.84rem; }
+.green-work-overview-alerts-head span { font-size: 0.72rem; font-weight: 700; }
+.green-work-overview-alerts p { margin: 4px 0 0; font-size: 0.78rem; }
+.green-work-overview-alerts p span { font-weight: 800; }
+.green-work-overview-mini-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 0; }
+.green-work-overview-chart-card,
+.green-work-overview-bar-card,
+.green-work-trend-card {
+  border-color: var(--gw-border);
+  background: var(--gw-surface);
+  box-shadow: none;
+}
+.green-work-overview-bar-head strong,
+.green-work-overview-bar-head span,
+.green-work-overview-chart-card strong { color: var(--gw-brand-dark); }
+.green-work-map-overview-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.green-work-map-overview-metrics > div {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--gw-border);
+  border-radius: 10px;
+  background: var(--gw-surface-muted);
+}
+.green-work-map-overview-metrics span {
+  color: var(--gw-muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.green-work-map-overview-metrics strong { color: var(--gw-text); font-size: 1.2rem; }
+.green-work-map-overview-metrics small { color: var(--gw-subtext); font-size: 0.68rem; }
+
+.green-work-menu-head {
+  border-bottom: 1px solid var(--gw-border);
+  padding: 4px 8px 18px;
+}
+.green-work-menu-brand { display: flex; align-items: baseline; gap: 7px; }
+.green-work-menu-brand strong { color: var(--gw-text); font-size: 1rem; }
+.green-work-menu-brand small {
+  color: var(--gw-brand);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.green-work-menu-item {
+  min-height: 36px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #445066;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: left;
+}
+.green-work-menu-item:hover { background: #eef0f3; color: var(--gw-text); }
+.green-work-menu-item.active {
+  border-color: #cdeedb;
+  background: var(--gw-brand-tint);
+  color: var(--gw-brand-dark);
+}
+.green-work-menu-subhead { color: var(--gw-brand-dark); font-size: 0.66rem; letter-spacing: 0.1em; }
+.green-work-menu-subproject { color: var(--gw-muted); font-size: 0.74rem; }
+
+.green-work-table,
+.green-work-live-table { color: var(--gw-text); }
+.green-work-table th,
+.green-work-live-table th { background: #f1f5f9; color: #526579; }
+.green-work-table td,
+.green-work-live-table td { border-color: var(--gw-border); }
+.green-work-live-pill { border-color: var(--gw-border-strong); }
+
+@media (min-width: 861px) {
+  .green-work-container { padding-left: 244px; }
+  .green-work-menu-drawer {
+    top: 0;
+    left: 0;
+    width: 244px;
+    height: 100dvh;
+    max-height: none;
+    padding: 20px 14px 16px;
+    border: 0;
+    border-right: 1px solid var(--gw-border);
+    border-radius: 0;
+    background: var(--gw-surface);
+    box-shadow: 2px 0 12px rgba(16, 24, 39, 0.04);
+    transform: none;
+    z-index: 40;
+  }
+  .green-work-menu-close,
+  .green-work-menu-overlay,
+  .green-work-menu-btn,
+  .green-work-toolbar-label { display: none; }
+}
+
+@media (max-width: 860px) {
+  .green-work-header-inner,
+  .green-work-toolbar-wrap,
+  .green-work-active-hub-wrap,
+  .green-work-content { width: calc(100% - 16px); }
+  .green-work-header-inner { padding: 9px 10px; grid-template-columns: auto minmax(0, 1fr) auto; }
+  .green-work-header-actions { gap: 5px; }
+  .green-work-header-actions .green-work-project-chip { display: none; }
+  .green-work-header-actions .green-work-header-btn:not(.green-work-theme-toggle) { display: none; }
+  .green-work-toolbar-wrap { padding: 8px 8px 0; }
+  .green-work-active-hub-wrap { padding: 8px 8px 0; }
+  .green-work-content { padding: 12px 8px 22px; }
+  .green-work-action-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+  .green-work-action-card { min-height: 64px; }
+  .green-work-map-overview-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .green-work-overview-mini-grid { grid-template-columns: 1fr; }
+  .green-work-section-heading { flex-direction: column; }
+  .green-work-secondary-btn { width: 100%; }
+}
+
+@media (max-width: 520px) {
+  .green-work-header-inner { min-height: 56px; padding: 8px; }
+  .green-work-brand img { width: 32px; height: 32px; }
+  .green-work-title h1 { font-size: 0.9rem; }
+  .green-work-title span { font-size: 0.64rem; }
+  .green-work-theme-toggle { min-height: 30px; padding: 0 7px; font-size: 0.66rem; }
+  .green-work-map-overview-metrics { gap: 7px; }
+  .green-work-map-overview-metrics > div { padding: 8px; }
+}
+
+:root[data-workspace-theme="dark"] .green-work-container {
+  --gw-bg: #0f1720;
+  --gw-surface: #162231;
+  --gw-surface-muted: #1b2b3a;
+  --gw-border: #304254;
+  --gw-border-strong: #4b6072;
+  --gw-text: #e8eef5;
+  --gw-subtext: #b4c2d0;
+  --gw-muted: #91a2b4;
+  --gw-brand: #36bd7a;
+  --gw-brand-dark: #8be0b2;
+  --gw-brand-tint: #173c32;
+  --gw-warning-bg: #3a301c;
+  --gw-warning-border: #806325;
+  --gw-warning-text: #f6d98d;
+  background: var(--gw-bg);
+}
+:root[data-workspace-theme="dark"] .green-work-header,
+:root[data-workspace-theme="dark"] .green-work-toolbar,
+:root[data-workspace-theme="dark"] .green-work-active-hub,
+:root[data-workspace-theme="dark"] .green-work-content.with-sidebar .green-work-sidebar,
+:root[data-workspace-theme="dark"] .green-work-card,
+:root[data-workspace-theme="dark"] .green-work-menu-drawer {
+  background: var(--gw-surface);
+  border-color: var(--gw-border);
+  color: var(--gw-text);
+}
+:root[data-workspace-theme="dark"] .green-work-title h1,
+:root[data-workspace-theme="dark"] .green-work-menu-brand strong,
+:root[data-workspace-theme="dark"] .green-work-card h3,
+:root[data-workspace-theme="dark"] .green-work-card h4,
+:root[data-workspace-theme="dark"] .green-work-card h5,
+:root[data-workspace-theme="dark"] .green-work-map-overview-metrics strong { color: var(--gw-text); }
+:root[data-workspace-theme="dark"] .green-work-header-btn,
+:root[data-workspace-theme="dark"] .green-work-action-card,
+:root[data-workspace-theme="dark"] .green-work-overview-chart-card,
+:root[data-workspace-theme="dark"] .green-work-overview-bar-card,
+:root[data-workspace-theme="dark"] .green-work-trend-card,
+:root[data-workspace-theme="dark"] .green-work-map-overview-metrics > div {
+  background: var(--gw-surface-muted);
+  border-color: var(--gw-border);
+  color: var(--gw-text);
+}
+:root[data-workspace-theme="dark"] .green-work-action-card.active,
+:root[data-workspace-theme="dark"] .green-work-menu-item.active { background: var(--gw-brand-tint); color: var(--gw-brand-dark); }
+:root[data-workspace-theme="dark"] .green-work-menu-item { color: var(--gw-subtext); }
+:root[data-workspace-theme="dark"] .green-work-menu-item:hover { background: #223447; color: var(--gw-text); }
+:root[data-workspace-theme="dark"] .green-work-card input,
+:root[data-workspace-theme="dark"] .green-work-card select,
+:root[data-workspace-theme="dark"] .green-work-card textarea { background: #0f1a26; color: var(--gw-text); border-color: var(--gw-border-strong); }
+:root[data-workspace-theme="dark"] .green-work-table th,
+:root[data-workspace-theme="dark"] .green-work-live-table th { background: #101c2a; color: var(--gw-subtext); }
+:root[data-workspace-theme="dark"] .green-work-overview-alerts-head strong { color: var(--gw-warning-text); }
+
 
 
