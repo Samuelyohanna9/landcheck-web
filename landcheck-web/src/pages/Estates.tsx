@@ -589,6 +589,7 @@ export default function Estates() {
   const [plotDocumentFile, setPlotDocumentFile] = useState<File | null>(null);
   const [plotDocumentBusy, setPlotDocumentBusy] = useState(false);
   const mapContainer = useRef<HTMLDivElement | null>(null);
+  const mapGridRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const mapInteractionRef = useRef<{ allocations: any[]; selectAllocation: (id: string) => void }>({ allocations: [], selectAllocation: () => {} });
   const [mapError, setMapError] = useState("");
@@ -1713,7 +1714,17 @@ export default function Estates() {
             <button type="button" className={`edash-map-controls-group edash-map-ctrl-btn${layersVisible ? " active" : ""}`} title="Toggle roads & open space" onClick={() => setLayersVisible((value) => !value)}>
               <EstateIcon name="layers" />
             </button>
-            <button type="button" className="edash-map-controls-group edash-map-ctrl-btn" title="Fullscreen" onClick={() => mapContainer.current?.parentElement?.requestFullscreen?.()}>
+            <button
+              type="button"
+              className="edash-map-controls-group edash-map-ctrl-btn"
+              title="Fullscreen"
+              onClick={() => {
+                const target = mapGridRef.current || mapContainer.current?.parentElement;
+                if (!target) return;
+                if (document.fullscreenElement === target) void document.exitFullscreen?.();
+                else void target.requestFullscreen?.();
+              }}
+            >
               <EstateIcon name="expand" />
             </button>
           </div>
@@ -3019,7 +3030,7 @@ export default function Estates() {
       {isMapView && message && <StatusBanner text={message} tone={messageTone} />}
       {renderStatsRow()}
       {isMapView ? (
-        <div className="edash-map-grid">
+        <div ref={mapGridRef} className="edash-map-grid">
           <div className="edash-map-grid-left">
             {renderMapPanel()}
             {renderBottomRow(["activity", "progress"])}

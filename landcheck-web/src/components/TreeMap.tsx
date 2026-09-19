@@ -120,6 +120,7 @@ type Props = {
   workflowMode?: "green" | "agric" | "relief_recovery" | "csr";
   minHeight?: number;
   showMapControls?: boolean;
+  fullscreenTargetRef?: { current: HTMLElement | null };
 };
 
 type MapAreaGeometry = {
@@ -819,6 +820,7 @@ export default function TreeMap({
   workflowMode = "green",
   minHeight = 420,
   showMapControls = false,
+  fullscreenTargetRef,
 }: Props) {
   const hasMapboxToken = Boolean(MAPBOX_TOKEN);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -1542,6 +1544,15 @@ export default function TreeMap({
   }, [mapReady]);
 
   useEffect(() => {
+    if (!mapReady) return undefined;
+    const resizeMapAfterFullscreenChange = () => {
+      window.requestAnimationFrame(() => mapRef.current?.resize());
+    };
+    document.addEventListener("fullscreenchange", resizeMapAfterFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", resizeMapAfterFullscreenChange);
+  }, [mapReady]);
+
+  useEffect(() => {
     const map = mapRef.current;
     const mapboxgl = mapboxglRef.current;
     if (!map || !mapboxgl || !mapReady || suspendFitBounds || !fitBounds || fitBounds.length === 0) return;
@@ -1743,7 +1754,19 @@ export default function TreeMap({
               <path d="m12 4 7 4-7 4-7-4 7-4zM5 12l7 4 7-4M5 16l7 4 7-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
             </svg>
           </button>
-          <button type="button" className="tree-map-estate-control-btn" aria-label="Fullscreen map" title="Fullscreen map" onClick={() => containerRef.current?.parentElement?.requestFullscreen?.()} disabled={!mapReady || Boolean(mapError)}>
+          <button
+            type="button"
+            className="tree-map-estate-control-btn"
+            aria-label="Fullscreen map"
+            title="Fullscreen map"
+            onClick={() => {
+              const target = fullscreenTargetRef?.current || containerRef.current?.parentElement;
+              if (!target) return;
+              if (document.fullscreenElement === target) void document.exitFullscreen?.();
+              else void target.requestFullscreen?.();
+            }}
+            disabled={!mapReady || Boolean(mapError)}
+          >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M8 4H4v4M16 4h4v4M20 16v4h-4M4 16v4h4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
             </svg>

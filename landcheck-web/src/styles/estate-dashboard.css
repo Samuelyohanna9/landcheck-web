@@ -441,6 +441,52 @@
 .edash-map-grid-left > .edash-bottom-row {
   flex-shrink: 0;
 }
+
+/* Keep the map and plot drawer in the same fullscreen element. Fullscreening only the map canvas
+   used to remove the sibling drawer from the browser's fullscreen top layer. */
+.edash-map-grid:fullscreen,
+.edash-map-grid:-webkit-full-screen {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 16px;
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: 100dvh;
+  padding: 16px;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: var(--edash-bg);
+}
+
+.edash-map-grid:fullscreen .edash-map-grid-left,
+.edash-map-grid:-webkit-full-screen .edash-map-grid-left {
+  height: 100%;
+  min-height: 0;
+}
+
+.edash-map-grid:fullscreen .edash-map-grid-left > .edash-map-card,
+.edash-map-grid:-webkit-full-screen .edash-map-grid-left > .edash-map-card {
+  height: 100%;
+  min-height: 0;
+}
+
+.edash-map-grid:fullscreen .edash-map-grid-left > .edash-bottom-row,
+.edash-map-grid:-webkit-full-screen .edash-map-grid-left > .edash-bottom-row {
+  display: none;
+}
+
+.edash-map-grid:fullscreen .edash-map-canvas-wrap,
+.edash-map-grid:-webkit-full-screen .edash-map-canvas-wrap {
+  min-height: 0;
+}
+
+.edash-map-grid:fullscreen > .edash-drawer,
+.edash-map-grid:-webkit-full-screen > .edash-drawer {
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+}
 /* Deliberately NOT min-height: 0 (unlike the drawer) - the map card's own floor is its content's
    minimum (the toolbar plus .edash-map-canvas-wrap's min-height below), and it should hold that
    floor even when the bottom row wants more room than is left. Overriding it to 0 previously let
