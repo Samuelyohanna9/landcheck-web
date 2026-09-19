@@ -10990,6 +10990,7 @@ export default function GreenWork() {
   const sidebarPrimaryMode = Boolean(showSidebar && !hasDedicatedMainContent);
   const mapAreaDrawMode = Boolean(activeProjectId && newOrderAreaEnabled && (activeForm === "assign_work" || activeForm === "map_view"));
   const activeTreeId = inspectedTree?.id || 0;
+  const showTreeInspectorPanel = mapViewMode || (remoteMonitoringMode && Boolean(inspectedTree));
 
   const recalcDrawerFrame = useCallback(() => {
     const menuButton = menuButtonRef.current;
@@ -11405,7 +11406,7 @@ export default function GreenWork() {
   };
 
   return (
-    <div className={`green-work-container ${inspectedTree ? "has-tree-inspector" : ""}`}>
+    <div className={`green-work-container ${showTreeInspectorPanel ? "has-tree-inspector-panel" : ""}`}>
       <Toaster position="top-right" />
       {privacyConsentModal}
       <header className="green-work-header">
@@ -17010,7 +17011,7 @@ export default function GreenWork() {
           )}
         </aside>
 
-        <section className={`green-work-main ${overviewMode || liveTableMode || verraMode || remoteMonitoringMode || agricFarmerLiveMode || agricFieldCaptureMode || agricSupportVisitMode || shareImpactMode ? "overview-mode" : "single-mode"} ${mapViewMode ? "map-view-mode" : ""}`}>
+        <section className={`green-work-main ${overviewMode || liveTableMode || verraMode || remoteMonitoringMode || agricFarmerLiveMode || agricFieldCaptureMode || agricSupportVisitMode || shareImpactMode ? "overview-mode" : "single-mode"} ${mapViewMode ? "map-view-mode" : ""} ${remoteMonitoringMode ? "remote-monitoring-mode" : ""}`}>
           {shareImpactMode && (
             <Suspense fallback={<div className="green-work-card green-work-empty-state"><GreenLoadingAnimation label="Loading share impact tools..." size="small" /></div>}>
               <GreenWorkShareImpactPanel
@@ -18224,7 +18225,7 @@ export default function GreenWork() {
         </section>
       </div>
 
-      {inspectedTree && (
+      {inspectedTree ? (
         <>
           <button
             type="button"
@@ -18655,7 +18656,20 @@ export default function GreenWork() {
             </div>
           </aside>
         </>
-      )}
+      ) : mapViewMode ? (
+        <aside className="green-work-tree-drawer green-work-tree-inspector green-work-tree-inspector-empty" aria-label="Tree details">
+          <div className="green-work-tree-inspector-empty-state">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <rect x="5" y="5" width="6" height="6" rx="1" fill="none" stroke="currentColor" strokeWidth="1.6" />
+              <rect x="13" y="5" width="6" height="6" rx="1" fill="none" stroke="currentColor" strokeWidth="1.6" />
+              <rect x="5" y="13" width="6" height="6" rx="1" fill="none" stroke="currentColor" strokeWidth="1.6" />
+              <rect x="13" y="13" width="6" height="6" rx="1" fill="none" stroke="currentColor" strokeWidth="1.6" />
+            </svg>
+            <strong>No tree selected</strong>
+            <p>Click a tree on the map to open its full record here.</p>
+          </div>
+        </aside>
+      ) : null}
 
       {workPasswordModalOpen && (
         <>
