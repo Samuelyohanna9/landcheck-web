@@ -3405,6 +3405,10 @@ export default function GreenWork() {
     workAuthSession?.auth_mode === "env_admin" ||
     normalizeName(workAuthSession?.user?.role_key) === "super_admin" ||
     normalizeName(workAuthSession?.user?.role) === "super_admin";
+  const canAccessSystemLogs =
+    normalizeName(workAuthSession?.user?.role_key) === "super_admin" ||
+    normalizeName(workAuthSession?.user?.role) === "super_admin" ||
+    normalizeName(workAuthSession?.user?.role_name).replace(/\s+/g, "_") === "super_admin";
   const canReviewSponsorPayoutClearance = canAccessSuperAdmin;
   const isSuperAdminOnlyForm = (form: WorkForm | null | undefined) => form === "super_admin" || form === "logs" || form === "merchants";
   const isPartnerWorkSession = workAuthSession?.auth_mode === "partner_user";
@@ -4089,6 +4093,7 @@ export default function GreenWork() {
     const storedForm = storedFormNormalized as WorkForm;
     if (!allowedForms.includes(storedForm)) return null;
     if (isSuperAdminOnlyForm(storedForm) && !canAccessSuperAdmin) return null;
+    if (storedForm === "logs" && !canAccessSystemLogs) return null;
     return storedForm;
   });
   const activeFormHiddenInAgric = activeForm ? isHiddenInFieldProject(activeForm) : false;
@@ -7454,7 +7459,7 @@ export default function GreenWork() {
   }, [activeForm]);
 
   useEffect(() => {
-    if (!canAccessSuperAdmin || activeForm !== "logs") return;
+    if (!canAccessSystemLogs || activeForm !== "logs") return;
     void loadComplianceDashboard();
     void loadActivityLogs();
     void loadQrPrintsReport();
@@ -7463,7 +7468,7 @@ export default function GreenWork() {
       void loadQrPrintsReport();
     }, 15000);
     return () => window.clearInterval(timer);
-  }, [activeForm, canAccessSuperAdmin, loadActivityLogs, loadComplianceDashboard, loadQrPrintsReport]);
+  }, [activeForm, canAccessSystemLogs, loadActivityLogs, loadComplianceDashboard, loadQrPrintsReport]);
 
   useEffect(() => {
     if (activeForm === "logs") return;
@@ -10207,7 +10212,7 @@ export default function GreenWork() {
           { form: "remote_monitoring", title: "Farm Health", note: "NDVI + vigor + drought watch", isNew: true },
           { form: "review_queue", title: "Review Queue", note: "Approve or reject submissions" },
           { form: "users", title: "Users", note: "All staff status + roles" },
-          ...(canAccessSuperAdmin
+          ...(canAccessSystemLogs
             ? [{ form: "logs" as WorkForm, title: "System Logs & Reports", note: "Cross-product activity + QR reports" }]
             : []),
           ...(activeProjectRecord?.organization_slug
@@ -10224,7 +10229,7 @@ export default function GreenWork() {
             { form: "map_view", title: actionMapWorkspaceCopy.title, note: actionMapWorkspaceCopy.note },
             { form: "review_queue", title: "Review Queue", note: "Approve or reject submissions" },
             { form: "users", title: "Users", note: "All staff status + roles" },
-            ...(canAccessSuperAdmin
+            ...(canAccessSystemLogs
               ? [{ form: "logs" as WorkForm, title: "System Logs & Reports", note: "Cross-product activity + QR reports" }]
               : []),
             ...(activeProjectRecord?.organization_slug
@@ -10254,7 +10259,7 @@ export default function GreenWork() {
           { form: "existing_tree_intake", title: actionCsrMode ? "Programme Records" : actionWorkflowLabels.recordTitle, note: actionCsrMode ? "Verified implementation records" : "Existing tree records" },
           { form: "verra_reports", title: actionCsrMode ? "Programme Reports" : "Verra Reports", note: actionCsrMode ? "CSR reporting package + history" : "VCS package + history" },
           { form: "review_queue", title: "Review Queue", note: "Approve or reject submissions" },
-          ...(canAccessSuperAdmin
+          ...(canAccessSystemLogs
             ? [{ form: "logs" as WorkForm, title: "System Logs & Reports", note: "Activity logs + QR prints report" }]
             : []),
           ...(activeProjectRecord?.organization_slug
@@ -11396,10 +11401,13 @@ export default function GreenWork() {
   };
 
   useEffect(() => {
-    if (canAccessSuperAdmin) return;
-    if (activeForm !== "super_admin" && activeForm !== "logs") return;
+    if (activeForm === "logs" && !canAccessSystemLogs) {
+      setActiveForm(activeProjectId ? defaultProjectForm : "project_focus");
+      return;
+    }
+    if (canAccessSuperAdmin || activeForm !== "super_admin") return;
     setActiveForm(activeProjectId ? defaultProjectForm : "project_focus");
-  }, [activeForm, activeProjectId, canAccessSuperAdmin, defaultProjectForm]);
+  }, [activeForm, activeProjectId, canAccessSystemLogs, canAccessSuperAdmin, defaultProjectForm]);
 
   useEffect(() => {
     if (!activeProjectId) return;
@@ -12054,7 +12062,7 @@ export default function GreenWork() {
                 Review Queue ({reviewQueue.length})
               </button>
             )}
-            {canAccessSuperAdmin && (
+            {canAccessSystemLogs && (
               <button
                 className={`green-work-menu-item ${activeForm === "logs" ? "active" : ""}`}
                 type="button"
@@ -16309,7 +16317,7 @@ export default function GreenWork() {
             </div>
           )}
 
-          {activeForm === "logs" && canAccessSuperAdmin && (
+          {activeForm === "logs" && canAccessSystemLogs && (
             <Suspense fallback={<div className="green-work-card green-work-empty-state"><GreenLoadingAnimation label="Loading system logs and compliance tools..." size="small" /></div>}>
               <GreenWorkLogsPanel
                 refreshLogsAndReports={() => {
