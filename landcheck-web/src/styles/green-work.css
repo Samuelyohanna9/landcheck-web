@@ -6472,6 +6472,10 @@
   font-size: 0.8rem;
   font-weight: 600;
   text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 10px;
 }
 .green-work-menu-item:hover { background: #eef0f3; color: var(--gw-text); }
 .green-work-menu-item.active {
@@ -6479,6 +6483,23 @@
   background: var(--gw-brand-tint);
   color: var(--gw-brand-dark);
 }
+.green-work-menu-item-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: currentColor;
+  opacity: 0.78;
+}
+.green-work-menu-item-icon svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+.green-work-menu-item.active .green-work-menu-item-icon,
+.green-work-menu-item:hover .green-work-menu-item-icon { opacity: 1; }
 .green-work-menu-subhead { color: var(--gw-brand-dark); font-size: 0.66rem; letter-spacing: 0.1em; }
 .green-work-menu-subproject { color: var(--gw-muted); font-size: 0.74rem; }
 
