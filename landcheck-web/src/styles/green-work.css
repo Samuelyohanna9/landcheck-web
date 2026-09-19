@@ -6434,21 +6434,33 @@
 }
 .green-work-map-overview-metrics > div {
   display: grid;
-  gap: 2px;
-  padding: 10px 12px;
+  gap: 1px;
+  padding: 8px 10px;
   border: 1px solid var(--gw-border);
-  border-radius: 10px;
+  border-radius: 9px;
   background: var(--gw-surface-muted);
 }
 .green-work-map-overview-metrics span {
   color: var(--gw-muted);
-  font-size: 0.66rem;
+  font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-.green-work-map-overview-metrics strong { color: var(--gw-text); font-size: 1.2rem; }
-.green-work-map-overview-metrics small { color: var(--gw-subtext); font-size: 0.68rem; }
+.green-work-map-metric-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.green-work-map-metric-label svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  color: var(--gw-brand);
+}
+.green-work-map-overview-metrics strong { color: var(--gw-text); font-size: 1.05rem; line-height: 1.15; }
+.green-work-map-overview-metrics small { color: var(--gw-subtext); font-size: 0.63rem; }
 .green-work-map-top-metrics { flex: 0 0 auto; }
 
 .green-work-map-toolbar {
