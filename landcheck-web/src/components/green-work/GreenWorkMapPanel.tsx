@@ -136,7 +136,7 @@ export default function GreenWorkMapPanel(props: GreenWorkMapPanelProps) {
           }}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M4 6h16M7 12h10M10 18h4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            <path d="M4 5h16l-6 7.5v5.5l-4 2v-7.5L4 5Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
           </svg>
         </button>
       </div>
