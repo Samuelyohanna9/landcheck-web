@@ -78,6 +78,73 @@
   cursor: not-allowed;
 }
 
+.tree-map-estate-controls {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tree-map-estate-controls-group,
+.tree-map-estate-control-btn {
+  overflow: hidden;
+  border: 1px solid var(--gw-border, rgba(27, 78, 50, 0.16));
+  border-radius: 12px;
+  background: var(--gw-surface, rgba(255, 255, 255, 0.96));
+  color: var(--gw-text, #184e34);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
+}
+
+.tree-map-estate-controls-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.tree-map-estate-controls button {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tree-map-estate-controls-group button + button {
+  border-top: 1px solid var(--gw-border, rgba(27, 78, 50, 0.16));
+}
+
+.tree-map-estate-control-btn {
+  flex: 0 0 auto;
+}
+
+.tree-map-estate-control-btn svg {
+  width: 19px;
+  height: 19px;
+  display: block;
+}
+
+.tree-map-estate-controls button:hover:not(:disabled),
+.tree-map-estate-controls button:focus-visible,
+.tree-map-estate-control-btn.active {
+  background: var(--gw-brand-tint, #e6f6ec);
+  color: var(--gw-brand-dark, #0f6e44);
+  outline: none;
+}
+
+.tree-map-estate-controls button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .tree-map-overlay {
   position: absolute;
   inset: 0;
@@ -222,6 +289,17 @@
   }
 
   .tree-map-zoom-btn {
+    width: 42px;
+    height: 42px;
+  }
+
+  .tree-map-estate-controls {
+    top: 10px;
+    right: 10px;
+    gap: 6px;
+  }
+
+  .tree-map-estate-controls button {
     width: 42px;
     height: 42px;
   }

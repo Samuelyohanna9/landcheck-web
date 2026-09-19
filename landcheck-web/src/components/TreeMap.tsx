@@ -119,6 +119,7 @@ type Props = {
   assignmentAreas?: Array<{ id?: number | string; label?: string | null; treeId?: number | null; geojson: any }>;
   workflowMode?: "green" | "agric" | "relief_recovery" | "csr";
   minHeight?: number;
+  showMapControls?: boolean;
 };
 
 type MapAreaGeometry = {
@@ -817,6 +818,7 @@ export default function TreeMap({
   assignmentAreas = [],
   workflowMode = "green",
   minHeight = 420,
+  showMapControls = false,
 }: Props) {
   const hasMapboxToken = Boolean(MAPBOX_TOKEN);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -848,6 +850,7 @@ export default function TreeMap({
   const healthyBlinkActiveRef = useRef(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [layersVisible, setLayersVisible] = useState(true);
   const treeDataSignature = useMemo(() => buildTreeDataSignature(trees, workflowMode), [trees, workflowMode]);
   const treeFeatureCollection = useMemo(
     () => buildTreeFeatureCollection(trees, workflowMode),
@@ -1072,7 +1075,9 @@ export default function TreeMap({
       map.boxZoom.enable();
       map.doubleClickZoom.enable();
       map.touchZoomRotate.enable();
-      map.addControl(new mapboxgl.NavigationControl(), "top-right");
+      if (!showMapControls) {
+        map.addControl(new mapboxgl.NavigationControl(), "top-right");
+      }
 
       const attachDrawControls = async () => {
         if (!enableDraw || drawRef.current) return;
@@ -1515,7 +1520,7 @@ export default function TreeMap({
       }
       mapboxglRef.current = null;
     };
-  }, [enableDraw, hasMapboxToken]);
+  }, [enableDraw, hasMapboxToken, showMapControls]);
 
   useEffect(() => {
     const handleOnline = () => {
@@ -1572,6 +1577,24 @@ export default function TreeMap({
     if (!source) return;
     source.setData(assignmentAreaFeatureCollection);
   }, [assignmentAreaFeatureCollection, assignmentAreaSignature, mapReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const visible = layersVisible ? "visible" : "none";
+    [
+      TREE_OUTER_LAYER_ID,
+      TREE_CORE_LAYER_ID,
+      ASSIGNMENT_AREA_FILL_LAYER_ID,
+      ASSIGNMENT_AREA_LINE_LAYER_ID,
+      ASSIGNMENT_AREA_POINT_LAYER_ID,
+      ASSIGNMENT_AREA_LABEL_LAYER_ID,
+    ].forEach((layerId) => {
+      if (map.getLayer(layerId)) {
+        map.setLayoutProperty(layerId, "visibility", visible);
+      }
+    });
+  }, [layersVisible, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1678,29 +1701,76 @@ export default function TreeMap({
     }
   }, [draftPoint]);
 
+  const fitVisibleData = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    const points = (fitBounds && fitBounds.length > 0 ? fitBounds : trees)
+      .map((point: any) => ({ lng: Number(point?.lng), lat: Number(point?.lat) }))
+      .filter((point: { lng: number; lat: number }) => Number.isFinite(point.lng) && Number.isFinite(point.lat));
+    if (points.length === 0) return;
+    if (points.length === 1) {
+      map.flyTo({ center: [points[0].lng, points[0].lat], zoom: Math.max(Number(map.getZoom() || 0), 15), duration: 280 });
+      return;
+    }
+    const west = Math.min(...points.map((point: { lng: number; lat: number }) => point.lng));
+    const south = Math.min(...points.map((point: { lng: number; lat: number }) => point.lat));
+    const east = Math.max(...points.map((point: { lng: number; lat: number }) => point.lng));
+    const north = Math.max(...points.map((point: { lng: number; lat: number }) => point.lat));
+    map.fitBounds([[west, south], [east, north]], { padding: 60, maxZoom: 17, duration: 280 });
+  };
+
   return (
     <div className="tree-map-wrap">
       <div ref={containerRef} className="tree-map" style={{ minHeight }} />
-      <div className="tree-map-zoom-buttons" aria-label="Map zoom controls">
-        <button
-          type="button"
-          className="tree-map-zoom-btn"
-          aria-label="Zoom in"
-          onClick={() => mapRef.current?.zoomIn({ duration: 180 })}
-          disabled={!mapReady || Boolean(mapError)}
-        >
-          +
-        </button>
-        <button
-          type="button"
-          className="tree-map-zoom-btn"
-          aria-label="Zoom out"
-          onClick={() => mapRef.current?.zoomOut({ duration: 180 })}
-          disabled={!mapReady || Boolean(mapError)}
-        >
-          -
-        </button>
-      </div>
+      {showMapControls ? (
+        <div className="tree-map-estate-controls" aria-label="Map controls">
+          <div className="tree-map-estate-controls-group">
+            <button type="button" aria-label="Zoom in" title="Zoom in" onClick={() => mapRef.current?.zoomIn({ duration: 180 })} disabled={!mapReady || Boolean(mapError)}>
+              +
+            </button>
+            <button type="button" aria-label="Zoom out" title="Zoom out" onClick={() => mapRef.current?.zoomOut({ duration: 180 })} disabled={!mapReady || Boolean(mapError)}>
+              −
+            </button>
+          </div>
+          <button type="button" className="tree-map-estate-control-btn" aria-label="Fit to visible trees" title="Fit to visible trees" onClick={fitVisibleData} disabled={!mapReady || Boolean(mapError)}>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M5 9V5h4M15 5h4v4M19 15v4h-4M9 19H5v-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="12" cy="12" r="2.2" fill="none" stroke="currentColor" strokeWidth="1.7" />
+            </svg>
+          </button>
+          <button type="button" className={`tree-map-estate-control-btn${layersVisible ? " active" : ""}`} aria-label="Toggle map layers" title="Toggle map layers" onClick={() => setLayersVisible((value) => !value)} disabled={!mapReady || Boolean(mapError)}>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="m12 4 7 4-7 4-7-4 7-4zM5 12l7 4 7-4M5 16l7 4 7-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <button type="button" className="tree-map-estate-control-btn" aria-label="Fullscreen map" title="Fullscreen map" onClick={() => containerRef.current?.parentElement?.requestFullscreen?.()} disabled={!mapReady || Boolean(mapError)}>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M8 4H4v4M16 4h4v4M20 16v4h-4M4 16v4h4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+      ) : (
+        <div className="tree-map-zoom-buttons" aria-label="Map zoom controls">
+          <button
+            type="button"
+            className="tree-map-zoom-btn"
+            aria-label="Zoom in"
+            onClick={() => mapRef.current?.zoomIn({ duration: 180 })}
+            disabled={!mapReady || Boolean(mapError)}
+          >
+            +
+          </button>
+          <button
+            type="button"
+            className="tree-map-zoom-btn"
+            aria-label="Zoom out"
+            onClick={() => mapRef.current?.zoomOut({ duration: 180 })}
+            disabled={!mapReady || Boolean(mapError)}
+          >
+            -
+          </button>
+        </div>
+      )}
       {!mapReady && !mapError && (
         <div className="tree-map-overlay">Loading map...</div>
       )}
