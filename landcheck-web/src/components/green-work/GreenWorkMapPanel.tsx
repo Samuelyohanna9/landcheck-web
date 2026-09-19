@@ -85,24 +85,15 @@ export default function GreenWorkMapPanel(props: GreenWorkMapPanelProps) {
 
   return (
     <div ref={mapCardRef} className="green-work-card green-work-map-card">
-      <h3>
-        {assignWorkAreaMode
-          ? "Planting Area Map (Polygon Draw)"
-          : mapAreaDrawMode
-            ? "Map View (Polygon Draw Enabled)"
-            : "Map View"}
-      </h3>
-      <p className="green-work-note">
-        {assignWorkAreaMode
-          ? "Draw one polygon for this planting order in this tab, then click Assign Work."
-          : mapAreaDrawMode
-            ? "Planting-area draw is enabled from Assign Tree Planting. Draw polygon here, then return to assign work."
-            : maintenanceMapFocusActive
-              ? `Showing ${maintenanceFocusedTreeIds.length} selected maintenance tree${maintenanceFocusedTreeIds.length === 1 ? "" : "s"} from the queue. Clear focus to return to the full project map.`
-              : activeWorkflowProfile === "agric"
-                ? "Project farm map view. Inspect mapped farm boundaries and open farmer-linked plot details."
-                : "Project tree map view. Inspect trees and monitor field positions."}
-      </p>
+      {(assignWorkAreaMode || mapAreaDrawMode || maintenanceMapFocusActive) && (
+        <p className="green-work-note">
+          {assignWorkAreaMode
+            ? "Draw one polygon for this planting order in this tab, then click Assign Work."
+            : mapAreaDrawMode
+              ? "Planting-area draw is enabled from Assign Tree Planting. Draw polygon here, then return to assign work."
+              : `Showing ${maintenanceFocusedTreeIds.length} selected maintenance tree${maintenanceFocusedTreeIds.length === 1 ? "" : "s"} from the queue. Clear focus to return to the full project map.`}
+        </p>
+      )}
       <div className="green-work-map-toolbar" aria-label="Map filters">
         <select
           aria-label="Filter by block"

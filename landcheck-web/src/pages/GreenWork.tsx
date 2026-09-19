@@ -18183,23 +18183,19 @@ export default function GreenWork() {
             <div className="green-work-map-overview-metrics green-work-map-top-metrics" aria-label="Project metrics">
               <div>
                 <span className="green-work-map-metric-label">{renderMapMetricIcon("planted")}<span>Planted</span></span>
-                <strong>{filteredOverviewTotals.plantedTrees}</strong>
-                <small>of {filteredOverviewTotals.targetTrees} target trees</small>
+                <span className="green-work-map-metric-value"><strong>{filteredOverviewTotals.plantedTrees}</strong><small>of {filteredOverviewTotals.targetTrees} target trees</small></span>
               </div>
               <div>
                 <span className="green-work-map-metric-label">{renderMapMetricIcon("tasks")}<span>Tasks done</span></span>
-                <strong>{filteredOverviewTotals.taskDone}</strong>
-                <small>{filteredOverviewTotals.taskPending} pending</small>
+                <span className="green-work-map-metric-value"><strong>{filteredOverviewTotals.taskDone}</strong><small>{filteredOverviewTotals.taskPending} pending</small></span>
               </div>
               <div>
                 <span className="green-work-map-metric-label">{renderMapMetricIcon("review")}<span>Awaiting review</span></span>
-                <strong>{reviewQueue.length}</strong>
-                <small>submissions</small>
+                <span className="green-work-map-metric-value"><strong>{reviewQueue.length}</strong><small>submissions</small></span>
               </div>
               <div>
                 <span className="green-work-map-metric-label">{renderMapMetricIcon("alerts")}<span>Open alerts</span></span>
-                <strong>{alertsSummary.total}</strong>
-                <small>{alertsSummary.danger} high priority</small>
+                <span className="green-work-map-metric-value"><strong>{alertsSummary.total}</strong><small>{alertsSummary.danger} high priority</small></span>
               </div>
             </div>
           )}

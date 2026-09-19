@@ -6459,6 +6459,13 @@
   flex: 0 0 14px;
   color: var(--gw-brand);
 }
+.green-work-map-metric-value {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+  white-space: nowrap;
+}
 .green-work-map-overview-metrics strong { color: var(--gw-text); font-size: 1.05rem; line-height: 1.15; }
 .green-work-map-overview-metrics small { color: var(--gw-subtext); font-size: 0.63rem; }
 .green-work-map-top-metrics { flex: 0 0 auto; }
