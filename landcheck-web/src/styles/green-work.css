@@ -6467,7 +6467,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   margin: 2px 0 10px;
   padding: 5px 6px;
   border: 1px solid var(--gw-border);
@@ -6476,9 +6476,12 @@
 }
 
 .green-work-map-toolbar select {
-  min-width: 132px;
+  width: auto;
+  min-width: 0;
+  flex: 1 1 0;
   min-height: 34px;
   padding: 0 28px 0 11px;
+  margin-bottom: 0;
   border: 1px solid var(--gw-border-strong);
   border-radius: 9px;
   background: var(--gw-surface);
@@ -6488,7 +6491,7 @@
   font-weight: 700;
 }
 
-.green-work-map-toolbar-spacer { flex: 1 1 auto; min-width: 8px; }
+.green-work-map-toolbar-spacer { flex: 1 1 auto; min-width: 0; }
 
 .green-work-map-filter-btn {
   width: 36px;
@@ -6621,9 +6624,8 @@
 
 @media (max-width: 520px) {
   .green-work-map-toolbar { gap: 6px; }
-  .green-work-map-toolbar select { min-width: 0; flex: 1 1 130px; }
+  .green-work-map-toolbar select { flex-basis: 0; }
   .green-work-map-toolbar-spacer { display: none; }
-  .green-work-map-filter-btn { margin-left: auto; }
 
   .green-work-header-inner { min-height: 56px; padding: 8px; }
   .green-work-brand img { width: 32px; height: 32px; }
