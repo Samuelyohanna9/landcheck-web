@@ -6946,6 +6946,83 @@
   }
 }
 
+/* Fullscreen must own both the map and the detail drawer. The drawer is rendered inside this
+   workspace surface, so it remains in the browser's fullscreen top layer instead of disappearing
+   with the rest of the page when a tree is selected. */
+.green-work-content:fullscreen,
+.green-work-content:-webkit-full-screen {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  background: var(--gw-bg);
+}
+
+.green-work-content:fullscreen .green-work-sidebar,
+.green-work-content:-webkit-full-screen .green-work-sidebar {
+  display: none;
+}
+
+.green-work-content:fullscreen .green-work-main,
+.green-work-content:-webkit-full-screen .green-work-main {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  padding: 0;
+  overflow: hidden;
+}
+
+.green-work-content:fullscreen .green-work-main > :not(.green-work-map-card),
+.green-work-content:-webkit-full-screen .green-work-main > :not(.green-work-map-card) {
+  display: none;
+}
+
+.green-work-content:fullscreen .green-work-map-card,
+.green-work-content:-webkit-full-screen .green-work-map-card {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex: 1;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.green-work-content:fullscreen .green-work-map-layout,
+.green-work-content:-webkit-full-screen .green-work-map-layout,
+.green-work-content:fullscreen .green-work-map-canvas,
+.green-work-content:-webkit-full-screen .green-work-map-canvas {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.green-work-content:fullscreen .green-work-map-card .tree-map-wrap,
+.green-work-content:-webkit-full-screen .green-work-map-card .tree-map-wrap,
+.green-work-content:fullscreen .green-work-map-card .tree-map,
+.green-work-content:-webkit-full-screen .green-work-map-card .tree-map {
+  height: 100%;
+  min-height: 0;
+  border-radius: 0;
+}
+
+.green-work-content:fullscreen .green-work-tree-drawer.green-work-tree-inspector,
+.green-work-content:-webkit-full-screen .green-work-tree-drawer.green-work-tree-inspector {
+  top: 0;
+  height: 100dvh;
+  max-height: 100dvh;
+  border-radius: 16px 0 0 16px;
+}
+
 @media (min-width: 861px) {
   .green-work-menu-drawer {
     padding: 11px 8px 10px;

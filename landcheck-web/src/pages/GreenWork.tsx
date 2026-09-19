@@ -3457,6 +3457,7 @@ export default function GreenWork() {
 
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const mapCardRef = useRef<HTMLDivElement | null>(null);
+  const mapFullscreenRef = useRef<HTMLDivElement | null>(null);
   const workPauseNoticeShownRef = useRef(false);
   const workSuspendNoticeShownRef = useRef(false);
   const lastLoadedProjectIdRef = useRef<number | null>(null);
@@ -12001,6 +12002,7 @@ export default function GreenWork() {
       </aside>
 
       <div
+        ref={mapFullscreenRef}
         className={`green-work-content ${showSidebar ? "with-sidebar" : "no-sidebar"} ${
           detailScrollMode ? "detail-scroll-mode" : ""
         } ${custodianHubMode ? "custodian-hub-mode" : ""} ${agricRegistryMode ? "agric-registry-mode" : ""} ${sidebarPrimaryMode ? "sidebar-primary-mode" : ""}`}
@@ -18332,6 +18334,7 @@ export default function GreenWork() {
                 setMenuOpen={setMenuOpen}
                 mapFitPoints={mapFitPoints}
                 existingTreeMapAreas={existingTreeMapAreas}
+                fullscreenTargetRef={mapFullscreenRef}
               />
             </Suspense>
           )}
@@ -18372,8 +18375,6 @@ export default function GreenWork() {
             </section>
           )}
         </section>
-      </div>
-
       {inspectedTree ? (
         <>
           <button
@@ -18869,6 +18870,8 @@ export default function GreenWork() {
           </div>
         </aside>
       ) : null}
+
+      </div>
 
       {workPasswordModalOpen && (
         <>

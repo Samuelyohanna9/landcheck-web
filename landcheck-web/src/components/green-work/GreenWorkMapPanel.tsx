@@ -51,6 +51,7 @@ export default function GreenWorkMapPanel(props: GreenWorkMapPanelProps) {
     setMenuOpen,
     mapFitPoints,
     existingTreeMapAreas,
+    fullscreenTargetRef,
   } = props;
   const [blockFilter, setBlockFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -175,6 +176,7 @@ export default function GreenWorkMapPanel(props: GreenWorkMapPanelProps) {
               assignmentAreas={existingTreeMapAreas}
               workflowMode={activeWorkflowProfile}
               showMapControls
+              fullscreenTargetRef={fullscreenTargetRef}
             />
           </Suspense>
         </div>
