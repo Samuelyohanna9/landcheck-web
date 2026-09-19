@@ -11405,7 +11405,7 @@ export default function GreenWork() {
   };
 
   return (
-    <div className="green-work-container">
+    <div className={`green-work-container ${inspectedTree ? "has-tree-inspector" : ""}`}>
       <Toaster position="top-right" />
       {privacyConsentModal}
       <header className="green-work-header">
@@ -18240,7 +18240,7 @@ export default function GreenWork() {
                 : undefined
             }
           />
-          <aside className="green-work-tree-drawer green-work-tree-inspector" style={drawerStyle}>
+          <aside className="green-work-tree-drawer green-work-tree-inspector">
             <div className="green-work-tree-drawer-head">
               <strong>{activeWorkflowProfile === "agric" ? "Farm Details" : "Tree Details"}</strong>
               <button
