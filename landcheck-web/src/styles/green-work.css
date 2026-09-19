@@ -6597,5 +6597,14 @@
 :root[data-workspace-theme="dark"] .green-work-live-table th { background: #101c2a; color: var(--gw-subtext); }
 :root[data-workspace-theme="dark"] .green-work-overview-alerts-head strong { color: var(--gw-warning-text); }
 
+/* Desktop keeps navigation in the rail, so the mobile-only drawer trigger and duplicate action
+   strip do not create the empty band visible above the main content. */
+@media (min-width: 861px) {
+  .green-work-toolbar-wrap,
+  .green-work-active-hub-wrap { display: none; }
+  .green-work-header-inner,
+  .green-work-content { width: calc(100% - 24px); max-width: none; }
+}
+
 
 

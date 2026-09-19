@@ -11485,7 +11485,7 @@ export default function GreenWork() {
         />
       )}
 
-      <aside className={`green-work-menu-drawer ${menuOpen ? "open" : ""}`} style={drawerStyle}>
+      <aside className={`green-work-menu-drawer ${menuOpen ? "open" : ""}`} style={menuOpen ? drawerStyle : undefined}>
         <div className="green-work-menu-head">
           <div className="green-work-menu-brand">
             <strong>LandCheck</strong>
