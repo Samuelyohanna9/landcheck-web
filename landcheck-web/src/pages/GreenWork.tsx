@@ -362,6 +362,26 @@ const getWorkflowLabels = (profile?: string | null) =>
         recordTitle: "Existing Trees",
       };
 
+const getMapWorkspaceCopy = (profile?: string | null) => {
+  const normalized = normalizeWorkflowProfile(profile);
+  if (normalized === "agric") {
+    return {
+      title: "Map + Farm Details",
+      note: "Plots + boundaries + farm details",
+    };
+  }
+  if (normalized === "relief_recovery") {
+    return {
+      title: "Map + Site Details",
+      note: "Sites + boundaries + relief details",
+    };
+  }
+  return {
+    title: "Map + AI Tree Health",
+    note: "Trees + draw polygons + AI health checks",
+  };
+};
+
 export type Project = {
   id: number;
   organization_id?: number | null;
@@ -2655,9 +2675,17 @@ const renderMenuItemIcon = (icon: WorkMenuIconName) => (
   </span>
 );
 
-type MapMetricIconName = "planted" | "tasks" | "review" | "alerts";
+type MapMetricIconName = "mapped" | "planted" | "tasks" | "review" | "alerts";
 
 const renderMapMetricIcon = (icon: MapMetricIconName) => {
+  if (icon === "mapped") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+        <path d="m4.5 7.7 7.5 4.2 7.5-4.2M12 12v9" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+      </svg>
+    );
+  }
   if (icon === "planted") {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -2827,10 +2855,14 @@ const OverviewSpeciesBarCard = ({
   title,
   context,
   rows,
+  itemLabel = "species",
+  emptyMessage = "No planted trees with species labels yet.",
 }: {
   title: string;
   context: string;
   rows: OverviewSpeciesBarRow[];
+  itemLabel?: string;
+  emptyMessage?: string;
 }) => {
   const visibleRows = rows.slice(0, 10);
   const maxCount = Math.max(1, ...visibleRows.map((row) => Number(row.count || 0)));
@@ -2839,10 +2871,10 @@ const OverviewSpeciesBarCard = ({
     <div className="green-work-overview-chart-card green-work-overview-species-card">
       <div className="green-work-overview-bar-head">
         <h5>{title}</h5>
-        <span>{rows.length} species</span>
+        <span>{rows.length} {itemLabel}</span>
       </div>
       {visibleRows.length === 0 ? (
-        <p className="green-work-note">No planted trees with species labels yet.</p>
+        <p className="green-work-note">{emptyMessage}</p>
       ) : (
         <div className="green-work-overview-species-bars">
           {visibleRows.map((row) => {
@@ -3710,6 +3742,13 @@ export default function GreenWork() {
   const fieldWorkflowMode = isFieldWorkflowProfile(activeWorkflowProfile);
   const agricWorkflowMode = activeWorkflowProfile === "agric";
   const reliefWorkflowMode = activeWorkflowProfile === "relief_recovery";
+  const activeMapWorkspaceCopy = getMapWorkspaceCopy(activeWorkflowProfile);
+  const mapMetricCopy = fieldWorkflowMode
+    ? {
+        label: `Mapped ${activeWorkflowLabels.entityPlural.toLowerCase()}`,
+        targetLabel: `target ${activeWorkflowLabels.entityPlural.toLowerCase()}`,
+      }
+    : { label: "Planted", targetLabel: "target trees" };
   const csrWorkflowMode = activeWorkflowProfile === "csr";
   const csrRouteProject = Boolean(activeProjectId && isCsrProgrammeProject(activeProjectAccessModel));
   const csrProjectMode = csrWorkflowMode || csrRouteProject;
@@ -10038,6 +10077,7 @@ export default function GreenWork() {
   const actionAccessModel = normalizeProjectAccessModel(projectSettingsDraft.access_model);
   const actionCsrMode = actionWorkflowProfile === "csr" || actionAccessModel === "csr_programme";
   const actionWorkflowLabels = getWorkflowLabels(actionWorkflowProfile);
+  const actionMapWorkspaceCopy = getMapWorkspaceCopy(actionWorkflowProfile);
 
   const activeProjectActions: Array<{ form: WorkForm; title: string; note: string; isNew?: boolean }> =
     actionWorkflowProfile === "agric"
@@ -10047,7 +10087,7 @@ export default function GreenWork() {
           { form: "field_capture_assign", title: "Field Capture", note: "Assign first plot capture to staff" },
           { form: "support_visit_assign", title: "Support Visits", note: "Assign follow-up field visits" },
           { form: "existing_tree_intake", title: "Plot Records", note: "Mapped plots + farm data" },
-          { form: "map_view", title: "Map View", note: "Plots + boundaries" },
+          { form: "map_view", title: actionMapWorkspaceCopy.title, note: actionMapWorkspaceCopy.note },
           { form: "remote_monitoring", title: "Farm Health", note: "NDVI + vigor + drought watch", isNew: true },
           { form: "review_queue", title: "Review Queue", note: "Approve or reject submissions" },
           { form: "users", title: "Users", note: "All staff status + roles" },
@@ -10065,7 +10105,7 @@ export default function GreenWork() {
             { form: "field_capture_assign", title: "Site Capture", note: "Assign first site assessment to staff" },
             { form: "support_visit_assign", title: "Relief Visits", note: "Assign follow-up relief or recovery visits" },
             { form: "existing_tree_intake", title: "Site Records", note: "Mapped sites + damage and recovery data" },
-            { form: "map_view", title: "Map View", note: "Sites + boundaries" },
+            { form: "map_view", title: actionMapWorkspaceCopy.title, note: actionMapWorkspaceCopy.note },
             { form: "review_queue", title: "Review Queue", note: "Approve or reject submissions" },
             { form: "users", title: "Users", note: "All staff status + roles" },
             ...(canAccessSuperAdmin
@@ -10077,7 +10117,7 @@ export default function GreenWork() {
           ]
       : [
           { form: "overview", title: actionCsrMode ? "CSR Overview" : "Overview", note: actionCsrMode ? "Programme progress + implementation status" : "Progress summary" },
-          { form: "map_view", title: "Map + AI Tree Health", note: `${actionWorkflowLabels.entityPlural} + draw polygons + AI health checks` },
+          { form: "map_view", title: actionMapWorkspaceCopy.title, note: actionMapWorkspaceCopy.note },
           { form: "remote_monitoring", title: actionCsrMode ? "Impact Monitoring" : "Remote Monitoring", note: actionCsrMode ? "Satellite monitoring +" : "Satellite Monitoring +", isNew: true },
           { form: "live_table", title: actionCsrMode ? "Implementation Live" : "Live Maintenance", note: actionCsrMode ? "Planting + maintenance + verification" : "New planting + existing tree" },
           ...(publicSponsorshipProject
@@ -10108,7 +10148,7 @@ export default function GreenWork() {
   const displayedProjectActions: Array<{ form: WorkForm; title: string; note: string; isNew?: boolean }> = csrPartnerDashboardMode
     ? [
         { form: "overview", title: "CSR Overview", note: "Programme progress + implementation status" },
-        { form: "map_view", title: "Map + AI Tree Health", note: "Trees + verified field locations + AI health checks" },
+        { form: "map_view", title: actionMapWorkspaceCopy.title, note: actionMapWorkspaceCopy.note },
         { form: "remote_monitoring", title: "Impact Monitoring", note: "Satellite monitoring +", isNew: true },
         { form: "live_table", title: "Implementation Live", note: "Planting + maintenance + verification" },
         { form: "existing_tree_intake", title: "Programme Records", note: "Verified implementation records" },
@@ -11678,7 +11718,7 @@ export default function GreenWork() {
               onClick={() => openForm("map_view")}
             >
               {renderMenuItemIcon("map_view")}
-              Map + AI Tree Health
+              {activeMapWorkspaceCopy.title}
             </button>
             {!fieldWorkflowMode ? (
               <>
@@ -17096,8 +17136,8 @@ export default function GreenWork() {
                 <div className="green-work-task-summary-stats">
                   <span>Staff: {filteredOverviewSummary.length}</span>
                   <span>Orders: {filteredOverviewTotals.orderCount}</span>
-                  <span>Target Trees: {filteredOverviewTotals.targetTrees}</span>
-                  <span>Planted: {filteredOverviewTotals.plantedTrees}</span>
+                  <span>{fieldWorkflowMode ? `Target ${activeWorkflowLabels.entityPlural}` : "Target Trees"}: {filteredOverviewTotals.targetTrees}</span>
+                  <span>{fieldWorkflowMode ? `Mapped ${activeWorkflowLabels.entityPlural}` : "Planted"}: {filteredOverviewTotals.plantedTrees}</span>
                   <span>Tasks: {filteredOverviewTotals.taskTotal}</span>
                   <span>Done: {filteredOverviewTotals.taskDone}</span>
                   <span>Pending: {filteredOverviewTotals.taskPending}</span>
@@ -17125,8 +17165,8 @@ export default function GreenWork() {
               )}
               <div className="green-work-overview-mini-grid">
                 <OverviewDonutCard
-                  title="Tree Health Mix"
-                  totalLabel="Trees"
+                  title={fieldWorkflowMode ? `${activeWorkflowLabels.entitySingular} Status Mix` : "Tree Health Mix"}
+                  totalLabel={fieldWorkflowMode ? activeWorkflowLabels.entityPlural : "Trees"}
                   segments={treeHealthMixSegments}
                   context={`Context: status distribution for ${overviewScopeLabel}.`}
                 />
@@ -17137,22 +17177,24 @@ export default function GreenWork() {
                   context={overviewExecutionMix.context}
                 />
                 <OverviewSpeciesBarCard
-                  title="Trees Planted by Species"
+                  title={fieldWorkflowMode ? `${activeWorkflowLabels.entityPlural} by ${agricWorkflowMode ? "Crop" : "Type"}` : "Trees Planted by Species"}
                   rows={speciesPlantedRows}
-                  context={`Context: planted tree count per species for ${overviewScopeLabel}.`}
+                  itemLabel={fieldWorkflowMode ? agricWorkflowMode ? "crops" : "types" : "species"}
+                  emptyMessage={fieldWorkflowMode ? `No mapped ${activeWorkflowLabels.entityPlural.toLowerCase()} with classification data yet.` : undefined}
+                  context={`Context: ${fieldWorkflowMode ? "mapped" : "planted tree"} distribution for ${overviewScopeLabel}.`}
                 />
               </div>
               <div className="green-work-overview-bars">
                 <div className="green-work-overview-bar-card">
                   <div className="green-work-overview-bar-head">
-                    <h5>Planting Completion</h5>
+                    <h5>{fieldWorkflowMode ? "Mapping Completion" : "Planting Completion"}</h5>
                     <span>{Math.round(plantingCompletionPct)}%</span>
                   </div>
                   <div className="progress-bar">
                     <span style={{ width: `${plantingCompletionPct}%` }} />
                   </div>
                   <p>
-                    {filteredOverviewTotals.plantedTrees} planted out of {filteredOverviewTotals.targetTrees} target trees.
+                    {filteredOverviewTotals.plantedTrees} {fieldWorkflowMode ? `mapped ${activeWorkflowLabels.entityPlural.toLowerCase()}` : "planted"} out of {filteredOverviewTotals.targetTrees} {mapMetricCopy.targetLabel}.
                   </p>
                   <p className="green-work-chart-context">Context: shown for the current staff filter.</p>
                 </div>
@@ -17307,7 +17349,7 @@ export default function GreenWork() {
                     </div>
                     <p className="staff-overview-position">{staff.position}</p>
                     <p>Planting Orders: {staff.orderCount}</p>
-                    <p>Target Trees: {staff.targetTrees} | Planted: {staff.plantedTrees}</p>
+                    <p>{fieldWorkflowMode ? `Target ${activeWorkflowLabels.entityPlural}: ${staff.targetTrees} | Mapped ${activeWorkflowLabels.entityPlural}: ${staff.plantedTrees}` : `Target Trees: ${staff.targetTrees} | Planted: ${staff.plantedTrees}`}</p>
                     <div className="progress-bar">
                       <span style={{ width: `${calcProgress(staff.plantedTrees, staff.targetTrees)}%` }} />
                     </div>
@@ -18182,8 +18224,8 @@ export default function GreenWork() {
           {activeProjectId && mapViewMode && (
             <div className="green-work-map-overview-metrics green-work-map-top-metrics" aria-label="Project metrics">
               <div>
-                <span className="green-work-map-metric-label">{renderMapMetricIcon("planted")}<span>Planted</span></span>
-                <span className="green-work-map-metric-value"><strong>{filteredOverviewTotals.plantedTrees}</strong><small>of {filteredOverviewTotals.targetTrees} target trees</small></span>
+                <span className="green-work-map-metric-label">{renderMapMetricIcon(fieldWorkflowMode ? "mapped" : "planted")}<span>{mapMetricCopy.label}</span></span>
+                <span className="green-work-map-metric-value"><strong>{filteredOverviewTotals.plantedTrees}</strong><small>of {filteredOverviewTotals.targetTrees} {mapMetricCopy.targetLabel}</small></span>
               </div>
               <div>
                 <span className="green-work-map-metric-label">{renderMapMetricIcon("tasks")}<span>Tasks done</span></span>
@@ -18251,8 +18293,8 @@ export default function GreenWork() {
               )}
               <div className="green-work-overview-mini-grid">
                 <OverviewDonutCard
-                  title={activeWorkflowProfile === "agric" ? "Farm Health Mix" : activeWorkflowProfile === "relief_recovery" ? "Site Health Mix" : "Tree Health Mix"}
-                  totalLabel={activeWorkflowProfile === "agric" ? "Plots" : activeWorkflowProfile === "relief_recovery" ? "Sites" : "Trees"}
+                  title={fieldWorkflowMode ? `${activeWorkflowLabels.entitySingular} Status Mix` : "Tree Health Mix"}
+                  totalLabel={fieldWorkflowMode ? activeWorkflowLabels.entityPlural : "Trees"}
                   segments={treeHealthMixSegments}
                   context={`Status distribution for ${overviewScopeLabel}.`}
                 />
@@ -18263,8 +18305,10 @@ export default function GreenWork() {
                   context={overviewExecutionMix.context}
                 />
                 <OverviewSpeciesBarCard
-                  title={activeWorkflowProfile === "agric" ? "Mapped Plots by Crop" : activeWorkflowProfile === "relief_recovery" ? "Sites by Type" : "Trees Planted by Species"}
+                  title={fieldWorkflowMode ? `${activeWorkflowLabels.entityPlural} by ${agricWorkflowMode ? "Crop" : "Type"}` : "Trees Planted by Species"}
                   rows={speciesPlantedRows}
+                  itemLabel={fieldWorkflowMode ? agricWorkflowMode ? "crops" : "types" : "species"}
+                  emptyMessage={fieldWorkflowMode ? `No mapped ${activeWorkflowLabels.entityPlural.toLowerCase()} with classification data yet.` : undefined}
                   context={`Current distribution for ${overviewScopeLabel}.`}
                 />
               </div>
@@ -18310,17 +18354,17 @@ export default function GreenWork() {
                   <img
                     className="green-work-tree-inspector-photo"
                     src={toDisplayPhotoUrl(inspectedTree.photo_url)}
-                    alt={activeWorkflowProfile === "agric" ? `Farm ${inspectedTree.id}` : `Tree ${inspectedTree.id}`}
+                    alt={activeWorkflowProfile === "agric" ? `Farm ${inspectedTree.id}` : activeWorkflowProfile === "relief_recovery" ? `Site ${inspectedTree.id}` : `Tree ${inspectedTree.id}`}
                   />
                 ) : (
                   <div className="green-work-tree-inspector-photo empty">
-                    {activeWorkflowProfile === "agric" ? "No farm photo" : "No tree photo"}
+                    {activeWorkflowProfile === "agric" ? "No farm photo" : activeWorkflowProfile === "relief_recovery" ? "No site photo" : "No tree photo"}
                   </div>
                 )}
               </div>
               <div className="green-work-tree-photo-upload-row">
                 <label className={`green-work-tree-photo-upload-btn ${treePhotoUploading ? "is-loading" : ""}`}>
-                  {treePhotoUploading ? "Uploading..." : activeWorkflowProfile === "agric" ? "Upload Farm Photo" : "Upload Tree Photo"}
+                  {treePhotoUploading ? "Uploading..." : activeWorkflowProfile === "agric" ? "Upload Farm Photo" : activeWorkflowProfile === "relief_recovery" ? "Upload Site Photo" : "Upload Tree Photo"}
                   <input
                     type="file"
                     accept="image/*"
@@ -18387,14 +18431,18 @@ export default function GreenWork() {
                 </div>
               )}
               <p className="green-work-tree-maintenance-count">
-                {activeWorkflowProfile === "agric" ? "Field Visit Records" : "Maintenance Records"}: {inspectedTree.maintenance.total}
+                {activeWorkflowProfile === "agric" ? "Field Visit Records" : activeWorkflowProfile === "relief_recovery" ? "Relief Visit Records" : "Maintenance Records"}: {inspectedTree.maintenance.total}
               </p>
               <h4>
                 {activeWorkflowProfile === "agric"
                   ? inspectedTreeRecord
                     ? formatPlotRecordLabel(inspectedTreeRecord)
                     : `Plot #${inspectedTree.project_tree_no || inspectedTree.id}`
-                  : formatProjectTreeLabelById(inspectedTree.id)}
+                  : activeWorkflowProfile === "relief_recovery"
+                    ? inspectedTreeRecord
+                      ? formatReliefSiteLabel(inspectedTreeRecord)
+                      : `Site #${inspectedTree.project_tree_no || inspectedTree.id}`
+                    : formatProjectTreeLabelById(inspectedTree.id)}
               </h4>
               {inspectedTree.loading && <p className="green-work-note">Loading latest records...</p>}
               <div className="green-work-tree-inspector-grid">
@@ -18449,6 +18497,49 @@ export default function GreenWork() {
                       <strong>{formatDateLabel(inspectedTree.planting_date)}</strong>
                     </div>
                   </>
+                ) : reliefWorkflowMode ? (
+                  <>
+                    <div>
+                      <span>Status</span>
+                      <strong>{inspectedTree.status_label || "-"}</strong>
+                    </div>
+                    <div>
+                      <span>Site Type</span>
+                      <strong>{inspectedTree.record_profile_data?.asset_type || inspectedTree.record_profile_data?.asset_name || "-"}</strong>
+                    </div>
+                    <div>
+                      <span>Damage Level</span>
+                      <strong>{formatReliefDamageLevelLabel(inspectedTree.record_profile_data?.damage_level)}</strong>
+                    </div>
+                    <div>
+                      <span>Occupancy</span>
+                      <strong>{inspectedTree.record_profile_data?.occupancy_status || "-"}</strong>
+                    </div>
+                    <div>
+                      <span>Tenure</span>
+                      <strong>{inspectedTree.record_profile_data?.tenure_status || "-"}</strong>
+                    </div>
+                    <div>
+                      <span>Response Pathway</span>
+                      <strong>{inspectedTree.record_profile_data?.response_pathway || "-"}</strong>
+                    </div>
+                    <div>
+                      <span>Current GPS</span>
+                      <strong>{formatGpsPair(inspectedTreeCoords?.lng ?? null, inspectedTreeCoords?.lat ?? null)}</strong>
+                    </div>
+                    <div>
+                      <span>Beneficiary</span>
+                      <strong>{inspectedTree.custodian_name || "-"}</strong>
+                    </div>
+                    <div>
+                      <span>Recorded By</span>
+                      <strong>{inspectedTree.created_by || "-"}</strong>
+                    </div>
+                    <div>
+                      <span>Observation Date</span>
+                      <strong>{formatDateLabel(inspectedTree.planting_date)}</strong>
+                    </div>
+                  </>
                 ) : (
                   <>
                     <div>
@@ -18497,7 +18588,7 @@ export default function GreenWork() {
                   </>
                 )}
               </div>
-              {activeWorkflowProfile !== "agric" && selectedInspectTreeMeta && (
+              {activeWorkflowProfile !== "agric" && activeWorkflowProfile !== "relief_recovery" && selectedInspectTreeMeta && (
                 <div className="green-work-tree-meta-edit">
                   <label>
                     Planting Date
@@ -18665,9 +18756,9 @@ export default function GreenWork() {
                 <span>Overdue: {inspectedTree.maintenance.overdue}</span>
               </div>
               <div className="green-work-tree-inspector-tasks">
-                <h5>{activeWorkflowProfile === "agric" ? "Recent Field Visits" : "Recent Maintenance"}</h5>
+                <h5>{activeWorkflowProfile === "agric" ? "Recent Field Visits" : activeWorkflowProfile === "relief_recovery" ? "Recent Relief Visits" : "Recent Maintenance"}</h5>
                 {inspectedTree.tasks.length === 0 ? (
-                  <p>{activeWorkflowProfile === "agric" ? "No field visits yet." : "No maintenance records yet."}</p>
+                  <p>{activeWorkflowProfile === "agric" ? "No field visits yet." : activeWorkflowProfile === "relief_recovery" ? "No relief visits yet." : "No maintenance records yet."}</p>
                 ) : (
                   inspectedTree.tasks.slice(0, 5).map((task: any) => (
                     <div key={task.id} className="green-work-tree-inspector-task">
@@ -18705,7 +18796,7 @@ export default function GreenWork() {
           </aside>
         </>
       ) : mapViewMode ? (
-        <aside className="green-work-tree-drawer green-work-tree-inspector green-work-tree-inspector-empty" aria-label="Tree details">
+        <aside className="green-work-tree-drawer green-work-tree-inspector green-work-tree-inspector-empty" aria-label={`${activeWorkflowLabels.entitySingular} details`}>
           <div className="green-work-tree-inspector-empty-state">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <rect x="5" y="5" width="6" height="6" rx="1" fill="none" stroke="currentColor" strokeWidth="1.6" />
@@ -18713,8 +18804,11 @@ export default function GreenWork() {
               <rect x="5" y="13" width="6" height="6" rx="1" fill="none" stroke="currentColor" strokeWidth="1.6" />
               <rect x="13" y="13" width="6" height="6" rx="1" fill="none" stroke="currentColor" strokeWidth="1.6" />
             </svg>
-            <strong>No tree selected</strong>
-            <p>Click a tree on the map to open its full record here and run AI tree health analysis.</p>
+            <strong>No {activeWorkflowLabels.entitySingular.toLowerCase()} selected</strong>
+            <p>
+              Click a {activeWorkflowLabels.entitySingular.toLowerCase()} on the map to open its full {activeWorkflowLabels.entitySingular.toLowerCase()} record
+              {fieldWorkflowMode ? " here." : " here and run AI tree health analysis."}
+            </p>
           </div>
         </aside>
       ) : null}
