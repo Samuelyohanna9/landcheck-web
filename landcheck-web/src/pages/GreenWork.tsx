@@ -2655,6 +2655,39 @@ const renderMenuItemIcon = (icon: WorkMenuIconName) => (
   </span>
 );
 
+type MapMetricIconName = "planted" | "tasks" | "review" | "alerts";
+
+const renderMapMetricIcon = (icon: MapMetricIconName) => {
+  if (icon === "planted") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M12 20V11M12 13c-2.7 0-4.7-1.3-5.8-3.8 2.8-.2 4.8.9 5.8 3.8ZM12 11c.3-3.2 2.1-5.4 5.5-6.4.1 3.5-1.7 5.8-5.5 6.4ZM8 20h8" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (icon === "tasks") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M6 4.5h12v15H6zM9 9h6M9 13h3" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="m13 14.5 1.5 1.5 3-3" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (icon === "review") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M6 4.5h12v15H6zM9 9h6M9 13h6M9 16h3" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="m12 4 8 15H4L12 4z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+      <path d="M12 9v4M12 16.5v.1" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+};
+
 type SpeciesDailySurvivalPoint = {
   day: number;
   date: string;
@@ -18148,10 +18181,26 @@ export default function GreenWork() {
 
           {activeProjectId && mapViewMode && (
             <div className="green-work-map-overview-metrics green-work-map-top-metrics" aria-label="Project metrics">
-              <div><span>Planted</span><strong>{filteredOverviewTotals.plantedTrees}</strong><small>of {filteredOverviewTotals.targetTrees} target trees</small></div>
-              <div><span>Tasks done</span><strong>{filteredOverviewTotals.taskDone}</strong><small>{filteredOverviewTotals.taskPending} pending</small></div>
-              <div><span>Awaiting review</span><strong>{reviewQueue.length}</strong><small>submissions</small></div>
-              <div><span>Open alerts</span><strong>{alertsSummary.total}</strong><small>{alertsSummary.danger} high priority</small></div>
+              <div>
+                <span className="green-work-map-metric-label">{renderMapMetricIcon("planted")}<span>Planted</span></span>
+                <strong>{filteredOverviewTotals.plantedTrees}</strong>
+                <small>of {filteredOverviewTotals.targetTrees} target trees</small>
+              </div>
+              <div>
+                <span className="green-work-map-metric-label">{renderMapMetricIcon("tasks")}<span>Tasks done</span></span>
+                <strong>{filteredOverviewTotals.taskDone}</strong>
+                <small>{filteredOverviewTotals.taskPending} pending</small>
+              </div>
+              <div>
+                <span className="green-work-map-metric-label">{renderMapMetricIcon("review")}<span>Awaiting review</span></span>
+                <strong>{reviewQueue.length}</strong>
+                <small>submissions</small>
+              </div>
+              <div>
+                <span className="green-work-map-metric-label">{renderMapMetricIcon("alerts")}<span>Open alerts</span></span>
+                <strong>{alertsSummary.total}</strong>
+                <small>{alertsSummary.danger} high priority</small>
+              </div>
             </div>
           )}
 
