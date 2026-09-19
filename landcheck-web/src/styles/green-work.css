@@ -4743,6 +4743,352 @@
 
 
 
+.green-work-header-inner--actions-only {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.green-work-menu-branding {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.green-work-menu-brand-logos {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.green-work-menu-brand-logos img {
+  width: 28px;
+  height: 28px;
+  display: block;
+  object-fit: contain;
+  border: 1px solid var(--gw-border);
+  border-radius: 8px;
+  background: var(--gw-brand-dark);
+}
+
+.green-work-menu-brand-logos img.green-work-partner-logo {
+  width: 26px;
+  height: 26px;
+  background: var(--gw-surface);
+}
+
+.green-work-estate-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--gw-brand);
+  border-radius: 9px;
+  background: var(--gw-surface);
+  color: var(--gw-brand-dark);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.green-work-estate-add-btn:hover,
+.green-work-estate-add-btn:focus-visible {
+  background: var(--gw-brand-tint);
+  outline: none;
+}
+
+.green-work-estate-add-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.green-work-estate-add-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.green-work-agric-simple-card {
+  padding: 18px;
+}
+
+.green-work-simple-head,
+.green-work-simple-subhead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.green-work-simple-head h3,
+.green-work-simple-subhead h4 {
+  margin: 3px 0 0;
+  color: var(--gw-text);
+}
+
+.green-work-simple-head .green-work-note {
+  margin: 6px 0 0;
+}
+
+.green-work-agric-farmer-list,
+.green-work-agric-event-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.green-work-agric-farmer-row,
+.green-work-agric-event-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid var(--gw-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--gw-surface) 92%, var(--gw-brand-tint));
+}
+
+.green-work-agric-farmer-row > div,
+.green-work-agric-event-row > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.green-work-agric-farmer-row strong,
+.green-work-agric-event-row strong {
+  color: var(--gw-text);
+  font-size: 0.82rem;
+}
+
+.green-work-agric-farmer-row span,
+.green-work-agric-event-row span {
+  color: var(--gw-muted);
+  font-size: 0.72rem;
+}
+
+.green-work-agric-farmer-status {
+  flex: 0 0 auto;
+  color: var(--gw-brand-dark) !important;
+  font-size: 0.7rem !important;
+  font-weight: 800;
+}
+
+.green-work-agric-event-row b {
+  flex: 0 0 auto;
+  color: var(--gw-brand-dark);
+  font-size: 0.75rem;
+}
+
+.green-work-agric-empty-state {
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px dashed var(--gw-border-strong);
+  border-radius: 10px;
+  color: var(--gw-muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.green-work-agric-allocation-box {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--gw-border);
+}
+
+.green-work-agric-allocation-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 0.4fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.green-work-agric-select-all {
+  margin-top: 12px;
+  padding: 9px 10px;
+  border: 1px solid var(--gw-border);
+  border-radius: 9px;
+  background: var(--gw-brand-tint);
+}
+
+.green-work-agric-check-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  max-height: 220px;
+  margin: 9px 0 13px;
+  overflow: auto;
+}
+
+.green-work-agric-check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--gw-border);
+  border-radius: 9px;
+  background: var(--gw-surface);
+  color: var(--gw-text);
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+
+.green-work-agric-check-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.green-work-agric-check-row small {
+  margin-left: auto;
+  color: var(--gw-muted);
+  font-size: 0.66rem;
+  white-space: nowrap;
+}
+
+.green-work-agric-check-row:has(input:checked) {
+  border-color: #9ed7b6;
+  background: var(--gw-brand-tint);
+}
+
+.green-work-agric-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: rgba(15, 23, 42, 0.36);
+  backdrop-filter: blur(8px);
+  cursor: default;
+}
+
+.green-work-agric-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 101;
+  display: flex;
+  flex-direction: column;
+  width: min(650px, calc(100vw - 28px));
+  max-height: min(760px, calc(100dvh - 28px));
+  padding: 20px;
+  overflow: auto;
+  border: 1px solid var(--gw-border-strong);
+  border-radius: 18px;
+  background: var(--gw-surface);
+  box-shadow: 0 22px 70px rgba(16, 24, 39, 0.24);
+  color: var(--gw-text);
+  transform: translate(-50%, -50%);
+}
+
+.green-work-agric-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.green-work-agric-modal-head h3 {
+  margin: 3px 0 0;
+  color: var(--gw-text);
+}
+
+.green-work-agric-modal-close {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--gw-border);
+  border-radius: 50%;
+  background: var(--gw-surface);
+  color: var(--gw-muted);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.green-work-agric-modal-close:hover,
+.green-work-agric-modal-close:focus-visible {
+  border-color: var(--gw-brand);
+  color: var(--gw-brand-dark);
+  outline: none;
+}
+
+.green-work-agric-modal > .green-work-note {
+  margin: 9px 0 16px;
+}
+
+.green-work-agric-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.green-work-agric-modal-grid .green-work-stacked-field-wide {
+  grid-column: 1 / -1;
+}
+
+.green-work-agric-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-top: 18px;
+}
+
+.green-work-agric-modal-actions .green-work-primary-btn,
+.green-work-agric-modal-actions .green-work-secondary-btn {
+  min-width: 130px;
+}
+
+@media (max-width: 760px) {
+  .green-work-header-inner--actions-only {
+    display: flex;
+    width: 100%;
+    padding: 8px;
+  }
+
+  .green-work-header-inner--actions-only .green-work-header-actions {
+    width: 100%;
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
+
+  .green-work-simple-head,
+  .green-work-simple-subhead {
+    flex-direction: column;
+  }
+
+  .green-work-estate-add-btn {
+    width: 100%;
+  }
+
+  .green-work-agric-allocation-grid,
+  .green-work-agric-check-list,
+  .green-work-agric-modal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .green-work-agric-modal-grid .green-work-stacked-field-wide {
+    grid-column: auto;
+  }
+
+  .green-work-agric-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .green-work-agric-modal-actions .green-work-primary-btn,
+  .green-work-agric-modal-actions .green-work-secondary-btn {
+    width: 100%;
+  }
+}
+
 /* ── Live Indicator ── */
 .green-work-live-indicator {
   display: inline-flex;
