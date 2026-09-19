@@ -3743,6 +3743,7 @@ export default function GreenWork() {
   const fieldWorkflowMode = isFieldWorkflowProfile(activeWorkflowProfile);
   const agricWorkflowMode = activeWorkflowProfile === "agric";
   const reliefWorkflowMode = activeWorkflowProfile === "relief_recovery";
+  const compactCustodianHubMode = Boolean(activeWorkflowProfile);
   const activeMapWorkspaceCopy = getMapWorkspaceCopy(activeWorkflowProfile);
   const mapMetricCopy = fieldWorkflowMode
     ? {
@@ -5912,7 +5913,7 @@ export default function GreenWork() {
       setAgricSelectedFarmerIds(new Set());
       setNewAllocation((previous) => ({ ...previous, custodian_id: "", quantity_allocated: 0 }));
       if (failedCount === 0) {
-        toast.success(`${savedCount} farmer allocation${savedCount === 1 ? "" : "s"} saved`);
+        toast.success(`${savedCount} ${activeWorkflowLabels.ownerSingular.toLowerCase()} allocation${savedCount === 1 ? "" : "s"} saved`);
       } else if (savedCount > 0) {
         toast.error(`${savedCount} allocation${savedCount === 1 ? "" : "s"} saved; ${failedCount} failed`);
       } else {
@@ -12934,13 +12935,19 @@ export default function GreenWork() {
                     </div>
                   )}
 
-                  {agricWorkflowMode && agricCustodianHubTab === "farmer_form" && (
+                  {compactCustodianHubMode && (!fieldWorkflowMode || agricCustodianHubTab === "farmer_form") && (
                     <section className="green-work-card green-work-agric-simple-card">
                       <div className="green-work-simple-head">
                         <div>
-                          <span className="green-work-section-kicker">Step 2</span>
-                          <h3>Farmers</h3>
-                          <p className="green-work-note">Add farmer records once, then allocate support events to one or many farmers.</p>
+                          <span className="green-work-section-kicker">{agricWorkflowMode ? "Step 2" : "Registry"}</span>
+                          <h3>{activeWorkflowLabels.ownerPlural}</h3>
+                          <p className="green-work-note">
+                            {agricWorkflowMode
+                              ? "Add farmer records once, then allocate support events to one or many farmers."
+                              : reliefWorkflowMode
+                                ? "Add beneficiary records once, then allocate relief events to one or many beneficiaries."
+                                : `Add ${activeWorkflowLabels.ownerPlural.toLowerCase()} once, then link distributed events in bulk.`}
+                          </p>
                         </div>
                         <button
                           type="button"
@@ -12951,22 +12958,23 @@ export default function GreenWork() {
                           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                             <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                           </svg>
-                          Add farmer
+                          Add {activeWorkflowLabels.ownerSingular.toLowerCase()}
                         </button>
                       </div>
                       {custodians.length > 0 ? (
                         <div className="green-work-agric-farmer-list">
                           {custodians.map((farmer) => {
                             const profile = farmer.profile_data || {};
+                            const referenceCode = agricWorkflowMode ? profile.farmer_code : reliefWorkflowMode ? profile.beneficiary_code : null;
                             const farmerAllocationCount = distributionAllocations.filter(
                               (allocation) => Number(allocation.custodian_id) === Number(farmer.id),
                             ).length;
                             return (
-                              <div className="green-work-agric-farmer-row" key={`agric-farmer-${farmer.id}`}>
+                              <div className="green-work-agric-farmer-row" key={`compact-owner-${farmer.id}`}>
                                 <div>
                                   <strong>{farmer.name}</strong>
                                   <span>
-                                    {profile.farmer_code || "No farmer code"} {farmer.community_name ? `| ${farmer.community_name}` : ""}
+                                    {referenceCode || formatTaskTypeLabel(farmer.custodian_type)} {farmer.community_name ? `| ${farmer.community_name}` : ""}
                                   </span>
                                 </div>
                                 <span className="green-work-agric-farmer-status">
@@ -12977,18 +12985,26 @@ export default function GreenWork() {
                           })}
                         </div>
                       ) : (
-                        <div className="green-work-agric-empty-state">No farmers added yet. Start with the first farmer.</div>
+                        <div className="green-work-agric-empty-state">
+                          No {activeWorkflowLabels.ownerPlural.toLowerCase()} added yet. Start with the first {activeWorkflowLabels.ownerSingular.toLowerCase()}.
+                        </div>
                       )}
                     </section>
                   )}
 
-                  {agricWorkflowMode && agricCustodianHubTab === "support_setup" && (
+                  {compactCustodianHubMode && (!fieldWorkflowMode || agricCustodianHubTab === "support_setup") && (
                     <section className="green-work-card green-work-agric-simple-card">
                       <div className="green-work-simple-head">
                         <div>
-                          <span className="green-work-section-kicker">Step 1</span>
-                          <h3>Support events</h3>
-                          <p className="green-work-note">Create the support package first, then allocate its units in bulk.</p>
+                          <span className="green-work-section-kicker">{agricWorkflowMode ? "Step 1" : "Events"}</span>
+                          <h3>{agricWorkflowMode ? "Support events" : reliefWorkflowMode ? "Relief events" : "Distributed events"}</h3>
+                          <p className="green-work-note">
+                            {agricWorkflowMode
+                              ? "Create the support package first, then allocate its units in bulk."
+                              : reliefWorkflowMode
+                                ? "Create the relief package first, then allocate it to many beneficiaries."
+                                : "Create a distributed event first, then allocate its seedlings to many custodians."}
+                          </p>
                         </div>
                         <button
                           type="button"
@@ -12999,7 +13015,7 @@ export default function GreenWork() {
                           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                             <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                           </svg>
-                          Create support event
+                          {agricWorkflowMode || reliefWorkflowMode ? "Create support event" : "Create distributed event"}
                         </button>
                       </div>
                       {distributionEvents.length > 0 ? (
@@ -13007,43 +13023,45 @@ export default function GreenWork() {
                           {distributionEvents.map((event) => (
                             <div className="green-work-agric-event-row" key={`agric-event-${event.id}`}>
                               <div>
-                                <strong>{event.species || "Support package"}</strong>
+                                <strong>{event.species || (fieldWorkflowMode ? "Support package" : "Distributed seedlings")}</strong>
                                 <span>{event.event_date} {event.source_batch_ref ? `| Batch ${event.source_batch_ref}` : ""}</span>
                               </div>
-                              <b>{Number(event.quantity || 0).toLocaleString()} units</b>
+                              <b>{Number(event.quantity || 0).toLocaleString()} {fieldWorkflowMode ? "units" : "seedlings"}</b>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <div className="green-work-agric-empty-state">No support events yet. Create one before allocating farmers.</div>
+                        <div className="green-work-agric-empty-state">
+                          No {fieldWorkflowMode ? "support" : "distributed"} events yet. Create one before allocating {activeWorkflowLabels.ownerPlural.toLowerCase()}.
+                        </div>
                       )}
 
                       <div className="green-work-agric-allocation-box">
                         <div className="green-work-simple-subhead">
                           <div>
                             <span className="green-work-section-kicker">Bulk allocation</span>
-                            <h4>Allocate farmers</h4>
+                            <h4>Allocate {activeWorkflowLabels.ownerPlural.toLowerCase()}</h4>
                           </div>
                           <span className="green-work-note">{agricSelectedFarmerIds.size} selected</span>
                         </div>
                         <div className="green-work-agric-allocation-grid">
                           <label className="green-work-stacked-field">
-                            <span>Support event</span>
+                            <span>{fieldWorkflowMode ? "Support event" : "Distributed event"}</span>
                             <select
                               value={newAllocation.event_id}
                               onChange={(event) => setNewAllocation((previous) => ({ ...previous, event_id: event.target.value }))}
                               disabled={!activeProjectId || distributionEvents.length === 0}
                             >
-                              <option value="">Select support event</option>
+                              <option value="">Select {fieldWorkflowMode ? "support" : "distributed"} event</option>
                               {distributionEvents.map((event) => (
                                 <option key={event.id} value={event.id}>
-                                  {event.species || "Support package"} - {event.event_date}
+                                  {event.species || (fieldWorkflowMode ? "Support package" : "Distributed seedlings")} - {event.event_date}
                                 </option>
                               ))}
                             </select>
                           </label>
                           <label className="green-work-stacked-field">
-                            <span>Units per farmer</span>
+                            <span>{fieldWorkflowMode ? `Units per ${activeWorkflowLabels.ownerSingular.toLowerCase()}` : "Seedlings per custodian"}</span>
                             <input
                               type="number"
                               min="1"
@@ -13065,7 +13083,7 @@ export default function GreenWork() {
                               }}
                               disabled={custodians.length === 0}
                             />
-                            <span>Select all farmers</span>
+                            <span>Select all {activeWorkflowLabels.ownerPlural.toLowerCase()}</span>
                           </label>
                         </div>
                         <div className="green-work-agric-check-list">
@@ -13084,7 +13102,9 @@ export default function GreenWork() {
                                 }}
                               />
                               <span>{farmer.name}</span>
-                              <small>{farmer.profile_data?.farmer_code || "Farmer"}</small>
+                              <small>
+                                {farmer.profile_data?.farmer_code || farmer.profile_data?.beneficiary_code || formatTaskTypeLabel(farmer.custodian_type)}
+                              </small>
                             </label>
                           ))}
                         </div>
@@ -13094,13 +13114,40 @@ export default function GreenWork() {
                           onClick={() => void bulkAllocateAgricSupport()}
                           disabled={!activeProjectId || workPartnerOrgPaused || agricBulkAllocationBusy || distributionEvents.length === 0 || custodians.length === 0}
                         >
-                          {agricBulkAllocationBusy ? "Saving allocations..." : "Allocate selected farmers"}
+                          {agricBulkAllocationBusy ? "Saving allocations..." : `Allocate selected ${activeWorkflowLabels.ownerPlural.toLowerCase()}`}
                         </button>
                       </div>
                     </section>
                   )}
 
-                  {(!fieldWorkflowMode || (!agricWorkflowMode && agricCustodianHubTab === "farmer_form")) && (
+                  {compactCustodianHubMode && (!fieldWorkflowMode || agricCustodianHubTab === "support_setup") && (
+                    <div className="green-work-card">
+                      <h3>{fieldWorkflowMode ? `${activeWorkflowLabels.ownerSingular} Registry Report` : "Custodian Report"}</h3>
+                      {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
+                      <p className="green-work-note">
+                        {agricWorkflowMode
+                          ? "Export includes farmer registry, support delivery, plot-by-plot evidence pages, and mapped boundaries."
+                          : reliefWorkflowMode
+                            ? "Export includes beneficiary registry, relief delivery, site evidence pages, and mapped boundaries."
+                            : "Export includes custodians, distribution history, and supervision tracking. Photo appendix is optional."}
+                      </p>
+                      <div className="work-actions">
+                        <label className="green-work-export-photo-toggle">
+                          <input
+                            type="checkbox"
+                            checked={includePhotosInCustodianPdf}
+                            onChange={(event) => setIncludePhotosInCustodianPdf(event.target.checked)}
+                          />
+                          {fieldWorkflowMode ? `Include ${activeWorkflowLabels.entitySingular.toLowerCase()} photos` : "Include photos"}
+                        </label>
+                        <button type="button" onClick={exportCustodianPdf} disabled={!activeProjectId}>
+                          {agricWorkflowMode ? "Export Agric Programme PDF" : reliefWorkflowMode ? "Export Relief Programme PDF" : "Export Custodian PDF"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {!compactCustodianHubMode && (!fieldWorkflowMode || (!agricWorkflowMode && agricCustodianHubTab === "farmer_form")) && (
                     <div className="green-work-card green-work-registry-card">
                       <h3>{fieldWorkflowMode ? `Register ${activeWorkflowLabels.ownerSingular}` : `Add ${activeWorkflowLabels.ownerSingular}`}</h3>
                       {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
@@ -13535,7 +13582,7 @@ export default function GreenWork() {
                     </div>
                   )}
 
-                  {(!fieldWorkflowMode || (!agricWorkflowMode && agricCustodianHubTab === "support_setup")) && (
+                  {!compactCustodianHubMode && (!fieldWorkflowMode || (!agricWorkflowMode && agricCustodianHubTab === "support_setup")) && (
                     <>
               <div className="green-work-card">
                 <h3>{fieldWorkflowMode ? "Support Events" : "Distributed Events"}</h3>
@@ -19125,7 +19172,7 @@ export default function GreenWork() {
 
       </div>
 
-      {agricFarmerModalOpen && agricWorkflowMode && (
+      {agricFarmerModalOpen && compactCustodianHubMode && (
         <>
           <button
             type="button"
@@ -19133,34 +19180,68 @@ export default function GreenWork() {
             onClick={() => setAgricFarmerModalOpen(false)}
             aria-label="Close add farmer dialog"
           />
-          <section className="green-work-agric-modal" role="dialog" aria-modal="true" aria-labelledby="agric-add-farmer-title">
+          <section className="green-work-agric-modal" role="dialog" aria-modal="true" aria-labelledby="compact-owner-modal-title">
             <div className="green-work-agric-modal-head">
               <div>
-                <span className="green-work-section-kicker">Farmer registry</span>
-                <h3 id="agric-add-farmer-title">Add farmer</h3>
+                <span className="green-work-section-kicker">{activeWorkflowLabels.ownerSingular} registry</span>
+                <h3 id="compact-owner-modal-title">Add {activeWorkflowLabels.ownerSingular.toLowerCase()}</h3>
               </div>
               <button type="button" className="green-work-agric-modal-close" onClick={() => setAgricFarmerModalOpen(false)} aria-label="Close add farmer dialog">
                 X
               </button>
             </div>
-            <p className="green-work-note">Capture the minimum details needed for support targeting. More profile data can be added later.</p>
+            <p className="green-work-note">Capture the minimum details needed for programme targeting. More profile data can be added later.</p>
             <div className="green-work-agric-modal-grid">
               <label className="green-work-stacked-field green-work-stacked-field-wide">
-                <span>Farmer name *</span>
+                <span>{activeWorkflowLabels.ownerSingular} name *</span>
                 <input
                   autoFocus
                   value={newCustodian.name}
                   onChange={(event) => setNewCustodian((previous) => ({ ...previous, name: event.target.value }))}
-                  placeholder="e.g. Amina Yusuf"
+                  placeholder={agricWorkflowMode ? "e.g. Amina Yusuf" : `e.g. ${activeWorkflowLabels.ownerSingular}`}
                   disabled={!activeProjectId || workPartnerOrgPaused}
                 />
               </label>
               <label className="green-work-stacked-field">
-                <span>Farmer code</span>
+                <span>Record type</span>
+                <select
+                  value={newCustodian.custodian_type}
+                  onChange={(event) => setNewCustodian((previous) => ({ ...previous, custodian_type: event.target.value as CustodianType }))}
+                  disabled={!activeProjectId || workPartnerOrgPaused}
+                >
+                  <option value="household">Household</option>
+                  <option value="school">School</option>
+                  <option value="community_group">Community group</option>
+                </select>
+              </label>
+              {agricWorkflowMode && (
+                <label className="green-work-stacked-field">
+                  <span>Farmer code</span>
+                  <input
+                    value={newCustodian.farmer_code}
+                    onChange={(event) => setNewCustodian((previous) => ({ ...previous, farmer_code: event.target.value }))}
+                    placeholder="Optional code"
+                    disabled={!activeProjectId || workPartnerOrgPaused}
+                  />
+                </label>
+              )}
+              {reliefWorkflowMode && (
+                <label className="green-work-stacked-field">
+                  <span>Beneficiary code</span>
+                  <input
+                    value={newCustodian.beneficiary_code}
+                    onChange={(event) => setNewCustodian((previous) => ({ ...previous, beneficiary_code: event.target.value }))}
+                    placeholder="Optional code"
+                    disabled={!activeProjectId || workPartnerOrgPaused}
+                  />
+                </label>
+              )}
+              <label className="green-work-stacked-field">
+                <span>Contact person</span>
                 <input
-                  value={newCustodian.farmer_code}
-                  onChange={(event) => setNewCustodian((previous) => ({ ...previous, farmer_code: event.target.value }))}
-                  placeholder="Optional code"
+                  value={newCustodian.contact_person}
+                  onChange={(event) => setNewCustodian((previous) => ({ ...previous, contact_person: event.target.value }))}
+                  placeholder="Optional contact"
                   disabled={!activeProjectId || workPartnerOrgPaused}
                 />
               </label>
@@ -19174,6 +19255,15 @@ export default function GreenWork() {
                 />
               </label>
               <label className="green-work-stacked-field">
+                <span>Email</span>
+                <input
+                  value={newCustodian.email}
+                  onChange={(event) => setNewCustodian((previous) => ({ ...previous, email: event.target.value }))}
+                  placeholder="Optional email"
+                  disabled={!activeProjectId || workPartnerOrgPaused}
+                />
+              </label>
+              <label className="green-work-stacked-field">
                 <span>Community</span>
                 <input
                   value={newCustodian.community_name}
@@ -19183,25 +19273,38 @@ export default function GreenWork() {
                 />
               </label>
               <label className="green-work-stacked-field">
-                <span>Farmer group</span>
+                <span>Local government</span>
                 <input
-                  value={newCustodian.farmer_group}
-                  onChange={(event) => setNewCustodian((previous) => ({ ...previous, farmer_group: event.target.value }))}
-                  placeholder="Optional group"
+                  value={newCustodian.local_government}
+                  onChange={(event) => setNewCustodian((previous) => ({ ...previous, local_government: event.target.value }))}
+                  placeholder="Optional LGA / district"
                   disabled={!activeProjectId || workPartnerOrgPaused}
                 />
               </label>
-              <label className="green-work-stacked-field">
-                <span>Primary crop</span>
-                <input
-                  value={newCustodian.primary_crop}
-                  onChange={(event) => setNewCustodian((previous) => ({ ...previous, primary_crop: event.target.value }))}
-                  placeholder="e.g. Maize"
-                  disabled={!activeProjectId || workPartnerOrgPaused}
-                />
-              </label>
+              {agricWorkflowMode && (
+                <>
+                  <label className="green-work-stacked-field">
+                    <span>Farmer group</span>
+                    <input
+                      value={newCustodian.farmer_group}
+                      onChange={(event) => setNewCustodian((previous) => ({ ...previous, farmer_group: event.target.value }))}
+                      placeholder="Optional group"
+                      disabled={!activeProjectId || workPartnerOrgPaused}
+                    />
+                  </label>
+                  <label className="green-work-stacked-field">
+                    <span>Primary crop</span>
+                    <input
+                      value={newCustodian.primary_crop}
+                      onChange={(event) => setNewCustodian((previous) => ({ ...previous, primary_crop: event.target.value }))}
+                      placeholder="e.g. Maize"
+                      disabled={!activeProjectId || workPartnerOrgPaused}
+                    />
+                  </label>
+                </>
+              )}
               <label className="green-work-stacked-field green-work-stacked-field-wide">
-                <span>Notes or support needs</span>
+                <span>Notes</span>
                 <textarea
                   value={newCustodian.notes}
                   onChange={(event) => setNewCustodian((previous) => ({ ...previous, notes: event.target.value }))}
@@ -19222,14 +19325,14 @@ export default function GreenWork() {
                 }}
                 disabled={!activeProjectId || workPartnerOrgPaused || !newCustodian.name.trim()}
               >
-                Save farmer
+                Save {activeWorkflowLabels.ownerSingular.toLowerCase()}
               </button>
             </div>
           </section>
         </>
       )}
 
-      {agricSupportModalOpen && agricWorkflowMode && (
+      {agricSupportModalOpen && compactCustodianHubMode && (
         <>
           <button
             type="button"
@@ -19237,20 +19340,24 @@ export default function GreenWork() {
             onClick={() => setAgricSupportModalOpen(false)}
             aria-label="Close support event dialog"
           />
-          <section className="green-work-agric-modal" role="dialog" aria-modal="true" aria-labelledby="agric-support-event-title">
+          <section className="green-work-agric-modal" role="dialog" aria-modal="true" aria-labelledby="compact-event-modal-title">
             <div className="green-work-agric-modal-head">
               <div>
-                <span className="green-work-section-kicker">Support setup</span>
-                <h3 id="agric-support-event-title">Create support event</h3>
+                <span className="green-work-section-kicker">{fieldWorkflowMode ? "Support setup" : "Distribution setup"}</span>
+                <h3 id="compact-event-modal-title">{fieldWorkflowMode ? "Create support event" : "Create distributed event"}</h3>
               </div>
               <button type="button" className="green-work-agric-modal-close" onClick={() => setAgricSupportModalOpen(false)} aria-label="Close support event dialog">
                 X
               </button>
             </div>
-            <p className="green-work-note">Create the package once. You can allocate it to many farmers from the next step.</p>
+            <p className="green-work-note">
+              {fieldWorkflowMode
+                ? `Create the package once. You can allocate it to many ${activeWorkflowLabels.ownerPlural.toLowerCase()} from the next step.`
+                : "Create the handout once. You can allocate its seedlings to many custodians from the next step."}
+            </p>
             <div className="green-work-agric-modal-grid">
               <label className="green-work-stacked-field">
-                <span>Support date *</span>
+                <span>{fieldWorkflowMode ? "Support date *" : "Distribution date *"}</span>
                 <input
                   autoFocus
                   type="date"
@@ -19260,16 +19367,16 @@ export default function GreenWork() {
                 />
               </label>
               <label className="green-work-stacked-field">
-                <span>Support item / package</span>
+                <span>{fieldWorkflowMode ? "Support item / package" : "Species"}</span>
                 <input
                   value={newDistributionEvent.species}
                   onChange={(event) => setNewDistributionEvent((previous) => ({ ...previous, species: event.target.value }))}
-                  placeholder="e.g. Improved seed"
+                  placeholder={fieldWorkflowMode ? "e.g. Improved seed" : "Optional species"}
                   disabled={!activeProjectId || workPartnerOrgPaused}
                 />
               </label>
               <label className="green-work-stacked-field">
-                <span>Total units *</span>
+                <span>{fieldWorkflowMode ? "Total units *" : "Total seedlings *"}</span>
                 <input
                   type="number"
                   min="1"
@@ -19288,7 +19395,7 @@ export default function GreenWork() {
                 />
               </label>
               <label className="green-work-stacked-field green-work-stacked-field-wide">
-                <span>Delivered by</span>
+                <span>{fieldWorkflowMode ? "Delivered by" : "Distributed by"}</span>
                 <input
                   value={newDistributionEvent.distributed_by}
                   onChange={(event) => setNewDistributionEvent((previous) => ({ ...previous, distributed_by: event.target.value }))}
@@ -19297,7 +19404,7 @@ export default function GreenWork() {
                 />
               </label>
               <label className="green-work-stacked-field green-work-stacked-field-wide">
-                <span>Event notes</span>
+                <span>{fieldWorkflowMode ? "Event notes" : "Distribution notes"}</span>
                 <textarea
                   value={newDistributionEvent.notes}
                   onChange={(event) => setNewDistributionEvent((previous) => ({ ...previous, notes: event.target.value }))}
@@ -19318,7 +19425,7 @@ export default function GreenWork() {
                 }}
                 disabled={!activeProjectId || workPartnerOrgPaused || !newDistributionEvent.event_date || Number(newDistributionEvent.quantity || 0) <= 0}
               >
-                Create support event
+                {fieldWorkflowMode ? "Create support event" : "Create distributed event"}
               </button>
             </div>
           </section>
