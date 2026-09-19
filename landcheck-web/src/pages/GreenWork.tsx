@@ -2582,6 +2582,41 @@ const renderActionIcon = (form: WorkForm) => {
           <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       );
+    case "project_focus":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M4 6.5h6l1.7 2H20v10.8H4z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+          <path d="M4 8.5h16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+    case "create_project":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <rect x="4.5" y="4.5" width="15" height="15" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M12 8v8M8 12h8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+    case "merchants":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M5 10v9h14v-9M4 10l1.2-5h13.6L20 10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+          <path d="M4 10c.4 1.4 1.4 2.1 2.8 2.1S9.2 11.4 9.6 10c.4 1.4 1.4 2.1 2.8 2.1s2.4-.7 2.8-2.1c.4 1.4 1.4 2.1 2.8 2.1S19.6 11.4 20 10M9 19v-4h6v4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case "sponsor_feedback":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M5 5.5h14v9H9l-4 3v-12z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+          <path d="M8 9.5h8M8 12.5h5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+    case "logs":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M5 5h14v14H5z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+          <path d="M8 9h8M8 12h8M8 15h5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
     default:
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -2590,6 +2625,35 @@ const renderActionIcon = (form: WorkForm) => {
       );
   }
 };
+
+type WorkMenuIconName = WorkForm | "survey_admin" | "estate_admin" | "change_password" | "logout";
+
+const renderMenuIcon = (icon: WorkMenuIconName) => {
+  if (icon === "survey_admin") return renderActionIcon("map_view");
+  if (icon === "estate_admin") return renderActionIcon("custodian_hub");
+  if (icon === "change_password") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <circle cx="8.2" cy="14.8" r="3.2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+        <path d="m10.7 12.3 7.7-7.7 2.1 2.1-1.9 1.9 1.2 1.2-2 2-1.2-1.2-2.8 2.8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (icon === "logout") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M10 5H5v14h5M13 8l4 4-4 4M8 12h9" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  return renderActionIcon(icon);
+};
+
+const renderMenuItemIcon = (icon: WorkMenuIconName) => (
+  <span className="green-work-menu-item-icon" aria-hidden="true">
+    {renderMenuIcon(icon)}
+  </span>
+);
 
 type SpeciesDailySurvivalPoint = {
   day: number;
@@ -11501,6 +11565,7 @@ export default function GreenWork() {
             type="button"
             onClick={() => openForm("super_admin")}
           >
+            {renderMenuItemIcon("super_admin")}
             Super Admin
           </button>
         )}
@@ -11510,6 +11575,7 @@ export default function GreenWork() {
             type="button"
             onClick={() => navigate("/admin")}
           >
+            {renderMenuItemIcon("survey_admin")}
             Survey Admin
           </button>
         )}
@@ -11519,6 +11585,7 @@ export default function GreenWork() {
             type="button"
             onClick={() => navigate("/estate-admin")}
           >
+            {renderMenuItemIcon("estate_admin")}
             Estate Admin
           </button>
         )}
@@ -11527,6 +11594,7 @@ export default function GreenWork() {
           type="button"
           onClick={() => openForm("project_focus")}
         >
+          {renderMenuItemIcon("project_focus")}
           Project Focus
         </button>
         {!csrPartnerDashboardMode && (
@@ -11535,6 +11603,7 @@ export default function GreenWork() {
             type="button"
             onClick={() => openForm("create_project")}
           >
+            {renderMenuItemIcon("create_project")}
             Create Project
           </button>
         )}
@@ -11544,6 +11613,7 @@ export default function GreenWork() {
           onClick={onChangeWorkPassword}
           disabled={!workAuthSession?.user?.id || workAuthSession.user.id <= 0}
         >
+          {renderMenuItemIcon("change_password")}
           Change Password
         </button>
         <button
@@ -11551,6 +11621,7 @@ export default function GreenWork() {
           type="button"
           onClick={onLogoutWork}
         >
+          {renderMenuItemIcon("logout")}
           Logout
         </button>
         {activeProjectId ? (
@@ -11563,6 +11634,7 @@ export default function GreenWork() {
                 type="button"
                 onClick={() => openForm("overview")}
               >
+                {renderMenuItemIcon("overview")}
                 Overview
               </button>
             ) : null}
@@ -11571,6 +11643,7 @@ export default function GreenWork() {
               type="button"
               onClick={() => openForm("map_view")}
             >
+              {renderMenuItemIcon("map_view")}
               Map + AI Tree Health
             </button>
             {!fieldWorkflowMode ? (
@@ -11580,6 +11653,7 @@ export default function GreenWork() {
                   type="button"
                   onClick={() => openForm("remote_monitoring")}
                 >
+                  {renderMenuItemIcon("remote_monitoring")}
                   {csrProjectMode ? "Impact Monitoring" : "Remote Monitoring"}
                 </button>
                 <button
@@ -11587,6 +11661,7 @@ export default function GreenWork() {
                   type="button"
                   onClick={() => openForm("live_table")}
                 >
+                  {renderMenuItemIcon("live_table")}
                   {csrProjectMode ? "Implementation Live" : "Live Maintenance Table"}
                 </button>
                 {publicSponsorshipProject ? (
@@ -11596,6 +11671,7 @@ export default function GreenWork() {
                       type="button"
                       onClick={() => openForm("sponsors")}
                     >
+                      {renderMenuItemIcon("sponsors")}
                       Sponsors
                     </button>
                     <button
@@ -11603,6 +11679,7 @@ export default function GreenWork() {
                       type="button"
                       onClick={() => openForm("sponsorship_orders")}
                     >
+                      {renderMenuItemIcon("sponsorship_orders")}
                       Sponsorship Payments
                     </button>
                     <button
@@ -11610,6 +11687,7 @@ export default function GreenWork() {
                       type="button"
                       onClick={() => openForm("sponsor_payouts")}
                     >
+                      {renderMenuItemIcon("sponsor_payouts")}
                       Sponsor Payouts
                     </button>
                     {canAccessSuperAdmin && (
@@ -11618,15 +11696,17 @@ export default function GreenWork() {
                         type="button"
                         onClick={() => openForm("merchants")}
                       >
+                        {renderMenuItemIcon("merchants")}
                         Merchants
                       </button>
                     )}
                     <button
                       className={`green-work-menu-item ${activeForm === "sponsor_feedback" ? "active" : ""}`}
-                      type="button"
-                      onClick={() => openForm("sponsor_feedback")}
-                    >
-                      Feedback & Nominations
+                        type="button"
+                        onClick={() => openForm("sponsor_feedback")}
+                      >
+                        {renderMenuItemIcon("sponsor_feedback")}
+                        Feedback & Nominations
                       {assistantUnreadCount > 0 && (
                         <span className="green-work-unread-badge green-work-unread-badge--inline" aria-label={`${assistantUnreadCount} new assistant question${assistantUnreadCount === 1 ? "" : "s"}`}>
                           {assistantUnreadCount > 99 ? "99+" : assistantUnreadCount}
@@ -11644,6 +11724,7 @@ export default function GreenWork() {
                   type="button"
                   onClick={() => openForm("farmer_live")}
                 >
+                  {renderMenuItemIcon("farmer_live")}
                   {activeWorkflowLabels.liveTableTitle}
                 </button>
                 <button
@@ -11651,6 +11732,7 @@ export default function GreenWork() {
                   type="button"
                   onClick={() => openForm("custodian_hub")}
                 >
+                  {renderMenuItemIcon("custodian_hub")}
                   {activeWorkflowLabels.registryTitle}
                 </button>
                 <button
@@ -11658,6 +11740,7 @@ export default function GreenWork() {
                   type="button"
                   onClick={() => openForm("field_capture_assign")}
                 >
+                  {renderMenuItemIcon("field_capture_assign")}
                   {activeWorkflowLabels.fieldCaptureTitle}
                 </button>
                 <button
@@ -11665,6 +11748,7 @@ export default function GreenWork() {
                   type="button"
                   onClick={() => openForm("support_visit_assign")}
                 >
+                  {renderMenuItemIcon("support_visit_assign")}
                   {activeWorkflowLabels.supportVisitTitle}
                 </button>
                 {agricWorkflowMode ? (
@@ -11673,6 +11757,7 @@ export default function GreenWork() {
                     type="button"
                     onClick={() => openForm("remote_monitoring")}
                   >
+                    {renderMenuItemIcon("remote_monitoring")}
                     Farm Health
                   </button>
                 ) : null}
@@ -11683,6 +11768,7 @@ export default function GreenWork() {
                 type="button"
                 onClick={() => openForm("custodian_hub")}
               >
+                {renderMenuItemIcon("custodian_hub")}
                 {activeWorkflowLabels.registryTitle}
               </button>
             )}
@@ -11691,6 +11777,7 @@ export default function GreenWork() {
               type="button"
               onClick={() => openForm("existing_tree_intake")}
             >
+              {renderMenuItemIcon("existing_tree_intake")}
               {fieldWorkflowMode
                 ? activeWorkflowLabels.recordTitle
                 : csrProjectMode
@@ -11703,6 +11790,7 @@ export default function GreenWork() {
                 type="button"
                 onClick={() => openForm("verra_reports")}
               >
+                {renderMenuItemIcon("verra_reports")}
                 {csrProjectMode ? "Programme Reports" : "Verra Reports"}
               </button>
             ) : null}
@@ -11712,6 +11800,7 @@ export default function GreenWork() {
                 type="button"
                 onClick={() => openForm("review_queue")}
               >
+                {renderMenuItemIcon("review_queue")}
                 Review Queue ({reviewQueue.length})
               </button>
             )}
@@ -11720,6 +11809,7 @@ export default function GreenWork() {
               type="button"
               onClick={() => openForm("logs")}
             >
+              {renderMenuItemIcon("logs")}
               System Logs & Reports
             </button>
             <button
@@ -11727,6 +11817,7 @@ export default function GreenWork() {
               type="button"
               onClick={() => openForm("users")}
             >
+              {renderMenuItemIcon("users")}
               Users
             </button>
             {!csrPartnerDashboardMode && (
@@ -11735,6 +11826,7 @@ export default function GreenWork() {
                 type="button"
                 onClick={() => openForm("add_user")}
               >
+                {renderMenuItemIcon("add_user")}
                 Add User
               </button>
             )}
@@ -11745,6 +11837,7 @@ export default function GreenWork() {
                   type="button"
                   onClick={() => openForm("assign_work")}
                 >
+                  {renderMenuItemIcon("assign_work")}
                   Assign Tree Planting
                 </button>
                 <button
@@ -11752,6 +11845,7 @@ export default function GreenWork() {
                   type="button"
                   onClick={() => openForm("assign_task")}
                 >
+                  {renderMenuItemIcon("assign_task")}
                   Assign Maintenance Task
                 </button>
               </>
