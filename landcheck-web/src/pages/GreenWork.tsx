@@ -18,6 +18,12 @@ import {
   getCachedProjectTreesOffline,
   isLikelyNetworkError,
 } from "../offline/greenOffline";
+import {
+  applyWorkspaceTheme,
+  getWorkspaceTheme,
+  subscribeWorkspaceTheme,
+  type WorkspaceTheme,
+} from "../utils/workspaceTheme";
 import "../styles/green-work.css";
 
 const GreenWorkMapPanel = lazyWithChunkRecovery(() => import("../components/green-work/GreenWorkMapPanel"));
@@ -3326,6 +3332,14 @@ export default function GreenWork() {
   const workSuspendNoticeShownRef = useRef(false);
   const lastLoadedProjectIdRef = useRef<number | null>(null);
   const navigate = useNavigate();
+  const [theme, setTheme] = useState<WorkspaceTheme>(() => getWorkspaceTheme());
+
+  useEffect(() => {
+    applyWorkspaceTheme(theme);
+  }, [theme]);
+
+  useEffect(() => subscribeWorkspaceTheme(setTheme), []);
+
   const [projects, setProjects] = useState<Project[]>([]);
   // Sponsor Feedback state
   const [socialFollowClaims, setSocialFollowClaims] = useState<any[]>([]);
@@ -11340,7 +11354,34 @@ export default function GreenWork() {
           </div>
           <div className="green-work-title">
             <h1>LandCheck Work</h1>
-            <span>Assignments & Progress</span>
+            <span>Programs, field operations &amp; impact</span>
+          </div>
+          <div className="green-work-header-actions">
+            {activeProjectName && <span className="green-work-project-chip">{activeProjectName}</span>}
+            {workAuthSession?.user?.full_name && (
+              <span className="green-work-profile-chip" title={workAuthSession.user.organization_name || undefined}>
+                {workAuthSession.user.full_name}
+              </span>
+            )}
+            <button
+              type="button"
+              className="green-work-header-btn green-work-theme-toggle"
+              role="switch"
+              aria-checked={theme === "light"}
+              aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+              onClick={() => setTheme((current) => current === "light" ? "dark" : "light")}
+            >
+              <span aria-hidden="true">{theme === "light" ? "Moon" : "Sun"}</span>
+              {theme === "light" ? "Light" : "Dark"}
+            </button>
+            {workAuthSession?.user?.id && workAuthSession.user.id > 0 && (
+              <button type="button" className="green-work-header-btn" onClick={onChangeWorkPassword}>
+                Change password
+              </button>
+            )}
+            <button type="button" className="green-work-header-btn" onClick={onLogoutWork}>
+              Logout
+            </button>
           </div>
         </div>
       </header>
@@ -11358,21 +11399,8 @@ export default function GreenWork() {
             <span />
             <span />
           </button>
-          <span className="green-work-toolbar-label">Menu</span>
-          {activeProjectName && <span className="green-work-project-chip">{activeProjectName}</span>}
-          {workAuthSession?.user?.full_name && (
-            <span className="green-work-profile-chip" title={workAuthSession.user.organization_name || undefined}>
-              {workAuthSession.user.full_name}
-            </span>
-          )}
-          {workAuthSession?.user?.id && workAuthSession.user.id > 0 && (
-            <button type="button" className="green-work-auth-btn" onClick={onChangeWorkPassword}>
-              Change Password
-            </button>
-          )}
-          <button type="button" className="green-work-auth-btn" onClick={onLogoutWork}>
-            Logout
-          </button>
+          <span className="green-work-toolbar-label">Workspace navigation</span>
+          <span className="green-work-toolbar-context">{activeProjectName || "Choose a project to begin"}</span>
         </div>
       </div>
 
@@ -11459,7 +11487,10 @@ export default function GreenWork() {
 
       <aside className={`green-work-menu-drawer ${menuOpen ? "open" : ""}`} style={drawerStyle}>
         <div className="green-work-menu-head">
-          <strong>Forsqm</strong>
+          <div className="green-work-menu-brand">
+            <strong>LandCheck</strong>
+            <small>Work</small>
+          </div>
           <button className="green-work-menu-close" type="button" onClick={() => setMenuOpen(false)} aria-label="Close menu">
             X
           </button>
@@ -18042,6 +18073,59 @@ export default function GreenWork() {
                 existingTreeMapAreas={existingTreeMapAreas}
               />
             </Suspense>
+          )}
+
+          {activeProjectId && mapViewMode && (
+            <section className="green-work-card green-work-map-overview-card" aria-labelledby="map-overview-title">
+              <div className="green-work-section-heading">
+                <div>
+                  <span className="green-work-section-kicker">Project snapshot</span>
+                  <h3 id="map-overview-title">Overview</h3>
+                  <p className="green-work-note">Key delivery, health, and review signals for this project.</p>
+                </div>
+                <button type="button" className="green-work-secondary-btn" onClick={() => openForm("overview")}>
+                  Open full overview
+                </button>
+              </div>
+              {alertsList.length > 0 && (
+                <div className="green-work-overview-alerts" role="status" aria-live="polite">
+                  <div className="green-work-overview-alerts-head">
+                    <strong>Attention required</strong>
+                    <span>{alertsSummary.total} open alerts</span>
+                  </div>
+                  {alertsList.slice(0, 5).map((alert: any) => (
+                    <p key={`map-overview-alert-${alert.id}`}>
+                      <span>[{String(alert.severity || "warning").toUpperCase()}]</span> {alert.message}
+                    </p>
+                  ))}
+                </div>
+              )}
+              <div className="green-work-overview-mini-grid">
+                <OverviewDonutCard
+                  title={activeWorkflowProfile === "agric" ? "Farm Health Mix" : activeWorkflowProfile === "relief_recovery" ? "Site Health Mix" : "Tree Health Mix"}
+                  totalLabel={activeWorkflowProfile === "agric" ? "Plots" : activeWorkflowProfile === "relief_recovery" ? "Sites" : "Trees"}
+                  segments={treeHealthMixSegments}
+                  context={`Status distribution for ${overviewScopeLabel}.`}
+                />
+                <OverviewDonutCard
+                  title={overviewExecutionMix.title}
+                  totalLabel={overviewExecutionMix.totalLabel}
+                  segments={overviewExecutionMix.segments}
+                  context={overviewExecutionMix.context}
+                />
+                <OverviewSpeciesBarCard
+                  title={activeWorkflowProfile === "agric" ? "Mapped Plots by Crop" : activeWorkflowProfile === "relief_recovery" ? "Sites by Type" : "Trees Planted by Species"}
+                  rows={speciesPlantedRows}
+                  context={`Current distribution for ${overviewScopeLabel}.`}
+                />
+              </div>
+              <div className="green-work-map-overview-metrics">
+                <div><span>Planted</span><strong>{filteredOverviewTotals.plantedTrees}</strong><small>of {filteredOverviewTotals.targetTrees} target trees</small></div>
+                <div><span>Tasks done</span><strong>{filteredOverviewTotals.taskDone}</strong><small>{filteredOverviewTotals.taskPending} pending</small></div>
+                <div><span>Awaiting review</span><strong>{reviewQueue.length}</strong><small>submissions</small></div>
+                <div><span>Open alerts</span><strong>{alertsSummary.total}</strong><small>{alertsSummary.danger} high priority</small></div>
+              </div>
+            </section>
           )}
         </section>
       </div>
