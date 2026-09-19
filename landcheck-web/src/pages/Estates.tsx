@@ -3012,6 +3012,7 @@ export default function Estates() {
       activeKey={isMapView ? "map" : "dashboard"}
       search={plotSearch}
       onSearchChange={setPlotSearch}
+      onEstateNameChange={(value) => setEstateDetail((current: any) => current ? { ...current, name: value } : current)}
       recentActivity={activity}
     >
       {isMapView && renderToolsBar()}

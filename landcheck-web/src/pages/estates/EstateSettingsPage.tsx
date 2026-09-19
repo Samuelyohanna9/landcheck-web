@@ -132,7 +132,13 @@ export default function EstateSettingsPage() {
   if (!estateId) return null;
 
   return (
-    <EstateShell estateId={estateId} estateName={estateDetail?.name} activeKey="settings" recentActivity={activity}>
+    <EstateShell
+      estateId={estateId}
+      estateName={estateDetail?.name}
+      activeKey="settings"
+      recentActivity={activity}
+      onEstateNameChange={(value) => { setName(value); setEstateDetail((current: any) => current ? { ...current, name: value } : current); }}
+    >
       <div className="edash-card" style={{ marginBottom: 16 }}>
         <div className="edash-card-inner">
           <div className="edash-card-head">

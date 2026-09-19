@@ -243,6 +243,21 @@
   font-weight: 600;
   white-space: nowrap;
 }
+.edash-breadcrumb-estate { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.edash-breadcrumb-edit {
+  border: 1px solid var(--edash-border);
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: var(--edash-surface);
+  color: var(--edash-brand-dark);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.edash-breadcrumb-edit:hover { background: var(--edash-brand-tint); border-color: var(--edash-brand); }
+.edash-breadcrumb-edit:focus-visible { outline: 2px solid var(--edash-brand); outline-offset: 2px; }
 
 .edash-breadcrumb b { color: var(--edash-faint); font-weight: 400; }
 .edash-breadcrumb strong { color: var(--edash-ink); font-weight: 700; }
