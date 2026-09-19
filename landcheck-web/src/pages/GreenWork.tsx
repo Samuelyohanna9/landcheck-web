@@ -18718,7 +18718,7 @@ export default function GreenWork() {
               <rect x="13" y="13" width="6" height="6" rx="1" fill="none" stroke="currentColor" strokeWidth="1.6" />
             </svg>
             <strong>No tree selected</strong>
-            <p>Click a tree on the map to open its full record here.</p>
+            <p>Click a tree on the map to open its full record here and run AI tree health analysis.</p>
           </div>
         </aside>
       ) : null}
