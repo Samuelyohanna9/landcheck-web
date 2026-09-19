@@ -47,6 +47,15 @@ export default function EstateBillingPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    const result = new URLSearchParams(window.location.search).get("payment_result");
+    if (!result) return;
+    if (result === "success") toast.success("Payment received. Your subscription is active again.");
+    else if (result === "pending") toast("Payment authorization is still pending. We will update billing when it completes.");
+    else toast.error("Payment was not completed. You can try again from Billing & plan.");
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }, []);
+
+  useEffect(() => {
     api.get("/estates").then((response) => {
       const first = (response.data || [])[0];
       if (first) { setSidebarEstateId(String(first.id)); setSidebarEstateName(first.name); }
@@ -98,6 +107,20 @@ export default function EstateBillingPage() {
     }
   };
 
+  const recoverPayment = async () => {
+    if (!organizationId) return;
+    setBusy(true);
+    try {
+      const response = await api.post("/estates/billing/payment-checkout", {}, { params: { organization_id: organizationId } });
+      const checkoutUrl = String(response.data?.checkout_url || "");
+      if (!checkoutUrl) throw new Error("Payment checkout was not created.");
+      window.location.assign(checkoutUrl);
+    } catch (err) {
+      toast.error(await extractApiErrorMessage(err, "Payment checkout could not be started."));
+      setBusy(false);
+    }
+  };
+
   if (!organizationId) return null;
 
   return (
@@ -127,7 +150,9 @@ export default function EstateBillingPage() {
                 {["trialing", "active"].includes(status.status) && !status.cancel_at_period_end && (
                   <button type="button" className="edash-btn-outline" disabled={busy} onClick={() => void cancel()}>Cancel subscription</button>
                 )}
-                {status.status === "none" || status.status === "canceled" || status.status === "expired" ? (
+                {["past_due", "canceled", "expired"].includes(status.status) && status.plan_key ? (
+                  <button type="button" className="edash-btn-primary" disabled={busy} onClick={() => void recoverPayment()}>{busy ? "Opening payment..." : "Retry payment"}</button>
+                ) : status.status === "none" ? (
                   <button type="button" className="edash-btn-primary" onClick={() => navigate("/estates/choose-plan")}>Choose a plan</button>
                 ) : null}
               </div>
@@ -153,7 +178,7 @@ export default function EstateBillingPage() {
                     <td data-label="Date">{new Date(charge.attempted_at).toLocaleDateString()}</td>
                     <td data-label="Type" style={{ textTransform: "capitalize" }}>{charge.charge_type.replaceAll("_", " ")}</td>
                     <td data-label="Amount">{money(charge.amount)}</td>
-                    <td data-label="Status"><span className={`edash-status-pill tone-${charge.status === "success" ? "good" : "danger"}`}>{charge.status}</span></td>
+                    <td data-label="Status"><span className={`edash-status-pill tone-${charge.status === "success" ? "good" : charge.status === "pending" ? "neutral" : "danger"}`}>{charge.status}</span></td>
                   </tr>
                 ))}
               </tbody>
