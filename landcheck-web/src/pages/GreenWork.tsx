@@ -2646,7 +2646,7 @@ const renderActionIcon = (form: WorkForm) => {
   }
 };
 
-type WorkMenuIconName = WorkForm | "survey_admin" | "estate_admin" | "change_password" | "logout";
+type WorkMenuIconName = WorkForm | "survey_admin" | "estate_admin" | "change_password" | "logout" | "settings";
 
 const renderMenuIcon = (icon: WorkMenuIconName) => {
   if (icon === "survey_admin") return renderActionIcon("map_view");
@@ -2663,6 +2663,14 @@ const renderMenuIcon = (icon: WorkMenuIconName) => {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <path d="M10 5H5v14h5M13 8l4 4-4 4M8 12h9" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (icon === "settings") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="m9.8 4.6.6-1.1h3.2l.6 1.1 1.5.9 1.3-.2 1.6 2.8-.8 1.1v1.8l.8 1.1-1.6 2.8-1.3-.2-1.5.9-.6 1.1h-3.2l-.6-1.1-1.5-.9-1.3.2-1.6-2.8.8-1.1V9.2l-.8-1.1L7 5.3l1.3.2 1.5-.9Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+        <circle cx="12" cy="10.9" r="2.2" fill="none" stroke="currentColor" strokeWidth="1.5" />
       </svg>
     );
   }
@@ -3744,6 +3752,14 @@ export default function GreenWork() {
   const agricWorkflowMode = activeWorkflowProfile === "agric";
   const reliefWorkflowMode = activeWorkflowProfile === "relief_recovery";
   const compactCustodianHubMode = Boolean(activeWorkflowProfile);
+  const workProfileDisplayName = workAuthSession?.user?.full_name || "Work user";
+  const workProfileInitials = workProfileDisplayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("") || "U";
+  const workProfileRole = formatTaskTypeLabel(workAuthSession?.user?.role_name || workAuthSession?.user?.role || "user");
   const activeMapWorkspaceCopy = getMapWorkspaceCopy(activeWorkflowProfile);
   const mapMetricCopy = fieldWorkflowMode
     ? {
@@ -4018,6 +4034,7 @@ export default function GreenWork() {
   const [agricFarmerModalOpen, setAgricFarmerModalOpen] = useState(false);
   const [agricSupportModalOpen, setAgricSupportModalOpen] = useState(false);
   const [agricSelectedFarmerIds, setAgricSelectedFarmerIds] = useState<Set<number>>(() => new Set());
+  const [agricFarmerSelectorOpen, setAgricFarmerSelectorOpen] = useState(false);
   const [agricBulkAllocationBusy, setAgricBulkAllocationBusy] = useState(false);
   const [treeMetaDraftById, setTreeMetaDraftById] = useState<
     Record<
@@ -4067,6 +4084,7 @@ export default function GreenWork() {
   const [assigningMaintenanceTask, setAssigningMaintenanceTask] = useState(false);
   const [inspectedTree, setInspectedTree] = useState<TreeInspectData | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [workspaceSettingsOpen, setWorkspaceSettingsOpen] = useState(false);
   const [activeForm, setActiveForm] = useState<WorkForm | null>(() => {
     const storedForm = storedFormNormalized as WorkForm;
     if (!allowedForms.includes(storedForm)) return null;
@@ -5911,6 +5929,7 @@ export default function GreenWork() {
       const failedCount = results.length - savedCount;
       await loadCommunityData(activeProjectId);
       setAgricSelectedFarmerIds(new Set());
+      setAgricFarmerSelectorOpen(false);
       setNewAllocation((previous) => ({ ...previous, custodian_id: "", quantity_allocated: 0 }));
       if (failedCount === 0) {
         toast.success(`${savedCount} ${activeWorkflowLabels.ownerSingular.toLowerCase()} allocation${savedCount === 1 ? "" : "s"} saved`);
@@ -11582,12 +11601,6 @@ export default function GreenWork() {
       <header className="green-work-header">
         <div className="green-work-header-inner green-work-header-inner--actions-only">
           <div className="green-work-header-actions">
-            {activeProjectName && <span className="green-work-project-chip">{activeProjectName}</span>}
-            {workAuthSession?.user?.full_name && (
-              <span className="green-work-profile-chip" title={workAuthSession.user.organization_name || undefined}>
-                {workAuthSession.user.full_name}
-              </span>
-            )}
             <div className="green-work-notifications">
               <button
                 type="button"
@@ -11640,25 +11653,13 @@ export default function GreenWork() {
                 </div>
               )}
             </div>
-            <button
-              type="button"
-              className="green-work-header-btn green-work-theme-toggle"
-              role="switch"
-              aria-checked={theme === "light"}
-              aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
-              onClick={() => setTheme((current) => current === "light" ? "dark" : "light")}
-            >
-              <span aria-hidden="true">{theme === "light" ? "Moon" : "Sun"}</span>
-              {theme === "light" ? "Light" : "Dark"}
-            </button>
-            {workAuthSession?.user?.id && workAuthSession.user.id > 0 && (
-              <button type="button" className="green-work-header-btn" onClick={onChangeWorkPassword}>
-                Change password
-              </button>
-            )}
-            <button type="button" className="green-work-header-btn" onClick={onLogoutWork}>
-              Logout
-            </button>
+            <div className="green-work-user-profile" title={workAuthSession?.user?.organization_name || undefined}>
+              <span className="green-work-user-avatar" aria-hidden="true">{workProfileInitials}</span>
+              <span className="green-work-user-copy">
+                <strong>{workProfileDisplayName}</strong>
+                <small>{workProfileRole}</small>
+              </span>
+            </div>
           </div>
         </div>
       </header>
@@ -11829,22 +11830,50 @@ export default function GreenWork() {
           </button>
         )}
         <button
-          className="green-work-menu-item"
+          className={`green-work-menu-item ${workspaceSettingsOpen ? "active" : ""}`}
           type="button"
-          onClick={onChangeWorkPassword}
-          disabled={!workAuthSession?.user?.id || workAuthSession.user.id <= 0}
+          onClick={() => setWorkspaceSettingsOpen((open) => !open)}
+          aria-expanded={workspaceSettingsOpen}
+          aria-controls="green-work-sidebar-settings"
         >
-          {renderMenuItemIcon("change_password")}
-          Change Password
+          {renderMenuItemIcon("settings")}
+          Settings
+          <span className="green-work-menu-item-chevron" aria-hidden="true">{workspaceSettingsOpen ? "-" : "+"}</span>
         </button>
-        <button
-          className="green-work-menu-item green-work-menu-item-logout"
-          type="button"
-          onClick={onLogoutWork}
-        >
-          {renderMenuItemIcon("logout")}
-          Logout
-        </button>
+        {workspaceSettingsOpen && (
+          <div className="green-work-sidebar-settings" id="green-work-sidebar-settings">
+            <button
+              className="green-work-menu-item green-work-menu-item--nested"
+              type="button"
+              role="switch"
+              aria-checked={theme === "light"}
+              onClick={() => setTheme((current) => current === "light" ? "dark" : "light")}
+            >
+              {renderMenuItemIcon("settings")}
+              {theme === "light" ? "Light mode" : "Dark mode"}
+            </button>
+            <button
+              className="green-work-menu-item green-work-menu-item--nested"
+              type="button"
+              onClick={() => {
+                setWorkspaceSettingsOpen(false);
+                onChangeWorkPassword();
+              }}
+              disabled={!workAuthSession?.user?.id || workAuthSession.user.id <= 0}
+            >
+              {renderMenuItemIcon("change_password")}
+              Change password
+            </button>
+            <button
+              className="green-work-menu-item green-work-menu-item--nested green-work-menu-item-logout"
+              type="button"
+              onClick={onLogoutWork}
+            >
+              {renderMenuItemIcon("logout")}
+              Logout
+            </button>
+          </div>
+        )}
         {activeProjectId ? (
           <div className="green-work-menu-group">
             <p className="green-work-menu-subhead">Active Project Actions</p>
@@ -13071,43 +13100,61 @@ export default function GreenWork() {
                             />
                           </label>
                         </div>
-                        <div className="green-work-agric-select-all">
-                          <label className="green-work-checkbox-row">
-                            <input
-                              type="checkbox"
-                              checked={custodians.length > 0 && custodians.every((farmer) => agricSelectedFarmerIds.has(Number(farmer.id)))}
-                              onChange={(event) => {
-                                setAgricSelectedFarmerIds(
-                                  event.target.checked ? new Set(custodians.map((farmer) => Number(farmer.id))) : new Set(),
-                                );
-                              }}
-                              disabled={custodians.length === 0}
-                            />
-                            <span>Select all {activeWorkflowLabels.ownerPlural.toLowerCase()}</span>
-                          </label>
+                        <div className="green-work-agric-picker-summary">
+                          <div>
+                            <strong>{agricSelectedFarmerIds.size} of {custodians.length} selected</strong>
+                            <span>Choose recipients only when you are ready to allocate.</span>
+                          </div>
+                          <button
+                            type="button"
+                            className="green-work-secondary-btn"
+                            onClick={() => setAgricFarmerSelectorOpen((open) => !open)}
+                            disabled={custodians.length === 0}
+                          >
+                            {agricFarmerSelectorOpen ? "Hide farmer list" : "Choose farmers"}
+                          </button>
                         </div>
-                        <div className="green-work-agric-check-list">
-                          {custodians.map((farmer) => (
-                            <label className="green-work-agric-check-row" key={`agric-select-${farmer.id}`}>
-                              <input
-                                type="checkbox"
-                                checked={agricSelectedFarmerIds.has(Number(farmer.id))}
-                                onChange={(event) => {
-                                  setAgricSelectedFarmerIds((previous) => {
-                                    const next = new Set(previous);
-                                    if (event.target.checked) next.add(Number(farmer.id));
-                                    else next.delete(Number(farmer.id));
-                                    return next;
-                                  });
-                                }}
-                              />
-                              <span>{farmer.name}</span>
-                              <small>
-                                {farmer.profile_data?.farmer_code || farmer.profile_data?.beneficiary_code || formatTaskTypeLabel(farmer.custodian_type)}
-                              </small>
-                            </label>
-                          ))}
-                        </div>
+                        {agricFarmerSelectorOpen && (
+                          <div className="green-work-agric-picker-panel">
+                            <div className="green-work-agric-select-all">
+                              <label className="green-work-checkbox-row">
+                                <input
+                                  type="checkbox"
+                                  checked={custodians.length > 0 && custodians.every((farmer) => agricSelectedFarmerIds.has(Number(farmer.id)))}
+                                  onChange={(event) => {
+                                    setAgricSelectedFarmerIds(
+                                      event.target.checked ? new Set(custodians.map((farmer) => Number(farmer.id))) : new Set(),
+                                    );
+                                  }}
+                                  disabled={custodians.length === 0}
+                                />
+                                <span>Select all {activeWorkflowLabels.ownerPlural.toLowerCase()}</span>
+                              </label>
+                            </div>
+                            <div className="green-work-agric-check-list">
+                              {custodians.map((farmer) => (
+                                <label className="green-work-agric-check-row" key={`agric-select-${farmer.id}`} title={farmer.name}>
+                                  <input
+                                    type="checkbox"
+                                    checked={agricSelectedFarmerIds.has(Number(farmer.id))}
+                                    onChange={(event) => {
+                                      setAgricSelectedFarmerIds((previous) => {
+                                        const next = new Set(previous);
+                                        if (event.target.checked) next.add(Number(farmer.id));
+                                        else next.delete(Number(farmer.id));
+                                        return next;
+                                      });
+                                    }}
+                                  />
+                                  <span>{farmer.name}</span>
+                                  <small>
+                                    {farmer.profile_data?.farmer_code || farmer.profile_data?.beneficiary_code || formatTaskTypeLabel(farmer.custodian_type)}
+                                  </small>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                         <button
                           type="button"
                           className="green-work-primary-btn"
