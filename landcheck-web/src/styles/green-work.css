@@ -6627,5 +6627,104 @@
   .green-work-content { width: calc(100% - 24px); max-width: none; }
 }
 
+/* Keep the selected tree visible in an Estate-style right detail panel. The map reserves
+   the panel width on desktop, while mobile keeps the drawer over the map for more room. */
+.green-work-tree-drawer.green-work-tree-inspector {
+  top: 72px;
+  right: 0;
+  bottom: 0;
+  left: auto;
+  width: min(420px, 35vw);
+  height: auto;
+  max-height: none;
+  padding: 0;
+  border: 1px solid var(--gw-border);
+  border-right: 0;
+  border-radius: 16px 0 0 0;
+  background: var(--gw-surface);
+  box-shadow: -10px 0 28px rgba(16, 24, 39, 0.12);
+  animation: greenWorkTreeDrawerInRight 0.22s ease;
+  overscroll-behavior: contain;
+}
+
+.green-work-tree-drawer.green-work-tree-inspector .green-work-tree-drawer-head {
+  min-height: 68px;
+  margin: 0;
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--gw-border);
+  background: var(--gw-surface);
+}
+
+.green-work-tree-drawer.green-work-tree-inspector .green-work-tree-drawer-head strong {
+  color: var(--gw-text);
+  font-size: 1rem;
+}
+
+.green-work-tree-drawer.green-work-tree-inspector .green-work-tree-drawer-close {
+  border-radius: 50%;
+  background: var(--gw-surface-muted);
+  color: var(--gw-subtext);
+}
+
+.green-work-tree-inspector-body {
+  padding: 16px 18px 24px;
+}
+
+.green-work-tree-inspector-photo-wrap,
+.green-work-tree-health-result,
+.green-work-tree-meta-edit {
+  background: var(--gw-surface-muted);
+  border-color: var(--gw-border);
+}
+
+.green-work-tree-inspector-photo-wrap { background: var(--gw-surface-muted); }
+.green-work-tree-inspector-photo.empty { color: var(--gw-muted); }
+.green-work-tree-inspector-body h4,
+.green-work-tree-drawer-head strong { color: var(--gw-text); }
+.green-work-tree-inspector-grid > div { border-color: var(--gw-border); }
+.green-work-tree-inspector-grid span { color: var(--gw-muted); }
+.green-work-tree-inspector-grid strong { color: var(--gw-text); }
+
+.green-work-container.has-tree-inspector .green-work-main.map-view-mode {
+  padding-right: calc(min(420px, 35vw) + 16px);
+}
+
+.green-work-tree-overlay { display: none; }
+
+@keyframes greenWorkTreeDrawerInRight {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@media (max-width: 860px) {
+  .green-work-tree-overlay {
+    display: block;
+    background: rgba(15, 23, 32, 0.28);
+  }
+
+  .green-work-tree-drawer.green-work-tree-inspector {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(94vw, 420px);
+    height: 100dvh;
+    border-radius: 16px 0 0 16px;
+  }
+
+  .green-work-container.has-tree-inspector .green-work-main.map-view-mode {
+    padding-right: 0.2rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .green-work-tree-drawer.green-work-tree-inspector {
+    width: min(96vw, 420px);
+  }
+
+  .green-work-tree-inspector-body {
+    padding: 14px 14px 22px;
+  }
+}
+
 
 
