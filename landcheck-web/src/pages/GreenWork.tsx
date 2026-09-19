@@ -18146,6 +18146,15 @@ export default function GreenWork() {
             </Suspense>
           )}
 
+          {activeProjectId && mapViewMode && (
+            <div className="green-work-map-overview-metrics green-work-map-top-metrics" aria-label="Project metrics">
+              <div><span>Planted</span><strong>{filteredOverviewTotals.plantedTrees}</strong><small>of {filteredOverviewTotals.targetTrees} target trees</small></div>
+              <div><span>Tasks done</span><strong>{filteredOverviewTotals.taskDone}</strong><small>{filteredOverviewTotals.taskPending} pending</small></div>
+              <div><span>Awaiting review</span><strong>{reviewQueue.length}</strong><small>submissions</small></div>
+              <div><span>Open alerts</span><strong>{alertsSummary.total}</strong><small>{alertsSummary.danger} high priority</small></div>
+            </div>
+          )}
+
           {activeProjectId && (activeForm === "map_view" || assignWorkAreaMode) && (
             <Suspense fallback={<div className="green-work-card green-work-empty-state"><GreenLoadingAnimation label="Loading work map..." size="small" /></div>}>
               <GreenWorkMapPanel
@@ -18213,12 +18222,6 @@ export default function GreenWork() {
                   rows={speciesPlantedRows}
                   context={`Current distribution for ${overviewScopeLabel}.`}
                 />
-              </div>
-              <div className="green-work-map-overview-metrics">
-                <div><span>Planted</span><strong>{filteredOverviewTotals.plantedTrees}</strong><small>of {filteredOverviewTotals.targetTrees} target trees</small></div>
-                <div><span>Tasks done</span><strong>{filteredOverviewTotals.taskDone}</strong><small>{filteredOverviewTotals.taskPending} pending</small></div>
-                <div><span>Awaiting review</span><strong>{reviewQueue.length}</strong><small>submissions</small></div>
-                <div><span>Open alerts</span><strong>{alertsSummary.total}</strong><small>{alertsSummary.danger} high priority</small></div>
               </div>
             </section>
           )}

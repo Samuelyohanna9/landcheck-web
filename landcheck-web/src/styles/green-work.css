@@ -6449,6 +6449,11 @@
 }
 .green-work-map-overview-metrics strong { color: var(--gw-text); font-size: 1.2rem; }
 .green-work-map-overview-metrics small { color: var(--gw-subtext); font-size: 0.68rem; }
+.green-work-map-top-metrics { flex: 0 0 auto; }
+
+@media (min-width: 861px) and (max-width: 1200px) {
+  .green-work-map-top-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
 .green-work-menu-head {
   border-bottom: 1px solid var(--gw-border);
