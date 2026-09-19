@@ -124,6 +124,7 @@
 
 .tree-map-estate-control-btn {
   flex: 0 0 auto;
+  background: var(--gw-surface, rgba(255, 255, 255, 0.96));
 }
 
 .tree-map-estate-control-btn svg {
@@ -141,7 +142,8 @@
 }
 
 .tree-map-estate-controls button:disabled {
-  opacity: 0.45;
+  opacity: 1;
+  color: var(--gw-muted, #64748b);
   cursor: not-allowed;
 }
 
