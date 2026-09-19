@@ -12054,14 +12054,16 @@ export default function GreenWork() {
                 Review Queue ({reviewQueue.length})
               </button>
             )}
-            <button
-              className={`green-work-menu-item ${activeForm === "logs" ? "active" : ""}`}
-              type="button"
-              onClick={() => openForm("logs")}
-            >
-              {renderMenuItemIcon("logs")}
-              System Logs & Reports
-            </button>
+            {canAccessSuperAdmin && (
+              <button
+                className={`green-work-menu-item ${activeForm === "logs" ? "active" : ""}`}
+                type="button"
+                onClick={() => openForm("logs")}
+              >
+                {renderMenuItemIcon("logs")}
+                System Logs & Reports
+              </button>
+            )}
             <button
               className={`green-work-menu-item ${activeForm === "users" ? "active" : ""}`}
               type="button"
