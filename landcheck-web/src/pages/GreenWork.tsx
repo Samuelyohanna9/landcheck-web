@@ -4135,6 +4135,24 @@ export default function GreenWork() {
     info: 0,
   });
   const [alertsList, setAlertsList] = useState<any[]>([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  useEffect(() => {
+    if (!notificationsOpen) return undefined;
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (event.target instanceof Element && !event.target.closest(".green-work-notifications")) {
+        setNotificationsOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setNotificationsOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [notificationsOpen]);
   const [serverLiveRows, setServerLiveRows] = useState<LiveMaintenanceRow[]>([]);
   const [serverLiveSources, setServerLiveSources] = useState<{ label: string; url: string }[]>(LIVE_TABLE_SOURCES);
   const [serverExistingLiveRows, setServerExistingLiveRows] = useState<LiveMaintenanceRow[]>([]);
@@ -11501,6 +11519,58 @@ export default function GreenWork() {
                 {workAuthSession.user.full_name}
               </span>
             )}
+            <div className="green-work-notifications">
+              <button
+                type="button"
+                className="green-work-header-btn green-work-notifications-btn"
+                aria-label={alertsSummary.total > 0 ? `${alertsSummary.total} open notifications` : "Notifications"}
+                aria-expanded={notificationsOpen}
+                aria-haspopup="dialog"
+                onClick={() => setNotificationsOpen((open) => !open)}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M6 10.5a6 6 0 1 1 12 0c0 4 1.5 5.3 1.5 5.3H4.5S6 14.5 6 10.5Z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                  <path d="M9.7 18.8a2.4 2.4 0 0 0 4.6 0" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+                {alertsSummary.total > 0 && (
+                  <span className="green-work-notifications-badge">{alertsSummary.total > 99 ? "99+" : alertsSummary.total}</span>
+                )}
+              </button>
+              {notificationsOpen && (
+                <div className="green-work-notifications-popover" role="dialog" aria-label="Notifications">
+                  <div className="green-work-notifications-head">
+                    <strong>Notifications</strong>
+                    <span>{alertsSummary.total} open alert{alertsSummary.total === 1 ? "" : "s"}</span>
+                  </div>
+                  {alertsList.length > 0 ? (
+                    <div className="green-work-notifications-list">
+                      {alertsList.slice(0, 7).map((alert: any) => {
+                        const severity = String(alert.severity || "warning").trim().toLowerCase();
+                        return (
+                          <div key={`header-notification-${alert.id}`} className={`green-work-notification-item is-${severity}`}>
+                            <span className="green-work-notification-severity">{severity}</span>
+                            <p>{alert.message}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="green-work-notifications-empty">No open notifications.</p>
+                  )}
+                  {alertsList.length > 7 && <p className="green-work-notifications-more">Showing the 7 most recent alerts.</p>}
+                  <button
+                    type="button"
+                    className="green-work-notifications-link"
+                    onClick={() => {
+                      setNotificationsOpen(false);
+                      openForm("overview");
+                    }}
+                  >
+                    Open full overview
+                  </button>
+                </div>
+              )}
+            </div>
             <button
               type="button"
               className="green-work-header-btn green-work-theme-toggle"
@@ -18278,19 +18348,6 @@ export default function GreenWork() {
                   Open full overview
                 </button>
               </div>
-              {alertsList.length > 0 && (
-                <div className="green-work-overview-alerts" role="status" aria-live="polite">
-                  <div className="green-work-overview-alerts-head">
-                    <strong>Attention required</strong>
-                    <span>{alertsSummary.total} open alerts</span>
-                  </div>
-                  {alertsList.slice(0, 5).map((alert: any) => (
-                    <p key={`map-overview-alert-${alert.id}`}>
-                      <span>[{String(alert.severity || "warning").toUpperCase()}]</span> {alert.message}
-                    </p>
-                  ))}
-                </div>
-              )}
               <div className="green-work-overview-mini-grid">
                 <OverviewDonutCard
                   title={fieldWorkflowMode ? `${activeWorkflowLabels.entitySingular} Status Mix` : "Tree Health Mix"}

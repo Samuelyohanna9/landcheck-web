@@ -6221,6 +6221,10 @@
   gap: 8px;
   min-width: 0;
 }
+.green-work-notifications {
+  position: relative;
+  flex: 0 0 auto;
+}
 .green-work-header-btn {
   display: inline-flex;
   align-items: center;
@@ -6247,6 +6251,108 @@
 }
 .green-work-theme-toggle { gap: 5px; }
 .green-work-theme-toggle span { color: var(--gw-brand-dark); font-size: 0.66rem; }
+.green-work-notifications-btn {
+  position: relative;
+  width: 38px;
+  min-width: 38px;
+  min-height: 34px;
+  padding: 0;
+}
+.green-work-notifications-btn svg { display: block; width: 18px; height: 18px; }
+.green-work-notifications-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border: 2px solid var(--gw-surface);
+  border-radius: 999px;
+  background: #d63939;
+  color: #fff;
+  font-size: 0.58rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.green-work-notifications-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 80;
+  width: min(360px, calc(100vw - 24px));
+  max-height: min(480px, calc(100dvh - 88px));
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--gw-border);
+  border-radius: 12px;
+  background: var(--gw-surface);
+  color: var(--gw-text);
+  box-shadow: var(--shadow-lg);
+}
+.green-work-notifications-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--gw-border);
+}
+.green-work-notifications-head strong { color: var(--gw-text); font-size: 0.84rem; }
+.green-work-notifications-head span { color: var(--gw-muted); font-size: 0.7rem; }
+.green-work-notifications-list { display: grid; gap: 7px; padding: 9px 0; }
+.green-work-notification-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  padding: 8px 9px;
+  border: 1px solid var(--gw-border);
+  border-left: 3px solid var(--gw-warning-border);
+  border-radius: 8px;
+  background: var(--gw-surface-muted);
+}
+.green-work-notification-item.is-danger { border-left-color: #dc2626; }
+.green-work-notification-item.is-info { border-left-color: #2563eb; }
+.green-work-notification-item.is-warning { border-left-color: #d97706; }
+.green-work-notification-severity {
+  color: var(--gw-muted);
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.green-work-notification-item p {
+  margin: 0;
+  color: var(--gw-text);
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+.green-work-notifications-empty,
+.green-work-notifications-more {
+  margin: 0;
+  padding: 10px 0;
+  color: var(--gw-muted);
+  font-size: 0.75rem;
+}
+.green-work-notifications-link {
+  width: 100%;
+  min-height: 32px;
+  border: 1px solid var(--gw-brand);
+  border-radius: 8px;
+  background: var(--gw-brand);
+  color: #fff;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.green-work-notifications-link:hover,
+.green-work-notifications-link:focus-visible {
+  border-color: var(--gw-brand-dark);
+  background: var(--gw-brand-dark);
+  outline: none;
+}
 
 .green-work-toolbar-wrap,
 .green-work-active-hub-wrap,
@@ -6617,7 +6723,7 @@
   .green-work-header-inner { padding: 9px 10px; grid-template-columns: auto minmax(0, 1fr) auto; }
   .green-work-header-actions { gap: 5px; }
   .green-work-header-actions .green-work-project-chip { display: none; }
-  .green-work-header-actions .green-work-header-btn:not(.green-work-theme-toggle) { display: none; }
+  .green-work-header-actions .green-work-header-btn:not(.green-work-theme-toggle):not(.green-work-notifications-btn) { display: none; }
   .green-work-toolbar-wrap { padding: 8px 8px 0; }
   .green-work-active-hub-wrap { padding: 8px 8px 0; }
   .green-work-content { padding: 12px 8px 22px; }
