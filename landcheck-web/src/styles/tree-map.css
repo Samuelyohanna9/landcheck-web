@@ -127,6 +127,14 @@
   background: var(--gw-surface, rgba(255, 255, 255, 0.96));
 }
 
+.tree-map-estate-controls > .tree-map-estate-control-btn {
+  overflow: hidden;
+  border: 1px solid var(--gw-border, rgba(27, 78, 50, 0.16));
+  border-radius: 12px;
+  background: var(--gw-surface, rgba(255, 255, 255, 0.96));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
+}
+
 .tree-map-estate-control-btn svg {
   width: 19px;
   height: 19px;
