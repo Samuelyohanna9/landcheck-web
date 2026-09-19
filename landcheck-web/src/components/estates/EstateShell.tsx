@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Toaster } from "react-hot-toast";
-import { API_URL, api } from "../../api/client";
+import toast, { Toaster } from "react-hot-toast";
+import { API_URL, api, extractApiErrorMessage } from "../../api/client";
 import EstateIcon, { type EstateIconName } from "./EstateIcon";
 import EstateModal from "./EstateModal";
 import { clearEstateAuthSession, getEstateAuthSession } from "../../auth/estateAuth";
@@ -56,6 +56,7 @@ export default function EstateShell({
   searchPlaceholder = "Search plots, customers, documents...",
   recentActivity = [],
   skipBillingGate = false,
+  onEstateNameChange,
   children,
 }: {
   estateId: string;
@@ -68,6 +69,7 @@ export default function EstateShell({
   /** The Billing page itself sets this - otherwise a Basic/past_due/cancelled organization would
    * get redirected away from the one page that lets it fix that, looping forever. */
   skipBillingGate?: boolean;
+  onEstateNameChange?: (name: string) => void;
   children: ReactNode;
 }) {
   const navigate = useNavigate();
@@ -75,11 +77,42 @@ export default function EstateShell({
   const [notifOpen, setNotifOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameBusy, setRenameBusy] = useState(false);
+  const [renameValue, setRenameValue] = useState(estateName || "");
+  const [displayEstateName, setDisplayEstateName] = useState(estateName || "Estate");
   const [companyLogoPath, setCompanyLogoPath] = useState<string | null>(null);
   const estateSession = getEstateAuthSession();
   const activeItem = estateNavItems.find((item) => item.key === activeKey);
   const notifRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const canRenameEstate = ["owner", "manager"].includes(String(estateSession?.user.role_key || "").toLowerCase());
+
+  useEffect(() => {
+    if (renameOpen) return;
+    const nextName = estateName || "Estate";
+    setDisplayEstateName(nextName);
+    setRenameValue(nextName === "Estate" ? "" : nextName);
+  }, [estateName, renameOpen]);
+
+  const saveEstateName = async () => {
+    const nextName = renameValue.trim();
+    if (!estateId || !nextName) return;
+    setRenameBusy(true);
+    try {
+      const response = await api.patch(`/estates/${estateId}`, { name: nextName });
+      const savedName = String(response.data?.name || nextName);
+      setDisplayEstateName(savedName);
+      setRenameValue(savedName);
+      setRenameOpen(false);
+      onEstateNameChange?.(savedName);
+      toast.success("Estate name updated.");
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "Estate name could not be updated."));
+    } finally {
+      setRenameBusy(false);
+    }
+  };
 
   // Plain React state reset to 0 on every mount, which is every page load AND every login - so
   // the badge looked "seen" only until the next navigation or refresh, then came right back. This
@@ -206,7 +239,10 @@ export default function EstateShell({
           <div className="edash-breadcrumb">
             <span>Estates</span>
             <b>&rsaquo;</b>
-            <strong>{estateName || "Estate"}</strong>
+            <span className="edash-breadcrumb-estate">
+              <strong>{displayEstateName}</strong>
+              {canRenameEstate && estateId && <button type="button" className="edash-breadcrumb-edit" onClick={() => { setRenameValue(displayEstateName === "Estate" ? "" : displayEstateName); setRenameOpen(true); }} aria-label="Edit estate name">Edit</button>}
+            </span>
             <b>&rsaquo;</b>
             <strong>{activeItem?.label}</strong>
           </div>
@@ -293,6 +329,18 @@ export default function EstateShell({
         </div>
         <div className={`edash-body${activeKey === "map" ? " edash-body--fill" : ""}`}>{children}</div>
       </div>
+      {renameOpen && (
+        <EstateModal title="Rename estate" subtitle="Update the name shown across your Estate workspace and reports." onClose={() => setRenameOpen(false)}>
+          <label className="edash-field" style={{ marginBottom: 14 }}>
+            <span>Estate name</span>
+            <input value={renameValue} maxLength={255} autoFocus onChange={(event) => setRenameValue(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && renameValue.trim()) void saveEstateName(); }} />
+          </label>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <button type="button" className="edash-btn-outline" disabled={renameBusy} onClick={() => setRenameOpen(false)}>Cancel</button>
+            <button type="button" className="edash-btn-primary" disabled={renameBusy || !renameValue.trim()} onClick={() => void saveEstateName()}>{renameBusy ? "Saving..." : "Save name"}</button>
+          </div>
+        </EstateModal>
+      )}
       {showHelp && (
         <EstateModal title="Help & Support" subtitle="We usually reply within one business day." onClose={() => setShowHelp(false)}>
           <p className="edash-status-row-desc" style={{ marginBottom: 14 }}>
