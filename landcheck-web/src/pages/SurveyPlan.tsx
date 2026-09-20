@@ -25,6 +25,7 @@ import type {
 } from "../types/surveyGeoreference";
 import type { TechnicalReportFields } from "../components/survey-plan/TechnicalReportModal";
 import SurveyNetworkMotif from "../components/survey-plan/SurveyNetworkMotif";
+import SurveyMobileMenu from "../components/SurveyMobileMenu";
 import CoordinateSystemSelect from "../components/CoordinateSystemSelect";
 import {
   clearSurveyPlanDraft,
@@ -760,6 +761,7 @@ export default function SurveyPlan() {
   const surveyUser = getSurveyAuthSession()?.user;
   const surveyUserInitials = initialsForUser(surveyUser?.full_name, surveyUser?.email);
   const [theme, setTheme] = useState<WorkspaceTheme>(getWorkspaceTheme);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   useEffect(() => applyWorkspaceTheme(theme), [theme]);
   useEffect(() => subscribeWorkspaceTheme(setTheme), []);
   const estateWorkspaceLoadedRef = useRef<string | null>(null);
@@ -4971,6 +4973,9 @@ export default function SurveyPlan() {
             : "Not saved yet"}
         </span>
         <div className="geo-top-bar-actions">
+          <button type="button" className="survey-mobile-menu-trigger survey-top-bar-mobile-menu" onClick={() => setMobileMenuOpen(true)} aria-label="Open Survey menu" aria-expanded={mobileMenuOpen}>
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
+          </button>
           <button
             type="button"
             className="geo-top-bar-icon-btn"
@@ -5075,6 +5080,9 @@ export default function SurveyPlan() {
           {surveyLastSavedAt ? `Saved ${surveyLastSavedAt.toLocaleTimeString(undefined, { hour12: false })}` : "Unsaved"}
         </span>
         <div className="survey-top-bar-actions">
+          <button type="button" className="survey-mobile-menu-trigger survey-top-bar-mobile-menu" onClick={() => setMobileMenuOpen(true)} aria-label="Open Survey menu" aria-expanded={mobileMenuOpen}>
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
+          </button>
           <button
             type="button"
             className="survey-top-bar-icon-btn"
@@ -5156,6 +5164,31 @@ export default function SurveyPlan() {
     >
       <Toaster position="top-right" />
 
+      <SurveyMobileMenu isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)}>
+        {!isEstateLayoutImport && (
+          <button type="button" className="survey-mobile-menu-item is-primary" onClick={() => { setMobileMenuOpen(false); handleStartNewPlan(); }}>
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+            Start a new plan
+          </button>
+        )}
+        <button type="button" className="survey-mobile-menu-item" onClick={() => { setMobileMenuOpen(false); navigate("/survey/guides"); }}>
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 4.5h12v11H4zM7 8h6M7 11h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          Documentation &amp; guides
+        </button>
+        <button type="button" className="survey-mobile-menu-item" onClick={() => {
+          setMobileMenuOpen(false);
+          if (isSurveyAuthed()) navigate("/dashboard");
+          else { setPendingGateDownload(null); setSignupGateOpen(true); }
+        }}>
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="7" r="3" stroke="currentColor" strokeWidth="1.4" /><path d="M4.5 16c.8-2.3 2.6-3.5 5.5-3.5s4.7 1.2 5.5 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
+          {isSurveyAuthed() ? "My dashboard" : "Sign in"}
+        </button>
+        <div className="survey-mobile-menu-divider" />
+        <button type="button" className="survey-mobile-menu-item" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")}>
+          {theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        </button>
+      </SurveyMobileMenu>
+
       {/* Header */}
       {workflowMode === "georeference" ? (
         renderGeoreferenceTopBar()
@@ -5169,6 +5202,9 @@ export default function SurveyPlan() {
             <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
           </svg>
           Back
+        </button>
+        <button type="button" className="survey-mobile-menu-trigger survey-header-mobile-menu" onClick={() => setMobileMenuOpen(true)} aria-label="Open Survey menu" aria-expanded={mobileMenuOpen}>
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
         </button>
         {isSurveyAuthed() ? (
           <button className="dashboard-link-btn" onClick={() => navigate("/dashboard")}>

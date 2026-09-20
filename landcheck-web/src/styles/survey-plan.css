@@ -7939,3 +7939,222 @@ button.geo-h-step:focus-visible {
     font-size: 0.52rem;
   }
 }
+
+/* Native-feeling mobile shell. Keep the brand and one clear menu affordance in the viewport;
+   secondary workflow actions live in SurveyMobileMenu so they cannot squeeze the map or header. */
+@media (max-width: 640px) {
+  .survey-container {
+    width: 100%;
+    min-width: 0;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .survey-container button,
+  .survey-container a {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .survey-content,
+  .survey-container.is-georeference-flow.is-preview-step .survey-content {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .geo-top-bar,
+  .survey-top-bar {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    height: 52px;
+    gap: 8px;
+    padding: max(6px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 6px max(10px, env(safe-area-inset-left));
+    overflow: hidden;
+  }
+
+  .geo-top-bar-brand,
+  .survey-top-bar-brand {
+    min-width: 0;
+    gap: 7px;
+    overflow: hidden;
+    font-size: 0.82rem;
+  }
+
+  .geo-top-bar-brand-logo,
+  .survey-top-bar-brand-logo {
+    padding: 5px 8px;
+    border-radius: 8px;
+  }
+
+  .geo-top-bar-brand-logo img,
+  .survey-top-bar-brand-logo img {
+    height: 17px;
+  }
+
+  .geo-top-bar-brand-tag,
+  .survey-top-bar-brand-tag {
+    overflow: hidden;
+    font-size: 0.6rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .geo-top-bar-saved,
+  .survey-top-bar-saved {
+    display: none;
+  }
+
+  .geo-top-bar-actions,
+  .survey-top-bar-actions {
+    min-width: 0;
+    margin-left: auto;
+    flex-shrink: 0;
+    gap: 5px;
+  }
+
+  .geo-top-bar-actions .geo-top-bar-icon-btn,
+  .geo-top-bar-actions .geo-top-bar-btn,
+  .geo-top-bar-actions .survey-theme-toggle,
+  .survey-top-bar-actions .survey-top-bar-icon-btn,
+  .survey-top-bar-actions .survey-top-bar-btn,
+  .survey-top-bar-actions .survey-theme-toggle {
+    display: none;
+  }
+
+  .survey-top-bar-mobile-menu {
+    display: inline-flex;
+  }
+
+  .geo-h-stepper,
+  .survey-h-stepper {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    gap: 14px;
+    padding: 0 10px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .geo-h-stepper::-webkit-scrollbar,
+  .survey-h-stepper::-webkit-scrollbar {
+    display: none;
+  }
+
+  .geo-h-step,
+  .survey-h-step {
+    flex: 0 0 auto;
+  }
+
+  .geo-h-step-label,
+  .survey-h-step-label {
+    display: none;
+  }
+
+  .survey-header {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: auto auto;
+    grid-template-areas:
+      "back menu"
+      "copy copy";
+    align-items: center;
+    gap: 0.35rem;
+    padding: max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 10px max(10px, env(safe-area-inset-left));
+  }
+
+  .survey-header-motif {
+    grid-area: copy;
+    pointer-events: none;
+  }
+
+  .survey-header .back-btn {
+    grid-area: back;
+    justify-self: start;
+  }
+
+  .survey-header-mobile-menu {
+    display: inline-flex;
+    grid-area: menu;
+    justify-self: end;
+  }
+
+  .survey-header .dashboard-link-btn,
+  .survey-header .reset-btn {
+    display: none;
+  }
+
+  .survey-header-copy {
+    grid-area: copy;
+    order: initial;
+    width: 100%;
+    padding-top: 0.2rem;
+  }
+
+  .survey-kicker {
+    min-height: 19px;
+    font-size: 0.48rem;
+  }
+
+  .survey-title {
+    width: auto;
+    margin-bottom: 0;
+    font-size: 1rem;
+  }
+
+  .survey-subtitle {
+    max-width: 34rem;
+    font-size: 0.68rem;
+  }
+
+  .mode-select-shell,
+  .survey-container.has-workflow .step-panel,
+  .survey-container.has-workflow .preview-panel,
+  .survey-container.has-workflow .export-panel {
+    max-width: 100%;
+    min-width: 0;
+    border-radius: 18px;
+  }
+
+  .mode-select-shell {
+    padding: 0.9rem;
+  }
+
+  .mode-select-head h2 {
+    font-size: 1.28rem;
+  }
+
+  .mode-select-head p,
+  .mode-card p {
+    font-size: 0.75rem;
+  }
+
+  .mode-card-grid {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+
+  .mode-card {
+    padding: 0.8rem;
+  }
+
+  .survey-container.is-preview-step:not(.is-georeference-flow) .survey-content {
+    padding-bottom: calc(8.75rem + env(safe-area-inset-bottom));
+  }
+
+  .survey-container .action-bar {
+    left: max(0.5rem, env(safe-area-inset-left));
+    right: max(0.5rem, env(safe-area-inset-right));
+    width: auto;
+    bottom: max(0.5rem, env(safe-area-inset-bottom));
+    border-radius: 16px;
+  }
+}
