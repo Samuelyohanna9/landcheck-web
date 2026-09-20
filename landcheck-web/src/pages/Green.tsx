@@ -856,13 +856,8 @@ export default function Green() {
   useEffect(() => {
     const themeMeta = document.querySelector('meta[name="theme-color"]');
     if (!themeMeta) return;
-    const colorScheme = window.matchMedia("(prefers-color-scheme: dark)");
-    const syncThemeColor = () => {
-      themeMeta.setAttribute("content", colorScheme.matches ? "#0F172A" : "#F8FAFC");
-    };
-    syncThemeColor();
-    colorScheme.addEventListener?.("change", syncThemeColor);
-    return () => colorScheme.removeEventListener?.("change", syncThemeColor);
+    // The field PWA is intentionally light-only for outdoor readability.
+    themeMeta.setAttribute("content", "#F8FAFC");
   }, []);
   const greenAuthSession = useMemo(() => getGreenAuthSession(), []);
   const greenAuthUser = greenAuthSession?.user || null;
