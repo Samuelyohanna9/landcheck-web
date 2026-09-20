@@ -5262,7 +5262,7 @@ export default function Green() {
                     window.open(`${BACKEND_URL}/green/trees/${inspectedTree.id}/qr-tag/pdf`, "_blank");
                   }}
                 >
-                  🌳 Download QR Tree Tag (PDF)
+                  Download QR Tree Tag (PDF)
                 </button>
               </div>
             </div>

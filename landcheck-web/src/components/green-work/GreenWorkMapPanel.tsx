@@ -48,9 +48,10 @@ export default function GreenWorkMapPanel(props: GreenWorkMapPanelProps) {
     setTreePositionDraft,
     setNewOrderAreaGeometry,
     setInspectedTree,
+    onAssignmentAreaInspect,
     setMenuOpen,
     mapFitPoints,
-    existingTreeMapAreas,
+    assignmentAreas,
     fullscreenTargetRef,
   } = props;
   const [blockFilter, setBlockFilter] = useState("all");
@@ -169,11 +170,20 @@ export default function GreenWorkMapPanel(props: GreenWorkMapPanelProps) {
               onPolygonChange={mapAreaDrawMode ? (geometry: any) => setNewOrderAreaGeometry(geometry) : undefined}
               minHeight={mapAreaDrawMode ? 520 : 320}
               onTreeInspect={(detail: any) => {
+                onAssignmentAreaInspect?.(null);
                 setInspectedTree(detail);
                 if (detail) setMenuOpen(false);
               }}
+              onAssignmentAreaInspect={(area: any) => {
+                onAssignmentAreaInspect?.(area || null);
+                if (area) {
+                  setInspectedTree(null);
+                  setTreePositionDraft(null);
+                  setMenuOpen(false);
+                }
+              }}
               fitBounds={filteredMapFitPoints}
-              assignmentAreas={existingTreeMapAreas}
+              assignmentAreas={assignmentAreas}
               workflowMode={activeWorkflowProfile}
               showMapControls
               fullscreenTargetRef={fullscreenTargetRef}

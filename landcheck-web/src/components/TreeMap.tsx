@@ -114,13 +114,27 @@ type Props = {
   onPolygonChange?: (geometry: { type: "Polygon" | "MultiPolygon"; coordinates: any } | null) => void;
   onSelectTree?: (id: number) => void;
   onTreeInspect?: (detail: TreeInspectData | null) => void;
+  onAssignmentAreaInspect?: (area: AssignmentArea | null) => void;
   onViewChange?: (view: { lng: number; lat: number; zoom: number; bearing: number; pitch: number }) => void;
   fitBounds?: { lng: number; lat: number }[] | null;
-  assignmentAreas?: Array<{ id?: number | string; label?: string | null; treeId?: number | null; geojson: any }>;
+  assignmentAreas?: AssignmentArea[];
   workflowMode?: "green" | "agric" | "relief_recovery" | "csr";
   minHeight?: number;
   showMapControls?: boolean;
   fullscreenTargetRef?: { current: HTMLElement | null };
+};
+
+type AssignmentArea = {
+  id?: number | string;
+  label?: string | null;
+  treeId?: number | null;
+  source?: "work_order" | "existing_tree" | string | null;
+  workOrderId?: number | null;
+  assignee_name?: string | null;
+  target_trees?: number | null;
+  due_date?: string | null;
+  status?: string | null;
+  geojson: any;
 };
 
 type MapAreaGeometry = {
@@ -466,14 +480,21 @@ const formatReliefGeometryLabel = (geometryInput: any, tree: TreePoint) => {
 };
 
 const buildAssignmentAreaFeatureCollection = (
-  areas: Array<{ id?: number | string; label?: string | null; treeId?: number | null; geojson: any }>,
+  areas: AssignmentArea[],
   trees: TreePoint[] = [],
   workflowMode: "green" | "agric" | "relief_recovery" | "csr" = "green",
 ) => {
   const features: any[] = [];
   const seenGeometry = new Set<string>();
 
-  const pushFeature = (geometryInput: any, id: number | string, label: string, treeId?: number | null) => {
+  const pushFeature = (
+    geometryInput: any,
+    id: number | string,
+    label: string,
+    treeId?: number | null,
+    source?: string | null,
+    workOrderId?: number | null,
+  ) => {
     const geometry = normalizeAreaGeometry(geometryInput);
     if (!geometry) return;
     const signature = `${geometry.type}:${JSON.stringify(geometry.coordinates)}`;
@@ -483,15 +504,25 @@ const buildAssignmentAreaFeatureCollection = (
       type: "Feature",
       properties: {
         id,
+        assignment_area_id: id,
         label,
         tree_id: Number.isFinite(Number(treeId)) && Number(treeId) > 0 ? Number(treeId) : null,
+        area_source: source || null,
+        work_order_id: Number.isFinite(Number(workOrderId)) && Number(workOrderId) > 0 ? Number(workOrderId) : null,
       },
       geometry,
     });
   };
 
   (areas || []).forEach((area, index) => {
-    pushFeature(area?.geojson, area?.id ?? index + 1, area?.label || `Assigned area ${index + 1}`, area?.treeId);
+    pushFeature(
+      area?.geojson,
+      area?.id ?? index + 1,
+      area?.label || `Assigned area ${index + 1}`,
+      area?.treeId,
+      area?.source,
+      area?.workOrderId,
+    );
   });
 
   (trees || []).forEach((tree, index) => {
@@ -522,7 +553,7 @@ const buildAssignmentAreaFeatureCollection = (
         : labelCount > 1
           ? `Tree #${localNo} - ${labelCount} trees`
           : `Tree #${localNo} - Existing area`;
-    pushFeature(areaGeojson, `tree-area-${tree?.id ?? index + 1}`, label, tree?.id ?? null);
+    pushFeature(areaGeojson, `tree-area-${tree?.id ?? index + 1}`, label, tree?.id ?? null, "existing_tree");
   });
 
   return {
@@ -572,12 +603,21 @@ const buildTreeDataSignature = (
     .join("||")}`;
 
 const buildAssignmentAreaSignature = (
-  areas: Array<{ id?: number | string; label?: string | null; treeId?: number | null; geojson: any }>,
+  areas: AssignmentArea[],
   trees: TreePoint[],
   workflowMode: "green" | "agric" | "relief_recovery" | "csr",
 ) => {
   const areaSignature = areas
-    .map((area) => stableSerialize([area.id ?? null, area.label ?? "", area.treeId ?? null, area.geojson || null]))
+    .map((area) =>
+      stableSerialize([
+        area.id ?? null,
+        area.label ?? "",
+        area.treeId ?? null,
+        area.source ?? null,
+        area.workOrderId ?? null,
+        area.geojson || null,
+      ]),
+    )
     .join("||");
   const treeAreaSignature = trees
     .filter((tree) => Boolean(tree.existing_area_geojson))
@@ -814,6 +854,7 @@ export default function TreeMap({
   onPolygonChange,
   onSelectTree,
   onTreeInspect,
+  onAssignmentAreaInspect,
   onViewChange,
   fitBounds,
   assignmentAreas = [],
@@ -833,6 +874,8 @@ export default function TreeMap({
   const onPolygonChangeRef = useRef(onPolygonChange);
   const onSelectTreeRef = useRef(onSelectTree);
   const onTreeInspectRef = useRef(onTreeInspect);
+  const onAssignmentAreaInspectRef = useRef(onAssignmentAreaInspect);
+  const assignmentAreasRef = useRef<AssignmentArea[]>(assignmentAreas);
   const treesRef = useRef(trees);
   const workflowModeRef = useRef<"green" | "agric" | "relief_recovery" | "csr">(workflowMode);
   const mapReadyRef = useRef(false);
@@ -870,6 +913,10 @@ export default function TreeMap({
   useEffect(() => {
     treesRef.current = trees;
   }, [trees]);
+
+  useEffect(() => {
+    assignmentAreasRef.current = assignmentAreas;
+  }, [assignmentAreas]);
 
   useEffect(() => {
     workflowModeRef.current = workflowMode;
@@ -1020,6 +1067,10 @@ export default function TreeMap({
   useEffect(() => {
     onTreeInspectRef.current = onTreeInspect;
   }, [onTreeInspect]);
+
+  useEffect(() => {
+    onAssignmentAreaInspectRef.current = onAssignmentAreaInspect;
+  }, [onAssignmentAreaInspect]);
 
   useEffect(() => {
     drawActiveRef.current = drawActive;
@@ -1352,51 +1403,43 @@ export default function TreeMap({
             inspectTreeFromProps(props, event.lngLat);
           };
 
+          const inspectAssignmentAreaFromEvent = (event: any) => {
+            const areaFeature = event.features?.[0];
+            const areaId = areaFeature?.properties?.assignment_area_id ?? areaFeature?.properties?.id;
+            const area = assignmentAreasRef.current.find((item) => String(item.id) === String(areaId));
+            if (!area) return;
+
+            const treeId = Number(areaFeature?.properties?.tree_id || area.treeId || 0);
+            if (Number.isFinite(treeId) && treeId > 0) {
+              const tree = treesRef.current.find((item) => Number(item.id) === treeId);
+              const props = tree ? buildTreeFeatureProps(tree) : null;
+              if (props) {
+                inspectTreeFromProps(props, event.lngLat);
+                return;
+              }
+            }
+
+            onAssignmentAreaInspectRef.current?.(area);
+            onTreeInspectRef.current?.(null);
+          };
+
           map.on("click", TREE_CORE_LAYER_ID, onTreePress);
           map.on("click", TREE_OUTER_LAYER_ID, onTreePress);
-          map.on("click", ASSIGNMENT_AREA_FILL_LAYER_ID, (event: any) => {
-            const areaFeature = event.features?.[0];
-            const treeId = Number(areaFeature?.properties?.tree_id || 0);
-            if (!Number.isFinite(treeId) || treeId <= 0) return;
-            const tree = treesRef.current.find((item) => Number(item.id) === treeId);
-            const props = tree ? buildTreeFeatureProps(tree) : null;
-            if (!props) return;
-            inspectTreeFromProps(props, event.lngLat);
-          });
-          map.on("click", ASSIGNMENT_AREA_LINE_LAYER_ID, (event: any) => {
-            const areaFeature = event.features?.[0];
-            const treeId = Number(areaFeature?.properties?.tree_id || 0);
-            if (!Number.isFinite(treeId) || treeId <= 0) return;
-            const tree = treesRef.current.find((item) => Number(item.id) === treeId);
-            const props = tree ? buildTreeFeatureProps(tree) : null;
-            if (!props) return;
-            inspectTreeFromProps(props, event.lngLat);
-          });
-          map.on("click", ASSIGNMENT_AREA_POINT_LAYER_ID, (event: any) => {
-            const areaFeature = event.features?.[0];
-            const treeId = Number(areaFeature?.properties?.tree_id || 0);
-            if (!Number.isFinite(treeId) || treeId <= 0) return;
-            const tree = treesRef.current.find((item) => Number(item.id) === treeId);
-            const props = tree ? buildTreeFeatureProps(tree) : null;
-            if (!props) return;
-            inspectTreeFromProps(props, event.lngLat);
-          });
-          map.on("click", ASSIGNMENT_AREA_LABEL_LAYER_ID, (event: any) => {
-            const areaFeature = event.features?.[0];
-            const treeId = Number(areaFeature?.properties?.tree_id || 0);
-            if (!Number.isFinite(treeId) || treeId <= 0) return;
-            const tree = treesRef.current.find((item) => Number(item.id) === treeId);
-            const props = tree ? buildTreeFeatureProps(tree) : null;
-            if (!props) return;
-            inspectTreeFromProps(props, event.lngLat);
-          });
+          map.on("click", ASSIGNMENT_AREA_FILL_LAYER_ID, inspectAssignmentAreaFromEvent);
+          map.on("click", ASSIGNMENT_AREA_LINE_LAYER_ID, inspectAssignmentAreaFromEvent);
+          map.on("click", ASSIGNMENT_AREA_POINT_LAYER_ID, inspectAssignmentAreaFromEvent);
+          map.on("click", ASSIGNMENT_AREA_LABEL_LAYER_ID, inspectAssignmentAreaFromEvent);
 
           map.on("click", (event: any) => {
             const feature = map.queryRenderedFeatures(event.point, {
               layers:
-                workflowModeRef.current !== "green"
-                  ? [...TREE_LAYER_IDS, ASSIGNMENT_AREA_FILL_LAYER_ID, ASSIGNMENT_AREA_LINE_LAYER_ID, ASSIGNMENT_AREA_POINT_LAYER_ID, ASSIGNMENT_AREA_LABEL_LAYER_ID]
-                  : TREE_LAYER_IDS,
+                [
+                  ...TREE_LAYER_IDS,
+                  ASSIGNMENT_AREA_FILL_LAYER_ID,
+                  ASSIGNMENT_AREA_LINE_LAYER_ID,
+                  ASSIGNMENT_AREA_POINT_LAYER_ID,
+                  ASSIGNMENT_AREA_LABEL_LAYER_ID,
+                ],
             })[0];
             if (feature) return;
             clickTreeIdRef.current = null;
@@ -1405,6 +1448,7 @@ export default function TreeMap({
               clickPopupRef.current = null;
             }
             onTreeInspectRef.current?.(null);
+            onAssignmentAreaInspectRef.current?.(null);
             if (enableDraw && drawActiveRef.current) {
               onAddTreeRef.current(event.lngLat.lng, event.lngLat.lat);
             }
