@@ -86,7 +86,7 @@ export default function GreenWorkShareImpactPanel({
     <div className="green-work-card green-work-share-impact">
       <h3>Share Impact Page</h3>
       <p className="green-work-note">
-        Share a public, donor-ready impact page showing your verified {modeLabel} data — supervisor-approved records, GPS maps, evidence photos, and field activities.
+        Share a public, donor-ready impact page showing your verified {modeLabel} data - supervisor-approved records, GPS maps, evidence photos, and field activities.
       </p>
 
       {!orgSlug ? (
@@ -98,7 +98,7 @@ export default function GreenWorkShareImpactPanel({
           <div className="green-work-share-block">
             <div className="green-work-share-block-title">Organisation-wide Impact Page</div>
             <p className="green-work-note">
-              Shows all your organisation's approved {entityPl} across all projects — best for sharing with major donors who want the full picture.
+              Shows all your organisation's approved {entityPl} across all projects - best for sharing with major donors who want the full picture.
             </p>
             <div className="green-work-share-link-row">
               <div className="green-work-share-link-box">{orgImpactUrl}</div>
@@ -118,7 +118,7 @@ export default function GreenWorkShareImpactPanel({
           <div className="green-work-share-block green-work-share-block-divided">
             <div className="green-work-share-block-title">Share a Specific Project</div>
             <p className="green-work-note">
-              Select a project to generate a focused link that only shows that project's data — useful when you want to update a specific donor on one programme.
+              Select a project to generate a focused link that only shows that project's data - useful when you want to update a specific donor on one programme.
             </p>
             <select
               value={shareProjectId}
@@ -128,7 +128,7 @@ export default function GreenWorkShareImpactPanel({
               <option value="">Select a project</option>
               {orgProjects.map((p) => (
                 <option key={p.id} value={String(p.id)}>
-                  {p.name}{p.location_text ? ` · ${p.location_text}` : ""}
+                  {p.name}{p.location_text ? ` - ${p.location_text}` : ""}
                 </option>
               ))}
             </select>
@@ -150,7 +150,7 @@ export default function GreenWorkShareImpactPanel({
                 </div>
                 <p className="green-work-note">
                   Showing impact for: <strong>{selectedProject.name}</strong>
-                  {selectedProject.location_text ? ` · ${selectedProject.location_text}` : ""}
+                  {selectedProject.location_text ? ` - ${selectedProject.location_text}` : ""}
                 </p>
               </>
             ) : (
@@ -184,7 +184,7 @@ export default function GreenWorkShareImpactPanel({
                       <div className="green-work-share-comment-name">{c.commenter_name}</div>
                       {(c.commenter_rank || c.commenter_org) && (
                         <div className="green-work-share-comment-role">
-                          {[c.commenter_rank, c.commenter_org].filter(Boolean).join(" · ")}
+                          {[c.commenter_rank, c.commenter_org].filter(Boolean).join(" - ")}
                         </div>
                       )}
                     </div>
