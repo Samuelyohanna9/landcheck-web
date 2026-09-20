@@ -129,8 +129,11 @@ export default function GreenWorkLogin() {
       }
       setError("");
       navigate(redirectTo, { replace: true });
-    } catch (err: any) {
-      setError(err?.response?.data?.detail || err?.message || "Invalid username or password.");
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: unknown } }; message?: unknown };
+      const detail = typeof error.response?.data?.detail === "string" ? error.response.data.detail : "";
+      const message = typeof error.message === "string" ? error.message : "";
+      setError(detail || message || "Invalid username or password.");
     } finally {
       setLoading(false);
     }
@@ -145,8 +148,11 @@ export default function GreenWorkLogin() {
 
       <div className="work-login-shell">
         <div className="work-login-brand">
-          <img src={GREEN_LOGO_SRC} alt="LandCheck Green" width="34" height="34" />
-          <span>LandCheck Work</span>
+          <img src={GREEN_LOGO_SRC} alt="" width="34" height="34" />
+          <span>
+            <strong>LandCheck</strong>
+            <small>Work</small>
+          </span>
         </div>
 
         <section className="work-login-card">
@@ -225,7 +231,7 @@ export default function GreenWorkLogin() {
           </a>
 
           <a className="work-login-explore" href="/green-partners">
-            Explore LC Green Platform
+            Explore LandCheck Green
           </a>
         </section>
 
