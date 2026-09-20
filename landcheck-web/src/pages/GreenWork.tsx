@@ -10186,9 +10186,7 @@ export default function GreenWork() {
           ...(canAccessSystemLogs
             ? [{ form: "logs" as WorkForm, title: "System Logs & Reports", note: "Cross-product activity + QR reports" }]
             : []),
-          ...(activeProjectRecord?.organization_slug
-            ? [{ form: "share_impact" as WorkForm, title: "Share Impact", note: "Donor links · endorsements" }]
-            : []),
+          { form: "share_impact", title: "Share Impact", note: "Donor links · endorsements" },
         ]
       : actionWorkflowProfile === "relief_recovery"
         ? [
@@ -10203,9 +10201,7 @@ export default function GreenWork() {
             ...(canAccessSystemLogs
               ? [{ form: "logs" as WorkForm, title: "System Logs & Reports", note: "Cross-product activity + QR reports" }]
               : []),
-            ...(activeProjectRecord?.organization_slug
-              ? [{ form: "share_impact" as WorkForm, title: "Share Impact", note: "Donor links · endorsements" }]
-              : []),
+            { form: "share_impact", title: "Share Impact", note: "Donor links · endorsements" },
           ]
       : [
           { form: "overview", title: actionCsrMode ? "CSR Overview" : "Overview", note: actionCsrMode ? "Programme progress + implementation status" : "Progress summary" },
@@ -10233,9 +10229,7 @@ export default function GreenWork() {
           ...(canAccessSystemLogs
             ? [{ form: "logs" as WorkForm, title: "System Logs & Reports", note: "Activity logs + QR prints report" }]
             : []),
-          ...(activeProjectRecord?.organization_slug
-            ? [{ form: "share_impact" as WorkForm, title: "Share Impact", note: "Donor links · endorsements" }]
-            : []),
+          { form: "share_impact", title: "Share Impact", note: "Donor links · endorsements" },
         ];
   const displayedProjectActions: Array<{ form: WorkForm; title: string; note: string; isNew?: boolean }> = csrPartnerDashboardMode
     ? [
@@ -10246,9 +10240,7 @@ export default function GreenWork() {
         { form: "existing_tree_intake", title: "Programme Records", note: "Verified implementation records" },
         { form: "verra_reports", title: "Programme Reports", note: "Client-ready reports + export history" },
         { form: "users", title: "Users", note: "Field teams + assigned agents" },
-        ...(activeProjectRecord?.organization_slug
-          ? [{ form: "share_impact" as WorkForm, title: "Share Impact", note: "Campaign story + stakeholder links" }]
-          : []),
+        { form: "share_impact", title: "Share Impact", note: "Campaign story + stakeholder links" },
       ]
     : activeProjectActions;
 
@@ -12074,6 +12066,14 @@ export default function GreenWork() {
                 System Logs & Reports
               </button>
             )}
+            <button
+              className={`green-work-menu-item ${activeForm === "share_impact" ? "active" : ""}`}
+              type="button"
+              onClick={() => openForm("share_impact")}
+            >
+              {renderMenuItemIcon("share_impact")}
+              Share Impact
+            </button>
             <button
               className={`green-work-menu-item ${activeForm === "users" ? "active" : ""}`}
               type="button"
