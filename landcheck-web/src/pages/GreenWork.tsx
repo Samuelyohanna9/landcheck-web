@@ -4051,6 +4051,9 @@ export default function GreenWork() {
   const [workspaceSettingsOpen, setWorkspaceSettingsOpen] = useState(false);
   const [activeForm, setActiveForm] = useState<WorkForm | null>(() => {
     const storedForm = storedFormNormalized as WorkForm;
+    // Do not restore a project-picker form without a project; the first-run workspace
+    // should open on the single onboarding surface instead of duplicating the picker.
+    if (!storedProjectId && (storedForm === "project_focus" || storedForm === "create_project")) return null;
     if (!allowedForms.includes(storedForm)) return null;
     if (isSuperAdminOnlyForm(storedForm) && !canAccessSuperAdmin) return null;
     if (storedForm === "logs" && !canAccessSystemLogs) return null;
@@ -11149,10 +11152,7 @@ export default function GreenWork() {
     activeForm === "existing_tree_intake" ||
     activeForm === "custodian_hub" ||
     assignWorkAreaMode;
-  const firstRunProjectSelectionMode = Boolean(
-    !activeProjectId && (activeForm === "project_focus" || activeForm === "create_project"),
-  );
-  const sidebarPrimaryMode = Boolean(showSidebar && !hasDedicatedMainContent && !firstRunProjectSelectionMode);
+  const sidebarPrimaryMode = Boolean(showSidebar && !hasDedicatedMainContent);
   const mapAreaDrawMode = Boolean(activeProjectId && newOrderAreaEnabled && (activeForm === "assign_work" || activeForm === "map_view"));
   const activeTreeId = inspectedTree?.id || 0;
   const showTreeInspectorPanel = mapViewMode || (remoteMonitoringMode && Boolean(inspectedTree));
@@ -17548,7 +17548,7 @@ export default function GreenWork() {
         </aside>
 
         <section className={`green-work-main ${overviewMode || liveTableMode || verraMode || remoteMonitoringMode || agricFarmerLiveMode || agricFieldCaptureMode || agricSupportVisitMode || shareImpactMode ? "overview-mode" : "single-mode"} ${mapViewMode ? "map-view-mode" : ""} ${remoteMonitoringMode ? "remote-monitoring-mode" : ""}`}>
-          {!activeProjectId && (
+          {!activeProjectId && activeForm !== "project_focus" && activeForm !== "create_project" && (
             <section className="green-work-card green-work-first-run" aria-labelledby="green-work-first-run-title">
               <div className="green-work-first-run-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
