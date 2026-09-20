@@ -5888,3 +5888,264 @@ body:has(.green-container) {
     font-size: 0.72rem;
   }
 }
+
+/* Compact mobile correction: preserve hierarchy without allowing metric content to overlap. */
+@media (max-width: 720px) {
+  .green-container.green-home-mode .green-shell {
+    padding-top: max(1rem, calc(env(safe-area-inset-top) + 0.35rem));
+  }
+
+  .green-container.green-home-mode .green-mobile-hero {
+    position: relative;
+    display: flex !important;
+    flex: 0 0 auto;
+    flex-direction: column;
+    min-height: 126px !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0.75rem 0.85rem 0.8rem;
+    z-index: 1;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-greeting {
+    min-height: 20px;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-greeting span {
+    font-size: 0.9rem;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-status-row {
+    display: grid !important;
+    margin-top: 0.55rem;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-sync-card,
+  .green-container.green-home-mode .green-mobile-hero-user-card {
+    min-height: 48px;
+    padding: 0.4rem 0.55rem;
+    border-radius: 14px;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-sync-card small {
+    font-size: 0.56rem;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-sync-card strong,
+  .green-container.green-home-mode .green-mobile-hero-user-card span {
+    font-size: 0.72rem;
+  }
+
+  .green-container.green-home-mode .green-overview-card {
+    padding: 0.75rem;
+    border-radius: 20px;
+  }
+
+  .green-container.green-home-mode .green-overview-card-head {
+    gap: 0.55rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .green-container.green-home-mode .green-overview-card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 13px;
+  }
+
+  .green-container.green-home-mode .green-overview-kicker,
+  .green-container.green-home-mode .green-overview-metric-card > span,
+  .green-container.green-home-mode .green-overview-carbon-head,
+  .green-container.green-home-mode .green-overview-proof-card > span {
+    font-size: 0.58rem;
+    letter-spacing: 0.1em;
+  }
+
+  .green-container.green-home-mode .green-overview-card-head h2 {
+    font-size: 1.08rem;
+  }
+
+  .green-container.green-home-mode .green-overview-project-select-row select,
+  .green-container.green-home-mode .green-overview-user-select select {
+    min-height: 46px;
+    font-size: 0.84rem;
+  }
+
+  .green-container.green-home-mode .green-overview-location-btn {
+    width: 52px;
+    min-width: 52px;
+    min-height: 46px;
+  }
+
+  .green-container.green-home-mode .green-overview-user-pill {
+    min-height: 38px;
+    margin-top: 0.5rem;
+    padding: 0.45rem 0.65rem;
+    font-size: 0.74rem;
+  }
+
+  .green-container.green-home-mode .green-project-status {
+    min-height: 38px;
+    margin-top: 0.45rem;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.68rem;
+  }
+
+  .green-container.green-home-mode .green-project-status strong {
+    font-size: 0.72rem;
+  }
+
+  .green-container.green-home-mode .green-overview-metrics-grid {
+    gap: 0.5rem;
+    margin-top: 0.65rem;
+  }
+
+  .green-container.green-home-mode .green-overview-metric-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-height: 126px;
+    padding: 0.65rem;
+    border-radius: 17px;
+  }
+
+  .green-container.green-home-mode .green-overview-metric-icon {
+    width: 36px;
+    height: 36px;
+    margin-bottom: 0.45rem;
+    border-radius: 12px;
+  }
+
+  .green-container.green-home-mode .green-overview-metric-icon svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .green-container.green-home-mode .green-overview-metric-card strong {
+    margin-top: 0.28rem;
+    font-size: 1.55rem;
+    letter-spacing: -0.04em;
+  }
+
+  .green-container.green-home-mode .green-overview-metric-card small {
+    margin-top: 0.22rem;
+    font-size: 0.66rem;
+  }
+
+  .green-container.green-home-mode .green-overview-survival-panel {
+    grid-template-columns: 82px minmax(0, 1fr);
+    gap: 0.6rem;
+    margin-top: 0.6rem;
+    padding: 0.75rem;
+    border-radius: 17px;
+  }
+
+  .green-container.green-home-mode .green-survival-gauge {
+    width: 74px;
+    height: 74px;
+  }
+
+  .green-container.green-home-mode .green-survival-gauge-inner {
+    width: 57px;
+    height: 57px;
+  }
+
+  .green-container.green-home-mode .green-survival-gauge-inner strong {
+    font-size: 0.84rem;
+  }
+
+  .green-container.green-home-mode .green-overview-survival-copy h3 {
+    font-size: 0.86rem;
+  }
+
+  .green-container.green-home-mode .green-overview-survival-copy p {
+    margin-top: 0.22rem;
+    font-size: 0.68rem;
+  }
+
+  .green-container.green-home-mode .green-overview-survival-badge {
+    padding: 0.55rem 0.65rem;
+    font-size: 0.66rem;
+  }
+
+  .green-container.green-home-mode .green-overview-section-head {
+    margin: 0.05rem 0 0.5rem;
+  }
+
+  .green-container.green-home-mode .green-overview-section-head h2 {
+    font-size: 1.18rem;
+  }
+
+  .green-container.green-home-mode .green-native-tiles {
+    gap: 0.5rem;
+  }
+
+  .green-container.green-home-mode .green-native-tiles .green-tile {
+    min-height: 136px;
+    padding: 0.65rem;
+    border-radius: 17px;
+  }
+
+  .green-container.green-home-mode .green-tile-icon {
+    width: 36px;
+    height: 36px;
+    margin-bottom: 0.45rem;
+    border-radius: 12px;
+  }
+
+  .green-container.green-home-mode .green-tile-label {
+    font-size: 0.78rem;
+  }
+
+  .green-container.green-home-mode .green-tile-meta-item {
+    padding: 0.15rem 0.28rem;
+    font-size: 0.5rem;
+  }
+
+  .green-container.green-home-mode .green-tile-badge {
+    top: 0.5rem;
+    right: 0.5rem;
+    min-width: 22px;
+    font-size: 0.68rem;
+  }
+
+  .green-container.green-home-mode .green-overview-carbon-card {
+    border-radius: 20px;
+  }
+
+  .green-container.green-home-mode .green-overview-carbon-grid {
+    gap: 0.7rem 0.5rem;
+  }
+
+  .green-container.green-home-mode .green-overview-carbon-stat strong {
+    font-size: 1.45rem;
+  }
+
+  .green-container.green-home-mode .green-overview-carbon-stat span {
+    font-size: 0.66rem;
+  }
+
+  .green-container.green-home-mode .green-overview-carbon-stat small {
+    font-size: 0.6rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .green-container.green-home-mode .green-mobile-hero {
+    min-height: 120px !important;
+    padding-right: 0.7rem;
+    padding-left: 0.7rem;
+  }
+
+  .green-container.green-home-mode .green-overview-metric-card {
+    min-height: 116px;
+    padding: 0.55rem;
+  }
+
+  .green-container.green-home-mode .green-overview-metric-card strong {
+    font-size: 1.42rem;
+  }
+
+  .green-container.green-home-mode .green-native-tiles .green-tile {
+    min-height: 126px;
+  }
+}
