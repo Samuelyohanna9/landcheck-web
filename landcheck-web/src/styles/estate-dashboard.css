@@ -1215,6 +1215,9 @@
   align-items: stretch;
 }
 
+.edash-bottom-row--2 { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); }
+.edash-bottom-row--3 { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr) minmax(0, 0.85fr); }
+
 .edash-card-inner { padding: 16px; }
 
 .edash-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
@@ -1357,12 +1360,10 @@
   .edash-menu-toggle { display: flex; }
   .edash-breadcrumb strong { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
   .edash-stats-row, .edash-stats-row--five { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  /* Recent Activity / Estate Progress / Risk Overview shrink to fit rather than stack - each
-     card's own content (icons, text, the donut) scales down further below so all three stay
-     legible side by side instead of one spilling onto its own full-width row underneath. Every
-     selector is duplicated with the .edash-body--fill prefix so it also wins (by specificity)
-     over that context's own compact rules, not just the plain Dashboard page's bottom row. */
-  .edash-bottom-row, .edash-body--fill > .edash-bottom-row { gap: 8px; }
+  /* These cards have useful text and legends, so mobile gives each one the full content width
+     instead of preserving the desktop ratio and clipping the second card's labels. */
+  .edash-bottom-row, .edash-bottom-row--2, .edash-bottom-row--3,
+  .edash-body--fill > .edash-bottom-row { grid-template-columns: 1fr; gap: 10px; }
   .edash-bottom-row .edash-card-inner, .edash-body--fill > .edash-bottom-row .edash-card-inner { padding: 8px 9px; }
   .edash-bottom-row .edash-card-head, .edash-body--fill > .edash-bottom-row .edash-card-head { margin-bottom: 5px; }
   .edash-bottom-row .edash-card-title, .edash-body--fill > .edash-bottom-row .edash-card-title { font-size: 0.72rem; }
