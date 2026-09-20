@@ -9467,5 +9467,81 @@
   color: #ffdf91 !important;
 }
 
+/* Share Impact uses the same dashboard surfaces and contrast in both themes. */
+.green-work-container .green-work-share-impact {
+  width: 100%;
+  max-width: 900px;
+}
+
+.green-work-container .green-work-share-warning {
+  background: var(--gw-warning-bg, #fff7e6);
+  border-color: var(--gw-warning-border, #f0c36a);
+  color: var(--gw-warning-text, #7a4d00);
+}
+
+.green-work-container .green-work-share-block-title {
+  color: var(--gw-text);
+}
+
+.green-work-container .green-work-share-link-box,
+.green-work-container .green-work-share-comment-card {
+  background: var(--gw-surface-muted);
+  border-color: var(--gw-border);
+  color: var(--gw-text);
+}
+
+.green-work-container .green-work-share-copy-btn {
+  min-height: 36px;
+  background: var(--gw-brand-dark, #16844d);
+  border: 1px solid var(--gw-brand, #27a866);
+  color: #ffffff;
+}
+
+.green-work-container .green-work-share-copy-btn:hover {
+  background: var(--gw-brand, #27a866);
+}
+
+.green-work-container .green-work-share-preview-link {
+  background: var(--gw-surface-muted);
+  border-color: var(--gw-border-strong);
+  color: var(--gw-text);
+}
+
+.green-work-container .green-work-share-select {
+  background: var(--gw-surface);
+  border-color: var(--gw-border-strong);
+  color: var(--gw-text);
+}
+
+.green-work-container .green-work-share-comment-name {
+  color: var(--gw-text);
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-share-warning {
+  background: #493718;
+  border-color: #9b762d;
+  color: #ffdf91;
+}
+
+@media (max-width: 860px) {
+  .green-work-container .green-work-share-link-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .green-work-container .green-work-share-link-box,
+  .green-work-container .green-work-share-copy-btn,
+  .green-work-container .green-work-share-preview-link {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .green-work-container .green-work-share-copy-btn,
+  .green-work-container .green-work-share-preview-link {
+    justify-content: center;
+  }
+}
+
 
 
