@@ -8504,6 +8504,93 @@ export default function GreenWork() {
     }
   };
 
+  const bulkApproveSubmittedTasks = async (taskIds: number[]) => {
+    if (!activeProjectId) return;
+    const uniqueTaskIds = Array.from(
+      new Set(taskIds.map((taskId) => Number(taskId)).filter((taskId) => Number.isFinite(taskId) && taskId > 0)),
+    );
+    if (uniqueTaskIds.length === 0) return;
+
+    const loadingId = toast.loading(`Approving ${uniqueTaskIds.length} submission${uniqueTaskIds.length === 1 ? "" : "s"}...`);
+    if (
+      !(await ensureWorkOperationalConsent("task_review_bulk", {
+        task_ids: uniqueTaskIds,
+        decision: "approve",
+      }))
+    ) {
+      toast.dismiss(loadingId);
+      return;
+    }
+
+    const approvedTaskIds: number[] = [];
+    const failed: Array<{ task_id: number; detail: string }> = [];
+    const batchSize = 20;
+    try {
+      for (let offset = 0; offset < uniqueTaskIds.length; offset += batchSize) {
+        const batch = uniqueTaskIds.slice(offset, offset + batchSize);
+        let response: any = null;
+        let lastError: any = null;
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+          try {
+            response = await api.post("/green/tasks/review-bulk", {
+              task_ids: batch,
+              reviewer_name: "supervisor",
+              season_mode: seasonMode,
+            });
+            break;
+          } catch (error: any) {
+            lastError = error;
+            const retryable = isLikelyNetworkError(error) || !error?.response;
+            if (!retryable || attempt === 1) break;
+          }
+        }
+
+        if (!response) {
+          const detail = lastError?.response?.data?.detail || "Approval batch failed; retry these submissions.";
+          batch.forEach((taskId) => failed.push({ task_id: taskId, detail }));
+          continue;
+        }
+
+        const data = response.data || {};
+        if (Array.isArray(data.approved_task_ids)) {
+          approvedTaskIds.push(...data.approved_task_ids.map((taskId: any) => Number(taskId)).filter(Number.isFinite));
+        }
+        if (Array.isArray(data.failed)) {
+          data.failed.forEach((item: any) => {
+            const taskId = Number(item?.task_id);
+            if (Number.isFinite(taskId) && taskId > 0) {
+              failed.push({ task_id: taskId, detail: String(item?.detail || "Approval failed") });
+            }
+          });
+        }
+      }
+
+      const approvedSet = new Set(approvedTaskIds);
+      setReviewNoteByTaskId((prev) => {
+        const next = { ...prev };
+        approvedSet.forEach((taskId) => delete next[taskId]);
+        return next;
+      });
+      await Promise.all([
+        loadProjectData(activeProjectId),
+        loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter, "new_planting"),
+        loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter, "existing_inventory"),
+      ]);
+
+      toast.dismiss(loadingId);
+      if (failed.length === 0) {
+        toast.success(`Approved ${approvedTaskIds.length} submission${approvedTaskIds.length === 1 ? "" : "s"}.`);
+      } else if (approvedTaskIds.length > 0) {
+        toast.success(`Approved ${approvedTaskIds.length} submission${approvedTaskIds.length === 1 ? "" : "s"}.`);
+        toast.error(`${failed.length} submission${failed.length === 1 ? "" : "s"} need retry.`);
+      } else {
+        toast.error("No submissions were approved. Retry the selected items.");
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Bulk approval could not be completed", { id: loadingId });
+    }
+  };
+
   const reopenApprovedTask = async (taskId: number) => {
     if (!activeProjectId) return;
     const loadingId = toast.loading("Reopening task...");
@@ -17618,6 +17705,7 @@ export default function GreenWork() {
                 reviewNoteByTaskId={reviewNoteByTaskId}
                 setReviewNoteByTaskId={setReviewNoteByTaskId}
                 reviewSubmittedTask={reviewSubmittedTask}
+                bulkApproveSubmittedTasks={bulkApproveSubmittedTasks}
                 reopenApprovedTask={reopenApprovedTask}
                 activeWorkflowLabels={activeWorkflowLabels}
                 toDisplayPhotoUrl={toDisplayPhotoUrl}
