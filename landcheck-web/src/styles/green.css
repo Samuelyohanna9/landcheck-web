@@ -4796,8 +4796,14 @@ body:has(.green-container) {
   }
 
   .green-container.green-home-mode .green-header-inner {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
     align-items: center;
     justify-content: space-between;
+    width: 100%;
+    min-height: 58px !important;
+    height: 58px;
   }
 
   .green-container.green-home-mode .green-header-brand {
@@ -4805,8 +4811,12 @@ body:has(.green-container) {
   }
 
   .green-container.green-home-mode .green-header-actions {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
     width: auto;
     justify-content: flex-end;
+    flex: 0 0 auto;
   }
 
   .green-container .green-header-inner {
@@ -4817,6 +4827,18 @@ body:has(.green-container) {
   .green-container .green-header-brand {
     flex: 1 1 auto;
     min-width: 0;
+    overflow: hidden;
+  }
+
+  .green-container .green-header-title {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .green-container .green-header-title h1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .green-container .green-header-actions {
@@ -4830,9 +4852,19 @@ body:has(.green-container) {
 
   .green-container .green-sync-badge {
     display: grid !important;
-    min-width: 0;
+    width: 76px;
+    min-width: 76px;
+    max-width: 76px;
     padding: 0.28rem 0.5rem;
     border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .green-container .green-sync-badge strong,
+  .green-container .green-sync-badge span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .green-container .green-sync-badge strong {
@@ -4852,6 +4884,8 @@ body:has(.green-container) {
 
   .green-container.green-home-mode .green-mobile-hero {
     display: block;
+    height: auto !important;
+    min-height: 104px;
     padding: 0.75rem 0.8rem;
     border-radius: 18px;
     border: 1px solid #cae7d2;
@@ -4866,6 +4900,13 @@ body:has(.green-container) {
 
   .green-container.green-home-mode .green-mobile-hero-greeting {
     margin-top: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-status-row {
+    position: relative;
+    z-index: 1;
   }
 
   .green-container.green-home-mode .green-mobile-hero::after {
