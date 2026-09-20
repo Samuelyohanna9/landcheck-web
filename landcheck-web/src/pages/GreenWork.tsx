@@ -855,6 +855,19 @@ type WorkOrder = {
   area_geojson?: any;
 };
 
+type MapAssignmentArea = {
+  id: number | string;
+  label: string;
+  treeId?: number | null;
+  source?: "work_order" | "existing_tree" | string | null;
+  workOrderId?: number | null;
+  assignee_name?: string | null;
+  target_trees?: number | null;
+  due_date?: string | null;
+  status?: string | null;
+  geojson: any;
+};
+
 type Tree = {
   id: number;
   project_tree_no?: number | null;
@@ -4047,6 +4060,8 @@ export default function GreenWork() {
   const [maintenanceMapFocusEnabled, setMaintenanceMapFocusEnabled] = useState(false);
   const [assigningMaintenanceTask, setAssigningMaintenanceTask] = useState(false);
   const [inspectedTree, setInspectedTree] = useState<TreeInspectData | null>(null);
+  const [inspectedAssignmentArea, setInspectedAssignmentArea] = useState<MapAssignmentArea | null>(null);
+  const [deletingPlantingAreaId, setDeletingPlantingAreaId] = useState<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [workspaceSettingsOpen, setWorkspaceSettingsOpen] = useState(false);
   const [activeForm, setActiveForm] = useState<WorkForm | null>(() => {
@@ -4597,6 +4612,7 @@ export default function GreenWork() {
     setTasks([]);
     setAssigneeFilter("all");
     setInspectedTree(null);
+    setInspectedAssignmentArea(null);
     setCustodians([]);
     setDistributionEvents([]);
     setDistributionAllocations([]);
@@ -7117,6 +7133,34 @@ export default function GreenWork() {
     }
   };
 
+  const deletePlantingAreaFromWork = async (area: MapAssignmentArea) => {
+    if (!activeProjectId || deletingPlantingAreaId !== null || area.source !== "work_order") return;
+    const workOrderId = Number(area.workOrderId ?? area.id);
+    if (!Number.isFinite(workOrderId) || workOrderId <= 0) return;
+    const areaLabel = String(area.label || `Planting area #${workOrderId}`);
+    const confirmed = window.confirm(
+      `Remove "${areaLabel}" from the map? This only removes the planting boundary; the planting order and recorded trees will remain.`,
+    );
+    if (!confirmed) return;
+
+    setDeletingPlantingAreaId(workOrderId);
+    try {
+      await api.patch(`/green/work-orders/${workOrderId}`, {
+        area_enabled: false,
+        area_label: null,
+        area_geojson: null,
+        allow_existing_tree_area_reuse: false,
+      });
+      setInspectedAssignmentArea(null);
+      await loadProjectData(activeProjectId);
+      toast.success("Planting area removed from the map.");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to remove planting area");
+    } finally {
+      setDeletingPlantingAreaId(null);
+    }
+  };
+
   useEffect(() => {
     loadProjects().catch(() => toast.error("Failed to load projects"));
     loadUsers().catch(() => toast.error("Failed to load users"));
@@ -7542,6 +7586,7 @@ export default function GreenWork() {
     setActiveProjectId(id);
     setAssigneeFilter("all");
     setInspectedTree(null);
+    setInspectedAssignmentArea(null);
     await loadProjectData(id);
   };
 
@@ -9104,7 +9149,7 @@ export default function GreenWork() {
     return treePoints.length ? treePoints : null;
   }, [visibleProjectTrees]);
   const mapWorkflowProfile = draftWorkflowProfile;
-  const existingTreeMapAreas = useMemo(
+  const existingTreeMapAreas = useMemo<MapAssignmentArea[]>(
     () =>
       mapViewTrees
         .map((tree) => {
@@ -9128,20 +9173,56 @@ export default function GreenWork() {
                   ? `Tree #${localNo} - ${labelCount} trees`
                   : `Tree #${localNo} - Existing area`,
             treeId: tree.id,
+            source: "existing_tree",
             geojson: geometry,
           };
         })
-        .filter((item): item is { id: string; label: string; treeId: number; geojson: any } => Boolean(item)),
+        .filter((item): item is NonNullable<typeof item> => Boolean(item)),
     [mapViewTrees, mapWorkflowProfile],
+  );
+  const plantingWorkOrderAreas = useMemo<MapAssignmentArea[]>(
+    () =>
+      orders
+        .filter((order) => order.work_type === "planting" && Boolean(order.area_enabled) && Boolean(order.area_geojson))
+        .map((order) => {
+          const geometry = normalizeMapAreaGeometry(order.area_geojson);
+          if (!geometry) return null;
+          const orderId = Number(order.id);
+          return {
+            id: orderId,
+            label: String(order.area_label || "").trim() || `Planting area #${orderId}`,
+            source: "work_order" as const,
+            workOrderId: orderId,
+            assignee_name: order.assignee_name,
+            target_trees: Number(order.target_trees || 0),
+            due_date: order.due_date,
+            status: order.status,
+            geojson: geometry,
+          };
+        })
+        .filter((item): item is NonNullable<typeof item> => Boolean(item)),
+    [orders],
+  );
+  const mapAssignmentAreas = useMemo(
+    () => [...existingTreeMapAreas, ...plantingWorkOrderAreas],
+    [existingTreeMapAreas, plantingWorkOrderAreas],
   );
   const projectAreaFitPoints = useMemo(() => {
     const points = existingTreeMapAreas.flatMap((item) => extractMapAreaPoints(normalizeMapAreaGeometry(item.geojson)));
     return points.length ? points : null;
   }, [existingTreeMapAreas]);
+  const plantingWorkOrderAreaFitPoints = useMemo(() => {
+    const points = plantingWorkOrderAreas.flatMap((item) => extractMapAreaPoints(normalizeMapAreaGeometry(item.geojson)));
+    return points.length ? points : null;
+  }, [plantingWorkOrderAreas]);
   const combinedProjectFitPoints = useMemo(() => {
-    const merged = [...(projectFitPoints || []), ...(projectAreaFitPoints || [])];
+    const merged = [
+      ...(projectFitPoints || []),
+      ...(projectAreaFitPoints || []),
+      ...(plantingWorkOrderAreaFitPoints || []),
+    ];
     return merged.length ? merged : null;
-  }, [projectFitPoints, projectAreaFitPoints]);
+  }, [projectFitPoints, projectAreaFitPoints, plantingWorkOrderAreaFitPoints]);
   const monitoringSourceAreas = useMemo(
     () =>
       mapWorkflowProfile === "agric"
@@ -11146,7 +11227,7 @@ export default function GreenWork() {
     assignWorkAreaMode;
   const sidebarPrimaryMode = Boolean(showSidebar && !hasDedicatedMainContent);
   const mapAreaDrawMode = Boolean(activeProjectId && newOrderAreaEnabled && (activeForm === "assign_work" || activeForm === "map_view"));
-  const activeTreeId = inspectedTree?.id || 0;
+  const activeTreeId = inspectedTree?.id || Number(inspectedAssignmentArea?.workOrderId || 0);
   const showTreeInspectorPanel = mapViewMode || (remoteMonitoringMode && Boolean(inspectedTree));
 
   const recalcDrawerFrame = useCallback(() => {
@@ -18751,9 +18832,17 @@ export default function GreenWork() {
                 setTreePositionDraft={setTreePositionDraft}
                 setNewOrderAreaGeometry={setNewOrderAreaGeometry}
                 setInspectedTree={setInspectedTree}
+                onAssignmentAreaInspect={(area: MapAssignmentArea | null) => {
+                  setInspectedAssignmentArea(area);
+                  if (area) {
+                    setInspectedTree(null);
+                    setTreePositionDraft(null);
+                    setMenuOpen(false);
+                  }
+                }}
                 setMenuOpen={setMenuOpen}
                 mapFitPoints={mapFitPoints}
-                existingTreeMapAreas={existingTreeMapAreas}
+                assignmentAreas={mapAssignmentAreas}
                 fullscreenTargetRef={mapFullscreenRef}
               />
             </Suspense>
@@ -18785,7 +18874,67 @@ export default function GreenWork() {
             </section>
           )}
         </section>
-      {inspectedTree ? (
+      {inspectedAssignmentArea ? (
+        <>
+          <button
+            type="button"
+            className="green-work-tree-overlay"
+            onClick={() => setInspectedAssignmentArea(null)}
+            aria-label="Close planting area details"
+          />
+          <aside className="green-work-tree-drawer green-work-tree-inspector" aria-label="Planting area details">
+            <div className="green-work-tree-drawer-head">
+              <strong>Planting Area</strong>
+              <button
+                className="green-work-tree-drawer-close"
+                type="button"
+                onClick={() => setInspectedAssignmentArea(null)}
+                aria-label="Close planting area details"
+              >
+                X
+              </button>
+            </div>
+            <div className="green-work-tree-inspector-body">
+              <h4>{inspectedAssignmentArea.label}</h4>
+              <p className="green-work-tree-inspector-notes">
+                This polygon is the field boundary assigned for planting. Remove it here when the map should no longer show this boundary.
+              </p>
+              <div className="green-work-tree-inspector-grid">
+                <div>
+                  <span>Assigned to</span>
+                  <strong>{inspectedAssignmentArea.assignee_name || "Unassigned"}</strong>
+                </div>
+                <div>
+                  <span>Target trees</span>
+                  <strong>{Number(inspectedAssignmentArea.target_trees || 0)}</strong>
+                </div>
+                <div>
+                  <span>Due date</span>
+                  <strong>{formatDateLabel(inspectedAssignmentArea.due_date)}</strong>
+                </div>
+                <div>
+                  <span>Status</span>
+                  <strong>{formatTaskTypeLabel(inspectedAssignmentArea.status || "open")}</strong>
+                </div>
+              </div>
+              {inspectedAssignmentArea.source === "work_order" && (
+                <div className="work-actions" style={{ marginTop: 16 }}>
+                  <button
+                    className="green-work-danger-btn"
+                    type="button"
+                    disabled={deletingPlantingAreaId === Number(inspectedAssignmentArea.workOrderId ?? inspectedAssignmentArea.id)}
+                    onClick={() => void deletePlantingAreaFromWork(inspectedAssignmentArea)}
+                  >
+                    {deletingPlantingAreaId === Number(inspectedAssignmentArea.workOrderId ?? inspectedAssignmentArea.id)
+                      ? "Removing Planting Area..."
+                      : "Remove Planting Area"}
+                  </button>
+                </div>
+              )}
+            </div>
+          </aside>
+        </>
+      ) : inspectedTree ? (
         <>
           <button
             type="button"
@@ -19256,7 +19405,7 @@ export default function GreenWork() {
                       cursor: "pointer"
                     }}
                   >
-                    ðŸŒ³ Download QR Tree Tag (PDF)
+                    Download QR Tree Tag (PDF)
                   </button>
                 </div>
               )}
