@@ -258,6 +258,26 @@ img {
   height: 18px;
 }
 
+/* Estate route loading uses the same Green mark with a quieter, smaller footprint. */
+.estate-loading-animation {
+  gap: 0.35rem;
+}
+
+.estate-loading-animation .green-loading-animation-ring {
+  width: 36px;
+  height: 36px;
+}
+
+.estate-loading-animation .green-loading-animation-logo {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+}
+
+.estate-loading-animation .green-loading-animation-label {
+  font-size: 0.7rem;
+}
+
 .green-loading-animation--large .green-loading-animation-ring {
   width: 72px;
   height: 72px;
