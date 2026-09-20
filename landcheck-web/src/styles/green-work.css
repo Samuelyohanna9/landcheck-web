@@ -8231,6 +8231,120 @@
 }
 
 @media (max-width: 860px) {
+  .green-work-header-inner.green-work-header-inner--actions-only {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .green-work-mobile-nav {
+    display: flex !important;
+    flex: 1 1 auto;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .green-work-mobile-menu-btn,
+  .green-work-mobile-menu-btn.green-work-menu-btn {
+    display: inline-flex !important;
+  }
+
+  .green-work-mobile-brand {
+    display: inline-flex !important;
+    min-width: 0;
+  }
+
+  .green-work-header-actions {
+    display: flex;
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+
+  .green-work-remote-card > .green-work-row {
+    display: block;
+    margin-bottom: 0;
+  }
+
+  /* The builder contains the usable mobile action. Remove the duplicate heading action
+     so it cannot be pushed off-screen beside the long Remote Monitoring title. */
+  .green-work-remote-card > .green-work-row > .work-actions {
+    display: none;
+  }
+
+  .green-work-remote-builder > .work-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+
+  .green-work-remote-builder > .work-actions button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .green-work-remote-builder > .work-actions .btn-primary {
+    grid-column: 1 / -1;
+  }
+
+  .green-work-remote-progress-panel {
+    padding: 0.78rem;
+    gap: 0.58rem;
+  }
+
+  .green-work-remote-progress-head {
+    align-items: flex-start;
+  }
+
+  .green-work-remote-progress-head strong {
+    max-width: 78%;
+    font-size: 0.82rem;
+    line-height: 1.25;
+  }
+
+  .green-work-remote-progress-step strong {
+    font-size: 0.72rem;
+  }
+
+  .green-work-remote-report-card {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .green-work-map-card.green-work-remote-map-card .tree-map {
+    min-height: clamp(280px, 58dvh, 480px);
+  }
+}
+
+@media (max-width: 520px) {
+  .green-work-remote-builder > .work-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .green-work-remote-builder > .work-actions .btn-primary {
+    grid-column: auto;
+  }
+
+  .green-work-remote-progress-panel {
+    margin-top: 0.65rem;
+    padding: 0.72rem;
+  }
+
+  .green-work-remote-progress-step {
+    grid-template-columns: 20px minmax(0, 1fr);
+    gap: 0.4rem;
+  }
+
+  .green-work-remote-progress-step span {
+    width: 20px;
+    height: 20px;
+    font-size: 0.62rem;
+  }
+}
+
+@media (max-width: 860px) {
   .green-work-container {
     min-height: 100dvh;
     height: auto;

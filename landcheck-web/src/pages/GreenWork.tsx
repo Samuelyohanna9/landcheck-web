@@ -5097,7 +5097,9 @@ export default function GreenWork() {
     remoteMonitoringProgressTimerRef.current = window.setInterval(() => {
       nextStep = Math.min(nextStep + 1, REMOTE_MONITORING_PROGRESS_STEPS.length - 1);
       setRemoteMonitoringProgressStep(nextStep);
-      setRemoteMonitoringProgressPct(Math.min(96, 10 + nextStep * 18));
+      // Keep the final percentage honest while the background job is still waiting on Earth
+      // Engine. The completed report moves this to 100%.
+      setRemoteMonitoringProgressPct(Math.min(90, 10 + nextStep * 16));
       if (nextStep >= REMOTE_MONITORING_PROGRESS_STEPS.length - 1) {
         stopRemoteMonitoringProgress();
       }
@@ -5106,9 +5108,10 @@ export default function GreenWork() {
 
   const waitForGreenExportJob = useCallback(async (jobId: string, timeoutMs = 1000 * 60 * 20) => {
     const startedAt = Date.now();
+    let pollDelayMs = 700;
     while (Date.now() - startedAt < timeoutMs) {
-      await new Promise((resolve) => window.setTimeout(resolve, 3000));
-      const statusRes = await api.get(`/green/export-jobs/${jobId}`);
+      await new Promise((resolve) => window.setTimeout(resolve, pollDelayMs));
+      const statusRes = await api.get(`/green/export-jobs/${jobId}?_ts=${Date.now()}`);
       const job = statusRes?.data || {};
       const status = String(job.status || "").toLowerCase();
       if (status === "completed") {
@@ -5117,6 +5120,7 @@ export default function GreenWork() {
       if (status === "failed") {
         throw new Error(String(job.error_text || "Export job failed"));
       }
+      pollDelayMs = Math.min(1800, Math.round(pollDelayMs * 1.35));
     }
     throw new Error("Export job is still preparing. Try again in a moment.");
   }, []);
@@ -5146,7 +5150,10 @@ export default function GreenWork() {
       if (!jobId) {
         throw new Error("Remote monitoring job was not created");
       }
-      const job = await waitForGreenExportJob(jobId, 1000 * 60 * 10);
+      const createdJob = created?.data || {};
+      const job = String(createdJob.status || "").toLowerCase() === "completed" && createdJob.result_payload
+        ? createdJob
+        : await waitForGreenExportJob(jobId, 1000 * 60 * 10);
       if (!job.result_payload) {
         throw new Error("Remote monitoring finished without a report payload");
       }
