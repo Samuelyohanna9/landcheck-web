@@ -1,3 +1,5 @@
+import { useEffect, useMemo, useState } from "react";
+
 type GreenWorkReviewQueuePanelProps = {
   activeProjectId: number | null | undefined;
   loadProjectData: (projectId: number) => void | Promise<void>;
@@ -31,6 +33,7 @@ type GreenWorkReviewQueuePanelProps = {
   reviewNoteByTaskId: Record<number, string>;
   setReviewNoteByTaskId: (value: any) => void;
   reviewSubmittedTask: (taskId: number, action: "approve" | "metadata_edit" | "reject") => void | Promise<void>;
+  bulkApproveSubmittedTasks: (taskIds: number[]) => void | Promise<void>;
   reopenApprovedTask: (taskId: number) => void | Promise<void>;
   activeWorkflowLabels: any;
   toDisplayPhotoUrl: (url: string, options?: any) => string;
@@ -71,12 +74,48 @@ export default function GreenWorkReviewQueuePanel({
   reviewNoteByTaskId,
   setReviewNoteByTaskId,
   reviewSubmittedTask,
+  bulkApproveSubmittedTasks,
   reopenApprovedTask,
   activeWorkflowLabels,
   toDisplayPhotoUrl,
   formatDateLabel,
   normalizeName,
 }: GreenWorkReviewQueuePanelProps) {
+  const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>([]);
+  const [bulkApproving, setBulkApproving] = useState(false);
+  const selectableTaskIds = useMemo(
+    () => reviewQueue.map((task) => Number(task.id)).filter((taskId) => Number.isFinite(taskId) && taskId > 0),
+    [reviewQueue],
+  );
+  const selectedTaskIdSet = useMemo(() => new Set(selectedTaskIds), [selectedTaskIds]);
+  const allTasksSelected = selectableTaskIds.length > 0 && selectableTaskIds.every((taskId) => selectedTaskIdSet.has(taskId));
+
+  useEffect(() => {
+    const validTaskIds = new Set(selectableTaskIds);
+    setSelectedTaskIds((current) => current.filter((taskId) => validTaskIds.has(taskId)));
+  }, [selectableTaskIds]);
+
+  const toggleAllTasks = () => {
+    setSelectedTaskIds(allTasksSelected ? [] : selectableTaskIds);
+  };
+
+  const toggleTask = (taskId: number) => {
+    setSelectedTaskIds((current) =>
+      current.includes(taskId) ? current.filter((id) => id !== taskId) : [...current, taskId],
+    );
+  };
+
+  const approveSelected = async () => {
+    if (selectedTaskIds.length === 0 || bulkApproving) return;
+    setBulkApproving(true);
+    try {
+      await bulkApproveSubmittedTasks(selectedTaskIds);
+      setSelectedTaskIds([]);
+    } finally {
+      setBulkApproving(false);
+    }
+  };
+
   return (
     <div className="green-work-card">
       <div className="green-work-row">
@@ -91,8 +130,34 @@ export default function GreenWorkReviewQueuePanel({
       </div>
       {!activeProjectId && <p className="green-work-note">Select project first from Project Focus.</p>}
       {activeProjectId && reviewQueue.length === 0 && <p className="green-work-note">No submitted tasks awaiting review.</p>}
+      {activeProjectId && reviewQueue.length > 0 && (
+        <div className="green-work-review-bulk-bar">
+          <label className="green-work-review-select-all">
+            <input
+              type="checkbox"
+              checked={allTasksSelected}
+              onChange={toggleAllTasks}
+              disabled={bulkApproving}
+              aria-label="Select all review submissions"
+            />
+            <span>Select all</span>
+          </label>
+          <span className="green-work-review-selected-count">
+            {selectedTaskIds.length} of {selectableTaskIds.length} selected
+          </span>
+          <button
+            type="button"
+            className="green-work-review-bulk-approve"
+            onClick={() => void approveSelected()}
+            disabled={selectedTaskIds.length === 0 || bulkApproving}
+          >
+            {bulkApproving ? "Approving selected..." : `Approve selected${selectedTaskIds.length ? ` (${selectedTaskIds.length})` : ""}`}
+          </button>
+        </div>
+      )}
       <div className="staff-list">
         {reviewQueue.map((task) => {
+          const taskId = Number(task.id);
           const reviewTreeRecord = treeById.get(Number(task.tree_id)) || null;
           const fallbackTreeCoords = treeCoordinatesById.get(Number(task.tree_id));
           const originalTreeLng = toFiniteCoord(task.tree_lng) ?? toFiniteCoord(fallbackTreeCoords?.lng);
@@ -152,7 +217,16 @@ export default function GreenWorkReviewQueuePanel({
                 <strong>
                   Task #{task.id} - {reviewTaskLabel}
                 </strong>
-                <span>{task.assignee_name || "-"}</span>
+                <label className="green-work-review-select" title="Select this submission">
+                  <input
+                    type="checkbox"
+                    checked={selectedTaskIdSet.has(taskId)}
+                    onChange={() => toggleTask(taskId)}
+                    disabled={bulkApproving}
+                    aria-label={`Select task ${task.id}`}
+                  />
+                  <span>{task.assignee_name || "-"}</span>
+                </label>
               </div>
               <div className="staff-row-meta">
                 {reviewEntityLabel} | Due: {formatDateLabel(task.due_date)} | Priority: {task.priority || "normal"}

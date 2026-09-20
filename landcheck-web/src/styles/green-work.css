@@ -3252,13 +3252,73 @@
   color: var(--green-900);
 }
 
-.staff-row-head span {
+.staff-row-head > span {
   font-size: 0.72rem;
   color: var(--green-700);
   background: var(--green-100);
   border: 1px solid rgba(42, 168, 82, 0.15);
   border-radius: var(--radius-pill);
   padding: 0.16rem 0.42rem;
+}
+
+.green-work-review-bulk-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem 0.8rem;
+  margin: 0.65rem 0 0.55rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--gw-border);
+  border-radius: var(--radius-sm);
+  background: var(--green-50);
+}
+
+.green-work-review-select,
+.green-work-review-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.green-work-review-select input,
+.green-work-review-select-all input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--green-600);
+  cursor: pointer;
+}
+
+.green-work-review-select span {
+  max-width: min(42vw, 240px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.green-work-review-selected-count {
+  color: var(--gw-subtext);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.green-work-review-bulk-approve {
+  margin-left: auto;
+  border: 1px solid var(--green-600);
+  border-radius: var(--radius-sm);
+  background: var(--green-600);
+  color: #ffffff;
+  font-size: 0.76rem;
+  font-weight: 800;
+  padding: 0.42rem 0.65rem;
+  cursor: pointer;
+}
+
+.green-work-review-bulk-approve:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .staff-row-meta {
@@ -6130,7 +6190,7 @@
     gap: 0.32rem;
   }
 
-  .staff-row-head span {
+  .staff-row-head > span {
     max-width: 100%;
     white-space: normal;
     word-break: break-word;
@@ -9202,12 +9262,26 @@
   color: #ffffff !important;
 }
 
-:root[data-workspace-theme="dark"] .green-work-container .staff-row-head span,
+:root[data-workspace-theme="dark"] .green-work-container .staff-row-head > span,
 :root[data-workspace-theme="dark"] .green-work-container .staff-overview-status,
 :root[data-workspace-theme="dark"] .green-work-container .staff-overview-type-chip {
   background: #174b38 !important;
   border-color: #4b8067 !important;
   color: #b7ffd1 !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-review-bulk-bar {
+  background: #1a2d40 !important;
+  border-color: #607b92 !important;
+  color: #ffffff !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container :where(
+  .green-work-review-select,
+  .green-work-review-select-all,
+  .green-work-review-selected-count
+) {
+  color: #ffffff !important;
 }
 
 :root[data-workspace-theme="dark"] .green-work-container .green-work-ai-narrative-textarea,
