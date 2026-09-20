@@ -7448,6 +7448,110 @@
   padding: 16px 18px 24px;
 }
 
+.green-work-planting-area-management {
+  margin-bottom: 0.7rem;
+  padding: 0.55rem;
+  border: 1px solid var(--gw-border);
+  border-radius: var(--radius-sm);
+  background: var(--gw-surface-muted);
+}
+
+.green-work-planting-area-management-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  color: var(--gw-text);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.green-work-planting-area-management-head span {
+  min-width: 1.35rem;
+  padding: 0.12rem 0.32rem;
+  border-radius: var(--radius-pill);
+  background: var(--green-100);
+  color: var(--green-800);
+  font-size: 0.68rem;
+  text-align: center;
+}
+
+.green-work-planting-area-management > .green-work-note {
+  margin: 0.3rem 0 0.48rem;
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.green-work-planting-area-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.green-work-planting-area-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 0.35rem;
+}
+
+.green-work-planting-area-select,
+.green-work-planting-area-remove {
+  border: 1px solid var(--gw-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font: inherit;
+}
+
+.green-work-planting-area-select {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.12rem;
+  padding: 0.38rem 0.45rem;
+  background: var(--gw-surface);
+  color: var(--gw-text);
+  text-align: left;
+}
+
+.green-work-planting-area-select strong,
+.green-work-planting-area-select span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.green-work-planting-area-select strong {
+  color: var(--gw-text);
+  font-size: 0.73rem;
+}
+
+.green-work-planting-area-select span {
+  color: var(--gw-subtext);
+  font-size: 0.67rem;
+}
+
+.green-work-planting-area-select:hover {
+  border-color: var(--green-500);
+}
+
+.green-work-planting-area-remove {
+  align-self: stretch;
+  padding: 0.3rem 0.45rem;
+  background: var(--red-600);
+  border-color: var(--red-600);
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.green-work-planting-area-remove:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .green-work-tree-inspector-photo-wrap,
 .green-work-tree-health-result,
 .green-work-tree-meta-edit {
@@ -9280,6 +9384,24 @@
   .green-work-review-select,
   .green-work-review-select-all,
   .green-work-review-selected-count
+) {
+  color: #ffffff !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-planting-area-management {
+  background: #1a2d40 !important;
+  border-color: #607b92 !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-planting-area-select {
+  background: #0f1a26 !important;
+  border-color: #66839a !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container :where(
+  .green-work-planting-area-management-head,
+  .green-work-planting-area-select strong,
+  .green-work-planting-area-select span
 ) {
   color: #ffffff !important;
 }
