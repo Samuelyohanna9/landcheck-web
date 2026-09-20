@@ -7879,5 +7879,59 @@
   color: var(--gw-warning-text);
 }
 
+.green-work-agric-list-toggle {
+  width: fit-content;
+  margin-top: 14px;
+}
+
+.green-work-agric-step-locked {
+  margin-top: 12px;
+}
+
+/* Field capture has a fixed set of columns. Wrap each cell instead of forcing users
+   to move a second horizontal scrollbar to reach the assignment action. */
+.green-work-field-capture-table-wrap {
+  overflow: hidden;
+}
+
+.green-work-live-table.green-work-field-capture-table {
+  min-width: 0;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.green-work-field-capture-table thead th,
+.green-work-field-capture-table tbody td {
+  min-width: 0;
+  padding: 0.3rem 0.22rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.2;
+}
+
+.green-work-field-capture-table thead th {
+  font-size: 0.55rem;
+  letter-spacing: 0.015em;
+}
+
+.green-work-field-capture-table tbody td {
+  font-size: 0.64rem;
+}
+
+.green-work-field-capture-table .green-work-link-btn,
+.green-work-field-capture-table .green-row-btn {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0.22rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  font-size: 0.62rem;
+  line-height: 1.2;
+}
+
 
 
