@@ -19,6 +19,7 @@ import CoordinateSystemSelect from "../components/CoordinateSystemSelect";
 import EstateShell from "../components/estates/EstateShell";
 import EstateReservationRequests from "../components/estates/EstateReservationRequests";
 import Spinner, { LoadingPanel } from "../components/estates/EstateSpinner";
+import { clearSurveyPlanDraft } from "../offline/surveyPlanDraft";
 import "../styles/estates.css";
 import "../styles/estate-dashboard.css";
 
@@ -1373,12 +1374,15 @@ export default function Estates() {
       await claimEstateSurveyRequestSession(survey.id);
       const params = new URLSearchParams({
         mode: "survey",
+        fresh: "1",
         estate_survey_plot: String(survey.survey_working_plot_id || ""),
         return_estate_id: String(estateId),
         return_plot_id: String(plotId),
         station_names: JSON.stringify(stationNames),
       });
       setSurveyStationSelection(null);
+      // Do not carry a different plot's saved preview into this Estate handoff.
+      await clearSurveyPlanDraft();
       navigate(`/survey-plan?${params.toString()}`);
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "Official Survey Plan could not be created."));

@@ -776,6 +776,7 @@ export default function SurveyPlan() {
     Number.isInteger(Number(returnEstateId)) && Number(returnEstateId) > 0 &&
     Number.isInteger(Number(returnImportReviewId)) && Number(returnImportReviewId) > 0,
   );
+  const startsFresh = searchParams.get("fresh") === "1";
   const [workflowMode, setWorkflowMode] = useState<WorkflowMode | null>(() =>
     isEstateLayoutImport && searchParams.get("mode") === "georeference" ? "georeference" : null,
   );
@@ -1203,7 +1204,12 @@ export default function SurveyPlan() {
 
   useEffect(() => {
     let active = true;
-    loadSurveyPlanDraft<SurveyPlanDraftState>(ACTIVE_SURVEY_DRAFT_ID)
+    // Estate handoffs explicitly request a clean workspace. Clear the persisted draft and skip
+    // hydration so a preview/template from another plot or session cannot reappear.
+    const draftLoad = startsFresh
+      ? clearSurveyPlanDraft(ACTIVE_SURVEY_DRAFT_ID).then(() => null)
+      : loadSurveyPlanDraft<SurveyPlanDraftState>(ACTIVE_SURVEY_DRAFT_ID);
+    draftLoad
       .then(async (record) => {
         if (!active || !record?.state) return;
         const saved = record.state;
@@ -1316,7 +1322,7 @@ export default function SurveyPlan() {
     return () => {
       active = false;
     };
-  }, [clearGeorefLocalState, isEstateLayoutImport, loadGeoreferenceSession]);
+  }, [clearGeorefLocalState, isEstateLayoutImport, loadGeoreferenceSession, startsFresh]);
 
   // Estate layout imports must open the requested tool even when Survey has a different local draft.
   // Other links continue to respect a user's restored Survey workflow.
@@ -1354,7 +1360,13 @@ export default function SurveyPlan() {
       })));
       setCoordinateSystem("wgs84");
       setPlotId(Number(workspace.plot_id));
-      setMeta({ ...buildDefaultPlotMeta(), ...(workspace.meta || {}) });
+      setMeta({
+        ...buildDefaultPlotMeta(),
+        ...(workspace.meta || {}),
+        // A fresh Estate handoff must make the operator choose the template again, even if the
+        // working plot retained metadata from an earlier unfinished session.
+        ...(startsFresh ? { template_name: DEFAULT_TEMPLATE_NAME } : {}),
+      });
       setWorkflowMode("survey");
       setCurrentStep(2);
       setFeatures(null);

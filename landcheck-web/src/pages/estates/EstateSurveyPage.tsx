@@ -5,6 +5,7 @@ import { api, extractApiErrorMessage } from "../../api/client";
 import { claimEstateSurveyRequestSession } from "../../auth/surveyAuth";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
+import { clearSurveyPlanDraft } from "../../offline/surveyPlanDraft";
 
 export default function EstateSurveyPage() {
   const { estateId } = useParams();
@@ -29,7 +30,9 @@ export default function EstateSurveyPage() {
   const openInSurvey = async (surveyRequestId: number, surveyWorkingPlotId: number | string | null | undefined) => {
     try {
       await claimEstateSurveyRequestSession(surveyRequestId);
-      navigate(`/survey-plan?mode=survey&estate_survey_plot=${surveyWorkingPlotId || ""}`);
+      // Estate handoffs are intentional fresh starts: do not reopen another plot's local preview.
+      await clearSurveyPlanDraft();
+      navigate(`/survey-plan?mode=survey&fresh=1&estate_survey_plot=${surveyWorkingPlotId || ""}`);
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "Could not open this plot in Survey."));
     }
