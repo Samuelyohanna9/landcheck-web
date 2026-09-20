@@ -2315,9 +2315,9 @@
 
 .gi-page .gi-hero-copy,
 .gi-page .gi-hero-highlights {
-  border-radius: var(--gi-radius-xl);
+  border-radius: 12px;
   border-color: var(--gi-border);
-  box-shadow: var(--gi-shadow-sm);
+  box-shadow: none;
 }
 
 .gi-page .gi-hero-copy {
@@ -2363,7 +2363,7 @@
 }
 
 .gi-page .gi-hero-highlights {
-  padding: 1.15rem;
+  padding: 0.85rem;
   background: #ffffff;
 }
 
@@ -2424,8 +2424,8 @@
 }
 
 .gi-page .gi-body {
-  padding-top: 1.5rem;
-  gap: 1.25rem;
+  padding-top: 1rem;
+  gap: 0.85rem;
 }
 
 .gi-page .gi-project-card,
@@ -2433,13 +2433,13 @@
 .gi-page .gi-comment-card,
 .gi-page .gi-board-card {
   border-color: var(--gi-border);
-  border-radius: var(--gi-radius-lg);
+  border-radius: 12px;
   background: #ffffff;
-  box-shadow: var(--gi-shadow-sm);
+  box-shadow: none;
 }
 
 .gi-page .gi-project-header {
-  padding: 1.2rem 1.25rem 1.1rem;
+  padding: 0.85rem 0.9rem 0.8rem;
   border-top: 3px solid var(--gi-accent);
   background: #ffffff;
   color: var(--gi-text);
@@ -2480,8 +2480,8 @@
 }
 
 .gi-page .gi-project-body {
-  padding: 1.2rem;
-  gap: 1.15rem;
+  padding: 0.85rem;
+  gap: 0.8rem;
 }
 
 .gi-page .gi-project-lead,
@@ -2498,8 +2498,9 @@
 }
 
 .gi-page .gi-board-card {
-  padding: 1rem;
-  border-radius: 14px;
+  padding: 0.65rem;
+  border-radius: 12px;
+  box-shadow: none;
 }
 
 .gi-page .gi-board-card::before {
@@ -2507,7 +2508,9 @@
 }
 
 .gi-page .gi-board-card-title {
-  font-size: 1rem;
+  color: var(--gi-text);
+  font-size: 0.95rem;
+  font-weight: 800;
 }
 
 .gi-page .gi-board-card-subtitle,
@@ -2515,6 +2518,15 @@
 .gi-page .gi-comment-body,
 .gi-page .gi-endorsements-intro {
   color: var(--gi-text-mid);
+}
+
+.gi-page .gi-board-card-header {
+  margin-bottom: 0.6rem;
+}
+
+.gi-page .gi-board-card-subtitle {
+  font-size: 0.82rem;
+  line-height: 1.4;
 }
 
 .gi-page .gi-section-heading {
@@ -2746,7 +2758,7 @@
 }
 
 .gi-page .gi-project-name {
-  font-size: clamp(1.2rem, 2.25vw, 1.6rem);
+  font-size: clamp(1.1rem, 2vw, 1.35rem);
 }
 
 .gi-page .gi-board-card-title {
@@ -2756,7 +2768,7 @@
 .gi-page .gi-readiness-value,
 .gi-page .gi-meter-value,
 .gi-page .gi-metric-val {
-  font-size: 1.35rem;
+  font-size: 1.25rem;
 }
 
 .gi-page .gi-meter-value-label,
@@ -2781,4 +2793,99 @@
   .gi-page .gi-project-name {
     font-size: 1.2rem;
   }
+}
+
+/* Match the compact Work dashboard card language used for operational summaries. */
+.gi-page .gi-board-card,
+.gi-page .gi-project-lead,
+.gi-page .gi-readiness-tile,
+.gi-page .gi-meter-card-shell,
+.gi-page .gi-insight-kpi,
+.gi-page .gi-rate-bar-wrap {
+  border-radius: 9px;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.gi-page .gi-board-card {
+  padding: 0.65rem;
+}
+
+.gi-page .gi-board-card-header {
+  margin-bottom: 0.55rem;
+}
+
+.gi-page .gi-board-card-title {
+  color: var(--gi-text);
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.gi-page .gi-board-card-subtitle,
+.gi-page .gi-readiness-note,
+.gi-page .gi-comment-body,
+.gi-page .gi-endorsements-intro {
+  color: var(--gi-text-mid);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.gi-page .gi-metric-tile {
+  min-height: 104px;
+  padding: 0.65rem;
+  border-radius: 9px;
+  border-color: var(--gi-border);
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.gi-page .gi-metric-kicker {
+  color: var(--gi-text);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+.gi-page .gi-metric-val {
+  margin-top: 0.35rem;
+  color: #087744;
+  font-size: 1.25rem;
+}
+
+.gi-page .gi-metric-label {
+  margin-top: 0.25rem;
+  color: var(--gi-text-mid);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.gi-page .gi-rate-bar-wrap {
+  padding: 0.65rem 0.7rem;
+  border-color: var(--gi-border);
+}
+
+.gi-page .gi-rate-bar-label {
+  color: var(--gi-text-mid);
+  font-size: 0.82rem;
+}
+
+.gi-page .gi-rate-bar-track {
+  height: 9px;
+  margin-top: 0.5rem;
+}
+
+.gi-page .gi-breakdown-list {
+  gap: 0.38rem;
+}
+
+.gi-page .gi-breakdown-label {
+  color: var(--gi-text);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.gi-page .gi-breakdown-count {
+  color: #087744;
+  font-size: 0.8rem;
+  font-weight: 800;
 }
