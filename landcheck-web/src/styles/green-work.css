@@ -8906,5 +8906,68 @@
   color: #ffffff !important;
 }
 
+/* Keep compact mobile header controls and branding fully visible. */
+@media (max-width: 860px) {
+  .green-work-header,
+  .green-work-header-inner.green-work-header-inner--actions-only,
+  .green-work-header-actions,
+  .green-work-notifications,
+  .green-work-notifications-btn {
+    overflow: visible;
+  }
+
+  .green-work-notifications-badge {
+    top: -1px;
+    right: -2px;
+    z-index: 5;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 3px;
+    font-size: 0.58rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .green-work-mobile-brand {
+    flex: 0 1 auto;
+    color: #17392b !important;
+  }
+
+  .green-work-mobile-brand span {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    flex: 0 0 auto;
+    min-width: 0;
+    max-width: none;
+    overflow: visible;
+    color: #17392b !important;
+    font-size: 0.78rem;
+  }
+
+  .green-work-mobile-brand strong {
+    color: #17392b !important;
+    font-weight: 900;
+  }
+
+  .green-work-mobile-brand small {
+    color: #168651 !important;
+    font-size: 0.68rem;
+    font-weight: 900;
+  }
+}
+
+@media (max-width: 520px) {
+  :root[data-workspace-theme="dark"] .green-work-mobile-brand,
+  :root[data-workspace-theme="dark"] .green-work-mobile-brand span,
+  :root[data-workspace-theme="dark"] .green-work-mobile-brand strong {
+    color: #ffffff !important;
+  }
+
+  :root[data-workspace-theme="dark"] .green-work-mobile-brand small {
+    color: #72f0a7 !important;
+  }
+}
+
 
 
