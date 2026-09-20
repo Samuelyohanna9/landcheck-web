@@ -19054,6 +19054,47 @@ export default function GreenWork() {
               </button>
             </div>
             <div className="green-work-tree-inspector-body">
+              {plantingWorkOrderAreas.length > 0 && (
+                <section className="green-work-planting-area-management" aria-label="Planting area management">
+                  <div className="green-work-planting-area-management-head">
+                    <strong>Planting areas</strong>
+                    <span>{plantingWorkOrderAreas.length}</span>
+                  </div>
+                  <p className="green-work-note">
+                    Boundaries assigned to field teams. Select one to inspect it or remove it from the map.
+                  </p>
+                  <div className="green-work-planting-area-list">
+                    {plantingWorkOrderAreas.map((area) => {
+                      const areaWorkOrderId = Number(area.workOrderId ?? area.id);
+                      const removing = deletingPlantingAreaId === areaWorkOrderId;
+                      return (
+                        <div key={`tree-inspector-area-${areaWorkOrderId}`} className="green-work-planting-area-row">
+                          <button
+                            type="button"
+                            className="green-work-planting-area-select"
+                            onClick={() => {
+                              setInspectedTree(null);
+                              setTreePositionDraft(null);
+                              setInspectedAssignmentArea(area);
+                            }}
+                          >
+                            <strong>{area.label}</strong>
+                            <span>{area.assignee_name || "Unassigned"}</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="green-work-planting-area-remove"
+                            disabled={removing}
+                            onClick={() => void deletePlantingAreaFromWork(area)}
+                          >
+                            {removing ? "Removing..." : "Remove"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
               <div className="green-work-tree-inspector-photo-wrap">
                 {inspectedTree.photo_url ? (
                   <img
