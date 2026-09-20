@@ -167,7 +167,7 @@ export default function GreenWorkMapPanel(props: GreenWorkMapPanelProps) {
               drawMode={mapAreaDrawMode ? "polygon" : "point"}
               drawActive={mapAreaDrawMode}
               onPolygonChange={mapAreaDrawMode ? (geometry: any) => setNewOrderAreaGeometry(geometry) : undefined}
-              minHeight={mapAreaDrawMode ? 520 : 360}
+              minHeight={mapAreaDrawMode ? 520 : 320}
               onTreeInspect={(detail: any) => {
                 setInspectedTree(detail);
                 if (detail) setMenuOpen(false);
