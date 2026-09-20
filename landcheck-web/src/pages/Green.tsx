@@ -262,6 +262,7 @@ type SponsorAgentPayoutDashboard = {
 };
 
 type Section = "tasks" | "map" | "records" | "profile" | "review" | "wallet";
+type MaintenanceStatusFilter = "all" | "pending" | "done";
 type TaskEdit = {
   status: string;
   notes: string;
@@ -572,12 +573,35 @@ const hasTaskGpsCapture = (task: any, edit?: { activity_lng?: number | null; act
   return toFiniteNumber(lngSource) !== null && toFiniteNumber(latSource) !== null;
 };
 const taskSortStamp = (task: any) => {
-  const candidates = [task?.due_date, task?.created_at, task?.activity_recorded_at];
+  const candidates = [task?.assigned_at, task?.created_at, task?.due_date, task?.activity_recorded_at];
   for (const value of candidates) {
     const stamp = value ? new Date(value).getTime() : NaN;
     if (Number.isFinite(stamp)) return stamp;
   }
   return Number(task?.id || 0);
+};
+const formatAssignedLabel = (value: string | null | undefined) => {
+  const raw = String(value || "").trim();
+  if (!raw) return "Assigned recently";
+  const assignedAt = new Date(raw);
+  if (Number.isNaN(assignedAt.getTime())) return `Assigned ${raw}`;
+
+  const elapsedMs = Date.now() - assignedAt.getTime();
+  if (elapsedMs >= 0 && elapsedMs < 60_000) return "Assigned just now";
+  if (elapsedMs >= 0 && elapsedMs < 3_600_000) {
+    const minutes = Math.max(1, Math.floor(elapsedMs / 60_000));
+    return `Assigned ${minutes} min${minutes === 1 ? "" : "s"} ago`;
+  }
+  if (elapsedMs >= 0 && elapsedMs < 86_400_000) {
+    const hours = Math.max(1, Math.floor(elapsedMs / 3_600_000));
+    return `Assigned ${hours} hr${hours === 1 ? "" : "s"} ago`;
+  }
+
+  return `Assigned ${assignedAt.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })}`;
 };
 const formatDateTimeLabel = (value: string | null | undefined) => {
   const raw = String(value || "").trim();
@@ -945,6 +969,7 @@ export default function Green() {
   const [focusPoint, setFocusPoint] = useState<{ lng: number; lat: number }[] | null>(null);
   const [plantingOrders, setPlantingOrders] = useState<WorkOrder[]>([]);
   const [activeSection, setActiveSection] = useState<Section | null>(storedSection);
+  const [maintenanceStatusFilter, setMaintenanceStatusFilter] = useState<MaintenanceStatusFilter>("all");
   const [installPrompt, setInstallPrompt] = useState<DeferredInstallPrompt | null>(null);
   const [treePhotoUploading, setTreePhotoUploading] = useState(false);
   const [plantingFlowState, setPlantingFlowState] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -1519,19 +1544,24 @@ export default function Green() {
     () => myTasks.filter((task) => isMaintenanceBoardTask(task)).sort((a, b) => taskSortStamp(b) - taskSortStamp(a)),
     [myTasks],
   );
+  const visibleMaintenanceBoardTasks = useMemo(() => {
+    if (maintenanceStatusFilter === "done") return maintenanceBoardTasks.filter((task) => isTaskApproved(task));
+    if (maintenanceStatusFilter === "pending") return maintenanceBoardTasks.filter((task) => !isTaskApproved(task));
+    return maintenanceBoardTasks;
+  }, [maintenanceBoardTasks, maintenanceStatusFilter]);
   const reviewBoardTasks = useMemo(
     () => myTasks.filter((task) => isReviewBoardTask(task)).sort((a, b) => taskSortStamp(b) - taskSortStamp(a)),
     [myTasks],
   );
   const activeBoardTasks = useMemo(
-    () => (activeSection === "review" ? reviewBoardTasks : maintenanceBoardTasks),
-    [activeSection, maintenanceBoardTasks, reviewBoardTasks],
+    () => (activeSection === "review" ? reviewBoardTasks : visibleMaintenanceBoardTasks),
+    [activeSection, reviewBoardTasks, visibleMaintenanceBoardTasks],
   );
   const maintenanceBoardStats = useMemo(() => {
     const open = maintenanceBoardTasks.filter((task) => !isTaskApproved(task) && !isTaskSubmitted(task)).length;
     const submitted = maintenanceBoardTasks.filter((task) => isTaskSubmitted(task)).length;
     const approved = maintenanceBoardTasks.filter((task) => isTaskApproved(task)).length;
-    return { open, submitted, approved };
+    return { open, submitted, approved, pending: maintenanceBoardTasks.length - approved };
   }, [maintenanceBoardTasks]);
   const reviewBoardStats = useMemo(() => {
     const metadataEdits = reviewBoardTasks.filter((task) => isTaskMetadataEditRequested(task)).length;
@@ -3845,6 +3875,27 @@ export default function Green() {
                 )}
               </div>
             </div>
+            {activeDetailSection === "tasks" && (
+              <div className="green-task-filter-bar" role="tablist" aria-label="Filter maintenance tasks by status">
+                {([
+                  ["all", "All", maintenanceBoardTasks.length],
+                  ["pending", "Pending", maintenanceBoardStats.pending],
+                  ["done", "Done", maintenanceBoardStats.approved],
+                ] as const).map(([filter, label, count]) => (
+                  <button
+                    key={filter}
+                    className={`green-task-filter-btn ${maintenanceStatusFilter === filter ? "is-active" : ""}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={maintenanceStatusFilter === filter}
+                    onClick={() => setMaintenanceStatusFilter(filter)}
+                  >
+                    <span>{label}</span>
+                    <strong>{count}</strong>
+                  </button>
+                ))}
+              </div>
+            )}
             {!activeUser ? (
               <p className="green-empty">Select a staff member or custodian to view assigned tasks.</p>
             ) : activeUserIsCustodian ? (
@@ -3880,7 +3931,18 @@ export default function Green() {
                       : t.activity_recorded_at || ""
                   ).trim();
                   return (
-                  <div key={t.id} className={`green-task-entry ${isTaskLockedForField(t) ? "is-done" : ""}`}>
+                  <div
+                    key={t.id}
+                    className={`green-task-entry ${isTaskApproved(t) ? "is-completed" : "is-pending"} ${
+                      isTaskSubmitted(t) ? "is-submitted" : ""
+                    }`}
+                  >
+                    <div className="green-task-card-head">
+                      <div>
+                        <strong>{toTitle(t.task_type || "Task")}</strong>
+                        <span>{formatAssignedLabel(t.assigned_at || t.created_at)}</span>
+                      </div>
+                    </div>
                     <div
                       className={`tree-row task-row ${isTaskLockedForField(t) ? "task-row-locked" : ""}`}
                       onClick={() => {
@@ -3890,7 +3952,7 @@ export default function Green() {
                       }}
                     >
                       <span className="task-cell" data-label="Task">
-                        {t.task_type}
+                        {toTitle(t.task_type || "Task")}
                       </span>
                       <span className="task-cell" data-label="Tree">
                         #{t.tree_id}
@@ -3913,6 +3975,7 @@ export default function Green() {
                           </span>
                         ) : (
                           <select
+                            className="green-task-status-select"
                             value={taskEdits[t.id]?.status || t.status}
                             onChange={(e) =>
                               setTaskEdits((prev) => ({
@@ -3925,6 +3988,7 @@ export default function Green() {
                             }
                           >
                             <option value="pending">Pending</option>
+                            <option value="in_progress">In Progress</option>
                             <option value="done">Done</option>
                             <option value="overdue">Overdue</option>
                           </select>
