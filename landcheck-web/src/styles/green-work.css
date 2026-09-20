@@ -8627,5 +8627,199 @@
   }
 }
 
+/* Final responsive contract: desktop KPIs stay on one compact line, while only
+   mobile layouts are allowed to stack them. Chart cards switch columns before
+   their donut legends can become too narrow. */
+.green-work-map-top-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.green-work-map-top-metrics > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 4px;
+  min-width: 0;
+  padding: 6px 8px;
+  overflow: hidden;
+}
+
+.green-work-map-top-metrics .green-work-map-metric-label {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: calc(100% - 2.1rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.green-work-map-top-metrics .green-work-map-metric-value {
+  flex: 0 0 auto;
+  justify-self: auto;
+  font-size: 0.9rem;
+}
+
+.green-work-overview-mini-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.green-work-overview-chart-card,
+.green-work-overview-bar-card,
+.green-work-trend-card {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.green-work-overview-donut-layout {
+  grid-template-columns: minmax(92px, 108px) minmax(0, 1fr);
+  min-width: 0;
+}
+
+.green-work-overview-donut-layout > *,
+.green-work-overview-donut-legend,
+.green-work-overview-donut-legend-row {
+  min-width: 0;
+}
+
+@media (min-width: 861px) and (max-width: 1279px) {
+  .green-work-overview-mini-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .green-work-map-top-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .green-work-overview-mini-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 861px) and (max-width: 1100px) {
+  .green-work-map-top-metrics > div {
+    gap: 3px;
+    padding-inline: 5px;
+  }
+
+  .green-work-map-top-metrics .green-work-map-metric-label {
+    font-size: 0.58rem;
+  }
+
+  .green-work-map-top-metrics .green-work-map-metric-value {
+    font-size: 0.84rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .green-work-map-top-metrics {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Remote monitoring has deliberately bright report styling in the light theme.
+   Replace every report surface, nested card, and control with solid dark tokens
+   so white text never sits on a pale gradient in dark mode. */
+:root[data-workspace-theme="dark"] .green-work-remote-report-card {
+  --gwr-accent: #9af5bf;
+  --gwr-accent-strong: #b7ffd1;
+  --gwr-accent-soft: #173c32;
+  --gwr-accent-border: #4b8067;
+  --gwr-accent-surface: #1b2b3a;
+  --gwr-accent-surface-strong: #203244;
+  --gwr-accent-glow: rgba(0, 0, 0, 0.18);
+  --gwr-accent-text: #ffffff;
+  --gwr-gridline: rgba(255, 255, 255, 0.12);
+  background: #162231 !important;
+  background-image: none !important;
+  border-color: #4b6072 !important;
+  color: #ffffff !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-remote-report-card :where(
+  h1, h2, h3, h4, h5, h6, p, span, strong, small, label, button, a, li
+) {
+  color: #ffffff !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-remote-report-card :where(
+  .green-work-remote-empty-state,
+  .green-work-remote-progress-panel,
+  .green-work-remote-overview-card,
+  .green-work-remote-dashboard-card,
+  .green-work-remote-trend-chart,
+  .green-work-remote-trend-metric,
+  .green-work-remote-priority-item,
+  .green-work-remote-record-board,
+  .green-work-remote-record-row,
+  .green-work-remote-record-metric,
+  .green-work-remote-insight-card
+) {
+  background: #1b2b3a !important;
+  background-image: none !important;
+  border-color: #4b6072 !important;
+  box-shadow: none !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-remote-report-card .green-work-remote-empty-state.is-loading,
+:root[data-workspace-theme="dark"] .green-work-remote-report-card .green-work-remote-progress-panel.is-report-panel {
+  background: #203244 !important;
+  border-color: #4b8067 !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-remote-report-card :where(
+  .green-work-remote-progress-bar,
+  .green-work-remote-distribution-bar
+) {
+  background: #314252 !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-remote-report-card .green-work-remote-progress-step span {
+  background: #22384a !important;
+  border-color: #66839a !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-remote-report-card :where(
+  .green-work-remote-trend-badge,
+  .green-work-remote-priority-total
+) {
+  background: #22384a !important;
+  border-color: #66839a !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-remote-report-card .green-work-remote-trend-badge.is-positive,
+:root[data-workspace-theme="dark"] .green-work-remote-report-card .green-work-remote-insight-card.is-healthy {
+  background: #173c32 !important;
+  border-color: #4b8067 !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-remote-report-card .green-work-remote-trend-badge.is-negative,
+:root[data-workspace-theme="dark"] .green-work-remote-report-card .green-work-remote-insight-card.is-warning {
+  background: #493616 !important;
+  border-color: #9d762c !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-remote-report-card :where(
+  input, select, textarea
+) {
+  background: #0f1a26 !important;
+  border-color: #66839a !important;
+  color: #ffffff !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-remote-report-card button:not(.is-primary) {
+  background: #22384a !important;
+  border-color: #66839a !important;
+  color: #ffffff !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-remote-report-card button.is-primary {
+  background: #1b9656 !important;
+  border-color: #4ee092 !important;
+  color: #ffffff !important;
+}
+
 
 
