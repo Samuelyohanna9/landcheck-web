@@ -11587,7 +11587,7 @@ export default function GreenWork() {
     <div className={`green-work-container ${showTreeInspectorPanel ? "has-tree-inspector-panel" : ""} ${menuOpen ? "menu-is-open" : ""}`}>
       <Toaster position="top-right" />
       {privacyConsentModal}
-      <header className="green-work-header">
+      <header className={`green-work-header ${notificationsOpen ? "notifications-is-open" : ""}`}>
         <div className="green-work-header-inner green-work-header-inner--actions-only">
           <div className="green-work-mobile-nav">
             <button

@@ -9007,5 +9007,112 @@
   color: #b7ddff !important;
 }
 
+/* Keep mobile notification details in the viewport instead of anchoring them to the bell. */
+@media (max-width: 860px) {
+  .green-work-header.notifications-is-open {
+    z-index: 500;
+  }
+
+  .green-work-header.notifications-is-open .green-work-notifications-popover {
+    position: fixed;
+    top: calc(56px + env(safe-area-inset-top) + 8px);
+    right: 10px;
+    left: 10px;
+    z-index: 501;
+    width: auto;
+    max-width: none;
+    max-height: min(520px, calc(100dvh - 76px));
+  }
+}
+
+@media (max-width: 520px) {
+  .green-work-header.notifications-is-open .green-work-notifications-popover {
+    top: calc(56px + env(safe-area-inset-top) + 6px);
+    right: 8px;
+    left: 8px;
+    max-height: calc(100dvh - 70px);
+  }
+}
+
+/* Keep chart cards and their legends sized from the available map width, not the viewport. */
+.green-work-map-overview-card {
+  container: green-work-overview / inline-size;
+}
+
+.green-work-overview-donut-legend-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.28rem;
+}
+
+.green-work-overview-donut-dot {
+  flex: 0 0 7px;
+  width: 7px;
+  height: 7px;
+}
+
+.green-work-overview-donut-label {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: calc(100% - 42px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.62rem;
+}
+
+.green-work-overview-donut-value {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-size: 0.58rem;
+  letter-spacing: -0.01em;
+}
+
+@container green-work-overview (min-width: 760px) and (max-width: 1159px) {
+  .green-work-overview-mini-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container green-work-overview (max-width: 759px) {
+  .green-work-overview-mini-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .green-work-overview-donut-layout {
+    grid-template-columns: 86px minmax(0, 1fr);
+    gap: 0.3rem;
+  }
+
+  .green-work-overview-donut-svg {
+    width: 84px;
+    height: 84px;
+  }
+}
+
+@container green-work-overview (max-width: 420px) {
+  .green-work-overview-donut-layout {
+    grid-template-columns: 76px minmax(0, 1fr);
+  }
+
+  .green-work-overview-donut-svg {
+    width: 74px;
+    height: 74px;
+  }
+
+  .green-work-overview-donut-legend-row {
+    gap: 0.2rem;
+  }
+
+  .green-work-overview-donut-label {
+    font-size: 0.58rem;
+  }
+
+  .green-work-overview-donut-value {
+    font-size: 0.54rem;
+  }
+}
+
 
 
