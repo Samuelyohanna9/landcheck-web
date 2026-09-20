@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
@@ -8,6 +8,7 @@ import EstateModal from "../../components/estates/EstateModal";
 
 export default function EstateSettingsPage() {
   const { estateId } = useParams();
+  const paymentPlanStageIdRef = useRef(0);
   const [estateDetail, setEstateDetail] = useState<any>(null);
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
@@ -26,7 +27,7 @@ export default function EstateSettingsPage() {
   const [publicLogoPath, setPublicLogoPath] = useState<string | null>(null);
   const [publicLogoFile, setPublicLogoFile] = useState<File | null>(null);
   const [publicShowPrices, setPublicShowPrices] = useState(true);
-  const [paymentPlan, setPaymentPlan] = useState<Array<{ label: string; percentage: string }>>([]);
+  const [paymentPlan, setPaymentPlan] = useState<Array<{ id: string; label: string; percentage: string }>>([]);
   const [publicCanPublish, setPublicCanPublish] = useState(false);
   const [publicUrlPath, setPublicUrlPath] = useState<string | null>(null);
 
@@ -50,7 +51,11 @@ export default function EstateSettingsPage() {
         setPublicPhone(publicPage.public_contact_phone || "");
         setPublicLogoPath(publicPage.public_logo_path || null);
         setPublicShowPrices(publicPage.public_show_prices !== false);
-        setPaymentPlan((publicPage.payment_plan || []).map((item: { label?: string; percentage?: string | number }) => ({ label: item.label || "", percentage: String(item.percentage ?? "") })));
+        setPaymentPlan((publicPage.payment_plan || []).map((item: { label?: string; percentage?: string | number }) => ({
+          id: `payment-stage-${paymentPlanStageIdRef.current++}`,
+          label: item.label || "",
+          percentage: String(item.percentage ?? ""),
+        })));
         setPublicCanPublish(Boolean(publicPage.can_publish));
         setPublicUrlPath(publicPage.public_url_path || null);
       } catch { /* public showcase is optional until its migration is deployed */ }
@@ -117,6 +122,11 @@ export default function EstateSettingsPage() {
     setPaymentPlan((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value } : item));
   };
 
+  const addPaymentPlanStage = () => {
+    const stage = { id: `payment-stage-${paymentPlanStageIdRef.current++}`, label: "", percentage: "" };
+    setPaymentPlan((current) => [...current, stage]);
+  };
+
   const addBlock = async () => {
     if (!blockLabel.trim()) return;
     try {
@@ -168,8 +178,8 @@ export default function EstateSettingsPage() {
           <label className="edash-field" style={{ margin: "10px 0" }}><span>About this Estate</span><textarea rows={3} value={publicDescription} onChange={(event) => setPublicDescription(event.target.value)} placeholder="Tell buyers what makes this Estate worth considering" /></label>
           <label className="edash-toggle" style={{ marginBottom: 14 }}><input type="checkbox" checked={publicShowPrices} onChange={(event) => setPublicShowPrices(event.target.checked)} /> Show plot prices publicly</label>
           <div className="edash-public-payment-plan">
-            <div className="edash-card-head" style={{ marginBottom: 5 }}><div><h4 className="edash-card-title" style={{ fontSize: "1rem" }}>Payment plan for buyers</h4><p className="edash-field-note">Optional. Show buyers how the agreed price can be paid in stages.</p></div><button type="button" className="edash-tool-btn" onClick={() => setPaymentPlan((current) => [...current, { label: "", percentage: "" }])}>+ Add stage</button></div>
-            {paymentPlan.map((item, index) => <div className="edash-public-payment-plan-row" key={`${index}-${item.label}`}><input aria-label={`Payment stage ${index + 1} name`} value={item.label} onChange={(event) => updatePaymentPlan(index, "label", event.target.value)} placeholder={index === 0 ? "Initial payment" : "Next payment"} /><input aria-label={`Payment stage ${index + 1} percentage`} type="number" min="1" max="100" step="1" value={item.percentage} onChange={(event) => updatePaymentPlan(index, "percentage", event.target.value)} placeholder="%" /><button type="button" className="edash-tool-btn" onClick={() => setPaymentPlan((current) => current.filter((_, itemIndex) => itemIndex !== index))}>Remove</button></div>)}
+            <div className="edash-card-head" style={{ marginBottom: 5 }}><div><h4 className="edash-card-title" style={{ fontSize: "1rem" }}>Payment plan for buyers</h4><p className="edash-field-note">Optional. Show buyers how the agreed price can be paid in stages.</p></div><button type="button" className="edash-tool-btn" onClick={addPaymentPlanStage}>+ Add stage</button></div>
+            {paymentPlan.map((item, index) => <div className="edash-public-payment-plan-row" key={item.id}><input aria-label={`Payment stage ${index + 1} name`} value={item.label} onChange={(event) => updatePaymentPlan(index, "label", event.target.value)} placeholder={index === 0 ? "Initial payment" : "Next payment"} /><input aria-label={`Payment stage ${index + 1} percentage`} type="number" min="1" max="100" step="1" value={item.percentage} onChange={(event) => updatePaymentPlan(index, "percentage", event.target.value)} placeholder="%" /><button type="button" className="edash-tool-btn" onClick={() => setPaymentPlan((current) => current.filter((stage) => stage.id !== item.id))}>Remove</button></div>)}
             {paymentPlan.length > 0 && <p className="edash-field-note" style={{ color: paymentPlan.reduce((total, item) => total + (Number(item.percentage) || 0), 0) === 100 ? "var(--edash-brand)" : "var(--edash-danger)" }}>Total: {paymentPlan.reduce((total, item) => total + (Number(item.percentage) || 0), 0)}%</p>}
           </div>
           <button type="button" className="edash-btn-primary" disabled={publicEnabled && !publicCanPublish} onClick={() => void savePublicPage()}>Save and publish page</button>
