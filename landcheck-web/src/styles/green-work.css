@@ -9007,6 +9007,84 @@
   color: #b7ddff !important;
 }
 
+/* Replace legacy light panel surfaces used by review, inventory, reports, and staff views. */
+:root[data-workspace-theme="dark"] .green-work-container :where(
+  .staff-row,
+  .green-work-review-photo,
+  .green-work-ai-narrative,
+  .green-work-verra-history,
+  .project-controls-col,
+  .work-order-row,
+  .green-work-multi-assign-panel,
+  .green-work-multi-assign-item-row
+) {
+  background: #1a2d40 !important;
+  border-color: #607b92 !important;
+  color: #ffffff !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container :where(
+  .staff-row strong,
+  .staff-row-meta,
+  .green-work-ai-narrative h4,
+  .green-work-ai-narrative .green-work-chart-context,
+  .green-work-verra-history h4,
+  .project-controls-col h3,
+  .work-order-row strong,
+  .green-work-multi-assign-header
+) {
+  color: #ffffff !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .staff-row-head span,
+:root[data-workspace-theme="dark"] .green-work-container .staff-overview-status,
+:root[data-workspace-theme="dark"] .green-work-container .staff-overview-type-chip {
+  background: #174b38 !important;
+  border-color: #4b8067 !important;
+  color: #b7ffd1 !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-ai-narrative-textarea,
+:root[data-workspace-theme="dark"] .green-work-container .green-work-verra-filters :where(input, select, textarea),
+:root[data-workspace-theme="dark"] .green-work-container .staff-row textarea {
+  background: #0f1a26 !important;
+  border-color: #66839a !important;
+  color: #ffffff !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container :where(
+  .green-work-ai-narrative-textarea,
+  .green-work-verra-filters :where(input, select, textarea),
+  .staff-row textarea
+)::placeholder {
+  color: #c2d0dd !important;
+  opacity: 1;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .staff-row-status.busy {
+  color: #ffdf91 !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .staff-row-status.normal {
+  color: #72f0a7 !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .staff-row-status.idle {
+  color: #c2d0dd !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-review-flag--warn {
+  background: #493718 !important;
+  border-color: #9b762d !important;
+  color: #ffdf91 !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-review-flag--info {
+  background: #22384a !important;
+  border-color: #66839a !important;
+  color: #b7ddff !important;
+}
+
 /* Keep mobile notification details in the viewport instead of anchoring them to the bell. */
 @media (max-width: 860px) {
   .green-work-header.notifications-is-open {
