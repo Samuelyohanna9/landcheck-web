@@ -354,6 +354,44 @@
   font-weight: 800;
 }
 
+/* The dashboard root is a fixed, overflow-clipped app shell. Keep the mobile notification panel
+   in document.body and anchor it to the bell so it cannot be cut off by that shell or Safari's
+   narrow visual viewport. The variables are repeated here because a body portal cannot inherit
+   the variables scoped to .edash. */
+.edash-notification-popover {
+  --edash-surface: #ffffff;
+  --edash-border: #e4e8ec;
+  --edash-border-soft: #edf0f3;
+  --edash-ink: #101827;
+  --edash-muted: #6b7685;
+  --edash-faint: #98a2b0;
+  --edash-brand: #1a8f5a;
+  --edash-brand-dark: #0f6e44;
+  --edash-neutral: #667085;
+  --edash-neutral-tint: #eef0f3;
+  --edash-radius-lg: 18px;
+  --edash-shadow-card: 0 1px 2px rgba(16, 24, 39, 0.04), 0 8px 24px rgba(16, 24, 39, 0.05);
+  --edash-shadow-pop: 0 12px 32px rgba(16, 24, 39, 0.14);
+  position: fixed;
+  z-index: 1000;
+  width: min(360px, calc(100vw - 16px));
+  max-height: min(480px, calc(100dvh - 76px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--edash-border);
+  border-radius: var(--edash-radius-lg);
+  background: var(--edash-surface);
+  color: var(--edash-ink);
+  box-shadow: var(--edash-shadow-pop);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.edash-notification-popover,
+.edash-notification-popover * { box-sizing: border-box; }
+
 .edash-user {
   display: flex;
   align-items: center;
@@ -1351,6 +1389,14 @@
   .edash-map-toolbar { flex-wrap: wrap; }
   .edash-map-search { flex: 1 1 190px; min-width: 170px; }
   .edash-map-select { width: auto; }
+}
+
+@media (max-width: 520px) {
+  .edash-notification-popover {
+    width: min(340px, calc(100vw - 16px));
+    max-height: calc(100dvh - 70px);
+    border-radius: 14px;
+  }
 }
 
 @media (max-width: 520px) {

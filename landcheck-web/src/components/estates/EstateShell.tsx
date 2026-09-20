@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { API_URL, api, extractApiErrorMessage } from "../../api/client";
@@ -6,6 +7,7 @@ import EstateIcon, { type EstateIconName } from "./EstateIcon";
 import EstateModal from "./EstateModal";
 import { clearEstateAuthSession, getEstateAuthSession } from "../../auth/estateAuth";
 import { prefetchMapboxCore } from "../../utils/mapboxLoader";
+import { useFloatingPopoverPosition } from "../../utils/useFloatingPopoverPosition";
 import "../../styles/estate-dashboard.css";
 
 export type EstateNavKey =
@@ -84,8 +86,10 @@ export default function EstateShell({
   const [companyLogoPath, setCompanyLogoPath] = useState<string | null>(null);
   const estateSession = getEstateAuthSession();
   const activeItem = estateNavItems.find((item) => item.key === activeKey);
-  const notifRef = useRef<HTMLDivElement>(null);
+  const notifButtonRef = useRef<HTMLButtonElement>(null);
+  const notifPopoverRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const notifPosition = useFloatingPopoverPosition(notifButtonRef, notifPopoverRef, notifOpen);
   const canRenameEstate = ["owner", "manager"].includes(String(estateSession?.user.role_key || "").toLowerCase());
 
   useEffect(() => {
@@ -172,16 +176,17 @@ export default function EstateShell({
     ? (companyLogoPath.startsWith("http") ? companyLogoPath : `${API_URL}${companyLogoPath}`)
     : null;
 
-  // Without this, these dropdowns only ever close via their own toggle button - clicking
-  // anywhere else on the page (including the other dropdown) leaves them stuck open.
+  // Keep the notification card dismissible even though it is portalled outside the dashboard
+  // root. Pointer events also work reliably for touch taps on iPhone Safari.
   useEffect(() => {
     if (!notifOpen && !userMenuOpen) return;
-    const handleClickOutside = (event: MouseEvent) => {
-      if (notifOpen && notifRef.current && !notifRef.current.contains(event.target as Node)) setNotifOpen(false);
-      if (userMenuOpen && userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) setUserMenuOpen(false);
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (notifOpen && !notifButtonRef.current?.contains(target) && !notifPopoverRef.current?.contains(target)) setNotifOpen(false);
+      if (userMenuOpen && userMenuRef.current && !userMenuRef.current.contains(target)) setUserMenuOpen(false);
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [notifOpen, userMenuOpen]);
 
   // The map bundle (mapbox-gl + its CSS) is a genuinely large download, and on a slow connection
@@ -255,43 +260,17 @@ export default function EstateShell({
             <div className="edash-toolbar-spacer" style={{ flex: 1 }} />
           )}
           <div className="edash-topbar-right">
-            <div style={{ position: "relative" }} ref={notifRef}>
+            <div style={{ position: "relative" }}>
               <button
                 type="button"
                 className="edash-icon-btn"
+                ref={notifButtonRef}
                 onClick={() => setNotifOpen((value) => { const next = !value; if (next) markActivitySeen(); return next; })}
                 aria-label="Recent updates"
               >
                 <EstateIcon name="bell" />
                 {unreadCount > 0 && <span className="edash-notif-badge">{Math.min(unreadCount, 9)}</span>}
               </button>
-              {notifOpen && (
-                <div className="edash-card" style={{ position: "absolute", right: 0, top: 44, width: 300, zIndex: 20 }}>
-                  <div className="edash-card-inner" style={{ padding: 12 }}>
-                    <div className="edash-card-head" style={{ marginBottom: 8 }}>
-                      <p className="edash-card-title" style={{ fontSize: "0.82rem" }}>Recent updates</p>
-                    </div>
-                    {recentActivity.length ? (
-                      <div className="edash-activity-list">
-                        {recentActivity.slice(0, 5).map((event) => (
-                          <div key={event.id} className="edash-activity-item">
-                            <span className="edash-activity-icon tone-neutral"><EstateIcon name="activity" /></span>
-                            <div className="edash-activity-body">
-                              <strong>{String(event.action || "").replaceAll("_", " ")}</strong>
-                              <span>{relativeTime(event.created_at)}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p style={{ color: "var(--edash-faint)", fontSize: "0.8rem" }}>No activity yet.</p>
-                    )}
-                    <Link className="edash-card-link" style={{ display: "block", marginTop: 10, textAlign: "center" }} to={`/estates/${estateId}/timeline`} onClick={() => setNotifOpen(false)}>
-                      View all activity
-                    </Link>
-                  </div>
-                </div>
-              )}
             </div>
             <div style={{ position: "relative" }} ref={userMenuRef}>
               <div className="edash-user" onClick={() => setUserMenuOpen((value) => !value)}>
@@ -327,6 +306,40 @@ export default function EstateShell({
             </div>
           </div>
         </div>
+        {notifOpen && notifPosition && createPortal(
+          <div
+            ref={notifPopoverRef}
+            className="edash-notification-popover"
+            style={{ top: notifPosition.top, left: notifPosition.left }}
+            role="dialog"
+            aria-label="Recent updates"
+          >
+            <div className="edash-card-inner" style={{ padding: 12 }}>
+              <div className="edash-card-head" style={{ marginBottom: 8 }}>
+                <p className="edash-card-title" style={{ fontSize: "0.82rem" }}>Recent updates</p>
+              </div>
+              {recentActivity.length ? (
+                <div className="edash-activity-list">
+                  {recentActivity.slice(0, 5).map((event) => (
+                    <div key={event.id} className="edash-activity-item">
+                      <span className="edash-activity-icon tone-neutral"><EstateIcon name="activity" /></span>
+                      <div className="edash-activity-body">
+                        <strong>{String(event.action || "").replaceAll("_", " ")}</strong>
+                        <span>{relativeTime(event.created_at)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ color: "var(--edash-faint)", fontSize: "0.8rem" }}>No activity yet.</p>
+              )}
+              <Link className="edash-card-link" style={{ display: "block", marginTop: 10, textAlign: "center" }} to={`/estates/${estateId}/timeline`} onClick={() => setNotifOpen(false)}>
+                View all activity
+              </Link>
+            </div>
+          </div>,
+          document.body,
+        )}
         <div className={`edash-body${activeKey === "map" ? " edash-body--fill" : ""}`}>{children}</div>
       </div>
       {renameOpen && (
