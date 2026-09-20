@@ -7950,9 +7950,10 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
   min-width: 0;
-  padding: 9px 12px;
+  min-height: 40px;
+  padding: 7px 9px;
   white-space: nowrap;
 }
 
@@ -7961,21 +7962,23 @@
   min-width: 0;
   overflow: hidden;
   color: var(--gw-subtext);
-  font-size: 0.73rem;
+  font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0;
   line-height: 1.2;
   text-overflow: ellipsis;
-  text-transform: none;
+  text-transform: none !important;
 }
 
 .green-work-map-overview-metrics .green-work-map-metric-value {
   display: block;
   flex: 0 0 auto;
   color: var(--gw-text);
-  font-size: 1.08rem;
+  font-size: 0.96rem;
   font-weight: 800;
   line-height: 1;
+  justify-self: end;
+  font-variant-numeric: tabular-nums;
 }
 
 .green-work-container.has-tree-inspector-panel .green-work-main.map-view-mode,
@@ -8004,7 +8007,37 @@
   }
 
   .green-work-map-overview-metrics > div {
-    padding: 8px 10px;
+    padding: 7px 8px;
+  }
+}
+
+/* The map area is narrower than the browser viewport once the navigation rail and
+   inspector are accounted for. Change the KPI density at the content width, not only
+   at the viewport width, so laptop layouts never force four cramped cells. */
+@media (min-width: 861px) and (max-width: 1400px), (min-width: 521px) and (max-width: 860px) {
+  .green-work-map-top-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .green-work-map-top-metrics > div {
+    min-height: 38px;
+    padding: 6px 7px;
+  }
+
+  .green-work-map-overview-metrics .green-work-map-metric-label {
+    font-size: 0.63rem;
+  }
+
+  .green-work-map-overview-metrics .green-work-map-metric-value {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .green-work-map-top-metrics {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -8061,6 +8094,134 @@
 :root[data-workspace-theme="dark"] .green-work-container :where(input, select, textarea)::placeholder {
   color: #ffffff !important;
   opacity: 0.82;
+}
+
+/* Keep every Work control legible on the dark canvas. This final button contract also
+   covers utility buttons whose domain styles predate the theme layer, including disabled
+   project options and table actions. */
+:root[data-workspace-theme="dark"] .green-work-container button {
+  border-color: #66839a;
+  background: #1a2d40;
+  color: #ffffff !important;
+  opacity: 1;
+  text-shadow: none;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container button:hover:not(:disabled),
+:root[data-workspace-theme="dark"] .green-work-container button:focus-visible {
+  border-color: #72e7a9;
+  background: #244057;
+  color: #ffffff !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container button:focus-visible {
+  outline: 2px solid #72e7a9;
+  outline-offset: 2px;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container button:disabled {
+  border-color: #71899d;
+  background: #314252;
+  color: #ffffff !important;
+  cursor: not-allowed;
+  opacity: 0.92;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-menu-item,
+:root[data-workspace-theme="dark"] .green-work-container .green-work-menu-item.green-work-menu-item--nested {
+  border-color: transparent;
+  background: transparent;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-menu-item:hover:not(:disabled),
+:root[data-workspace-theme="dark"] .green-work-container .green-work-menu-item.green-work-menu-item--nested:hover:not(:disabled) {
+  border-color: #385d73;
+  background: #244057;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-menu-item.active {
+  border-color: #398761;
+  background: var(--gw-brand-tint);
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-card .btn-primary,
+:root[data-workspace-theme="dark"] .green-work-container .green-work-primary-btn,
+:root[data-workspace-theme="dark"] .green-work-container .green-work-tree-health-btn,
+:root[data-workspace-theme="dark"] .green-work-container .green-work-tree-meta-save,
+:root[data-workspace-theme="dark"] .green-work-container .green-work-live-years-btn,
+:root[data-workspace-theme="dark"] .green-work-container .green-work-notifications-link {
+  border-color: #4ee092;
+  background: #1b9656;
+  color: #ffffff !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-card .btn-primary:hover:not(:disabled),
+:root[data-workspace-theme="dark"] .green-work-container .green-work-primary-btn:hover:not(:disabled),
+:root[data-workspace-theme="dark"] .green-work-container .green-work-tree-health-btn:hover:not(:disabled),
+:root[data-workspace-theme="dark"] .green-work-container .green-work-tree-meta-save:hover:not(:disabled),
+:root[data-workspace-theme="dark"] .green-work-container .green-work-live-years-btn:hover:not(:disabled),
+:root[data-workspace-theme="dark"] .green-work-container .green-work-notifications-link:hover:not(:disabled) {
+  border-color: #9af5bf;
+  background: #25b86d;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-danger-btn,
+:root[data-workspace-theme="dark"] .green-work-container .green-work-verra-disclosure-btn {
+  border-color: #ff8995;
+  background: #a92f43;
+  color: #ffffff !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-danger-btn:hover:not(:disabled),
+:root[data-workspace-theme="dark"] .green-work-container .green-work-verra-disclosure-btn:hover:not(:disabled) {
+  border-color: #ffb5bc;
+  background: #c83b51;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-btn-primary {
+  border-color: #4ee092;
+  background: #1b9656;
+  color: #ffffff !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-btn-outline {
+  border-color: #66839a;
+  background: #1a2d40;
+  color: #ffffff !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-link-btn {
+  border-color: transparent;
+  background: transparent;
+  color: #9af5bf !important;
+  box-shadow: none;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-inline-upload-btn,
+:root[data-workspace-theme="dark"] .green-work-container .green-work-export-photo-toggle,
+:root[data-workspace-theme="dark"] .green-work-container .green-work-share-preview-link {
+  border-color: #66839a;
+  background: #1a2d40;
+  color: #ffffff !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-map-filter-btn,
+:root[data-workspace-theme="dark"] .green-work-container .green-work-tree-drawer-close,
+:root[data-workspace-theme="dark"] .green-work-container .green-work-menu-close,
+:root[data-workspace-theme="dark"] .green-work-container .green-work-option-toggle,
+:root[data-workspace-theme="dark"] .green-work-container .green-work-toggle-btn,
+:root[data-workspace-theme="dark"] .green-work-container .green-work-tree-photo-upload-btn {
+  border-color: #66839a;
+  background: #1a2d40;
+  color: #ffffff !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-toggle-btn.active,
+:root[data-workspace-theme="dark"] .green-work-container .green-work-live-scope-tab.active,
+:root[data-workspace-theme="dark"] .green-work-container .green-work-hub-tab.is-active {
+  border-color: #72e7a9;
+  background: #174b38;
+  color: #ffffff !important;
 }
 
 /* Mobile shell: keep the header useful, move navigation into a true viewport drawer, and
