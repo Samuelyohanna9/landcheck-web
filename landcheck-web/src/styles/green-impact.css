@@ -2249,9 +2249,14 @@
 .gi-page .gi-topbar {
   min-height: 64px;
   padding: 0.7rem clamp(0.85rem, 2vw, 1.5rem);
-  border-bottom-color: #294157;
-  background: #132234;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 8px 20px rgba(8, 21, 33, 0.14);
+  border-bottom-color: var(--gi-border);
+  background: #ffffff;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 6px 18px rgba(15, 31, 45, 0.06);
+}
+
+.gi-page .gi-topbar-brand,
+.gi-page .gi-topbar-name {
+  color: var(--gi-text);
 }
 
 .gi-page .gi-topbar-logo {
@@ -2283,8 +2288,9 @@
 }
 
 .gi-page .gi-btn-ghost {
-  background: #1b2c3d;
-  border-color: #5a7389;
+  color: var(--gi-text);
+  background: #ffffff;
+  border-color: var(--gi-border-strong);
 }
 
 .gi-page .gi-btn:focus-visible,
@@ -2298,30 +2304,62 @@
 
 .gi-page .gi-hero {
   padding: 1.25rem clamp(0.85rem, 2vw, 1.5rem) 2.7rem;
-  background: #132234;
+  background: #f3f6f8;
 }
 
 .gi-page .gi-hero::before {
   background:
-    linear-gradient(130deg, rgba(54, 189, 122, 0.1), transparent 42%),
-    radial-gradient(circle at 100% 0, rgba(77, 157, 212, 0.12), transparent 36%);
+    linear-gradient(130deg, rgba(54, 189, 122, 0.08), transparent 42%),
+    radial-gradient(circle at 100% 0, rgba(77, 157, 212, 0.08), transparent 36%);
 }
 
 .gi-page .gi-hero-copy,
 .gi-page .gi-hero-highlights {
   border-radius: var(--gi-radius-xl);
-  border-color: #3c566d;
-  box-shadow: none;
+  border-color: var(--gi-border);
+  box-shadow: var(--gi-shadow-sm);
 }
 
 .gi-page .gi-hero-copy {
   padding: 1.35rem;
-  background: #16293b;
+  background: #ffffff;
+  color: var(--gi-text);
 }
 
 .gi-page.gi-mode-agric .gi-hero-copy,
 .gi-page.gi-mode-relief .gi-hero-copy {
-  background: #16293b;
+  background: #ffffff;
+}
+
+.gi-page .gi-hero-kicker {
+  border-color: var(--gi-accent-border);
+  background: var(--gi-accent-faint);
+  color: var(--gi-accent-mid);
+}
+
+.gi-page .gi-hero-logo-wrap {
+  border-color: var(--gi-border-strong);
+  background: #f7fafc;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.gi-page .gi-hero-logo-placeholder {
+  background: var(--gi-accent-soft);
+  color: var(--gi-accent-dark);
+}
+
+.gi-page .gi-hero-org-name {
+  color: var(--gi-text);
+}
+
+.gi-page .gi-hero-org-sub,
+.gi-page .gi-hero-description {
+  color: var(--gi-text-mid);
+}
+
+.gi-page .gi-hero-sub-link {
+  color: var(--gi-accent-mid);
+  border-bottom-color: var(--gi-accent-border);
 }
 
 .gi-page .gi-hero-highlights {
@@ -2403,12 +2441,42 @@
 .gi-page .gi-project-header {
   padding: 1.2rem 1.25rem 1.1rem;
   border-top: 3px solid var(--gi-accent);
-  background: #16293b;
+  background: #ffffff;
+  color: var(--gi-text);
 }
 
 .gi-page.gi-mode-agric .gi-project-header,
 .gi-page.gi-mode-relief .gi-project-header {
-  background: #16293b;
+  background: #ffffff;
+}
+
+.gi-page .gi-project-mode-chip {
+  border-color: var(--gi-accent-border);
+  background: var(--gi-accent-faint);
+  color: var(--gi-accent-mid);
+}
+
+.gi-page .gi-project-name {
+  color: var(--gi-text);
+}
+
+.gi-page .gi-project-sponsor,
+.gi-page .gi-project-meta {
+  color: var(--gi-text-mid);
+}
+
+.gi-page .gi-project-lead {
+  border-color: var(--gi-border);
+  background: #f7fafc;
+  box-shadow: none;
+}
+
+.gi-page .gi-project-lead span {
+  color: var(--gi-text-soft);
+}
+
+.gi-page .gi-project-lead strong {
+  color: var(--gi-text);
 }
 
 .gi-page .gi-project-body {
@@ -2511,24 +2579,30 @@
 
 .gi-page .gi-footer {
   padding: 1.35rem clamp(0.85rem, 2vw, 1.5rem) 1.7rem;
-  background: #132234;
+  border-top: 1px solid var(--gi-border);
+  background: #ffffff;
 }
 
 .gi-page .gi-footer-text,
 .gi-page .gi-footer-verified,
 .gi-page .gi-footer-link {
-  color: #c2d1dd;
+  color: var(--gi-text-soft);
 }
 
 .gi-page .gi-footer-verified {
-  color: #8be0b2;
+  color: var(--gi-accent-mid);
+}
+
+.gi-page .gi-footer-divider {
+  background: var(--gi-border);
 }
 
 .gi-page .gi-copied-toast {
   bottom: 1rem;
-  border: 1px solid #4bd88d;
+  border: 1px solid var(--gi-accent-border);
   border-radius: 8px;
-  background: #16293b;
+  background: #ffffff;
+  color: var(--gi-text);
   box-shadow: var(--gi-shadow-md);
 }
 
