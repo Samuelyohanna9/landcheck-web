@@ -1518,6 +1518,27 @@ const isHiddenSupportPlaceholderTree = (tree?: Pick<Tree, "record_profile_data">
     normalizeName(tree.record_profile_data.placeholder_reason),
   );
 };
+const sequenceProjectTreesForDisplay = (rows: any[]) => {
+  const visibleRows = rows
+    .filter((row) => !isHiddenSupportPlaceholderTree(row))
+    .slice()
+    .sort((a, b) => {
+      const aCreated = Date.parse(String(a?.created_at || ""));
+      const bCreated = Date.parse(String(b?.created_at || ""));
+      const aOrder = Number.isFinite(aCreated) ? aCreated : Number.POSITIVE_INFINITY;
+      const bOrder = Number.isFinite(bCreated) ? bCreated : Number.POSITIVE_INFINITY;
+      return aOrder - bOrder || Number(a?.id || 0) - Number(b?.id || 0);
+    });
+  const numberByTreeId = new Map<number, number>();
+  visibleRows.forEach((row, index) => {
+    const treeId = Number(row?.id || 0);
+    if (treeId > 0) numberByTreeId.set(treeId, index + 1);
+  });
+  return rows.map((row) => ({
+    ...row,
+    project_tree_no: numberByTreeId.get(Number(row?.id || 0)) || null,
+  }));
+};
 const normalizeSpeciesAllocations = (
   value: unknown,
 ): Array<{ species: string; count: number }> => {
@@ -4891,7 +4912,8 @@ export default function GreenWork() {
         });
       }
       if (cachedTrees && cachedTrees.length > 0) {
-        setTrees(cachedTrees.filter((t: any) => Number.isFinite(Number(t.lng)) && Number.isFinite(Number(t.lat))));
+        const cachedVisibleTrees = cachedTrees.filter((t: any) => Number.isFinite(Number(t.lng)) && Number.isFinite(Number(t.lat)));
+        setTrees(sequenceProjectTreesForDisplay(cachedVisibleTrees));
       }
       return;
     }
@@ -5024,12 +5046,13 @@ export default function GreenWork() {
             tree.record_profile_data && typeof tree.record_profile_data === "object" ? tree.record_profile_data : null,
         }))
         .filter((tree: any) => Number.isFinite(tree.lng) && Number.isFinite(tree.lat));
-      setTrees(normalizedTrees);
-      cacheProjectTreesOffline(projectId, normalizedTrees).catch(() => {});
+      const sequencedTrees = sequenceProjectTreesForDisplay(normalizedTrees);
+      setTrees(sequencedTrees);
+      cacheProjectTreesOffline(projectId, sequencedTrees).catch(() => {});
     } else {
       // Offline fallback for trees
       const cachedTrees = await getCachedProjectTreesOffline(projectId).catch(() => []);
-      setTrees(cachedTrees.length > 0 ? cachedTrees : []);
+      setTrees(cachedTrees.length > 0 ? sequenceProjectTreesForDisplay(cachedTrees) : []);
     }
 
     if (tasksRes.status === "fulfilled") {
@@ -7144,28 +7167,37 @@ export default function GreenWork() {
   };
 
   const deletePlantingAreaFromWork = async (area: MapAssignmentArea) => {
-    if (!activeProjectId || deletingPlantingAreaId !== null || area.source !== "work_order") return;
-    const workOrderId = Number(area.workOrderId ?? area.id);
-    if (!Number.isFinite(workOrderId) || workOrderId <= 0) return;
-    const areaLabel = String(area.label || `Planting area #${workOrderId}`);
+    if (!activeProjectId || deletingPlantingAreaId !== null) return;
+    const isWorkOrderArea = area.source === "work_order";
+    const targetId = Number(isWorkOrderArea ? area.workOrderId ?? area.id : area.treeId);
+    if (!Number.isFinite(targetId) || targetId <= 0) return;
+    const areaLabel = String(area.label || (isWorkOrderArea ? `Planting area #${targetId}` : `Tree #${targetId} field polygon`));
     const confirmed = window.confirm(
-      `Remove "${areaLabel}" from the map? This only removes the planting boundary; the planting order and recorded trees will remain.`,
+      `Remove "${areaLabel}" from the map? This clears only the polygon; the planting order and recorded tree data will remain.`,
     );
     if (!confirmed) return;
 
-    setDeletingPlantingAreaId(workOrderId);
+    setDeletingPlantingAreaId(targetId);
     try {
-      await api.patch(`/green/work-orders/${workOrderId}`, {
-        area_enabled: false,
-        area_label: null,
-        area_geojson: null,
-        allow_existing_tree_area_reuse: false,
-      });
+      if (isWorkOrderArea) {
+        await api.patch(`/green/work-orders/${targetId}`, {
+          area_enabled: false,
+          area_label: null,
+          area_geojson: null,
+          allow_existing_tree_area_reuse: false,
+        });
+      } else {
+        await api.patch(`/green/trees/${targetId}`, {
+          existing_area_geojson: null,
+          clear_existing_area_geojson: true,
+          actor_name: "supervisor",
+        });
+      }
       setInspectedAssignmentArea(null);
       await loadProjectData(activeProjectId);
-      toast.success("Planting area removed from the map.");
+      toast.success("Polygon removed from the map.");
     } catch (error: any) {
-      toast.error(error?.response?.data?.detail || "Failed to remove planting area");
+      toast.error(error?.response?.data?.detail || "Failed to remove polygon");
     } finally {
       setDeletingPlantingAreaId(null);
     }
@@ -9248,7 +9280,7 @@ export default function GreenWork() {
   const mapWorkflowProfile = draftWorkflowProfile;
   const existingTreeMapAreas = useMemo<MapAssignmentArea[]>(
     () =>
-      mapViewTrees
+      visibleProjectTrees
         .map((tree) => {
           const geometry = normalizeMapAreaGeometry(tree.existing_area_geojson);
           if (!geometry) return null;
@@ -9271,16 +9303,19 @@ export default function GreenWork() {
                   : `Tree #${localNo} - Existing area`,
             treeId: tree.id,
             source: "existing_tree",
+            assignee_name: tree.created_by,
+            target_trees: labelCount,
+            status: tree.status,
             geojson: geometry,
           };
         })
         .filter((item): item is NonNullable<typeof item> => Boolean(item)),
-    [mapViewTrees, mapWorkflowProfile],
+    [visibleProjectTrees, mapWorkflowProfile],
   );
   const plantingWorkOrderAreas = useMemo<MapAssignmentArea[]>(
     () =>
       orders
-        .filter((order) => order.work_type === "planting" && Boolean(order.area_enabled) && Boolean(order.area_geojson))
+        .filter((order) => order.work_type === "planting" && Boolean(order.area_geojson))
         .map((order) => {
           const geometry = normalizeMapAreaGeometry(order.area_geojson);
           if (!geometry) return null;
@@ -18982,7 +19017,7 @@ export default function GreenWork() {
           />
           <aside className="green-work-tree-drawer green-work-tree-inspector" aria-label="Planting area details">
             <div className="green-work-tree-drawer-head">
-              <strong>Planting Area</strong>
+              <strong>{inspectedAssignmentArea.source === "existing_tree" ? "Field Polygon" : "Planting Area"}</strong>
               <button
                 className="green-work-tree-drawer-close"
                 type="button"
@@ -18995,7 +19030,7 @@ export default function GreenWork() {
             <div className="green-work-tree-inspector-body">
               <h4>{inspectedAssignmentArea.label}</h4>
               <p className="green-work-tree-inspector-notes">
-                This polygon is the field boundary assigned for planting. Remove it here when the map should no longer show this boundary.
+                This polygon is a field boundary used on the map. Remove it here when the map should no longer show this boundary.
               </p>
               <div className="green-work-tree-inspector-grid">
                 <div>
@@ -19015,17 +19050,29 @@ export default function GreenWork() {
                   <strong>{formatTaskTypeLabel(inspectedAssignmentArea.status || "open")}</strong>
                 </div>
               </div>
-              {inspectedAssignmentArea.source === "work_order" && (
+              {(inspectedAssignmentArea.source === "work_order" || inspectedAssignmentArea.source === "existing_tree") && (
                 <div className="work-actions" style={{ marginTop: 16 }}>
                   <button
                     className="green-work-danger-btn"
                     type="button"
-                    disabled={deletingPlantingAreaId === Number(inspectedAssignmentArea.workOrderId ?? inspectedAssignmentArea.id)}
+                    disabled={
+                      deletingPlantingAreaId ===
+                      Number(
+                        inspectedAssignmentArea.source === "work_order"
+                          ? inspectedAssignmentArea.workOrderId ?? inspectedAssignmentArea.id
+                          : inspectedAssignmentArea.treeId,
+                      )
+                    }
                     onClick={() => void deletePlantingAreaFromWork(inspectedAssignmentArea)}
                   >
-                    {deletingPlantingAreaId === Number(inspectedAssignmentArea.workOrderId ?? inspectedAssignmentArea.id)
-                      ? "Removing Planting Area..."
-                      : "Remove Planting Area"}
+                    {deletingPlantingAreaId ===
+                    Number(
+                      inspectedAssignmentArea.source === "work_order"
+                        ? inspectedAssignmentArea.workOrderId ?? inspectedAssignmentArea.id
+                        : inspectedAssignmentArea.treeId,
+                    )
+                      ? "Removing Polygon..."
+                      : "Remove Polygon"}
                   </button>
                 </div>
               )}
@@ -19064,21 +19111,21 @@ export default function GreenWork() {
               </button>
             </div>
             <div className="green-work-tree-inspector-body">
-              {plantingWorkOrderAreas.length > 0 && (
+              {mapAssignmentAreas.length > 0 && (
                 <section className="green-work-planting-area-management" aria-label="Planting area management">
                   <div className="green-work-planting-area-management-head">
-                    <strong>Planting areas</strong>
-                    <span>{plantingWorkOrderAreas.length}</span>
+                    <strong>Map polygons</strong>
+                    <span>{mapAssignmentAreas.length}</span>
                   </div>
                   <p className="green-work-note">
-                    Boundaries assigned to field teams. Select one to inspect it or remove it from the map.
+                    Supervisor and field-captured boundaries. Select one to inspect it or remove it from the map.
                   </p>
                   <div className="green-work-planting-area-list">
-                    {plantingWorkOrderAreas.map((area) => {
-                      const areaWorkOrderId = Number(area.workOrderId ?? area.id);
-                      const removing = deletingPlantingAreaId === areaWorkOrderId;
+                    {mapAssignmentAreas.map((area) => {
+                      const areaTargetId = Number(area.source === "work_order" ? area.workOrderId ?? area.id : area.treeId);
+                      const removing = deletingPlantingAreaId === areaTargetId;
                       return (
-                        <div key={`tree-inspector-area-${areaWorkOrderId}`} className="green-work-planting-area-row">
+                        <div key={`tree-inspector-area-${area.source}-${String(area.id)}`} className="green-work-planting-area-row">
                           <button
                             type="button"
                             className="green-work-planting-area-select"
@@ -19094,7 +19141,7 @@ export default function GreenWork() {
                           <button
                             type="button"
                             className="green-work-planting-area-remove"
-                            disabled={removing}
+                            disabled={removing || !Number.isFinite(areaTargetId) || areaTargetId <= 0}
                             onClick={() => void deletePlantingAreaFromWork(area)}
                           >
                             {removing ? "Removing..." : "Remove"}
