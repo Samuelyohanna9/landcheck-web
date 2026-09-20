@@ -4791,6 +4791,24 @@ body:has(.green-container) {
     padding-top: env(safe-area-inset-top);
   }
 
+  .green-container.green-home-mode .green-header {
+    display: block !important;
+  }
+
+  .green-container.green-home-mode .green-header-inner {
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .green-container.green-home-mode .green-header-brand {
+    display: flex !important;
+  }
+
+  .green-container.green-home-mode .green-header-actions {
+    width: auto;
+    justify-content: flex-end;
+  }
+
   .green-container .green-header-inner {
     min-height: 58px;
     padding: 0.55rem 0.8rem;
@@ -4834,10 +4852,20 @@ body:has(.green-container) {
 
   .green-container.green-home-mode .green-mobile-hero {
     display: block;
+    padding: 0.75rem 0.8rem;
+    border-radius: 18px;
     border: 1px solid #cae7d2;
     background: linear-gradient(145deg, #f5fcf7 0%, #e3f6e9 100%);
     color: var(--field-ink);
     box-shadow: 0 8px 18px rgba(47, 119, 71, 0.08);
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-brand {
+    display: none;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-greeting {
+    margin-top: 0;
   }
 
   .green-container.green-home-mode .green-mobile-hero::after {
