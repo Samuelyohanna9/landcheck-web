@@ -11157,11 +11157,12 @@ export default function GreenWork() {
     const viewportWidth = window.innerWidth || 1280;
     const viewportHeight = window.innerHeight || 720;
 
-    const top = Math.round(Math.max(8, menuRect.bottom + 8));
+    const compactViewport = viewportWidth <= 860;
+    const top = compactViewport ? 0 : Math.round(Math.max(8, menuRect.bottom + 8));
     const width = Math.round(Math.min(340, Math.max(260, viewportWidth - 16)));
-    const left = Math.round(Math.max(8, Math.min(menuRect.left, viewportWidth - width - 8)));
+    const left = compactViewport ? 0 : Math.round(Math.max(8, Math.min(menuRect.left, viewportWidth - width - 8)));
     const bottom = Math.round(mapRect ? Math.min(viewportHeight - 8, mapRect.bottom) : viewportHeight - 8);
-    const height = Math.max(260, bottom - top);
+    const height = compactViewport ? viewportHeight : Math.max(260, bottom - top);
 
     const next: DrawerFrame = { top, left, width, height };
     setDrawerFrame((prev) => {
@@ -11194,6 +11195,18 @@ export default function GreenWork() {
       window.removeEventListener("scroll", onViewportChange, true);
     };
   }, [recalcDrawerFrame]);
+
+  useEffect(() => {
+    if (!menuOpen || window.innerWidth > 860) return;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousDocumentOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousDocumentOverflow;
+    };
+  }, [menuOpen]);
 
   const drawerStyle = drawerFrame
     ? {
@@ -11564,11 +11577,30 @@ export default function GreenWork() {
   };
 
   return (
-    <div className={`green-work-container ${showTreeInspectorPanel ? "has-tree-inspector-panel" : ""}`}>
+    <div className={`green-work-container ${showTreeInspectorPanel ? "has-tree-inspector-panel" : ""} ${menuOpen ? "menu-is-open" : ""}`}>
       <Toaster position="top-right" />
       {privacyConsentModal}
       <header className="green-work-header">
         <div className="green-work-header-inner green-work-header-inner--actions-only">
+          <div className="green-work-mobile-nav">
+            <button
+              className="green-work-menu-btn green-work-mobile-menu-btn"
+              type="button"
+              onClick={() => setMenuOpen((prev) => !prev)}
+              aria-label={menuOpen ? "Close workspace menu" : "Open workspace menu"}
+              aria-expanded={menuOpen}
+              aria-controls="green-work-menu-drawer"
+              ref={menuButtonRef}
+            >
+              <span />
+              <span />
+              <span />
+            </button>
+            <div className="green-work-mobile-brand" aria-label="LandCheck Work">
+              <img src={GREEN_LOGO_SRC} alt="" width="28" height="28" />
+              <span><strong>LandCheck</strong> <small>Work</small></span>
+            </div>
+          </div>
           <div className="green-work-header-actions">
             <div className="green-work-notifications">
               <button
@@ -11640,7 +11672,6 @@ export default function GreenWork() {
             type="button"
             onClick={() => setMenuOpen((prev) => !prev)}
             aria-label="Open forms menu"
-            ref={menuButtonRef}
           >
             <span />
             <span />
@@ -11732,7 +11763,7 @@ export default function GreenWork() {
         />
       )}
 
-      <aside className={`green-work-menu-drawer ${menuOpen ? "open" : ""}`} style={menuOpen ? drawerStyle : undefined}>
+      <aside id="green-work-menu-drawer" className={`green-work-menu-drawer ${menuOpen ? "open" : ""}`} style={menuOpen ? drawerStyle : undefined}>
         <div className="green-work-menu-head">
           <div className="green-work-menu-branding">
             <div className="green-work-menu-brand-logos" aria-label="LandCheck Work logos">
