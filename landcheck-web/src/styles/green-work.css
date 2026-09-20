@@ -8041,6 +8041,48 @@
   }
 }
 
+/* Use the available desktop width for the map and KPI stack. The fixed navigation rail
+   and inspector still own their space; only the empty outer gutters are reduced. */
+@media (min-width: 861px) {
+  .green-work-content {
+    width: calc(100% - 8px);
+    max-width: none;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .green-work-content .green-work-main.map-view-mode,
+  .green-work-content .green-work-main.remote-monitoring-mode {
+    min-width: 0;
+  }
+
+  .green-work-container.has-tree-inspector-panel .green-work-main.map-view-mode,
+  .green-work-container.has-tree-inspector-panel .green-work-main.remote-monitoring-mode {
+    padding-right: calc(clamp(320px, 28vw, 420px) + 8px);
+  }
+
+  .green-work-map-card,
+  .green-work-map-top-metrics,
+  .green-work-map-overview-card {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+/* The empty detail panel is rendered even before a tree is selected. Give it an explicit
+   dark surface so the panel and its guidance text never inherit a white light-mode surface. */
+:root[data-workspace-theme="dark"] .green-work-container .green-work-tree-drawer.green-work-tree-inspector,
+:root[data-workspace-theme="dark"] .green-work-container .green-work-tree-inspector-empty-state {
+  background: var(--gw-surface) !important;
+  background-image: none !important;
+  border-color: var(--gw-border) !important;
+  color: #ffffff !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-tree-inspector-empty-state :where(svg, strong, p) {
+  color: #ffffff !important;
+}
+
 /* Dark mode uses a solid, high-contrast text system so labels do not fade into the navy
    surfaces. Green remains an accent for active states and map controls. */
 :root[data-workspace-theme="dark"] .green-work-container {
