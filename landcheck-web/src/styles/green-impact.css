@@ -2594,103 +2594,117 @@
   }
 }
 
-/* Public impact links inherit the workspace theme when opened from the dashboard. */
-:root[data-workspace-theme="dark"] .gi-page {
-  --gi-surface: #162231;
-  --gi-surface-soft: #1b2b3a;
-  --gi-text: #ffffff;
-  --gi-text-mid: #d2dee8;
-  --gi-text-soft: #bdcbd7;
-  --gi-text-faint: #9eb0c0;
-  --gi-border: #304254;
-  --gi-border-strong: #5a7185;
-  --gi-shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.2);
-  --gi-shadow-md: 0 12px 28px rgba(0, 0, 0, 0.24);
-  --gi-shadow-lg: 0 18px 40px rgba(0, 0, 0, 0.3);
-  background: #0f1720;
+/* Keep public report typography compact and aligned with the dashboard. */
+.gi-page {
+  font-size: 14px;
 }
 
-:root[data-workspace-theme="dark"] .gi-page .gi-hero,
-:root[data-workspace-theme="dark"] .gi-page .gi-topbar,
-:root[data-workspace-theme="dark"] .gi-page .gi-footer {
-  background: #0f1d2c;
+.gi-page .gi-topbar-name,
+.gi-page .gi-btn {
+  font-size: 0.8rem;
 }
 
-:root[data-workspace-theme="dark"] .gi-page .gi-hero-copy,
-:root[data-workspace-theme="dark"] .gi-page .gi-project-header {
-  background: #16293b;
+.gi-page .gi-hero-kicker,
+.gi-page .gi-hero-verified-badge,
+.gi-page .gi-project-mode-chip,
+.gi-page .gi-summary-context,
+.gi-page .gi-metric-kicker,
+.gi-page .gi-form-label {
+  font-size: 0.64rem;
 }
 
-:root[data-workspace-theme="dark"] .gi-page .gi-hero-highlights,
-:root[data-workspace-theme="dark"] .gi-page .gi-summary-grid,
-:root[data-workspace-theme="dark"] .gi-page .gi-project-card,
-:root[data-workspace-theme="dark"] .gi-page .gi-board-card,
-:root[data-workspace-theme="dark"] .gi-page .gi-endorsement-form,
-:root[data-workspace-theme="dark"] .gi-page .gi-comment-card {
-  background: #162231;
-  border-color: #304254;
+.gi-page .gi-hero-org-name {
+  font-size: clamp(1.35rem, 2.5vw, 2.05rem);
 }
 
-:root[data-workspace-theme="dark"] .gi-page .gi-hero-highlight,
-:root[data-workspace-theme="dark"] .gi-page .gi-hero-mix,
-:root[data-workspace-theme="dark"] .gi-page .gi-project-lead,
-:root[data-workspace-theme="dark"] .gi-page .gi-prog-chip,
-:root[data-workspace-theme="dark"] .gi-page .gi-readiness-tile,
-:root[data-workspace-theme="dark"] .gi-page .gi-meter-card-shell,
-:root[data-workspace-theme="dark"] .gi-page .gi-insight-kpi,
-:root[data-workspace-theme="dark"] .gi-page .gi-metric-tile,
-:root[data-workspace-theme="dark"] .gi-page .gi-rate-bar-wrap,
-:root[data-workspace-theme="dark"] .gi-page .gi-farmer-list,
-:root[data-workspace-theme="dark"] .gi-page .gi-farmer-row {
-  background: #1b2b3a;
-  border-color: #304254;
+.gi-page .gi-hero-description,
+.gi-page .gi-endorsements-intro {
+  font-size: 0.88rem;
+  line-height: 1.55;
 }
 
-:root[data-workspace-theme="dark"] .gi-page .gi-form-input,
-:root[data-workspace-theme="dark"] .gi-page .gi-form-textarea,
-:root[data-workspace-theme="dark"] .gi-page .gi-farmer-search {
-  background: #0c1927;
-  border-color: #5a7185;
-  color: #ffffff;
+.gi-page .gi-hero-panel-title,
+.gi-page .gi-section-heading-text {
+  font-size: 0.98rem;
 }
 
-:root[data-workspace-theme="dark"] .gi-page .gi-form-input:focus,
-:root[data-workspace-theme="dark"] .gi-page .gi-form-textarea:focus {
-  background: #0c1927;
-  box-shadow: 0 0 0 3px rgba(75, 216, 141, 0.2);
+.gi-page .gi-hero-panel-copy,
+.gi-page .gi-hero-highlight strong,
+.gi-page .gi-project-meta,
+.gi-page .gi-project-lead strong,
+.gi-page .gi-board-card-subtitle,
+.gi-page .gi-readiness-note,
+.gi-page .gi-comment-body {
+  font-size: 0.8rem;
 }
 
-:root[data-workspace-theme="dark"] .gi-page .gi-summary-cell:not(:last-child)::after {
-  background: #304254;
+.gi-page .gi-hero-highlight span,
+.gi-page .gi-hero-mix-helper,
+.gi-page .gi-prog-chip-label,
+.gi-page .gi-farmer-directory-note,
+.gi-page .gi-insight-kpi span {
+  font-size: 0.66rem;
 }
 
-:root[data-workspace-theme="dark"] .gi-page .gi-summary-val {
-  color: #8be0b2;
+.gi-page .gi-hero-mix-label,
+.gi-page .gi-prog-chip-value,
+.gi-page .gi-farmer-name,
+.gi-page .gi-breakdown-label,
+.gi-page .gi-breakdown-count,
+.gi-page .gi-insight-kpi strong {
+  font-size: 0.78rem;
 }
 
-:root[data-workspace-theme="dark"] .gi-page .gi-map-wrap {
-  background: #0c1927;
-  border-color: #304254;
+.gi-page .gi-summary-val {
+  font-size: clamp(1.3rem, 2.4vw, 1.8rem);
 }
 
-:root[data-workspace-theme="dark"] .gi-page .gi-empty-section {
-  background: #1b2b3a;
-  border-color: #5a7185;
-  color: #d2dee8;
+.gi-page .gi-summary-label,
+.gi-page .gi-rate-bar-label,
+.gi-page .gi-metric-label,
+.gi-page .gi-farmer-row-meta,
+.gi-page .gi-timeline-meta,
+.gi-page .gi-timeline-notes,
+.gi-page .gi-footer-text,
+.gi-page .gi-footer-verified,
+.gi-page .gi-footer-link {
+  font-size: 0.74rem;
 }
 
-:root[data-workspace-theme="dark"] .gi-page .gi-form-error {
-  background: #42252d;
-  border-color: #a64956;
-  color: #ffb8bf;
+.gi-page .gi-project-name {
+  font-size: clamp(1.2rem, 2.25vw, 1.6rem);
 }
 
-:root[data-workspace-theme="dark"] .gi-page .gi-form-success {
-  background: #174b38;
-  border-color: #4b8067;
-  color: #a5f1c4;
+.gi-page .gi-board-card-title {
+  font-size: 0.95rem;
 }
 
-:root[data-workspace-theme="dark"] .gi-page .gi-footer-divider {
-  background: #3c566d;
+.gi-page .gi-readiness-value,
+.gi-page .gi-meter-value,
+.gi-page .gi-metric-val {
+  font-size: 1.35rem;
+}
+
+.gi-page .gi-meter-value-label,
+.gi-page .gi-meter-note,
+.gi-page .gi-cadence-bar-label,
+.gi-page .gi-cadence-bar-count,
+.gi-page .gi-timeline-date {
+  font-size: 0.7rem;
+}
+
+.gi-page .gi-form-input,
+.gi-page .gi-form-textarea,
+.gi-page .gi-farmer-search {
+  font-size: 0.82rem;
+}
+
+@media (max-width: 540px) {
+  .gi-page .gi-summary-val {
+    font-size: 1.35rem;
+  }
+
+  .gi-page .gi-project-name {
+    font-size: 1.2rem;
+  }
 }
