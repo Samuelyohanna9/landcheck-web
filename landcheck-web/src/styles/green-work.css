@@ -9228,5 +9228,78 @@
   }
 }
 
+/* Live maintenance table semantic states need dark surfaces as well as bright text. */
+:root[data-workspace-theme="dark"] .green-work-container .green-work-live-table-wrap {
+  background: #1a2d40 !important;
+  border-color: #607b92 !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-live-table thead th,
+:root[data-workspace-theme="dark"] .green-work-container .green-work-live-table tbody td {
+  color: #ffffff !important;
+  border-color: #385269 !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-live-hint {
+  color: #c2d0dd !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container :where(
+  .green-work-live-tree-link,
+  .green-work-live-assign-link
+) {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: #9af5bf !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-live-countdown {
+  color: #a5f1c4 !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-live-countdown.overdue {
+  color: #ffb8bf !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-live-indicator {
+  border-color: #66839a !important;
+  background: #22384a !important;
+  color: #ffffff !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-live-indicator.danger {
+  background: #4a252d !important;
+  border-color: #a64956 !important;
+  color: #ffb8bf !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-live-indicator.warning {
+  background: #493718 !important;
+  border-color: #9b762d !important;
+  color: #ffdf91 !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-live-indicator.ok {
+  background: #174b38 !important;
+  border-color: #4b8067 !important;
+  color: #a5f1c4 !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-live-indicator.info {
+  background: #1d3c5d !important;
+  border-color: #527fa9 !important;
+  color: #b7ddff !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-live-title-indicator {
+  background: #493718 !important;
+  border-color: #9b762d !important;
+  color: #ffdf91 !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-live-title-indicator :where(span) {
+  color: #ffdf91 !important;
+}
+
 
 
