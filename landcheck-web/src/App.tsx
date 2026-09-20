@@ -250,6 +250,7 @@ function RouteLoadingFallback() {
 
   if (["/survey", "/survey/guides", "/flood", "/green-partners"].includes(path)) return null;
 
+  const isEstateRoute = path.startsWith("/estates") || path.startsWith("/estate-admin");
   let Animation: typeof SurveyLoadingAnimation | null = null;
   if (path.startsWith("/survey")) {
     Animation = SurveyLoadingAnimation;
@@ -257,13 +258,15 @@ function RouteLoadingFallback() {
     Animation = HazardLoadingAnimation;
   } else if (path.startsWith("/green")) {
     Animation = GreenLoadingAnimation;
+  } else if (isEstateRoute) {
+    Animation = GreenLoadingAnimation;
   }
 
   if (!Animation) return null;
 
   return (
     <div className="route-loading-fallback">
-      <Animation size="large" />
+      <Animation size={isEstateRoute ? "small" : "large"} className={isEstateRoute ? "estate-loading-animation" : undefined} />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { clearWorkAuthed, getWorkAuthSession } from "../auth/workAuth";
+import GreenLoadingAnimation from "../components/GreenLoadingAnimation";
 import "../styles/admin-dashboard.css";
 
 type EstateAdminOrganization = {
@@ -183,8 +184,7 @@ export default function EstateAdminDashboard() {
 
       {loading ? (
         <div className="loading-state">
-          <div className="spinner" />
-          <p>Loading Estate monitoring...</p>
+          <GreenLoadingAnimation label="Loading Estate monitoring..." size="small" className="estate-loading-animation" />
         </div>
       ) : (
         <main className="admin-content estate-admin-content">
