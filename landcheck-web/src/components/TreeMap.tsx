@@ -1409,6 +1409,14 @@ export default function TreeMap({
             const area = assignmentAreasRef.current.find((item) => String(item.id) === String(areaId));
             if (!area) return;
 
+            // Field-captured polygons belong to the tree record. Open the area drawer
+            // first so supervisors can remove the boundary without deleting the tree.
+            if (area.source === "existing_tree") {
+              onAssignmentAreaInspectRef.current?.(area);
+              onTreeInspectRef.current?.(null);
+              return;
+            }
+
             const treeId = Number(areaFeature?.properties?.tree_id || area.treeId || 0);
             if (Number.isFinite(treeId) && treeId > 0) {
               const tree = treesRef.current.find((item) => Number(item.id) === treeId);
