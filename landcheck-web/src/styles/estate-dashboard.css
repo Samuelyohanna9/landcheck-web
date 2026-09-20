@@ -231,7 +231,22 @@
   color: var(--edash-ink);
   cursor: pointer;
   flex-shrink: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
 }
+
+/* Safari can paint an inline SVG's currentColor stroke as a blank line when the button is
+   promoted into the mobile drawer layer. Keep the menu glyph explicit so it stays visible on
+   iPhone as well as Chromium Android. */
+.edash-menu-toggle svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  color: var(--edash-ink);
+}
+
+.edash-menu-toggle svg path { stroke: var(--edash-ink); }
 
 .edash-breadcrumb {
   display: flex;
@@ -1285,6 +1300,8 @@
     transform: translateX(-100%);
     transition: transform 0.2s ease;
     box-shadow: var(--edash-shadow-pop);
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
   .edash.is-sidebar-open .edash-sidebar { transform: translateX(0); }
   .edash-sidebar-backdrop {
