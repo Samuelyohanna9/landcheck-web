@@ -6861,10 +6861,9 @@
   line-height: 1;
 }
 .green-work-notifications-popover {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 80;
+  position: fixed;
+  right: auto;
+  z-index: 300;
   width: min(360px, calc(100vw - 24px));
   max-height: min(480px, calc(100dvh - 88px));
   overflow: auto;
@@ -6874,6 +6873,9 @@
   background: var(--gw-surface);
   color: var(--gw-text);
   box-shadow: var(--shadow-lg);
+  isolation: isolate;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 .green-work-notifications-head {
   display: flex;
@@ -7759,7 +7761,7 @@
 /* Keep global header popovers above the tree inspector without covering modal dialogs. */
 .green-work-header { z-index: 90; }
 .green-work-notifications { z-index: 100; }
-.green-work-notifications-popover { z-index: 120; }
+.green-work-notifications-popover { z-index: 300; }
 
 /* Dark workspace contrast pass. Domain styles above use fixed light colors, so these
    overrides keep the map workspace readable without changing light mode. */
@@ -9447,29 +9449,36 @@
   color: #b7ddff !important;
 }
 
-/* Keep mobile notification details in the viewport instead of anchoring them to the bell. */
-@media (max-width: 860px) {
-  .green-work-header.notifications-is-open {
-    z-index: 500;
-  }
+/* Portalled notification panels need their own tokens because they no longer inherit the
+   variables scoped to .green-work-container. The dark selector below keeps iOS and desktop
+   popovers consistent with the active workspace theme. */
+.green-work-notifications-popover {
+  --gw-surface: #ffffff;
+  --gw-surface-muted: #f5faf6;
+  --gw-border: rgba(28, 73, 45, 0.12);
+  --gw-text: #0d2f21;
+  --gw-muted: #567164;
+  --gw-brand: #1a8f5a;
+  --gw-brand-dark: #0f6e44;
+  --gw-warning-border: #f0d39a;
+  --shadow-lg: 0 16px 34px rgba(15, 61, 31, 0.18);
+}
 
-  .green-work-header.notifications-is-open .green-work-notifications-popover {
-    position: fixed;
-    top: calc(56px + env(safe-area-inset-top) + 8px);
-    right: 10px;
-    left: 10px;
-    z-index: 501;
-    width: auto;
-    max-width: none;
-    max-height: min(520px, calc(100dvh - 76px));
-  }
+:root[data-workspace-theme="dark"] .green-work-notifications-popover {
+  --gw-surface: #132334;
+  --gw-surface-muted: #1a2d40;
+  --gw-border: #385269;
+  --gw-text: #f3f7fb;
+  --gw-muted: #a4b6c7;
+  --gw-brand: #45d68b;
+  --gw-brand-dark: #a5f1c4;
+  --gw-warning-border: #9b762d;
+  --shadow-lg: 0 12px 30px rgba(0, 0, 0, 0.28);
 }
 
 @media (max-width: 520px) {
-  .green-work-header.notifications-is-open .green-work-notifications-popover {
-    top: calc(56px + env(safe-area-inset-top) + 6px);
-    right: 8px;
-    left: 8px;
+  .green-work-notifications-popover {
+    width: calc(100vw - 16px);
     max-height: calc(100dvh - 70px);
   }
 }
