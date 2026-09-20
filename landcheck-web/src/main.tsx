@@ -8,9 +8,10 @@ import "./index.css";
 if (typeof document !== "undefined") {
   const initialWorkspaceTheme = getWorkspaceTheme();
   document.documentElement.dataset.workspaceTheme = initialWorkspaceTheme;
+  const isGreenFieldRoute = window.location.pathname === "/green" || window.location.pathname === "/green/";
   document.querySelector('meta[name="theme-color"]')?.setAttribute(
     "content",
-    initialWorkspaceTheme === "light" ? "#F8FAFC" : "#0F172A",
+    isGreenFieldRoute || initialWorkspaceTheme === "light" ? "#F8FAFC" : "#0F172A",
   );
 }
 
