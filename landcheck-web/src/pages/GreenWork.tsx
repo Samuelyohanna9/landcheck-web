@@ -4038,6 +4038,7 @@ export default function GreenWork() {
   const [agricFarmerModalOpen, setAgricFarmerModalOpen] = useState(false);
   const [agricSupportModalOpen, setAgricSupportModalOpen] = useState(false);
   const [agricSelectedFarmerIds, setAgricSelectedFarmerIds] = useState<Set<number>>(() => new Set());
+  const [agricFarmerListOpen, setAgricFarmerListOpen] = useState(false);
   const [agricFarmerSelectorOpen, setAgricFarmerSelectorOpen] = useState(false);
   const [agricBulkAllocationBusy, setAgricBulkAllocationBusy] = useState(false);
   const [treeMetaDraftById, setTreeMetaDraftById] = useState<
@@ -5934,6 +5935,7 @@ export default function GreenWork() {
       const failedCount = results.length - savedCount;
       await loadCommunityData(activeProjectId);
       setAgricSelectedFarmerIds(new Set());
+      setAgricFarmerListOpen(false);
       setAgricFarmerSelectorOpen(false);
       setNewAllocation((previous) => ({ ...previous, custodian_id: "", quantity_allocated: 0 }));
       if (failedCount === 0) {
@@ -13001,28 +13003,41 @@ export default function GreenWork() {
                         </button>
                       </div>
                       {custodians.length > 0 ? (
-                        <div className="green-work-agric-farmer-list">
-                          {custodians.map((farmer) => {
-                            const profile = farmer.profile_data || {};
-                            const referenceCode = agricWorkflowMode ? profile.farmer_code : reliefWorkflowMode ? profile.beneficiary_code : null;
-                            const farmerAllocationCount = distributionAllocations.filter(
-                              (allocation) => Number(allocation.custodian_id) === Number(farmer.id),
-                            ).length;
-                            return (
-                              <div className="green-work-agric-farmer-row" key={`compact-owner-${farmer.id}`}>
-                                <div>
-                                  <strong>{farmer.name}</strong>
-                                  <span>
-                                    {referenceCode || formatTaskTypeLabel(farmer.custodian_type)} {farmer.community_name ? `| ${farmer.community_name}` : ""}
-                                  </span>
-                                </div>
-                                <span className="green-work-agric-farmer-status">
-                                  {farmerAllocationCount} allocation{farmerAllocationCount === 1 ? "" : "s"}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
+                        <>
+                          {agricWorkflowMode && (
+                            <button
+                              type="button"
+                              className="green-work-secondary-btn green-work-agric-list-toggle"
+                              onClick={() => setAgricFarmerListOpen((open) => !open)}
+                            >
+                              {agricFarmerListOpen ? "Hide farmer list" : `Farmer list (${custodians.length})`}
+                            </button>
+                          )}
+                          {(!agricWorkflowMode || agricFarmerListOpen) && (
+                            <div className="green-work-agric-farmer-list">
+                              {custodians.map((farmer) => {
+                                const profile = farmer.profile_data || {};
+                                const referenceCode = agricWorkflowMode ? profile.farmer_code : reliefWorkflowMode ? profile.beneficiary_code : null;
+                                const farmerAllocationCount = distributionAllocations.filter(
+                                  (allocation) => Number(allocation.custodian_id) === Number(farmer.id),
+                                ).length;
+                                return (
+                                  <div className="green-work-agric-farmer-row" key={`compact-owner-${farmer.id}`}>
+                                    <div>
+                                      <strong>{farmer.name}</strong>
+                                      <span>
+                                        {referenceCode || formatTaskTypeLabel(farmer.custodian_type)} {farmer.community_name ? `| ${farmer.community_name}` : ""}
+                                      </span>
+                                    </div>
+                                    <span className="green-work-agric-farmer-status">
+                                      {farmerAllocationCount} allocation{farmerAllocationCount === 1 ? "" : "s"}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <div className="green-work-agric-empty-state">
                           No {activeWorkflowLabels.ownerPlural.toLowerCase()} added yet. Start with the first {activeWorkflowLabels.ownerSingular.toLowerCase()}.
@@ -13035,7 +13050,7 @@ export default function GreenWork() {
                     <section className="green-work-card green-work-agric-simple-card">
                       <div className="green-work-simple-head">
                         <div>
-                          <span className="green-work-section-kicker">{agricWorkflowMode ? "Step 1" : "Events"}</span>
+                          <span className="green-work-section-kicker">Step 1</span>
                           <h3>{agricWorkflowMode ? "Support events" : reliefWorkflowMode ? "Relief events" : "Distributed events"}</h3>
                           <p className="green-work-note">
                             {agricWorkflowMode
@@ -13078,11 +13093,17 @@ export default function GreenWork() {
                       <div className="green-work-agric-allocation-box">
                         <div className="green-work-simple-subhead">
                           <div>
-                            <span className="green-work-section-kicker">Bulk allocation</span>
+                            <span className="green-work-section-kicker">Step 2 · Bulk allocation</span>
                             <h4>Allocate {activeWorkflowLabels.ownerPlural.toLowerCase()}</h4>
                           </div>
                           <span className="green-work-note">{agricSelectedFarmerIds.size} selected</span>
                         </div>
+                        {distributionEvents.length === 0 ? (
+                          <div className="green-work-agric-empty-state green-work-agric-step-locked">
+                            Create a {agricWorkflowMode ? "support" : reliefWorkflowMode ? "relief" : "distributed"} event above before choosing and allocating {activeWorkflowLabels.ownerPlural.toLowerCase()} in this project.
+                          </div>
+                        ) : (
+                          <>
                         <div className="green-work-agric-allocation-grid">
                           <label className="green-work-stacked-field">
                             <span>{fieldWorkflowMode ? "Support event" : "Distributed event"}</span>
@@ -13121,7 +13142,9 @@ export default function GreenWork() {
                             onClick={() => setAgricFarmerSelectorOpen((open) => !open)}
                             disabled={custodians.length === 0}
                           >
-                            {agricFarmerSelectorOpen ? "Hide farmer list" : "Choose farmers"}
+                            {agricFarmerSelectorOpen
+                              ? `Hide ${activeWorkflowLabels.ownerPlural.toLowerCase()} list`
+                              : `Choose ${activeWorkflowLabels.ownerPlural.toLowerCase()}`}
                           </button>
                         </div>
                         {agricFarmerSelectorOpen && (
@@ -13173,6 +13196,8 @@ export default function GreenWork() {
                         >
                           {agricBulkAllocationBusy ? "Saving allocations..." : `Allocate selected ${activeWorkflowLabels.ownerPlural.toLowerCase()}`}
                         </button>
+                          </>
+                        )}
                       </div>
                     </section>
                   )}
@@ -18347,8 +18372,8 @@ export default function GreenWork() {
                     : "Supervision Live"}: {displayedCustodianLiveSummary.visitLive}
                 </span>
               </div>
-              <div className="green-work-live-table-wrap">
-                <table className="green-work-live-table">
+              <div className={`green-work-live-table-wrap ${agricFieldCaptureMode ? "green-work-field-capture-table-wrap" : ""}`}>
+                <table className={`green-work-live-table ${agricFieldCaptureMode ? "green-work-field-capture-table" : ""}`}>
                   <thead>
                     <tr>
                       <th>{fieldWorkflowMode ? activeWorkflowLabels.ownerSingular : "Custodian"}</th>
