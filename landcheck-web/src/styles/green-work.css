@@ -9192,5 +9192,41 @@
   }
 }
 
+/* Desktop keeps the complete overview visible in one row; only mobile stacks cards. */
+@media (min-width: 861px) {
+  .green-work-overview-mini-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 860px) {
+  .green-work-overview-mini-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@container green-work-overview (min-width: 421px) and (max-width: 1159px) {
+  .green-work-overview-donut-layout {
+    grid-template-columns: 78px minmax(0, 1fr);
+    gap: 0.25rem;
+  }
+
+  .green-work-overview-donut-svg {
+    width: 76px;
+    height: 76px;
+  }
+}
+
+@container green-work-overview (max-width: 420px) {
+  .green-work-overview-donut-layout {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .green-work-overview-donut-svg {
+    width: 62px;
+    height: 62px;
+  }
+}
+
 
 
