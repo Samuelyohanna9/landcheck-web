@@ -11149,7 +11149,10 @@ export default function GreenWork() {
     activeForm === "existing_tree_intake" ||
     activeForm === "custodian_hub" ||
     assignWorkAreaMode;
-  const sidebarPrimaryMode = Boolean(showSidebar && !hasDedicatedMainContent);
+  const firstRunProjectSelectionMode = Boolean(
+    !activeProjectId && (activeForm === "project_focus" || activeForm === "create_project"),
+  );
+  const sidebarPrimaryMode = Boolean(showSidebar && !hasDedicatedMainContent && !firstRunProjectSelectionMode);
   const mapAreaDrawMode = Boolean(activeProjectId && newOrderAreaEnabled && (activeForm === "assign_work" || activeForm === "map_view"));
   const activeTreeId = inspectedTree?.id || 0;
   const showTreeInspectorPanel = mapViewMode || (remoteMonitoringMode && Boolean(inspectedTree));
@@ -17545,6 +17548,35 @@ export default function GreenWork() {
         </aside>
 
         <section className={`green-work-main ${overviewMode || liveTableMode || verraMode || remoteMonitoringMode || agricFarmerLiveMode || agricFieldCaptureMode || agricSupportVisitMode || shareImpactMode ? "overview-mode" : "single-mode"} ${mapViewMode ? "map-view-mode" : ""} ${remoteMonitoringMode ? "remote-monitoring-mode" : ""}`}>
+          {!activeProjectId && (
+            <section className="green-work-card green-work-first-run" aria-labelledby="green-work-first-run-title">
+              <div className="green-work-first-run-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M4 6.5h6l1.8 2H20v10.8H4z" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M8 13h8M8 16h5" strokeLinecap="round" />
+                </svg>
+              </div>
+              <p className="green-work-section-kicker">Welcome to LandCheck Work</p>
+              <h2 id="green-work-first-run-title">Choose a project to get started</h2>
+              <p>
+                Your Work dashboard is organized by project. Select an existing project or create a new one to open
+                the workspace and start managing field activities.
+              </p>
+              <div className="green-work-first-run-actions">
+                <button type="button" className="btn-primary" onClick={() => openForm("project_focus")}>
+                  Select a project
+                </button>
+                <button type="button" className="green-work-secondary-btn" onClick={() => openForm("create_project")}>
+                  Create a project
+                </button>
+              </div>
+              <div className="green-work-first-run-steps" aria-label="Getting started steps">
+                <span><strong>1</strong> Select or create a project</span>
+                <span><strong>2</strong> Open the project workspace</span>
+                <span><strong>3</strong> Start managing field work</span>
+              </div>
+            </section>
+          )}
           {shareImpactMode && (
             <Suspense fallback={<div className="green-work-card green-work-empty-state"><GreenLoadingAnimation label="Loading share impact tools..." size="small" /></div>}>
               <GreenWorkShareImpactPanel
