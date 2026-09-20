@@ -1,6 +1,7 @@
 ﻿import { Fragment, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { lazyWithChunkRecovery } from "../utils/lazyWithChunkRecovery";
 import { useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { api, BACKEND_URL } from "../api/client";
 import type { TreeInspectData } from "../components/TreeMap";
@@ -24,6 +25,7 @@ import {
   subscribeWorkspaceTheme,
   type WorkspaceTheme,
 } from "../utils/workspaceTheme";
+import { useFloatingPopoverPosition } from "../utils/useFloatingPopoverPosition";
 import "../styles/green-work.css";
 
 const GreenWorkMapPanel = lazyWithChunkRecovery(() => import("../components/green-work/GreenWorkMapPanel"));
@@ -4174,10 +4176,22 @@ export default function GreenWork() {
   });
   const [alertsList, setAlertsList] = useState<any[]>([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notificationsButtonRef = useRef<HTMLButtonElement>(null);
+  const notificationsPopoverRef = useRef<HTMLDivElement>(null);
+  const notificationsPosition = useFloatingPopoverPosition(
+    notificationsButtonRef,
+    notificationsPopoverRef,
+    notificationsOpen,
+  );
   useEffect(() => {
     if (!notificationsOpen) return undefined;
     const closeOnOutsideClick = (event: PointerEvent) => {
-      if (event.target instanceof Element && !event.target.closest(".green-work-notifications")) {
+      const target = event.target;
+      if (
+        target instanceof Node &&
+        !notificationsButtonRef.current?.contains(target) &&
+        !notificationsPopoverRef.current?.contains(target)
+      ) {
         setNotificationsOpen(false);
       }
     };
@@ -11820,6 +11834,7 @@ export default function GreenWork() {
             <div className="green-work-notifications">
               <button
                 type="button"
+                ref={notificationsButtonRef}
                 className="green-work-header-btn green-work-notifications-btn"
                 aria-label={alertsSummary.total > 0 ? `${alertsSummary.total} open notifications` : "Notifications"}
                 aria-expanded={notificationsOpen}
@@ -11834,40 +11849,6 @@ export default function GreenWork() {
                   <span className="green-work-notifications-badge">{alertsSummary.total > 99 ? "99+" : alertsSummary.total}</span>
                 )}
               </button>
-              {notificationsOpen && (
-                <div className="green-work-notifications-popover" role="dialog" aria-label="Notifications">
-                  <div className="green-work-notifications-head">
-                    <strong>Notifications</strong>
-                    <span>{alertsSummary.total} open alert{alertsSummary.total === 1 ? "" : "s"}</span>
-                  </div>
-                  {alertsList.length > 0 ? (
-                    <div className="green-work-notifications-list">
-                      {alertsList.slice(0, 7).map((alert: any) => {
-                        const severity = String(alert.severity || "warning").trim().toLowerCase();
-                        return (
-                          <div key={`header-notification-${alert.id}`} className={`green-work-notification-item is-${severity}`}>
-                            <span className="green-work-notification-severity">{severity}</span>
-                            <p>{alert.message}</p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p className="green-work-notifications-empty">No open notifications.</p>
-                  )}
-                  {alertsList.length > 7 && <p className="green-work-notifications-more">Showing the 7 most recent alerts.</p>}
-                  <button
-                    type="button"
-                    className="green-work-notifications-link"
-                    onClick={() => {
-                      setNotificationsOpen(false);
-                      openForm("overview");
-                    }}
-                  >
-                    Open full overview
-                  </button>
-                </div>
-              )}
             </div>
             <div className="green-work-user-profile" title={workAuthSession?.user?.organization_name || undefined}>
               <span className="green-work-user-avatar" aria-hidden="true">{workProfileInitials}</span>
@@ -11879,6 +11860,49 @@ export default function GreenWork() {
           </div>
         </div>
       </header>
+      {notificationsOpen && notificationsPosition
+        ? createPortal(
+            <div
+              ref={notificationsPopoverRef}
+              className="green-work-notifications-popover"
+              role="dialog"
+              aria-label="Notifications"
+              style={{ top: notificationsPosition.top, left: notificationsPosition.left }}
+            >
+              <div className="green-work-notifications-head">
+                <strong>Notifications</strong>
+                <span>{alertsSummary.total} open alert{alertsSummary.total === 1 ? "" : "s"}</span>
+              </div>
+              {alertsList.length > 0 ? (
+                <div className="green-work-notifications-list">
+                  {alertsList.slice(0, 7).map((alert: any) => {
+                    const severity = String(alert.severity || "warning").trim().toLowerCase();
+                    return (
+                      <div key={`header-notification-${alert.id}`} className={`green-work-notification-item is-${severity}`}>
+                        <span className="green-work-notification-severity">{severity}</span>
+                        <p>{alert.message}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="green-work-notifications-empty">No open notifications.</p>
+              )}
+              {alertsList.length > 7 && <p className="green-work-notifications-more">Showing the 7 most recent alerts.</p>}
+              <button
+                type="button"
+                className="green-work-notifications-link"
+                onClick={() => {
+                  setNotificationsOpen(false);
+                  openForm("overview");
+                }}
+              >
+                Open full overview
+              </button>
+            </div>,
+            document.body,
+          )
+        : null}
 
       <div className="green-work-toolbar-wrap">
         <div className="green-work-toolbar">
