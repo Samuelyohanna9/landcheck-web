@@ -1,5 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
-
 :root {
   --work-login-ink: #10261d;
   --work-login-ink-soft: #5b6d64;
@@ -653,5 +651,253 @@
 
   .work-login-card {
     padding: 1.35rem 1.25rem;
+  }
+}
+
+/* Match the Work dashboard: solid navy surfaces, bright text, and restrained green accents. */
+.work-login-page {
+  --work-login-ink: #ffffff;
+  --work-login-ink-soft: #ffffff;
+  --work-login-green: #1b9656;
+  --work-login-green-deep: #147541;
+  --work-login-line: #304254;
+  --work-login-surface: #162231;
+  --work-login-surface-muted: #1b2b3a;
+  min-height: 100dvh;
+  height: 100dvh;
+  border-top: 3px solid #0b6b6f;
+  background: #0f1720;
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.work-login-backdrop {
+  background: #0f1720;
+}
+
+.work-login-backdrop-art {
+  opacity: 0.28;
+}
+
+.work-login-art-parcels path {
+  stroke: rgba(97, 184, 132, 0.2);
+}
+
+.work-login-art-river {
+  stroke: rgba(97, 184, 132, 0.28);
+}
+
+.work-login-art-pins path {
+  fill: rgba(97, 184, 132, 0.3);
+  stroke: rgba(97, 184, 132, 0.42);
+}
+
+.work-login-backdrop-scrim {
+  background: linear-gradient(180deg, rgba(7, 20, 31, 0.72), rgba(7, 20, 31, 0.88));
+}
+
+.work-login-shell {
+  width: min(420px, 100%);
+  gap: 0.85rem;
+}
+
+.work-login-brand {
+  gap: 0.55rem;
+}
+
+.work-login-brand img {
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(78, 224, 146, 0.55);
+  border-radius: 8px;
+}
+
+.work-login-brand span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  color: #ffffff;
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.work-login-brand span strong {
+  color: #ffffff;
+}
+
+.work-login-brand span small {
+  color: #4ee092;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.work-login-card {
+  border: 1px solid #304254;
+  border-radius: 16px;
+  background: #162231;
+  box-shadow: 0 22px 46px rgba(0, 0, 0, 0.32);
+  padding: clamp(1.4rem, 3vw, 1.8rem);
+  color: #ffffff;
+}
+
+.work-login-card-kicker {
+  color: #72e7a9;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.work-login-card h1 {
+  margin-top: 0.5rem;
+  color: #ffffff;
+  font-size: clamp(1.9rem, 2.4vw + 1rem, 2.25rem);
+  letter-spacing: -0.035em;
+}
+
+.work-login-card-sub {
+  color: #ffffff;
+  font-size: 0.84rem;
+}
+
+.work-login-form > label:not(.work-login-checkbox) {
+  color: #ffffff;
+  font-size: 0.72rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.work-login-form input[type="text"],
+.work-login-form input[type="password"] {
+  min-height: 46px;
+  border: 1px solid #4b6072;
+  border-radius: 8px;
+  background: #0f1a26;
+  color: #ffffff;
+  font-size: 0.9rem;
+}
+
+.work-login-form input::placeholder {
+  color: #b5c2ce;
+}
+
+.work-login-form input:hover {
+  border-color: #66839a;
+}
+
+.work-login-form input:focus,
+.work-login-form input:focus-visible {
+  outline: 2px solid #4ee092;
+  outline-offset: 1px;
+  border-color: #4ee092;
+  background: #0f1a26;
+  box-shadow: 0 0 0 3px rgba(78, 224, 146, 0.16);
+}
+
+.work-login-form input:-webkit-autofill,
+.work-login-form input:-webkit-autofill:hover,
+.work-login-form input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #ffffff;
+  -webkit-box-shadow: 0 0 0 1000px #0f1a26 inset;
+  box-shadow: 0 0 0 1000px #0f1a26 inset;
+  caret-color: #ffffff;
+}
+
+.work-login-password-eye {
+  color: #ffffff;
+}
+
+.work-login-password-eye:hover,
+.work-login-password-eye:focus-visible {
+  background: #223447;
+  color: #72e7a9;
+}
+
+.work-login-form label.work-login-checkbox {
+  color: #ffffff;
+}
+
+.work-login-checkbox input {
+  border-color: #66839a;
+  background: #0f1a26;
+}
+
+.work-login-forgot,
+.work-login-explore {
+  color: #72e7a9;
+}
+
+.work-login-submit {
+  min-height: 46px;
+  border: 1px solid #4ee092;
+  border-radius: 8px;
+  background: #1b9656;
+  color: #ffffff;
+  font-size: 0.9rem;
+  letter-spacing: 0;
+  text-transform: none;
+  box-shadow: none;
+}
+
+.work-login-submit:hover:not(:disabled) {
+  background: #25b86d;
+  box-shadow: 0 8px 18px rgba(27, 150, 86, 0.22);
+}
+
+.work-login-divider {
+  color: #ffffff;
+  font-size: 0.68rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.work-login-divider::before,
+.work-login-divider::after {
+  background: #304254;
+}
+
+.work-login-outline-btn {
+  min-height: 44px;
+  border: 1px solid #4b6072;
+  border-radius: 8px;
+  background: #1b2b3a;
+  color: #ffffff;
+  font-size: 0.88rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.work-login-outline-btn:hover {
+  border-color: #4ee092;
+  background: #223447;
+  color: #ffffff;
+}
+
+.work-login-explore {
+  font-size: 0.82rem;
+}
+
+.work-login-footer {
+  color: #b5c2ce;
+  font-size: 0.72rem;
+}
+
+@media (max-width: 520px) {
+  .work-login-page {
+    height: auto;
+    min-height: 100dvh;
+    overflow: auto;
+    padding: max(16px, env(safe-area-inset-top)) 14px max(16px, env(safe-area-inset-bottom));
+  }
+
+  .work-login-shell {
+    width: 100%;
+  }
+
+  .work-login-card {
+    padding: 1.35rem 1.15rem;
   }
 }
