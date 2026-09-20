@@ -5,6 +5,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { api } from "../api/client";
 import { clearSurveyAuthSession, getSurveyAuthSession } from "../auth/surveyAuth";
 import ProfileAvatarMenu from "../components/ProfileAvatarMenu";
+import SurveyMobileMenu from "../components/SurveyMobileMenu";
 import { useFloatingPopoverPosition } from "../utils/useFloatingPopoverPosition";
 import {
   applyWorkspaceTheme,
@@ -496,6 +497,7 @@ export default function Dashboard() {
   const [deletingGeorefId, setDeletingGeorefId] = useState<string | null>(null);
   const [plotTags, setPlotTags] = useState<Record<number, string>>({});
   const [createWorkOpen, setCreateWorkOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [theme, setTheme] = useState<WorkspaceTheme>(getWorkspaceTheme);
 
   useEffect(() => applyWorkspaceTheme(theme), [theme]);
@@ -510,6 +512,8 @@ export default function Dashboard() {
     warmSurveyPlanEntry();
     setCreateWorkOpen(true);
   };
+
+  const closeMobileMenu = () => setMobileMenuOpen(false);
 
   const loadWork = () => {
     setLoading(true);
@@ -760,6 +764,17 @@ export default function Dashboard() {
       <Toaster position="top-right" />
       <header className="dashboard-header">
         <div className="header-left">
+          <button
+            type="button"
+            className="workspace-mobile-menu-trigger"
+            onClick={() => setMobileMenuOpen(true)}
+            aria-label="Open Survey menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          </button>
           <button className="dashboard-logo-btn" onClick={() => navigate("/")} aria-label="Go to LandCheck home">
             <span className="dashboard-logo-mark" aria-hidden="true"><img src="/logo.svg" alt="" /></span>
             <span className="dashboard-logo-wordmark" aria-hidden="true"><span className="dashboard-logo-land">Land</span> <span className="dashboard-logo-check">Check</span></span>
@@ -826,6 +841,34 @@ export default function Dashboard() {
           )}
         </div>
       </header>
+
+      <SurveyMobileMenu isOpen={mobileMenuOpen} onClose={closeMobileMenu}>
+        <button type="button" className="survey-mobile-menu-item is-primary" onClick={() => { closeMobileMenu(); openWorkChooser(); }}>
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+          New work
+        </button>
+        <button type="button" className="survey-mobile-menu-item" onClick={() => { closeMobileMenu(); navigate("/survey/guides"); }}>
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 4.5h12v11H4zM7 8h6M7 11h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          Documentation &amp; guides
+        </button>
+        <button type="button" className="survey-mobile-menu-item" onClick={() => { closeMobileMenu(); setSupportOpen(true); }}>
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 5.5h13v8h-7l-3.5 3v-3h-2.5z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" /></svg>
+          Contact support
+        </button>
+        <div className="survey-mobile-menu-divider" />
+        <button type="button" className="survey-mobile-menu-item" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")}>
+          {theme === "dark" ? (
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="3.2" stroke="currentColor" strokeWidth="1.5" /><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.3 4.3l1.4 1.4M14.3 14.3l1.4 1.4M15.7 4.3l-1.4 1.4M5.7 14.3l-1.4 1.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
+          ) : (
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M16.6 12.4A6.7 6.7 0 017.6 3.4a6.7 6.7 0 109 9z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /></svg>
+          )}
+          Switch to {theme === "dark" ? "light" : "dark"} mode
+        </button>
+        <button type="button" className="survey-mobile-menu-item is-danger" onClick={() => { closeMobileMenu(); handleSignOut(); }}>
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4H4.5A1.5 1.5 0 003 5.5v9A1.5 1.5 0 004.5 16H8M12 6l4 4-4 4M16 10H8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          Sign out
+        </button>
+      </SurveyMobileMenu>
 
       <div className="workspace-category-scroll">
         <div className="work-category-tabs" role="tablist" aria-label="Filter by project type">

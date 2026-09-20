@@ -2142,6 +2142,34 @@
   cursor: pointer;
 }
 
+.workspace-mobile-menu-trigger {
+  display: none;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 38px;
+  padding: 0;
+  border: 1px solid var(--workspace-border-strong);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--workspace-ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.workspace-mobile-menu-trigger:hover,
+.workspace-mobile-menu-trigger:focus-visible {
+  border-color: var(--workspace-emerald);
+  color: var(--workspace-emerald);
+  outline: none;
+}
+
+.workspace-mobile-menu-trigger svg {
+  width: 19px;
+  height: 19px;
+}
+
 .workspace-mobile-notifications:hover {
   background: rgba(33, 199, 122, 0.12);
   border-color: rgba(33, 199, 122, 0.45);
@@ -2170,8 +2198,10 @@
 
   .workspace-container .header-left {
     min-width: 0;
-    gap: 0;
+    gap: 8px;
   }
+
+  .workspace-mobile-menu-trigger { display: inline-flex; }
 
   .workspace-container .dashboard-logo-btn img {
     width: 108px;
@@ -3064,5 +3094,65 @@
 @media (prefers-reduced-motion: reduce) {
   .workspace-theme-toggle {
     transition: none;
+  }
+}
+
+/* Survey dashboard mobile shell: the desktop action row is replaced by the shared drawer,
+   leaving a compact, safe-area-aware header with one predictable menu target. */
+@media (max-width: 768px) {
+  .dashboard-container.workspace-container {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  .workspace-container .dashboard-header {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 60px;
+    padding: max(8px, env(safe-area-inset-top)) 12px 8px;
+  }
+
+  .workspace-container .header-left {
+    min-width: 0;
+    flex: 1 1 auto;
+    gap: 8px;
+  }
+
+  .workspace-container .dashboard-logo-btn {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .workspace-container .dashboard-logo-mark {
+    flex: 0 0 30px;
+  }
+
+  .workspace-container .dashboard-logo-wordmark {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 380px) {
+  .workspace-container .dashboard-header {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .workspace-container .workspace-mobile-menu-trigger {
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
+  }
+
+  .workspace-container .dashboard-logo-wordmark {
+    font-size: 0.86rem;
   }
 }
