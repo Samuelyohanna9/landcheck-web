@@ -1358,7 +1358,45 @@
   }
   .edash.is-sidebar-open .edash-sidebar-backdrop { opacity: 1; pointer-events: auto; }
   .edash-menu-toggle { display: flex; }
-  .edash-breadcrumb strong { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+  /* The breadcrumb is the only flexible part of the phone header. Keeping the bell and avatar
+     in a non-shrinking right cluster prevents them from being pushed outside the viewport by a
+     long estate name or the active page label. */
+  .edash-topbar {
+    gap: 8px;
+    padding: 0 10px;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .edash-breadcrumb {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 5px;
+    overflow: hidden;
+  }
+  .edash-breadcrumb > span:first-child,
+  .edash-breadcrumb > b:first-of-type { display: none; }
+  .edash-breadcrumb-estate {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .edash-breadcrumb-estate strong,
+  .edash-breadcrumb > strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .edash-breadcrumb-estate strong { flex: 1 1 auto; max-width: none; }
+  .edash-breadcrumb > strong { flex: 0 1 auto; max-width: 110px; }
+  .edash-breadcrumb-edit { flex-shrink: 0; padding: 3px 6px; }
+  .edash-topbar-right {
+    gap: 8px;
+    margin-left: 0;
+    flex-shrink: 0;
+  }
+  .edash-user { gap: 0; padding: 0; flex-shrink: 0; }
+  .edash-user-chevron { display: none; }
   .edash-stats-row, .edash-stats-row--five { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   /* These cards have useful text and legends, so mobile gives each one the full content width
      instead of preserving the desktop ratio and clipping the second card's labels. */
@@ -1393,6 +1431,12 @@
 }
 
 @media (max-width: 520px) {
+  .edash-topbar { gap: 6px; padding: 0 8px; }
+  .edash-menu-toggle { width: 34px; height: 34px; }
+  .edash-icon-btn, .edash-user-avatar { width: 34px; height: 34px; }
+  .edash-company-logo { display: none; }
+  .edash-breadcrumb { font-size: 0.76rem; }
+  .edash-breadcrumb > strong { max-width: 92px; }
   .edash-notification-popover {
     width: min(340px, calc(100vw - 16px));
     max-height: calc(100dvh - 70px);
