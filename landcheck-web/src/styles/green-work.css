@@ -8138,6 +8138,133 @@
   opacity: 0.82;
 }
 
+/* Give the no-project state a useful landing surface instead of leaving the workspace empty. */
+.green-work-first-run {
+  align-self: center;
+  justify-content: center;
+  width: min(100%, 760px);
+  min-height: clamp(360px, calc(100dvh - 180px), 620px);
+  padding: clamp(28px, 6vw, 72px);
+  text-align: center;
+}
+
+.green-work-first-run-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 18px;
+  border: 1px solid rgba(23, 131, 69, 0.24);
+  border-radius: 18px;
+  background: var(--gw-brand-tint);
+  color: var(--gw-brand-dark);
+}
+
+.green-work-first-run-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.green-work-first-run .green-work-section-kicker {
+  margin-bottom: 8px;
+}
+
+.green-work-first-run h2 {
+  margin: 0;
+  color: var(--gw-text);
+  font-size: clamp(1.45rem, 2.4vw, 2.05rem);
+  line-height: 1.12;
+}
+
+.green-work-first-run > p:not(.green-work-section-kicker) {
+  max-width: 560px;
+  margin: 12px auto 0;
+  color: var(--gw-subtext);
+  font-size: 0.98rem;
+  line-height: 1.55;
+}
+
+.green-work-first-run-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.green-work-first-run-actions .btn-primary,
+.green-work-first-run-actions .green-work-secondary-btn {
+  width: auto;
+  min-width: 160px;
+  min-height: 42px;
+  padding: 0 16px;
+}
+
+.green-work-first-run-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: min(100%, 620px);
+  margin: 28px auto 0;
+}
+
+.green-work-first-run-steps span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid var(--gw-border);
+  border-radius: 10px;
+  background: var(--gw-surface-muted);
+  color: var(--gw-subtext);
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+.green-work-first-run-steps strong {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--gw-brand);
+  color: #ffffff;
+  font-size: 0.7rem;
+}
+
+:root[data-workspace-theme="dark"] .green-work-first-run-icon {
+  border-color: #398761;
+  background: #123d2b;
+  color: #9af5bf;
+}
+
+@media (max-width: 860px) {
+  .green-work-first-run {
+    width: 100%;
+    min-height: calc(100dvh - 150px);
+    padding: 32px 18px;
+  }
+
+  .green-work-first-run-actions {
+    width: 100%;
+  }
+
+  .green-work-first-run-actions .btn-primary,
+  .green-work-first-run-actions .green-work-secondary-btn {
+    width: 100%;
+  }
+
+  .green-work-first-run-steps {
+    grid-template-columns: 1fr;
+    width: min(100%, 360px);
+  }
+}
+
 /* Keep every Work control legible on the dark canvas. This final button contract also
    covers utility buttons whose domain styles predate the theme layer, including disabled
    project options and table actions. */
