@@ -8969,5 +8969,43 @@
   }
 }
 
+/* Replace legacy light chip surfaces in dark mode so white status text remains readable. */
+:root[data-workspace-theme="dark"] .green-work-container .green-work-flow-pill,
+:root[data-workspace-theme="dark"] .green-work-container .green-work-live-pill,
+:root[data-workspace-theme="dark"] .green-work-container .green-work-live-maturity-chip {
+  background: #22384a !important;
+  border-color: #66839a !important;
+  color: #ffffff !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-flow-pill {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-live-pill.ok,
+:root[data-workspace-theme="dark"] .green-work-container .green-work-live-maturity-chip.is-set {
+  background: #174b38 !important;
+  border-color: #4b8067 !important;
+  color: #a5f1c4 !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-live-pill.danger {
+  background: #4a252d !important;
+  border-color: #a64956 !important;
+  color: #ffb8bf !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-live-pill.warning {
+  background: #493718 !important;
+  border-color: #9b762d !important;
+  color: #ffdf91 !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-container .green-work-live-pill.info {
+  background: #1d3c5d !important;
+  border-color: #527fa9 !important;
+  color: #b7ddff !important;
+}
+
 
 
