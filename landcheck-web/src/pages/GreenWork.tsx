@@ -2683,47 +2683,6 @@ const renderMenuItemIcon = (icon: WorkMenuIconName) => (
   </span>
 );
 
-type MapMetricIconName = "mapped" | "planted" | "tasks" | "review" | "alerts";
-
-const renderMapMetricIcon = (icon: MapMetricIconName) => {
-  if (icon === "mapped") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-        <path d="m4.5 7.7 7.5 4.2 7.5-4.2M12 12v9" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-  if (icon === "planted") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path d="M12 20V11M12 13c-2.7 0-4.7-1.3-5.8-3.8 2.8-.2 4.8.9 5.8 3.8ZM12 11c.3-3.2 2.1-5.4 5.5-6.4.1 3.5-1.7 5.8-5.5 6.4ZM8 20h8" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-  if (icon === "tasks") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path d="M6 4.5h12v15H6zM9 9h6M9 13h3" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="m13 14.5 1.5 1.5 3-3" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-  if (icon === "review") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path d="M6 4.5h12v15H6zM9 9h6M9 13h6M9 16h3" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="m12 4 8 15H4L12 4z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-      <path d="M12 9v4M12 16.5v.1" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-};
-
 type SpeciesDailySurvivalPoint = {
   day: number;
   date: string;
@@ -18686,21 +18645,21 @@ export default function GreenWork() {
 
           {activeProjectId && mapViewMode && (
             <div className="green-work-map-overview-metrics green-work-map-top-metrics" aria-label="Project metrics">
-              <div>
-                <span className="green-work-map-metric-label">{renderMapMetricIcon(fieldWorkflowMode ? "mapped" : "planted")}<span>{mapMetricCopy.label}</span></span>
-                <span className="green-work-map-metric-value"><strong>{filteredOverviewTotals.plantedTrees}</strong><small>of {filteredOverviewTotals.targetTrees} {mapMetricCopy.targetLabel}</small></span>
+              <div aria-label={`${mapMetricCopy.label}: ${filteredOverviewTotals.plantedTrees}. Target ${filteredOverviewTotals.targetTrees} ${mapMetricCopy.targetLabel}`}>
+                <span className="green-work-map-metric-label">{mapMetricCopy.label}</span>
+                <strong className="green-work-map-metric-value">{filteredOverviewTotals.plantedTrees}</strong>
               </div>
-              <div>
-                <span className="green-work-map-metric-label">{renderMapMetricIcon("tasks")}<span>Tasks done</span></span>
-                <span className="green-work-map-metric-value"><strong>{filteredOverviewTotals.taskDone}</strong><small>{filteredOverviewTotals.taskPending} pending</small></span>
+              <div aria-label={`Tasks done: ${filteredOverviewTotals.taskDone}. ${filteredOverviewTotals.taskPending} pending`}>
+                <span className="green-work-map-metric-label">Tasks done</span>
+                <strong className="green-work-map-metric-value">{filteredOverviewTotals.taskDone}</strong>
               </div>
-              <div>
-                <span className="green-work-map-metric-label">{renderMapMetricIcon("review")}<span>Awaiting review</span></span>
-                <span className="green-work-map-metric-value"><strong>{reviewQueue.length}</strong><small>submissions</small></span>
+              <div aria-label={`Awaiting review: ${reviewQueue.length} submissions`}>
+                <span className="green-work-map-metric-label">Awaiting review</span>
+                <strong className="green-work-map-metric-value">{reviewQueue.length}</strong>
               </div>
-              <div>
-                <span className="green-work-map-metric-label">{renderMapMetricIcon("alerts")}<span>Open alerts</span></span>
-                <span className="green-work-map-metric-value"><strong>{alertsSummary.total}</strong><small>{alertsSummary.danger} high priority</small></span>
+              <div aria-label={`Open alerts: ${alertsSummary.total}. ${alertsSummary.danger} high priority`}>
+                <span className="green-work-map-metric-label">Open alerts</span>
+                <strong className="green-work-map-metric-value">{alertsSummary.total}</strong>
               </div>
             </div>
           )}
