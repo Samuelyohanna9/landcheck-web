@@ -22,6 +22,7 @@ type BillingStatus = {
 };
 
 type Charge = { id: number; charge_type: string; amount: string; currency: string; status: string; failure_reason?: string | null; attempted_at: string };
+type PlanChangeResponse = BillingStatus & { plan_change_status?: string; plan_change_amount?: string };
 
 const STATUS_LABEL: Record<string, string> = {
   trialing: "Free trial",
@@ -82,8 +83,14 @@ export default function EstateBillingPage() {
     if (!organizationId) return;
     setBusy(true);
     try {
-      await api.post("/estates/billing/change-plan", { plan_key: planKey }, { params: { organization_id: organizationId } });
-      toast.success(`You're now on the ${ESTATE_PLANS[planKey].label} plan.`);
+      const response = await api.post<PlanChangeResponse>("/estates/billing/change-plan", { plan_key: planKey }, { params: { organization_id: organizationId } });
+      if (response.data?.plan_change_status === "pending") {
+        toast("Upgrade payment is pending. Your plan will update after the payment is confirmed.");
+      } else if (Number(response.data?.plan_change_amount || 0) > 0) {
+        toast.success(`You're now on Plus. ${money(response.data.plan_change_amount)} was charged for the upgrade difference.`);
+      } else {
+        toast.success(`You're now on the ${ESTATE_PLANS[planKey].label} plan.`);
+      }
       setShowUpgrade(false);
       await load();
     } catch (err) {
@@ -158,6 +165,13 @@ export default function EstateBillingPage() {
               </div>
               {showUpgrade && (
                 <div style={{ marginTop: 20 }}>
+                  {status.plan_key === "basic" && (
+                    <p className="edash-field-note" style={{ marginBottom: 12 }}>
+                      {status.status === "trialing"
+                        ? `No charge is made during your trial. Plus will be charged at ${money(String(ESTATE_PLANS.plus[status.billing_cycle === "yearly" ? "yearly" : "monthly"]))} when the trial converts.`
+                        : `Upgrading now charges the ${money(String(Math.max(0, ESTATE_PLANS.plus[status.billing_cycle === "yearly" ? "yearly" : "monthly"] - Number(status.amount || 0))))} difference. Your next renewal will use the full Plus price.`}
+                    </p>
+                  )}
                   <EstatePricingCards onSelectPlan={(planKey) => void upgrade(planKey)} busyPlan={busy ? "plus" : null} ctaLabel={(planKey) => (planKey === status.plan_key ? "Current plan" : "Switch to this plan")} />
                 </div>
               )}
