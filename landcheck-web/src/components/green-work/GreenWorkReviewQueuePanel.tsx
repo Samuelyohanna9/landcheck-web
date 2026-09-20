@@ -41,6 +41,8 @@ type GreenWorkReviewQueuePanelProps = {
   normalizeName: (value: string | null | undefined) => string;
 };
 
+const prefetchedReviewPhotoUrls = new Set<string>();
+
 export default function GreenWorkReviewQueuePanel({
   activeProjectId,
   loadProjectData,
@@ -94,6 +96,23 @@ export default function GreenWorkReviewQueuePanel({
     const validTaskIds = new Set(selectableTaskIds);
     setSelectedTaskIds((current) => current.filter((taskId) => validTaskIds.has(taskId)));
   }, [selectableTaskIds]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || reviewQueue.length === 0) return;
+    const options = getReviewPhotoRenderOptions();
+    reviewQueue.slice(0, 2).forEach((task) => {
+      const photoUrl = getTaskPhotoUrls(task)[0];
+      const displayUrl = photoUrl ? toDisplayPhotoUrl(photoUrl, options) : "";
+      if (!displayUrl || prefetchedReviewPhotoUrls.has(displayUrl)) return;
+
+      prefetchedReviewPhotoUrls.add(displayUrl);
+      const image = new window.Image();
+      image.decoding = "async";
+      image.onload = () => image.decode?.().catch(() => undefined);
+      image.onerror = () => prefetchedReviewPhotoUrls.delete(displayUrl);
+      image.src = displayUrl;
+    });
+  }, [reviewQueue]);
 
   const toggleAllTasks = () => {
     setSelectedTaskIds(allTasksSelected ? [] : selectableTaskIds);
@@ -156,7 +175,7 @@ export default function GreenWorkReviewQueuePanel({
         </div>
       )}
       <div className="staff-list">
-        {reviewQueue.map((task) => {
+        {reviewQueue.map((task, taskIndex) => {
           const taskId = Number(task.id);
           const reviewTreeRecord = treeById.get(Number(task.tree_id)) || null;
           const fallbackTreeCoords = treeCoordinatesById.get(Number(task.tree_id));
@@ -356,7 +375,8 @@ export default function GreenWorkReviewQueuePanel({
                       key={`review-task-${task.id}-photo-${photoIndex}`}
                       src={toDisplayPhotoUrl(photoUrl, reviewPhotoRenderOptions)}
                       alt={`Task ${task.id} evidence ${photoIndex + 1}`}
-                      loading={photoIndex === 0 ? "eager" : "lazy"}
+                      loading={taskIndex < 2 && photoIndex === 0 ? "eager" : "lazy"}
+                      fetchPriority={taskIndex === 0 && photoIndex === 0 ? "high" : "low"}
                       decoding="async"
                       width={reviewPhotoRenderOptions.w || 560}
                       height={reviewPhotoRenderOptions.h || 420}

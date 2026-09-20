@@ -2033,6 +2033,16 @@ const getReviewPhotoRenderOptions = (): PhotoRenderOptions => {
   return baseline;
 };
 
+const getTreeInspectorPhotoRenderOptions = (): PhotoRenderOptions => {
+  const reviewOptions = getReviewPhotoRenderOptions();
+  return {
+    w: Math.min(Number(reviewOptions.w || 560), 360),
+    h: Math.min(Number(reviewOptions.h || 420), 270),
+    q: Math.min(Number(reviewOptions.q || 64), 58),
+    fm: "webp",
+  };
+};
+
 const appendPhotoRenderParams = (baseUrl: string, opts?: PhotoRenderOptions) => {
   if (!opts) return baseUrl;
   const params = new URLSearchParams();
@@ -19099,8 +19109,13 @@ export default function GreenWork() {
                 {inspectedTree.photo_url ? (
                   <img
                     className="green-work-tree-inspector-photo"
-                    src={toDisplayPhotoUrl(inspectedTree.photo_url)}
+                    src={toDisplayPhotoUrl(inspectedTree.photo_url, getTreeInspectorPhotoRenderOptions())}
                     alt={activeWorkflowProfile === "agric" ? `Farm ${inspectedTree.id}` : activeWorkflowProfile === "relief_recovery" ? `Site ${inspectedTree.id}` : `Tree ${inspectedTree.id}`}
+                    loading="eager"
+                    fetchPriority="high"
+                    decoding="async"
+                    width={360}
+                    height={270}
                   />
                 ) : (
                   <div className="green-work-tree-inspector-photo empty">
