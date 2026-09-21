@@ -192,7 +192,12 @@ export default function EstateBillingPage() {
                     <td data-label="Date">{new Date(charge.attempted_at).toLocaleDateString()}</td>
                     <td data-label="Type" style={{ textTransform: "capitalize" }}>{charge.charge_type.replaceAll("_", " ")}</td>
                     <td data-label="Amount">{money(charge.amount)}</td>
-                    <td data-label="Status"><span className={`edash-status-pill tone-${charge.status === "success" ? "good" : charge.status === "pending" ? "neutral" : "danger"}`}>{charge.status}</span></td>
+                    <td data-label="Status">
+                      <span className={`edash-status-pill tone-${charge.status === "success" ? "good" : charge.status === "pending" ? "neutral" : "danger"}`}>{charge.status}</span>
+                      {charge.status === "failed" && charge.failure_reason && (
+                        <div className="edash-field-note" style={{ marginTop: 4 }}>{charge.failure_reason}</div>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

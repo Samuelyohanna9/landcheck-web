@@ -18,6 +18,7 @@ import EstateModal from "../components/estates/EstateModal";
 import CoordinateSystemSelect from "../components/CoordinateSystemSelect";
 import EstateShell from "../components/estates/EstateShell";
 import EstateReservationRequests from "../components/estates/EstateReservationRequests";
+import EstateOperationsSummary from "../components/estates/EstateOperationsSummary";
 import Spinner, { LoadingPanel } from "../components/estates/EstateSpinner";
 import { clearSurveyPlanDraft } from "../offline/surveyPlanDraft";
 import "../styles/estates.css";
@@ -558,6 +559,9 @@ export default function Estates() {
   const [qualityLoading, setQualityLoading] = useState(false);
   const [activity, setActivity] = useState<any[]>([]);
   const [dashboard, setDashboard] = useState<any>(null);
+  const [estatePayments, setEstatePayments] = useState<any[]>([]);
+  const [estateDocuments, setEstateDocuments] = useState<any[]>([]);
+  const [publicSettings, setPublicSettings] = useState<any>(null);
   const [estateDetail, setEstateDetail] = useState<any>(null);
   const unitSystem: UnitSystem = estateDetail?.unit_system === "ft" ? "ft" : "m";
   // Satellite is the requested default first view - the actual terrain/imagery is what a plot
@@ -1122,6 +1126,9 @@ export default function Estates() {
     api.get(`/estates/${estateId}/blocks`).then((response) => setBlocks(response.data || [])).catch(() => setBlocks([]));
     api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));
     api.get(`/estates/${estateId}/dashboard`).then((response) => setDashboard(response.data)).catch(() => setDashboard(null));
+    api.get("/estates/payments", { params: { estate_id: estateId, page_size: 100 } }).then((response) => setEstatePayments(response.data?.items || [])).catch(() => setEstatePayments([]));
+    api.get("/estates/documents", { params: { page_size: 100 } }).then((response) => setEstateDocuments(response.data?.items || [])).catch(() => setEstateDocuments([]));
+    api.get(`/estates/${estateId}/public-settings`).then((response) => setPublicSettings(response.data)).catch(() => setPublicSettings(null));
   }, [estateId]);
   // Builds the mapboxgl.Map exactly ONCE per estate, guarded by mapRef.current the same way the
   // already-reliable MapViewEnhanced/ProjectMap components do it - this is a stronger guarantee
@@ -1292,6 +1299,8 @@ export default function Estates() {
     setLayoutProposal((proposals.data || [])[0] || null);
     setSurveyRequests(surveys.data || []);
     setStakingTasks(staking.data || []);
+    void api.get("/estates/payments", { params: { estate_id: estateId, page_size: 100 } }).then((response) => setEstatePayments(response.data?.items || [])).catch(() => setEstatePayments([]));
+    void api.get("/estates/documents", { params: { page_size: 100 } }).then((response) => setEstateDocuments(response.data?.items || [])).catch(() => setEstateDocuments([]));
   };
   const runWorkflow = async (label: string, action: () => Promise<any>) => {
     try {
@@ -3042,6 +3051,18 @@ export default function Estates() {
         </div>
       ) : (
         <>
+          <EstateOperationsSummary
+            estateId={estateId}
+            dashboard={dashboard}
+            plots={plots}
+            allocations={allocations}
+            customers={customers}
+            surveyRequests={surveyRequests}
+            stakingTasks={stakingTasks}
+            payments={estatePayments}
+            documents={estateDocuments}
+            publicSettings={publicSettings}
+          />
           <EstateReservationRequests estateId={estateId} />
           {renderBottomRow()}
           {renderFooter()}

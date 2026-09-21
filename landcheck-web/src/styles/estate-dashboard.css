@@ -2357,3 +2357,120 @@
   .edash-modal-actions { justify-content: stretch; }
   .edash-modal-actions > button { flex: 1; }
 }
+
+/* Estate control room -----------------------------------------------------
+   This layer is deliberately built from the same cards, type scale, and action buttons as the
+   rest of the Estate dashboard. It turns the first screen into an exception-first workspace while
+   leaving the established map, reservation, and reporting workflows intact. */
+.edash-ops { display: grid; gap: 14px; }
+.edash-ops-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 2px 2px 0; }
+.edash-ops-heading h2 { margin: 3px 0 3px; color: var(--edash-ink); font-size: 1.2rem; letter-spacing: -0.025em; }
+.edash-ops-heading p { margin: 0; max-width: 650px; color: var(--edash-muted); font-size: 0.78rem; }
+.edash-section-kicker { display: block; color: var(--edash-brand-dark); font-size: 0.64rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+.edash-ops-heading-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.edash-ops-heading-actions .edash-btn-outline,
+.edash-ops-heading-actions .edash-btn-primary { height: 33px; font-size: 0.74rem; }
+.edash-ops-heading-actions svg { width: 14px; height: 14px; }
+
+.edash-ops-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.edash-ops-metric { display: flex; align-items: center; gap: 9px; min-width: 0; padding: 11px 12px; border: 1px solid var(--edash-border); border-radius: var(--edash-radius-md); background: var(--edash-surface); box-shadow: var(--edash-shadow-card); }
+.edash-ops-metric-icon { display: flex; align-items: center; justify-content: center; width: 27px; height: 27px; border-radius: 8px; flex-shrink: 0; }
+.edash-ops-metric-icon svg { width: 14px; height: 14px; }
+.edash-ops-metric-icon.tone-neutral { background: var(--edash-neutral-tint); color: var(--edash-neutral); }
+.edash-ops-metric-icon.tone-info { background: var(--edash-info-tint); color: var(--edash-info); }
+.edash-ops-metric-icon.tone-good { background: var(--edash-good-tint); color: var(--edash-good); }
+.edash-ops-metric-icon.tone-warn { background: var(--edash-warn-tint); color: var(--edash-warn); }
+.edash-ops-metric > div { display: grid; min-width: 0; }
+.edash-ops-eyebrow { color: var(--edash-muted); font-size: 0.63rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.edash-ops-metric strong { color: var(--edash-ink); font-size: 0.95rem; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.edash-ops-metric small { color: var(--edash-faint); font-size: 0.66rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.edash-ops-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(310px, 0.85fr); gap: 14px; }
+.edash-ops-grid > .edash-card, .edash-passport-card { min-width: 0; }
+.edash-ops-card-subtitle { margin: 3px 0 0; color: var(--edash-muted); font-size: 0.7rem; line-height: 1.35; }
+.edash-ops-count { display: inline-flex; align-items: center; justify-content: center; min-width: 25px; height: 25px; padding: 0 7px; border-radius: 999px; background: var(--edash-neutral-tint); color: var(--edash-muted); font-size: 0.72rem; font-weight: 800; }
+.edash-ops-count.is-active { background: var(--edash-warn-tint); color: var(--edash-warn); }
+.edash-ops-action-list { display: grid; gap: 5px; }
+.edash-ops-action { display: grid; grid-template-columns: 27px minmax(0, 1fr) auto; align-items: center; gap: 9px; min-width: 0; padding: 7px 0; border-bottom: 1px solid var(--edash-border-soft); }
+.edash-ops-action:last-child { border-bottom: none; padding-bottom: 0; }
+.edash-ops-action:hover .edash-ops-action-copy strong { color: var(--edash-brand-dark); }
+.edash-ops-action-icon { display: flex; align-items: center; justify-content: center; width: 27px; height: 27px; border-radius: 8px; }
+.edash-ops-action-icon svg { width: 14px; height: 14px; }
+.edash-ops-action-icon.tone-warn { background: var(--edash-warn-tint); color: var(--edash-warn); }
+.edash-ops-action-icon.tone-danger { background: var(--edash-danger-tint); color: var(--edash-danger); }
+.edash-ops-action-icon.tone-info { background: var(--edash-info-tint); color: var(--edash-info); }
+.edash-ops-action-icon.tone-good { background: var(--edash-good-tint); color: var(--edash-good); }
+.edash-ops-action-copy { display: grid; min-width: 0; }
+.edash-ops-action-copy strong { color: var(--edash-ink); font-size: 0.74rem; font-weight: 700; }
+.edash-ops-action-copy small { color: var(--edash-muted); font-size: 0.66rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.edash-ops-action-number { display: inline-flex; align-items: center; justify-content: center; min-width: 23px; height: 23px; padding: 0 6px; border-radius: 999px; font-size: 0.68rem; font-weight: 800; }
+.edash-ops-action-number.tone-warn { background: var(--edash-warn-tint); color: var(--edash-warn); }
+.edash-ops-action-number.tone-danger { background: var(--edash-danger-tint); color: var(--edash-danger); }
+.edash-ops-action-number.tone-info { background: var(--edash-info-tint); color: var(--edash-info); }
+.edash-ops-action-number.tone-good { background: var(--edash-good-tint); color: var(--edash-good); }
+.edash-ops-empty { display: grid; justify-items: center; gap: 4px; padding: 18px 8px 5px; color: var(--edash-faint); text-align: center; }
+.edash-ops-empty svg { width: 26px; height: 26px; color: var(--edash-good); margin-bottom: 2px; }
+.edash-ops-empty strong { color: var(--edash-ink); font-size: 0.78rem; }
+.edash-ops-empty span { font-size: 0.68rem; }
+
+.edash-ops-readiness-card .edash-card-head > svg { width: 20px; height: 20px; color: var(--edash-brand); }
+.edash-ops-readiness-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--edash-border-soft); color: var(--edash-muted); font-size: 0.72rem; }
+.edash-ops-readiness-row strong { color: var(--edash-ink); font-size: 0.82rem; }
+.edash-ops-readiness-row a { color: var(--edash-brand-dark); font-size: 0.68rem; font-weight: 700; white-space: nowrap; }
+.edash-ops-trust-note { display: flex; align-items: flex-start; gap: 7px; margin-top: 11px; padding: 8px 9px; border-radius: var(--edash-radius-sm); background: var(--edash-brand-tint); color: var(--edash-brand-dark); font-size: 0.68rem; line-height: 1.4; }
+.edash-ops-trust-note svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+.edash-passport-card .edash-card-inner { padding-bottom: 14px; }
+.edash-passport-toolbar { display: flex; align-items: flex-end; gap: 10px; padding: 10px; margin-bottom: 10px; border: 1px solid var(--edash-border-soft); border-radius: var(--edash-radius-md); background: #fafbfc; }
+.edash-passport-toolbar .edash-field { min-width: 170px; }
+.edash-passport-toolbar .edash-field select { height: 34px; padding-top: 6px; padding-bottom: 6px; }
+.edash-passport-identity { display: grid; gap: 1px; min-width: 150px; margin-right: auto; }
+.edash-passport-identity span, .edash-passport-identity small { color: var(--edash-muted); font-size: 0.67rem; }
+.edash-passport-identity strong { color: var(--edash-ink); font-size: 0.8rem; }
+.edash-passport-identity small { color: var(--edash-faint); }
+.edash-passport-toolbar .edash-btn-outline { height: 34px; font-size: 0.72rem; }
+.edash-passport-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.edash-passport-step { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-width: 0; padding: 9px; border: 1px solid var(--edash-border-soft); border-radius: var(--edash-radius-md); background: var(--edash-surface); }
+.edash-passport-step-icon { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: var(--edash-brand-tint); color: var(--edash-brand-dark); }
+.edash-passport-step-icon svg { width: 14px; height: 14px; }
+.edash-passport-step > div { display: grid; min-width: 0; }
+.edash-passport-step > div > span { color: var(--edash-muted); font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.edash-passport-step > div > strong { color: var(--edash-ink); font-size: 0.74rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.edash-passport-step > div > small { color: var(--edash-faint); font-size: 0.64rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.edash-ops-badge { align-self: start; padding: 3px 6px; border-radius: 999px; font-size: 0.59rem; font-weight: 800; white-space: nowrap; }
+.edash-ops-badge.tone-good { background: var(--edash-good-tint); color: var(--edash-good); }
+.edash-ops-badge.tone-info { background: var(--edash-info-tint); color: var(--edash-info); }
+.edash-ops-badge.tone-warn { background: var(--edash-warn-tint); color: var(--edash-warn); }
+.edash-ops-badge.tone-neutral { background: var(--edash-neutral-tint); color: var(--edash-neutral); }
+
+.edash-ops-links { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.edash-ops-links > a { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 10px; border: 1px solid var(--edash-border); border-radius: var(--edash-radius-md); background: var(--edash-surface); box-shadow: var(--edash-shadow-card); }
+.edash-ops-links > a:hover { border-color: var(--edash-brand); }
+.edash-ops-links > a > svg { width: 16px; height: 16px; color: var(--edash-brand); }
+.edash-ops-links > a > span { display: grid; min-width: 0; }
+.edash-ops-links strong { color: var(--edash-ink); font-size: 0.7rem; }
+.edash-ops-links small { color: var(--edash-muted); font-size: 0.62rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.edash-ops-links b { color: var(--edash-faint); font-size: 1rem; font-weight: 400; }
+
+@media (max-width: 1080px) {
+  .edash-ops-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .edash-ops-grid { grid-template-columns: 1fr; }
+  .edash-passport-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .edash-ops-links { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .edash-ops-heading { display: grid; gap: 10px; }
+  .edash-ops-heading-actions { width: 100%; }
+  .edash-ops-heading-actions > * { flex: 1; justify-content: center; }
+  .edash-ops-metrics { gap: 7px; }
+  .edash-ops-metric { padding: 9px; gap: 7px; }
+  .edash-ops-metric strong { font-size: 0.82rem; }
+  .edash-ops-metric small { font-size: 0.6rem; }
+  .edash-passport-toolbar { align-items: stretch; flex-wrap: wrap; }
+  .edash-passport-toolbar .edash-field { flex-basis: 100%; }
+  .edash-passport-identity { margin-right: 0; flex: 1; }
+  .edash-passport-toolbar .edash-btn-outline { flex-shrink: 0; }
+  .edash-passport-grid { grid-template-columns: 1fr; }
+  .edash-ops-links { grid-template-columns: 1fr; }
+}
