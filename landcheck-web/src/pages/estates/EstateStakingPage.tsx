@@ -10,6 +10,7 @@ export default function EstateStakingPage() {
   const [estateName, setEstateName] = useState("");
   const [tasks, setTasks] = useState<any[]>([]);
   const [activity, setActivity] = useState<any[]>([]);
+  const [actionBusy, setActionBusy] = useState("");
 
   const load = () => {
     if (!estateId) return;
@@ -20,8 +21,11 @@ export default function EstateStakingPage() {
   useEffect(load, [estateId]);
 
   const run = async (label: string, action: () => Promise<unknown>) => {
+    if (actionBusy) return;
+    setActionBusy(label);
     try { await action(); toast.success(`${label} completed.`); load(); }
     catch (error) { toast.error(await extractApiErrorMessage(error, `${label} could not be completed.`)); }
+    finally { setActionBusy(""); }
   };
 
   const downloadDgps = async (taskId: number) => {
@@ -54,8 +58,8 @@ export default function EstateStakingPage() {
                   </div>
                   <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
                     <button type="button" className="edash-btn-outline" onClick={() => void downloadDgps(task.id)}><EstateIcon name="download" /> DGPS CSV</button>
-                    {task.status === "pending" && <button type="button" className="edash-btn-primary" onClick={() => void run("Staking start", () => api.post(`/estates/staking-tasks/${task.id}/start`))}>Start</button>}
-                    {task.status === "in_progress" && <button type="button" className="edash-btn-primary" onClick={() => void run("Staking completion", () => api.post(`/estates/staking-tasks/${task.id}/complete`))}>Complete</button>}
+                    {task.status === "pending" && <button type="button" className="edash-btn-primary" disabled={Boolean(actionBusy)} onClick={() => void run("Staking start", () => api.post(`/estates/staking-tasks/${task.id}/start`))}>{actionBusy === "Staking start" ? "Starting..." : "Start"}</button>}
+                    {task.status === "in_progress" && <button type="button" className="edash-btn-primary" disabled={Boolean(actionBusy)} onClick={() => void run("Staking completion", () => api.post(`/estates/staking-tasks/${task.id}/complete`))}>{actionBusy === "Staking completion" ? "Completing..." : "Complete"}</button>}
                   </div>
                 </div>
               ))}

@@ -1,6 +1,6 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { API_URL, api, extractApiErrorMessage } from "../api/client";
+import { API_URL, api, createIdempotencyKey, extractApiErrorMessage } from "../api/client";
 import { formatArea } from "../utils/unitFormat";
 import "../styles/estate-public.css";
 
@@ -38,6 +38,7 @@ export default function PublicEstateReservationPage() {
   const [submitted, setSubmitted] = useState(false);
   const [formError, setFormError] = useState("");
   const [form, setForm] = useState({ full_name: "", phone: "", email: "", message: "" });
+  const reservationRequestRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -53,8 +54,14 @@ export default function PublicEstateReservationPage() {
     if (!estate || !plot || !slug) return;
     setBusy(true);
     setFormError("");
+    const fingerprint = JSON.stringify({ slug, plotId: plot.id, source, form });
+    if (!reservationRequestRef.current || reservationRequestRef.current.fingerprint !== fingerprint) {
+      reservationRequestRef.current = { fingerprint, key: createIdempotencyKey("estate-public-reservation") };
+    }
+    const idempotencyKey = reservationRequestRef.current.key;
     try {
-      await api.post(`/estates/public/${slug}/plots/${plot.id}/reservation`, { ...form, email: form.email || null, message: form.message || null, source: source || null });
+      await api.post(`/estates/public/${slug}/plots/${plot.id}/reservation`, { ...form, email: form.email || null, message: form.message || null, source: source || null }, { headers: { "X-Idempotency-Key": idempotencyKey } });
+      reservationRequestRef.current = null;
       setSubmitted(true);
     } catch (err) {
       setFormError(await extractApiErrorMessage(err, "We could not send your reservation request. Please try again."));

@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from "reac
 import toast from "react-hot-toast";
 import { clearEstateAuthSession } from "../auth/estateAuth";
 import { claimEstateSurveyRequestSession } from "../auth/surveyAuth";
-import { api, extractApiErrorMessage } from "../api/client";
+import { api, createIdempotencyKey, extractApiErrorMessage } from "../api/client";
 import { money, PAYMENT_METHODS } from "../components/estates/FinancialComponents";
 import CoordinateInput from "../components/CoordinateInput";
 import EstateLayoutImport, { type EstateLayoutMethod, LAYOUT_IMPORT_METHODS } from "../components/estates/EstateLayoutImport";
@@ -508,6 +508,8 @@ export default function Estates() {
   const [assignmentBusy, setAssignmentBusy] = useState<"reserve" | "allocate" | null>(null);
   const [customerBusy, setCustomerBusy] = useState(false);
   const [workflowBusy, setWorkflowBusy] = useState("");
+  const assignmentRequestRef = useRef<{ fingerprint: string; key: string } | null>(null);
+  const customerRequestRef = useRef<{ fingerprint: string; key: string } | null>(null);
   const [inspectionNotes, setInspectionNotes] = useState("");
   const [inspectionOutcome, setInspectionOutcome] = useState("observed");
   const [hazards, setHazards] = useState<any>(null);
@@ -888,7 +890,12 @@ export default function Estates() {
     const estate = estates.find((item) => item.id === Number(estateId));
     if (!estate || !customerName.trim()) { toast.error("Enter the customer name."); return; }
     setCustomerBusy(true);
-    try { const response = await api.post(`/estates/organizations/${estate.organization_id}/customers`, { full_name: customerName.trim(), phone: customerPhone.trim() || null, email: customerEmail.trim() || null }); setSelectedCustomerId(String(response.data.id)); setCustomerName(""); setCustomerPhone(""); setCustomerEmail(""); stashPendingNotice("Customer added."); window.location.reload(); }
+    const fingerprint = JSON.stringify({ organizationId: estate.organization_id, fullName: customerName.trim(), phone: customerPhone.trim(), email: customerEmail.trim() });
+    if (!customerRequestRef.current || customerRequestRef.current.fingerprint !== fingerprint) {
+      customerRequestRef.current = { fingerprint, key: createIdempotencyKey("estate-customer") };
+    }
+    const idempotencyKey = customerRequestRef.current.key;
+    try { const response = await api.post(`/estates/organizations/${estate.organization_id}/customers`, { full_name: customerName.trim(), phone: customerPhone.trim() || null, email: customerEmail.trim() || null }, { headers: { "X-Idempotency-Key": idempotencyKey } }); setSelectedCustomerId(String(response.data.id)); setCustomerName(""); setCustomerPhone(""); setCustomerEmail(""); customerRequestRef.current = null; stashPendingNotice("Customer added."); window.location.reload(); }
     catch (error) { toast.error(await extractApiErrorMessage(error, "Customer could not be created.")); }
     finally { setCustomerBusy(false); }
   };
@@ -904,6 +911,11 @@ export default function Estates() {
       return;
     }
     setAssignmentBusy(allocate ? "allocate" : "reserve");
+    const fingerprint = JSON.stringify({ allocate, estateId, plotId: selectedPlot.id, customerId: selectedCustomerId, agreedPrice, amountPaidNow, amountPaidNowMethod, paymentScheduleEnabled, installmentAmount, installmentIntervalMonths, nextPaymentDueDate, salesAgentSubject });
+    if (!assignmentRequestRef.current || assignmentRequestRef.current.fingerprint !== fingerprint) {
+      assignmentRequestRef.current = { fingerprint, key: createIdempotencyKey(allocate ? "estate-allocate" : "estate-reserve") };
+    }
+    const idempotencyKey = assignmentRequestRef.current.key;
     try {
       const [agentSubjectType, agentSubjectId] = salesAgentSubject ? salesAgentSubject.split("::") : [null, null];
       const response = await api.post(`/estates/${estateId}/plots/${selectedPlot.id}/${allocate ? "allocate" : "reserve"}`, {
@@ -918,13 +930,14 @@ export default function Estates() {
         initial_payment_method: amountPaidNow ? amountPaidNowMethod : null,
         sales_agent_subject_type: agentSubjectType,
         sales_agent_subject_id: agentSubjectId,
-      });
-      if (amountPaidReceipt && response.data.initial_payment_id) {
+      }, { headers: { "X-Idempotency-Key": idempotencyKey } });
+      if (amountPaidReceipt && response.data.initial_payment_id && !response.data.already_processed) {
         const form = new FormData();
         form.append("file", amountPaidReceipt);
         try { await api.post(`/estates/payments/${response.data.initial_payment_id}/evidence`, form); }
         catch { /* the reservation/allocation itself already succeeded - a failed receipt upload shouldn't block it */ }
       }
+      assignmentRequestRef.current = null;
       stashPendingNotice(`Plot ${allocate ? "allocated" : "reserved"}.${response.data.customer_notified ? " A confirmation email has been sent to the customer." : ""}`);
       window.location.reload();
     }

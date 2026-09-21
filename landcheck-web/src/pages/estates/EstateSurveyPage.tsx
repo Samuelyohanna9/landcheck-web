@@ -13,6 +13,7 @@ export default function EstateSurveyPage() {
   const [estateName, setEstateName] = useState("");
   const [requests, setRequests] = useState<any[]>([]);
   const [activity, setActivity] = useState<any[]>([]);
+  const [actionBusy, setActionBusy] = useState("");
 
   const load = () => {
     if (!estateId) return;
@@ -23,8 +24,11 @@ export default function EstateSurveyPage() {
   useEffect(load, [estateId]);
 
   const run = async (label: string, action: () => Promise<unknown>) => {
+    if (actionBusy) return;
+    setActionBusy(label);
     try { await action(); toast.success(`${label} completed.`); load(); }
     catch (error) { toast.error(await extractApiErrorMessage(error, `${label} could not be completed.`)); }
+    finally { setActionBusy(""); }
   };
 
   const openInSurvey = async (surveyRequestId: number, surveyWorkingPlotId: number | string | null | undefined) => {
@@ -58,9 +62,9 @@ export default function EstateSurveyPage() {
                     <p className="edash-status-row-desc">{item.survey_reference ? `Reference ${item.survey_reference}` : "No reference assigned yet."}</p>
                   </div>
                   <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                    {!item.materialized && <button type="button" className="edash-btn-primary" onClick={() => void run("Survey workspace", () => api.post(`/estates/survey-requests/${item.id}/start`))}>Start</button>}
-                    {item.materialized && <button type="button" className="edash-btn-outline" onClick={() => void openInSurvey(item.id, item.survey_working_plot_id)}>Open in Survey</button>}
-                    {item.materialized && item.status !== "completed" && <button type="button" className="edash-btn-primary" onClick={() => void run("Survey completion", () => api.post(`/estates/survey-requests/${item.id}/complete`))}>Complete</button>}
+                    {!item.materialized && <button type="button" className="edash-btn-primary" disabled={Boolean(actionBusy)} onClick={() => void run("Survey workspace", () => api.post(`/estates/survey-requests/${item.id}/start`))}>{actionBusy === "Survey workspace" ? "Starting..." : "Start"}</button>}
+                    {item.materialized && <button type="button" className="edash-btn-outline" disabled={Boolean(actionBusy)} onClick={() => void openInSurvey(item.id, item.survey_working_plot_id)}>Open in Survey</button>}
+                    {item.materialized && item.status !== "completed" && <button type="button" className="edash-btn-primary" disabled={Boolean(actionBusy)} onClick={() => void run("Survey completion", () => api.post(`/estates/survey-requests/${item.id}/complete`))}>{actionBusy === "Survey completion" ? "Completing..." : "Complete"}</button>}
                   </div>
                 </div>
               ))}

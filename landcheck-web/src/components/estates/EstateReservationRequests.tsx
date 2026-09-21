@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { api, extractApiErrorMessage } from "../../api/client";
+import { api, createIdempotencyKey, extractApiErrorMessage } from "../../api/client";
 import { getEstateAuthSession } from "../../auth/estateAuth";
 import { PAYMENT_METHODS } from "./FinancialComponents";
 
@@ -74,6 +74,7 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
   const [installmentAmount, setInstallmentAmount] = useState("");
   const [installmentIntervalMonths, setInstallmentIntervalMonths] = useState("3");
   const [nextPaymentDueDate, setNextPaymentDueDate] = useState("");
+  const conversionRequestRef = useRef<{ fingerprint: string; key: string } | null>(null);
   const role = getEstateAuthSession()?.user.role_key;
   const canUpdate = role === "owner" || role === "manager" || role === "sales" || role === "marketer";
 
@@ -101,6 +102,7 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
   }, [estateId]);
 
   const updateStatus = async (requestId: number, status: ReservationRequest["status"]) => {
+    if (updatingId === requestId || migratingId === requestId) return;
     setUpdatingId(requestId);
     try {
       const response = await api.patch(`/estates/reservation-requests/${requestId}`, { status });
@@ -114,6 +116,7 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
   };
 
   const migrateToCustomer = async (requestId: number) => {
+    if (migratingId === requestId) return;
     if (!initialPaymentAmount || Number(initialPaymentAmount) <= 0) {
       toast.error("Enter the customer's first payment before creating the reservation.");
       return;
@@ -123,6 +126,11 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
       return;
     }
     setMigratingId(requestId);
+    const fingerprint = JSON.stringify({ requestId, initialPaymentAmount, initialPaymentMethod, paymentScheduleEnabled, installmentAmount, installmentIntervalMonths, nextPaymentDueDate });
+    if (!conversionRequestRef.current || conversionRequestRef.current.fingerprint !== fingerprint) {
+      conversionRequestRef.current = { fingerprint, key: createIdempotencyKey("estate-public-reservation") };
+    }
+    const idempotencyKey = conversionRequestRef.current.key;
     try {
       const response = await api.post(`/estates/reservation-requests/${requestId}/convert`, {
         initial_payment_amount: Number(initialPaymentAmount),
@@ -132,9 +140,10 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
           interval_months: Number(installmentIntervalMonths),
           next_due_at: `${nextPaymentDueDate}T00:00:00Z`,
         } : null,
-      });
+      }, { headers: { "X-Idempotency-Key": idempotencyKey } });
       setRequests((current) => current.map((item) => item.id === requestId ? response.data : item));
       toast.success("Customer created and plot reserved.");
+      conversionRequestRef.current = null;
       resetConversionPaymentForm();
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "The request could not be added to customers."));

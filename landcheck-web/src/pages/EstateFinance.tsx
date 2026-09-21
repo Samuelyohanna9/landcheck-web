@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { api, extractApiErrorMessage } from "../api/client";
+import { api, createIdempotencyKey, extractApiErrorMessage } from "../api/client";
 import { FinancialSummaryCards, PaymentStatusBadge, money, PAYMENT_METHODS, paymentMethodLabel } from "../components/estates/FinancialComponents";
 import EstateShell from "../components/estates/EstateShell";
 import EstateModal from "../components/estates/EstateModal";
@@ -94,6 +94,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
   const [file, setFile] = useState<File | null>(null);
   const [recordDetail, setRecordDetail] = useState<any>(null);
   const [uploadBusy, setUploadBusy] = useState(false);
+  const paymentRequestRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
   const fail = async (error: unknown, message: string) => toast.error(await extractApiErrorMessage(error, message));
 
@@ -183,10 +184,15 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
     const resolvedMethod = paymentMethod === "other" ? paymentMethodOther.trim() : paymentMethod;
     if (!resolvedMethod) { toast.error("Enter the payment method."); return; }
     setRecordBusy(true);
+    const fingerprint = JSON.stringify({ allocationId, amount, paymentDate, resolvedMethod, reference: reference.trim() });
+    if (!paymentRequestRef.current || paymentRequestRef.current.fingerprint !== fingerprint) {
+      paymentRequestRef.current = { fingerprint, key: createIdempotencyKey("estate-payment") };
+    }
+    const idempotencyKey = paymentRequestRef.current.key;
     try {
-      const made = await api.post(`/estates/allocations/${allocationId}/payments`, { amount, payment_date: paymentDate, payment_method: resolvedMethod, reference_no: reference || null });
+      const made = await api.post(`/estates/allocations/${allocationId}/payments`, { amount, payment_date: paymentDate, payment_method: resolvedMethod, reference_no: reference || null }, { headers: { "X-Idempotency-Key": idempotencyKey } });
       let noticeText = "Payment recorded and pending confirmation.";
-      if (receipt) {
+      if (receipt && !made.data.already_processed) {
         const body = new FormData();
         body.append("file", receipt);
         try { await api.post(`/estates/payments/${made.data.id}/evidence`, body); noticeText = "Payment recorded and receipt attached."; }
@@ -194,6 +200,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
       }
       if (made.data.customer_notified) noticeText += " A confirmation email has been sent to the customer.";
       toast.success(noticeText);
+      paymentRequestRef.current = null;
       setRecording(false);
       await load();
     } catch (error) {

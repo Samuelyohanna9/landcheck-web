@@ -35,6 +35,15 @@ export const api = axios.create({
   timeout: 30000,
 });
 
+// Mutation callers keep this key while retrying the same logical action. The API uses it to
+// return the original allocation/payment instead of creating a second financial record.
+export function createIdempotencyKey(prefix = "estate-action") {
+  const random = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${prefix}-${random}`.slice(0, 128);
+}
+
 type StoredSessionUser = {
   id?: number | null;
   full_name?: string | null;

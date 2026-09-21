@@ -1,6 +1,6 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { api, extractApiErrorMessage } from "../../api/client";
+import { api, createIdempotencyKey, extractApiErrorMessage } from "../../api/client";
 import { money, PAYMENT_METHODS } from "../../components/estates/FinancialComponents";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
@@ -46,6 +46,7 @@ export default function EstateCommissionsPage() {
   const [payoutNotes, setPayoutNotes] = useState("");
   const [payoutReceipt, setPayoutReceipt] = useState<File | null>(null);
   const [payoutBusy, setPayoutBusy] = useState(false);
+  const payoutRequestRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
   const loadCommissionData = async (orgId: number) => {
     try {
@@ -180,8 +181,13 @@ export default function EstateCommissionsPage() {
   };
 
   const submitPayout = async () => {
-    if (!payoutAllocationId) return;
+    if (!payoutAllocationId || payoutBusy) return;
     setPayoutBusy(true);
+    const fingerprint = JSON.stringify({ payoutAllocationId, payoutAmount, payoutDate, payoutMethod, payoutReference: payoutReference.trim(), payoutNotes: payoutNotes.trim() });
+    if (!payoutRequestRef.current || payoutRequestRef.current.fingerprint !== fingerprint) {
+      payoutRequestRef.current = { fingerprint, key: createIdempotencyKey("estate-commission-payout") };
+    }
+    const idempotencyKey = payoutRequestRef.current.key;
     try {
       const response = await api.post(`/estates/allocations/${payoutAllocationId}/commission-payout`, {
         amount: payoutAmount ? Number(payoutAmount) : null,
@@ -189,14 +195,15 @@ export default function EstateCommissionsPage() {
         payment_method: payoutMethod,
         reference_no: payoutReference.trim() || null,
         notes: payoutNotes.trim() || null,
-      });
-      if (payoutReceipt) {
+      }, { headers: { "X-Idempotency-Key": idempotencyKey } });
+      if (payoutReceipt && !response.data.already_processed) {
         const form = new FormData();
         form.append("file", payoutReceipt);
         try { await api.post("/estates/documents", form, { params: { entity_type: "commission_payout", entity_id: response.data.id, document_type: "receipt" } }); }
         catch { /* the payout itself already succeeded - a failed receipt upload shouldn't undo it */ }
       }
       setPayoutAllocationId(null);
+      payoutRequestRef.current = null;
       toast.success("Commission payout recorded.");
       await refreshAfterPayout();
     } catch (error) {
