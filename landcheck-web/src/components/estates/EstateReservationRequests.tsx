@@ -144,7 +144,7 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
   };
 
   return (
-    <section className="edash-card edash-public-leads">
+    <section id="public-reservations" className="edash-card edash-public-leads">
       <div className="edash-card-inner">
         <div className="edash-card-head">
           <div>

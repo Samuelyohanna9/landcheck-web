@@ -146,6 +146,22 @@
   color: var(--edash-brand-dark);
 }
 
+.edash-nav-label { min-width: 0; flex: 1; }
+.edash-nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--edash-danger);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .edash-nav-icon {
   display: flex;
   align-items: center;
@@ -2417,12 +2433,21 @@
 .edash-survey-station-row input { min-width: 0; }
 .edash-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 
+.edash-reservation-notice { display: grid; gap: 10px; color: var(--edash-ink); }
+.edash-reservation-notice-icon { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 12px; background: var(--edash-danger-tint); color: var(--edash-danger); }
+.edash-reservation-notice-icon svg { width: 21px; height: 21px; }
+.edash-reservation-notice > strong { font-size: 1.05rem; }
+.edash-reservation-notice p { margin: 0; color: var(--edash-muted); font-size: 0.82rem; line-height: 1.5; }
+.edash-reservation-notice-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+
 @media (max-width: 640px) {
   .edash-modal-overlay { padding: 0; align-items: stretch; }
   .edash-modal { max-width: none; border-radius: 0; min-height: 100vh; }
   .edash-survey-station-row { grid-template-columns: 68px minmax(0, 1fr); }
   .edash-modal-actions { justify-content: stretch; }
   .edash-modal-actions > button { flex: 1; }
+  .edash-reservation-notice-actions { flex-direction: column; }
+  .edash-reservation-notice-actions > button { width: 100%; justify-content: center; }
 }
 
 /* Estate control room -----------------------------------------------------

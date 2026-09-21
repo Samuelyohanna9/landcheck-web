@@ -51,6 +51,8 @@ function humanizeRole(roleKey?: string | null) {
   return roleKey.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+type DeliverySignal = { id: number; created_at: string };
+
 export default function EstateShell({
   estateId,
   estateName,
@@ -94,12 +96,81 @@ export default function EstateShell({
   const notifPosition = useFloatingPopoverPosition(notifButtonRef, notifPopoverRef, notifOpen);
   const canRenameEstate = ["owner", "manager"].includes(String(estateSession?.user.role_key || "").toLowerCase());
 
+  const deliverySeenStorageKey = `edash_delivery_seen_${estateId}_${estateSession?.user.id || "user"}`;
+  const reservationNoticeStorageKey = `edash_reservation_notice_${estateId}_${estateSession?.user.id || "user"}`;
+  const [deliveryRows, setDeliveryRows] = useState<DeliverySignal[]>([]);
+  const [deliverySeenTimestamp, setDeliverySeenTimestamp] = useState<string | null>(() => {
+    try { return window.localStorage.getItem(deliverySeenStorageKey); } catch { return null; }
+  });
+  const [newReservationCount, setNewReservationCount] = useState(0);
+  const [newReservationLatestId, setNewReservationLatestId] = useState<number | null>(null);
+  const [showReservationNotice, setShowReservationNotice] = useState(false);
+
+  const latestDeliveryTimestamp = deliveryRows.reduce<string | null>(
+    (latest, row) => (!latest || row.created_at > latest ? row.created_at : latest),
+    null,
+  );
+  const unreadDeliveryCount = deliverySeenTimestamp
+    ? deliveryRows.filter((row) => row.created_at > deliverySeenTimestamp).length
+    : deliveryRows.length;
+
+  const markDeliverySeen = () => {
+    if (!latestDeliveryTimestamp) return;
+    try { window.localStorage.setItem(deliverySeenStorageKey, latestDeliveryTimestamp); } catch { /* badge remains session-only if storage is blocked */ }
+    setDeliverySeenTimestamp(latestDeliveryTimestamp);
+  };
+
+  const dismissReservationNotice = () => {
+    if (newReservationLatestId !== null) {
+      try { window.localStorage.setItem(reservationNoticeStorageKey, String(newReservationLatestId)); } catch { /* the notice can still be dismissed for this render */ }
+    }
+    setShowReservationNotice(false);
+  };
+
+  const openPublicReservations = () => {
+    dismissReservationNotice();
+    navigate(`/estates/${estateId}#public-reservations`);
+  };
+
   useEffect(() => {
     if (renameOpen) return;
     const nextName = estateName || "Estate";
     setDisplayEstateName(nextName);
     setRenameValue(nextName === "Estate" ? "" : nextName);
   }, [estateName, renameOpen]);
+
+  useEffect(() => {
+    try { setDeliverySeenTimestamp(window.localStorage.getItem(deliverySeenStorageKey)); } catch { setDeliverySeenTimestamp(null); }
+  }, [deliverySeenStorageKey]);
+
+  useEffect(() => {
+    if (!estateId || estateId === "0") return;
+    let mounted = true;
+    api.get(`/estates/${estateId}/notifications`, { params: { limit: 250 } })
+      .then((response) => {
+        if (!mounted) return;
+        const items = Array.isArray(response.data?.items) ? response.data.items : [];
+        setDeliveryRows(items.map((item: DeliverySignal) => ({ id: Number(item.id), created_at: String(item.created_at || "") })).filter((item: DeliverySignal) => item.created_at));
+      })
+      .catch(() => { if (mounted) setDeliveryRows([]); });
+    api.get(`/estates/${estateId}/reservation-requests`, { params: { status: "new" } })
+      .then((response) => {
+        if (!mounted) return;
+        const rows = Array.isArray(response.data) ? response.data : [];
+        const latestId = rows.reduce((latest: number | null, row: { id?: number }) => Math.max(latest || 0, Number(row.id || 0)), 0) || null;
+        setNewReservationCount(rows.length);
+        setNewReservationLatestId(latestId);
+        let seenId = 0;
+        try { seenId = Number(window.localStorage.getItem(reservationNoticeStorageKey) || 0); } catch { /* continue without persisted dismissal */ }
+        if (latestId && latestId > seenId) setShowReservationNotice(true);
+      })
+      .catch(() => { if (mounted) { setNewReservationCount(0); setNewReservationLatestId(null); } });
+    return () => { mounted = false; };
+  }, [estateId, reservationNoticeStorageKey]);
+
+  useEffect(() => {
+    if (activeKey === "notifications") markDeliverySeen();
+  }, [activeKey, latestDeliveryTimestamp]);
 
   const saveEstateName = async () => {
     const nextName = renameValue.trim();
@@ -226,10 +297,11 @@ export default function EstateShell({
               key={item.key}
               className={`edash-nav-item${item.key === activeKey ? " active" : ""}`}
               to={item.path(estateId)}
-              onClick={() => setSidebarOpen(false)}
+              onClick={() => { setSidebarOpen(false); if (item.key === "notifications") markDeliverySeen(); }}
             >
               <span className="edash-nav-icon"><EstateIcon name={item.icon} /></span>
-              {item.label}
+              <span className="edash-nav-label">{item.label}</span>
+              {item.key === "notifications" && unreadDeliveryCount > 0 && <span className="edash-nav-badge">{unreadDeliveryCount > 99 ? "99+" : unreadDeliveryCount}</span>}
             </Link>
           ))}
         </nav>
@@ -271,7 +343,7 @@ export default function EstateShell({
                 aria-label="Recent updates"
               >
                 <EstateIcon name="bell" />
-                {unreadCount > 0 && <span className="edash-notif-badge">{Math.min(unreadCount, 9)}</span>}
+                {Math.max(unreadCount, unreadDeliveryCount) > 0 && <span className="edash-notif-badge">{Math.min(Math.max(unreadCount, unreadDeliveryCount), 99)}</span>}
               </button>
             </div>
             <div style={{ position: "relative" }} ref={userMenuRef}>
@@ -367,6 +439,19 @@ export default function EstateShell({
           <p className="edash-field-note">
             For hazard or geometry questions, the Audit Timeline and Reports pages often have the detail our team will ask for first.
           </p>
+        </EstateModal>
+      )}
+      {showReservationNotice && newReservationCount > 0 && (
+        <EstateModal title="New public reservations" subtitle="Public Reservations" onClose={dismissReservationNotice}>
+          <div className="edash-reservation-notice">
+            <span className="edash-reservation-notice-icon"><EstateIcon name="customers" /></span>
+            <strong>{newReservationCount} new reservation{newReservationCount === 1 ? "" : "s"}</strong>
+            <p>New customers have submitted reservation requests through your public Estate page. Check their details and follow up from Public Reservations.</p>
+            <div className="edash-reservation-notice-actions">
+              <button type="button" className="edash-btn-primary" onClick={openPublicReservations}>OK, check reservations</button>
+              <button type="button" className="edash-btn-outline" onClick={dismissReservationNotice}>Later</button>
+            </div>
+          </div>
         </EstateModal>
       )}
     </div>
