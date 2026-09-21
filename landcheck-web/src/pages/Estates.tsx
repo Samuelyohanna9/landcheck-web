@@ -59,6 +59,31 @@ function relativeTime(value: string) {
   return new Date(value).toLocaleDateString();
 }
 
+function addCalendarMonths(value: string, months: number) {
+  const date = new Date(`${value}T12:00:00`);
+  if (!value || !Number.isFinite(date.getTime()) || !Number.isInteger(months) || months < 1) return null;
+  const originalDay = date.getDate();
+  date.setDate(1);
+  date.setMonth(date.getMonth() + months);
+  const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  date.setDate(Math.min(originalDay, lastDay));
+  return date;
+}
+
+function schedulePreview(nextDueDate: string, intervalMonths: string) {
+  const interval = Number(intervalMonths);
+  const first = new Date(`${nextDueDate}T12:00:00`);
+  if (!nextDueDate || !Number.isFinite(first.getTime()) || !Number.isInteger(interval) || interval < 1) return null;
+  const dates = [first, addCalendarMonths(nextDueDate, interval), addCalendarMonths(nextDueDate, interval * 2)].filter(Boolean) as Date[];
+  return dates.map((date) => date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }));
+}
+
+function tomorrowDateInputValue() {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  return date.toISOString().slice(0, 10);
+}
+
 type Estate = { id: number; name: string; status: string; organization_id: number; location?: string | null; crs?: string; project_reference?: string | null; project_owner?: string | null; financial?: { confirmed_collections:string; outstanding_balance:string } };
 type EstateCoordinatePoint = { station: string; lng: number; lat: number; height?: number; is_boundary?: boolean };
 type SurveyStationSelection = {
@@ -473,7 +498,7 @@ export default function Estates() {
   const [paymentScheduleEnabled, setPaymentScheduleEnabled] = useState(false);
   const [installmentAmount, setInstallmentAmount] = useState("");
   const [installmentIntervalMonths, setInstallmentIntervalMonths] = useState("3");
-  const [firstPaymentDueDate, setFirstPaymentDueDate] = useState("");
+  const [nextPaymentDueDate, setNextPaymentDueDate] = useState("");
   const [amountPaidNow, setAmountPaidNow] = useState("");
   const [amountPaidNowMethod, setAmountPaidNowMethod] = useState("bank_transfer");
   const [amountPaidReceipt, setAmountPaidReceipt] = useState<File | null>(null);
@@ -864,8 +889,12 @@ export default function Estates() {
   };
   const assignCustomer = async (allocate: boolean) => {
     if (!estateId || !selectedPlot || !selectedCustomerId) { toast.error("Choose a parcel and customer first."); return; }
-    if (paymentScheduleEnabled && (!installmentAmount || !firstPaymentDueDate || Number(installmentIntervalMonths) < 1)) {
-      toast.error("Enter the instalment amount, interval and first due date.");
+    if (!amountPaidNow || Number(amountPaidNow) <= 0) {
+      toast.error("Record the customer's first payment before reserving or allocating this plot.");
+      return;
+    }
+    if (paymentScheduleEnabled && (!installmentAmount || !nextPaymentDueDate || Number(installmentIntervalMonths) < 1)) {
+      toast.error("Enter the instalment amount, repeat interval in months, and next payment due date.");
       return;
     }
     try {
@@ -876,7 +905,7 @@ export default function Estates() {
         payment_schedule: paymentScheduleEnabled ? {
           installment_amount: Number(installmentAmount),
           interval_months: Number(installmentIntervalMonths),
-          first_due_at: `${firstPaymentDueDate}T00:00:00Z`,
+          next_due_at: `${nextPaymentDueDate}T00:00:00Z`,
         } : null,
         initial_payment_amount: amountPaidNow ? Number(amountPaidNow) : null,
         initial_payment_method: amountPaidNow ? amountPaidNowMethod : null,
@@ -2105,6 +2134,11 @@ export default function Estates() {
                         {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
                       </select>
                       <input type="number" min="0" step="0.01" value={agreedPrice} onChange={(event) => setAgreedPrice(event.target.value)} placeholder="Agreed price (NGN)" style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)", width: "100%", marginBottom: 8 }} />
+                      <label className="edash-overview-field edash-initial-payment-field" style={{ marginBottom: 8 }}>
+                        <span>First payment received now (NGN) <strong>*</strong></span>
+                        <input type="number" min="0.01" step="0.01" required value={amountPaidNow} onChange={(event) => setAmountPaidNow(event.target.value)} placeholder="Enter amount received today" aria-label="First payment received now in Naira" />
+                        <small>This payment is required before the plot becomes Reserved. It is recorded today.</small>
+                      </label>
                       <label className="edash-overview-field" style={{ marginBottom: 8 }}>
                         <span>Payment schedule (optional)</span>
                         <select className="edash-map-select" value={paymentScheduleEnabled ? "scheduled" : "none"} onChange={(event) => setPaymentScheduleEnabled(event.target.value === "scheduled")}>
@@ -2114,13 +2148,25 @@ export default function Estates() {
                       </label>
                       {paymentScheduleEnabled && (
                         <div className="edash-payment-schedule-fields">
-                          <input type="number" min="0.01" step="0.01" value={installmentAmount} onChange={(event) => setInstallmentAmount(event.target.value)} placeholder="Instalment amount (NGN)" aria-label="Instalment amount in Naira" />
-                          <input type="number" min="1" max="60" step="1" value={installmentIntervalMonths} onChange={(event) => setInstallmentIntervalMonths(event.target.value)} placeholder="Repeat every (months)" aria-label="Repeat every number of months" />
                           <label>
-                            <span>First payment due</span>
-                            <input type="date" value={firstPaymentDueDate} onChange={(event) => setFirstPaymentDueDate(event.target.value)} aria-label="First payment due date" />
+                            <span>Next instalment amount (NGN)</span>
+                            <input type="number" min="0.01" step="0.01" value={installmentAmount} onChange={(event) => setInstallmentAmount(event.target.value)} placeholder="Amount due each time" aria-label="Next instalment amount in Naira" />
                           </label>
-                          <p>We will email the buyer up to 7 days before each due date and show the schedule in the buyer portal.</p>
+                          <label>
+                            <span>Repeat every (months)</span>
+                            <div className="edash-payment-interval-input"><input type="number" min="1" max="60" step="1" value={installmentIntervalMonths} onChange={(event) => setInstallmentIntervalMonths(event.target.value)} aria-label="Repeat every number of months" /><span>months</span></div>
+                            <small>For example, 3 means once every 3 months, not every month.</small>
+                          </label>
+                          <label>
+                            <span>Next payment due</span>
+                            <input type="date" min={tomorrowDateInputValue()} value={nextPaymentDueDate} onChange={(event) => setNextPaymentDueDate(event.target.value)} aria-label="Next payment due date" />
+                          </label>
+                          <p>
+                            The first payment is the amount recorded above today. The buyer will receive one email up to 7 days before each next due date. A 3-month interval means the next payment date, then the same date 3 months later, then 3 months after that.
+                          </p>
+                          {schedulePreview(nextPaymentDueDate, installmentIntervalMonths) && (
+                            <p className="edash-payment-schedule-preview">Example schedule: {schedulePreview(nextPaymentDueDate, installmentIntervalMonths)?.join(" → ")}</p>
+                          )}
                         </div>
                       )}
                       {salesAgents.length > 0 && (
@@ -2129,7 +2175,6 @@ export default function Estates() {
                           {salesAgents.map((agent) => <option key={`${agent.subject_type}::${agent.subject_id}`} value={`${agent.subject_type}::${agent.subject_id}`}>{agent.display_name} ({agent.role})</option>)}
                         </select>
                       )}
-                      <input type="number" min="0" step="0.01" value={amountPaidNow} onChange={(event) => setAmountPaidNow(event.target.value)} placeholder="Amount already paid, if any (NGN)" style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)", width: "100%", marginBottom: 8 }} />
                       {Boolean(amountPaidNow) && (
                         <>
                           <select className="edash-map-select" style={{ width: "100%", marginBottom: 8 }} value={amountPaidNowMethod} onChange={(event) => setAmountPaidNowMethod(event.target.value)}>
@@ -2149,19 +2194,19 @@ export default function Estates() {
                         </div>
                       )}
                       <div style={{ display: "flex", gap: 8 }}>
-                        <button type="button" className="edash-btn-outline" onClick={() => void assignCustomer(false)}>Reserve</button>
+                        <button type="button" className="edash-btn-outline" disabled={!amountPaidNow} title={!amountPaidNow ? "Record the first payment before reserving." : undefined} onClick={() => void assignCustomer(false)}>Reserve</button>
                         <button
                           type="button"
                           className="edash-btn-primary"
-                          disabled={Number(agreedPrice) > 0 && (Number(amountPaidNow) || 0) < Number(agreedPrice)}
-                          title={Number(agreedPrice) > 0 && (Number(amountPaidNow) || 0) < Number(agreedPrice) ? "Allocation is only available once the agreed price is fully paid - use Reserve until then." : undefined}
+                          disabled={!amountPaidNow || (Number(agreedPrice) > 0 && (Number(amountPaidNow) || 0) < Number(agreedPrice))}
+                          title={!amountPaidNow ? "Record the first payment before allocating." : Number(agreedPrice) > 0 && (Number(amountPaidNow) || 0) < Number(agreedPrice) ? "Allocation is only available once the agreed price is fully paid - use Reserve until then." : undefined}
                           onClick={() => void assignCustomer(true)}
                         >
                           Allocate / sell
                         </button>
                       </div>
                       <p className="edash-tab-empty" style={{ padding: "6px 0 0", textAlign: "left", fontSize: "0.78rem" }}>
-                        Allocation (the official, title-bearing status) is only available once fully paid - otherwise this reserves the plot, and it will automatically become Allocated the moment its balance is fully confirmed paid.
+                        A first payment is required to reserve a plot. Allocation (the official, title-bearing status) is only available once fully paid, and a reserved plot becomes Allocated automatically when its balance is fully confirmed paid.
                       </p>
                     </div>
                   )}
