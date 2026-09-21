@@ -23,6 +23,7 @@ export default function EstateCustomersPage() {
   const [newEmail, setNewEmail] = useState("");
   const [message, setMessage] = useState("");
   const [portalLink, setPortalLink] = useState("");
+  const [packetBusy, setPacketBusy] = useState(false);
 
   const load = () => {
     if (!estateId) return;
@@ -66,6 +67,24 @@ export default function EstateCustomersPage() {
       toast.success("Buyer portal link created and copied.");
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "Buyer portal link could not be created."));
+    }
+  };
+
+  const downloadCustomerPacket = async () => {
+    if (!selectedCustomer) return;
+    setPacketBusy(true);
+    try {
+      const response = await api.get(`/estates/customers/${selectedCustomer.id}/statement.pdf`, { responseType: "blob" });
+      const url = URL.createObjectURL(response.data as Blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${selectedCustomer.name || "customer"}-customer-packet.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "The customer packet could not be downloaded."));
+    } finally {
+      setPacketBusy(false);
     }
   };
 
@@ -131,7 +150,7 @@ export default function EstateCustomersPage() {
                   </div>
                 ) : <p className="edash-tab-empty">Loading...</p>}
                 {statement && (
-                  <button type="button" className="edash-btn-outline" style={{ marginTop: 12 }} onClick={() => window.print()}>Print statement</button>
+                  <button type="button" className="edash-btn-outline" style={{ marginTop: 12 }} disabled={packetBusy} onClick={() => void downloadCustomerPacket()}>{packetBusy ? "Preparing..." : "Download customer packet"}</button>
                 )}
               </>
             )}
