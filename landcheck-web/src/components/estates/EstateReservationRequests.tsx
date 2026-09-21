@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import { getEstateAuthSession } from "../../auth/estateAuth";
+import { PAYMENT_METHODS } from "./FinancialComponents";
 
 type ReservationRequest = {
   id: number;
@@ -41,6 +42,9 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [migratingId, setMigratingId] = useState<number | null>(null);
+  const [paymentRequestId, setPaymentRequestId] = useState<number | null>(null);
+  const [initialPaymentAmount, setInitialPaymentAmount] = useState("");
+  const [initialPaymentMethod, setInitialPaymentMethod] = useState("bank_transfer");
   const role = getEstateAuthSession()?.user.role_key;
   const canUpdate = role === "owner" || role === "manager" || role === "sales" || role === "marketer";
 
@@ -71,11 +75,20 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
   };
 
   const migrateToCustomer = async (requestId: number) => {
+    if (!initialPaymentAmount || Number(initialPaymentAmount) <= 0) {
+      toast.error("Enter the customer's first payment before creating the reservation.");
+      return;
+    }
     setMigratingId(requestId);
     try {
-      const response = await api.post(`/estates/reservation-requests/${requestId}/convert`, {});
+      const response = await api.post(`/estates/reservation-requests/${requestId}/convert`, {
+        initial_payment_amount: Number(initialPaymentAmount),
+        initial_payment_method: initialPaymentMethod,
+      });
       setRequests((current) => current.map((item) => item.id === requestId ? response.data : item));
       toast.success("Customer created and plot reserved.");
+      setPaymentRequestId(null);
+      setInitialPaymentAmount("");
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "The request could not be added to customers."));
     } finally {
@@ -106,7 +119,17 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
                 </div>
                 <div className="edash-public-lead-actions">
                   <span className={`edash-public-lead-status is-${item.status}`}>{statusLabels[item.status]}</span>
-                  {canUpdate && item.status !== "converted" && <><select aria-label={`Update request from ${item.full_name}`} disabled={updatingId === item.id || migratingId === item.id} value={item.status} onChange={(event) => void updateStatus(item.id, event.target.value as ReservationRequest["status"])}><option value="new">New</option><option value="contacted">Contacted</option><option value="declined">Declined</option></select><button type="button" className="edash-btn-primary edash-public-lead-convert" disabled={migratingId === item.id} onClick={() => void migrateToCustomer(item.id)}>{migratingId === item.id ? "Adding..." : "Add to customers & reserve"}</button></>}
+                  {canUpdate && item.status !== "converted" && <>
+                    <select aria-label={`Update request from ${item.full_name}`} disabled={updatingId === item.id || migratingId === item.id} value={item.status} onChange={(event) => void updateStatus(item.id, event.target.value as ReservationRequest["status"])}><option value="new">New</option><option value="contacted">Contacted</option><option value="declined">Declined</option></select>
+                    {paymentRequestId === item.id ? (
+                      <div className="edash-public-lead-payment">
+                        <label><span>First payment received (NGN)</span><input type="number" min="0.01" step="0.01" value={initialPaymentAmount} onChange={(event) => setInitialPaymentAmount(event.target.value)} placeholder="Amount received now" /></label>
+                        <label><span>Payment method</span><select value={initialPaymentMethod} onChange={(event) => setInitialPaymentMethod(event.target.value)}>{PAYMENT_METHODS.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}</select></label>
+                        <small>The payment is required before this enquiry becomes a proper reservation.</small>
+                        <div><button type="button" className="edash-btn-primary edash-public-lead-convert" disabled={migratingId === item.id} onClick={() => void migrateToCustomer(item.id)}>{migratingId === item.id ? "Adding..." : "Confirm reservation"}</button><button type="button" className="edash-btn-outline" onClick={() => setPaymentRequestId(null)}>Cancel</button></div>
+                      </div>
+                    ) : <button type="button" className="edash-btn-primary edash-public-lead-convert" onClick={() => { setPaymentRequestId(item.id); setInitialPaymentAmount(""); }}>{"Add payment & reserve"}</button>}
+                  </>}
                   {item.status === "converted" && <small className="edash-public-lead-converted">Customer and reservation created</small>}
                 </div>
               </article>

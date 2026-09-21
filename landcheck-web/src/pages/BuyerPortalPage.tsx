@@ -30,7 +30,7 @@ function paymentScheduleLabel(plan?: string | null) {
   try {
     const parsed = JSON.parse(plan);
     if (parsed?.installment_amount && parsed?.interval_months) {
-      return `${money(parsed.installment_amount)} every ${parsed.interval_months} month${parsed.interval_months === 1 ? "" : "s"}`;
+      return `${money(parsed.installment_amount)} every ${parsed.interval_months} month${parsed.interval_months === 1 ? "" : "s"} after the first payment`;
     }
   } catch { /* legacy free-text plans remain hidden here rather than displayed as an unreliable schedule */ }
   return null;
@@ -90,7 +90,7 @@ export default function BuyerPortalPage() {
           <div><span>Documents</span><strong>{allocation.document_readiness.complete ? "Ready" : "In progress"}</strong></div>
           {allocation.reservation_expires_at && <div><span>Reservation deadline</span><strong>{new Date(allocation.reservation_expires_at).toLocaleDateString()}</strong></div>}
           {allocation.next_payment_due_at && <div><span>Next payment due</span><strong>{new Date(allocation.next_payment_due_at).toLocaleDateString()}</strong></div>}
-          {paymentScheduleLabel(allocation.payment_plan) && <div><span>Instalment schedule</span><strong>{paymentScheduleLabel(allocation.payment_plan)}</strong></div>}
+          {paymentScheduleLabel(allocation.payment_plan) && <div><span>Instalment schedule</span><strong>{paymentScheduleLabel(allocation.payment_plan)}</strong><small>One reminder is sent up to 7 days before each next due date.</small></div>}
         </div>
         <h3>Document readiness</h3>
         <div className="estate-buyer-checklist">
