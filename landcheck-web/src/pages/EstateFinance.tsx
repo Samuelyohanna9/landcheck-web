@@ -40,6 +40,26 @@ const DOCUMENT_TYPES = [
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+function formatPaymentPlan(value: unknown) {
+  if (!value) return "Not specified";
+  const raw = String(value).trim();
+  if (!raw) return "Not specified";
+  try {
+    const plan = JSON.parse(raw) as Record<string, unknown>;
+    if (plan.type === "installment") {
+      const amount = Number(plan.installment_amount || 0);
+      const interval = Number(plan.interval_months || 0);
+      const dueDate = plan.next_due_at ? new Date(String(plan.next_due_at)) : null;
+      const due = dueDate && !Number.isNaN(dueDate.getTime()) ? dueDate.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "not set";
+      const repeat = interval === 1 ? "every month" : `every ${interval} months`;
+      return `Installment of ${money(amount)} ${repeat}; next payment due ${due}.`;
+    }
+    return "Payment plan configured";
+  } catch {
+    return raw;
+  }
+}
+
 async function download(path: string, name: string) {
   const response = await api.get(path, { responseType: "blob" });
   const url = URL.createObjectURL(response.data as Blob);
@@ -448,7 +468,7 @@ function AllocationPanel({ detail }: { detail: any }) {
   return (
     <div className="edash-info-card" style={{ flexDirection: "column", marginBottom: 12 }}>
       <p className="edash-info-card-name">{detail.customer.name} - {detail.estate.name} / {detail.plot.number}</p>
-      <p className="edash-status-row-desc" style={{ marginBottom: 8 }}>Allocation: {detail.allocation.allocation_date ? new Date(detail.allocation.allocation_date).toLocaleDateString() : "-"} &middot; Payment plan: {detail.allocation.payment_plan || "Not specified"}</p>
+      <p className="edash-status-row-desc" style={{ marginBottom: 8 }}>Allocation: {detail.allocation.allocation_date ? new Date(detail.allocation.allocation_date).toLocaleDateString() : "-"} &middot; Payment plan: {formatPaymentPlan(detail.allocation.payment_plan)}</p>
       <div className="edash-overview-grid edash-overview-grid--2" style={{ marginBottom: 8 }}>
         <div className="edash-overview-field"><span>Agreed</span><strong>{money(financial.agreed_price)}</strong></div>
         <div className="edash-overview-field"><span>Confirmed</span><strong>{money(financial.confirmed_paid)}</strong></div>
@@ -508,7 +528,7 @@ function AllocationRecordView({ record, onPrint }: { record: any; onPrint: () =>
         <div className="edash-overview-field"><span>Allocation status</span><strong>{String(record.allocation.status || "").replaceAll("_", " ")}</strong><small>{record.allocation.allocation_date ? new Date(record.allocation.allocation_date).toLocaleDateString() : "Not allocated"}</small></div>
         <div className="edash-overview-field"><span>Outstanding</span><strong>{money(record.financial.outstanding)}</strong><small>{Number(record.financial.percentage || 0).toFixed(0)}% paid</small></div>
       </div>
-      <div className="edash-allocation-record-section"><h4>Plot and workflow</h4><p className="edash-status-row-desc">{record.estate?.name || "Estate"} {record.plot?.public_address ? `- ${record.plot.public_address}` : ""} {record.plot?.land_use ? `- ${record.plot.land_use}` : ""}</p><p className="edash-status-row-desc">Survey: <strong>{record.survey?.status || "Not started"}</strong> - Staking: <strong>{record.staking?.status || "Not started"}</strong></p><p className="edash-status-row-desc">Payment plan: {record.allocation.payment_plan || "Not specified"}</p></div>
+      <div className="edash-allocation-record-section"><h4>Plot and workflow</h4><p className="edash-status-row-desc">{record.estate?.name || "Estate"} {record.plot?.public_address ? `- ${record.plot.public_address}` : ""} {record.plot?.land_use ? `- ${record.plot.land_use}` : ""}</p><p className="edash-status-row-desc">Survey: <strong>{record.survey?.status || "Not started"}</strong> - Staking: <strong>{record.staking?.status || "Not started"}</strong></p><p className="edash-status-row-desc">Payment plan: {formatPaymentPlan(record.allocation.payment_plan)}</p></div>
       <div className="edash-allocation-record-section"><h4>Documents</h4><div className="edash-chip-row">{record.documents?.length ? record.documents.map((document: any) => <button type="button" className="edash-chip" key={document.id} onClick={() => void downloadDocument(document.id, document.filename)}>{document.filename}</button>) : <span className="edash-status-row-desc">No documents uploaded.</span>}</div></div>
       <div className="edash-allocation-record-section"><h4>Payment receipts and transactions</h4>{record.payments?.length ? <div style={{ overflowX: "auto" }}><table className="edash-mini-table"><thead><tr><th>Date</th><th>Amount</th><th>Status</th><th>Reference</th><th>Receipt</th></tr></thead><tbody>{record.payments.map((payment: any) => <tr key={payment.id}><td data-label="Date">{new Date(payment.date).toLocaleDateString()}</td><td data-label="Amount">{money(payment.amount)}</td><td data-label="Status"><PaymentStatusBadge status={payment.status} /></td><td data-label="Reference">{payment.reference || "-"}</td><td data-label="Receipt"><div>{payment.receipt_number || payment.evidence?.[0]?.filename || "Pending"}</div><button type="button" className="edash-card-link" onClick={() => void download(`/estates/payments/${payment.id}/receipt.pdf`, `payment-${payment.id}-receipt.pdf`)}>Receipt PDF</button></td></tr>)}</tbody></table></div> : <p className="edash-status-row-desc">No payments recorded.</p>}<p className="edash-status-row-desc" style={{ marginTop: 8 }}>Agreed: {money(record.financial.agreed_price)}. Confirmed: {money(record.financial.confirmed_paid)}. Pending: {money(record.financial.pending_paid)}. Outstanding: {money(record.financial.outstanding)}.</p></div>
     </div>
@@ -562,7 +582,7 @@ function CustomerStatement({ statement }: { statement: Statement }) {
         <div key={allocation.allocation_id} style={{ marginBottom: 16 }}>
           <div className="edash-card-head"><h3 className="edash-card-title" style={{ fontSize: "0.86rem" }}>{allocation.estate} / {allocation.plot}</h3></div>
           <p className="edash-status-row-desc" style={{ marginBottom: 8 }}>
-            Allocation date: {allocation.allocation_date ? new Date(allocation.allocation_date).toLocaleDateString() : "Not yet allocated"}. Agreed price: {money(allocation.agreed_price)}{allocation.payment_plan ? ` · Payment plan: ${allocation.payment_plan}` : ""}
+            Allocation date: {allocation.allocation_date ? new Date(allocation.allocation_date).toLocaleDateString() : "Not yet allocated"}. Agreed price: {money(allocation.agreed_price)}. Payment plan: {formatPaymentPlan(allocation.payment_plan)}
           </p>
           {allocation.transactions.length ? (
             <div style={{ overflowX: "auto" }}>
