@@ -9,6 +9,8 @@ type PortalAllocation = {
   estate?: { name: string } | null;
   plot?: { number: string; area_sqm: number };
   financial: { agreed_price: string; confirmed_paid: string; outstanding: string; percentage: string };
+  payment_plan?: string | null;
+  next_payment_due_at?: string | null;
   survey_status: string;
   reservation_expires_at?: string | null;
   document_readiness: { complete: boolean; stages: Array<{ label: string; status: string }> };
@@ -22,6 +24,17 @@ type Portal = {
 };
 
 const money = (value: string | number) => new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(Number(value || 0));
+
+function paymentScheduleLabel(plan?: string | null) {
+  if (!plan) return null;
+  try {
+    const parsed = JSON.parse(plan);
+    if (parsed?.installment_amount && parsed?.interval_months) {
+      return `${money(parsed.installment_amount)} every ${parsed.interval_months} month${parsed.interval_months === 1 ? "" : "s"}`;
+    }
+  } catch { /* legacy free-text plans remain hidden here rather than displayed as an unreliable schedule */ }
+  return null;
+}
 
 async function download(path: string, filename: string) {
   const response = await api.get(path, { responseType: "blob" });
@@ -76,6 +89,8 @@ export default function BuyerPortalPage() {
           <div><span>Survey</span><strong>{allocation.survey_status.replaceAll("_", " ")}</strong></div>
           <div><span>Documents</span><strong>{allocation.document_readiness.complete ? "Ready" : "In progress"}</strong></div>
           {allocation.reservation_expires_at && <div><span>Reservation deadline</span><strong>{new Date(allocation.reservation_expires_at).toLocaleDateString()}</strong></div>}
+          {allocation.next_payment_due_at && <div><span>Next payment due</span><strong>{new Date(allocation.next_payment_due_at).toLocaleDateString()}</strong></div>}
+          {paymentScheduleLabel(allocation.payment_plan) && <div><span>Instalment schedule</span><strong>{paymentScheduleLabel(allocation.payment_plan)}</strong></div>}
         </div>
         <h3>Document readiness</h3>
         <div className="estate-buyer-checklist">

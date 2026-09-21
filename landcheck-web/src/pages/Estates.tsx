@@ -470,7 +470,10 @@ export default function Estates() {
   const [customerEmail, setCustomerEmail] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [agreedPrice, setAgreedPrice] = useState("");
-  const [paymentPlan, setPaymentPlan] = useState("");
+  const [paymentScheduleEnabled, setPaymentScheduleEnabled] = useState(false);
+  const [installmentAmount, setInstallmentAmount] = useState("");
+  const [installmentIntervalMonths, setInstallmentIntervalMonths] = useState("3");
+  const [firstPaymentDueDate, setFirstPaymentDueDate] = useState("");
   const [amountPaidNow, setAmountPaidNow] = useState("");
   const [amountPaidNowMethod, setAmountPaidNowMethod] = useState("bank_transfer");
   const [amountPaidReceipt, setAmountPaidReceipt] = useState<File | null>(null);
@@ -861,12 +864,20 @@ export default function Estates() {
   };
   const assignCustomer = async (allocate: boolean) => {
     if (!estateId || !selectedPlot || !selectedCustomerId) { toast.error("Choose a parcel and customer first."); return; }
+    if (paymentScheduleEnabled && (!installmentAmount || !firstPaymentDueDate || Number(installmentIntervalMonths) < 1)) {
+      toast.error("Enter the instalment amount, interval and first due date.");
+      return;
+    }
     try {
       const [agentSubjectType, agentSubjectId] = salesAgentSubject ? salesAgentSubject.split("::") : [null, null];
       const response = await api.post(`/estates/${estateId}/plots/${selectedPlot.id}/${allocate ? "allocate" : "reserve"}`, {
         customer_id: Number(selectedCustomerId),
         agreed_price: agreedPrice ? Number(agreedPrice) : null,
-        payment_plan: paymentPlan.trim() || null,
+        payment_schedule: paymentScheduleEnabled ? {
+          installment_amount: Number(installmentAmount),
+          interval_months: Number(installmentIntervalMonths),
+          first_due_at: `${firstPaymentDueDate}T00:00:00Z`,
+        } : null,
         initial_payment_amount: amountPaidNow ? Number(amountPaidNow) : null,
         initial_payment_method: amountPaidNow ? amountPaidNowMethod : null,
         sales_agent_subject_type: agentSubjectType,
@@ -2093,7 +2104,24 @@ export default function Estates() {
                         {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
                       </select>
                       <input type="number" min="0" step="0.01" value={agreedPrice} onChange={(event) => setAgreedPrice(event.target.value)} placeholder="Agreed price (NGN)" style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)", width: "100%", marginBottom: 8 }} />
-                      <input value={paymentPlan} onChange={(event) => setPaymentPlan(event.target.value)} placeholder="Payment plan (optional)" style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)", width: "100%", marginBottom: 8 }} />
+                      <label className="edash-overview-field" style={{ marginBottom: 8 }}>
+                        <span>Payment schedule (optional)</span>
+                        <select className="edash-map-select" value={paymentScheduleEnabled ? "scheduled" : "none"} onChange={(event) => setPaymentScheduleEnabled(event.target.value === "scheduled")}>
+                          <option value="none">No scheduled instalments</option>
+                          <option value="scheduled">Schedule instalment reminders</option>
+                        </select>
+                      </label>
+                      {paymentScheduleEnabled && (
+                        <div className="edash-payment-schedule-fields">
+                          <input type="number" min="0.01" step="0.01" value={installmentAmount} onChange={(event) => setInstallmentAmount(event.target.value)} placeholder="Instalment amount (NGN)" aria-label="Instalment amount in Naira" />
+                          <input type="number" min="1" max="60" step="1" value={installmentIntervalMonths} onChange={(event) => setInstallmentIntervalMonths(event.target.value)} placeholder="Repeat every (months)" aria-label="Repeat every number of months" />
+                          <label>
+                            <span>First payment due</span>
+                            <input type="date" value={firstPaymentDueDate} onChange={(event) => setFirstPaymentDueDate(event.target.value)} aria-label="First payment due date" />
+                          </label>
+                          <p>We will email the buyer up to 7 days before each due date and show the schedule in the buyer portal.</p>
+                        </div>
+                      )}
                       {salesAgents.length > 0 && (
                         <select className="edash-map-select" style={{ width: "100%", marginBottom: 8 }} value={salesAgentSubject} onChange={(event) => setSalesAgentSubject(event.target.value)}>
                           <option value="">No sales agent (skip commission tracking)</option>
