@@ -139,6 +139,19 @@ export default function EstateCommissionsPage() {
     }
   };
 
+  const openAgentPortal = async (member: { id: number }) => {
+    if (!organizationId) return;
+    const previewWindow = window.open("about:blank", "_blank");
+    try {
+      const response = await api.post(`/estates/organizations/${organizationId}/members/${member.id}/portal-preview`);
+      if (previewWindow) previewWindow.location.href = response.data.portal_url;
+      else window.location.href = response.data.portal_url;
+    } catch (error) {
+      previewWindow?.close();
+      toast.error(await extractApiErrorMessage(error, "The agent workspace could not be opened."));
+    }
+  };
+
   const saveCommissionTiers = async () => {
     if (!organizationId) return;
     setCommissionTiersBusy(true);
@@ -221,7 +234,8 @@ export default function EstateCommissionsPage() {
                       <td data-label="Current tier">{member.current_tier_label ? `${member.current_tier_label} (${Number(member.current_tier_rate_percent).toFixed(1)}%)` : "-"}</td>
                       <td data-label="Status"><span className={`edash-status-pill tone-${member.is_active ? "good" : "neutral"}`}>{member.is_active ? "Active" : "Inactive"}</span></td>
                       <td style={{ display: "flex", gap: 6 }}>
-                        <button type="button" className="edash-btn-outline" onClick={() => void openAgentDetail(member.subject_type, member.subject_id)}>View</button>
+                        <button type="button" className="edash-btn-outline" onClick={() => void openAgentDetail(member.subject_type, member.subject_id)}>Details</button>
+                        {(member.role === "sales" || member.role === "marketer") && <button type="button" className="edash-btn-outline" disabled={!member.is_active} onClick={() => void openAgentPortal(member)}>View portal</button>}
                         {member.role === "sales" || member.role === "marketer" ? <button type="button" className="edash-btn-outline" disabled={!member.email} title={member.email ? "Send or regenerate the workspace link" : "Add an email address when creating this agent"} onClick={async () => { try { const response = await api.post(`/estates/organizations/${organizationId}/members/${member.id}/portal-invite`); await navigator.clipboard?.writeText(response.data.portal_url); toast.success(response.data.email_sent ? "Workspace invite sent." : "Workspace link regenerated and copied."); } catch (error) { toast.error(await extractApiErrorMessage(error, "Workspace invite could not be sent.")); } }}>{member.email ? "Send link" : "No email"}</button> : null}
                         <button type="button" className="edash-btn-outline" onClick={() => void toggleAgentActive(member)}>{member.is_active ? "Deactivate" : "Reactivate"}</button>
                       </td>

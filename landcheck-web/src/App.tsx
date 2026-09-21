@@ -62,7 +62,6 @@ const EstateHazardsPage = lazyWithChunkRecovery(() => import("./pages/estates/Es
 const EstateReportsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateReportsPage"));
 const EstateAuditPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateAuditPage"));
 const EstateSettingsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateSettingsPage"));
-const EstateAgentPortalPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateAgentPortalPage"));
 const AgentPortalAccessPage = lazyWithChunkRecovery(() => import("./pages/estates/AgentPortalAccessPage"));
 const BuyerPortalPage = lazyWithChunkRecovery(() => import("./pages/BuyerPortalPage"));
 const EstateReconciliationPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateReconciliationPage"));
@@ -324,7 +323,6 @@ export default function App() {
               <Route path="/estates/:estateId/map" element={<EstateProtectedRoute element={<Estates />} />} />
               <Route path="/estates/:estateId/plots" element={<EstateProtectedRoute element={<EstatePlotsPage />} />} />
               <Route path="/estates/:estateId/customers" element={<EstateProtectedRoute element={<EstateCustomersPage />} />} />
-              <Route path="/estates/:estateId/agent-portal" element={<EstateProtectedRoute element={<EstateAgentPortalPage />} />} />
               <Route path="/estates/:estateId/survey" element={<EstateProtectedRoute element={<EstateSurveyPage />} />} />
               <Route path="/estates/:estateId/staking" element={<EstateProtectedRoute element={<EstateStakingPage />} />} />
               <Route path="/estates/:estateId/development" element={<EstateProtectedRoute element={<EstateDevelopmentPage />} />} />

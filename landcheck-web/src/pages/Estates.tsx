@@ -2069,6 +2069,7 @@ export default function Estates() {
                         <div className="edash-info-card-body">
                           <p className="edash-info-card-name">{selectedAllocation.customer_name}</p>
                           <p className="edash-info-card-meta">Allocation status: {selectedAllocation.status.replaceAll("_", " ")}</p>
+                          {selectedAllocation.attribution && <p className="edash-info-card-meta">Source: {selectedAllocation.attribution.type === "agent" ? `Agent ${selectedAllocation.attribution.agent_name || "assigned"}` : selectedAllocation.attribution.type === "company_qr" ? `Company QR${selectedAllocation.attribution.campaign_name ? ` (${selectedAllocation.attribution.campaign_name})` : ""}` : selectedAllocation.attribution.label}</p>}
                         </div>
                       </div>
                       {financial && (

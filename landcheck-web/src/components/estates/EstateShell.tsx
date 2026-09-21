@@ -12,14 +12,13 @@ import "../../styles/estate-dashboard.css";
 
 export type EstateNavKey =
   | "dashboard" | "map" | "plots" | "customers" | "payments" | "commissions" | "survey" | "staking"
-  | "documents" | "development" | "hazard" | "reports" | "audit" | "agent" | "reconciliation" | "settings" | "notifications";
+  | "documents" | "development" | "hazard" | "reports" | "audit" | "reconciliation" | "settings" | "notifications";
 
 export const estateNavItems: Array<{ key: EstateNavKey; label: string; icon: EstateIconName; path: (estateId: string) => string }> = [
   { key: "dashboard", label: "Dashboard", icon: "dashboard", path: (id) => `/estates/${id}` },
   { key: "map", label: "Map & Plots", icon: "map", path: (id) => `/estates/${id}/map` },
   { key: "plots", label: "Plots", icon: "plots", path: (id) => `/estates/${id}/plots` },
   { key: "customers", label: "Customers", icon: "customers", path: (id) => `/estates/${id}/customers` },
-  { key: "agent", label: "Agent Workspace", icon: "customers", path: (id) => `/estates/${id}/agent-portal` },
   { key: "payments", label: "Sales & Payments", icon: "payments", path: () => "/estates/payments" },
   { key: "reconciliation", label: "Reconciliation", icon: "payments", path: () => "/estates/reconciliation" },
   { key: "commissions", label: "Commissions", icon: "wallet", path: () => "/estates/commissions" },

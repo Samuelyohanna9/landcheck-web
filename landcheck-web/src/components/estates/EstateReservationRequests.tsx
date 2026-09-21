@@ -14,6 +14,7 @@ type ReservationRequest = {
   status: "new" | "contacted" | "converted" | "declined";
   customer_id: number | null;
   allocation_id: number | null;
+  attribution?: { type: string; label: string; agent_name?: string | null; campaign_name?: string | null; source_code?: string | null; source_channel?: string | null };
   created_at: string;
 };
 
@@ -27,6 +28,12 @@ const statusLabels: Record<ReservationRequest["status"], string> = {
 function relativeDate(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+}
+
+function attributionLabel(item: ReservationRequest) {
+  if (item.attribution?.type === "agent") return `Agent: ${item.attribution.agent_name || "Assigned agent"}`;
+  if (item.attribution?.type === "company_qr") return `Company QR: ${item.attribution.campaign_name || item.attribution.source_code || "Company campaign"}`;
+  return item.attribution?.label || "Direct public page";
 }
 
 export default function EstateReservationRequests({ estateId }: { estateId: string }) {
@@ -93,6 +100,7 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
                 <div className="edash-public-lead-main">
                   <div className="edash-public-lead-title"><strong>{item.full_name}</strong><span>Plot {item.plot_number || "-"}</span></div>
                   <div className="edash-public-lead-contact"><a href={`tel:${item.phone}`}>{item.phone}</a>{item.email && <a href={`mailto:${item.email}`}>{item.email}</a>}</div>
+                  <small className="edash-public-lead-attribution">{attributionLabel(item)}{item.attribution?.source_channel ? ` · ${item.attribution.source_channel}` : ""}</small>
                   {item.message && <p>{item.message}</p>}
                   <small>{relativeDate(item.created_at)}</small>
                 </div>
