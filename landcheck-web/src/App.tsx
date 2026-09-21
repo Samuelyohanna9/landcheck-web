@@ -62,6 +62,9 @@ const EstateHazardsPage = lazyWithChunkRecovery(() => import("./pages/estates/Es
 const EstateReportsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateReportsPage"));
 const EstateAuditPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateAuditPage"));
 const EstateSettingsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateSettingsPage"));
+const EstateAgentPortalPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateAgentPortalPage"));
+const BuyerPortalPage = lazyWithChunkRecovery(() => import("./pages/BuyerPortalPage"));
+const EstateReconciliationPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateReconciliationPage"));
 
 type ChunkLoadBoundaryProps = {
   children: ReactNode;
@@ -310,6 +313,7 @@ export default function App() {
               <Route path="/estates/choose-plan" element={<EstateProtectedRoute element={<EstateChoosePlan />} />} />
               <Route path="/estates/billing" element={<EstateProtectedRoute element={<EstateBillingPage />} />} />
               <Route path="/estates/plot/:token" element={<PublicPlotView />} />
+              <Route path="/estates/buyer/:token" element={<BuyerPortalPage />} />
               <Route path="/estates/public/:slug/reserve/:plotId" element={<PublicEstateReservationPage />} />
               <Route path="/estates/public/:slug" element={<PublicEstatePage />} />
               <Route path="/estates/workspace" element={<EstateProtectedRoute element={<Estates />} />} />
@@ -317,6 +321,7 @@ export default function App() {
               <Route path="/estates/:estateId/map" element={<EstateProtectedRoute element={<Estates />} />} />
               <Route path="/estates/:estateId/plots" element={<EstateProtectedRoute element={<EstatePlotsPage />} />} />
               <Route path="/estates/:estateId/customers" element={<EstateProtectedRoute element={<EstateCustomersPage />} />} />
+              <Route path="/estates/:estateId/agent-portal" element={<EstateProtectedRoute element={<EstateAgentPortalPage />} />} />
               <Route path="/estates/:estateId/survey" element={<EstateProtectedRoute element={<EstateSurveyPage />} />} />
               <Route path="/estates/:estateId/staking" element={<EstateProtectedRoute element={<EstateStakingPage />} />} />
               <Route path="/estates/:estateId/development" element={<EstateProtectedRoute element={<EstateDevelopmentPage />} />} />
@@ -325,6 +330,7 @@ export default function App() {
               <Route path="/estates/:estateId/timeline" element={<EstateProtectedRoute element={<EstateAuditPage />} />} />
               <Route path="/estates/:estateId/settings" element={<EstateProtectedRoute element={<EstateSettingsPage />} />} />
               <Route path="/estates/payments" element={<EstateProtectedRoute element={<EstateFinance mode="payments" />} />} />
+              <Route path="/estates/reconciliation" element={<EstateProtectedRoute element={<EstateReconciliationPage />} />} />
               <Route path="/estates/commissions" element={<EstateProtectedRoute element={<EstateCommissionsPage />} />} />
               <Route path="/estates/documents" element={<EstateProtectedRoute element={<EstateFinance mode="documents" />} />} />
               <Route path="/flood" element={<FloodAnalysisLanding />} />

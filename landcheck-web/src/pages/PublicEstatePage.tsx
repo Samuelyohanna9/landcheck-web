@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { API_URL, api, extractApiErrorMessage } from "../api/client";
 import { MAPBOX_TOKEN, loadMapboxGl, loadMapboxGlCss } from "../utils/mapboxLoader";
 import { formatArea } from "../utils/unitFormat";
@@ -160,6 +160,8 @@ function PublicEstateMap({ estate, selectedPlotId, onSelect, onReserve }: { esta
 export default function PublicEstatePage() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const source = searchParams.get("source") || "";
   const [estate, setEstate] = useState<PublicEstate | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -171,12 +173,12 @@ export default function PublicEstatePage() {
   useEffect(() => {
     if (!slug) return;
     setLoading(true);
-    api.get(`/estates/public/${slug}`).then((response) => {
+    api.get(`/estates/public/${slug}`, { params: source ? { source } : undefined }).then((response) => {
       const value = response.data as PublicEstate;
       setEstate(value);
       setSelectedPlotId(null);
     }).catch(async (err) => setError(await extractApiErrorMessage(err, "This Estate page is not available."))).finally(() => setLoading(false));
-  }, [slug]);
+  }, [slug, source]);
 
   const filteredPlots = useMemo(() => {
     if (!estate) return [];
@@ -188,7 +190,7 @@ export default function PublicEstatePage() {
   }, [estate, search, statusFilter]);
   const selectedPlot = estate?.plots.find((plot) => plot.id === selectedPlotId) || null;
   const companyName = estate?.organization_name || "Estate company";
-  const reservePlot = (plotId: number) => { if (estate) navigate(`/estates/public/${estate.slug}/reserve/${plotId}`); };
+  const reservePlot = (plotId: number) => { if (estate) navigate(`/estates/public/${estate.slug}/reserve/${plotId}${source ? `?source=${encodeURIComponent(source)}` : ""}`); };
 
   if (loading) return <main className="estate-public-app"><div className="estate-public-loading">Loading estate page...</div></main>;
   if (error || !estate) return <main className="estate-public-app"><div className="estate-public-message"><h1>Estate page unavailable</h1><p>{error || "This page is not available."}</p></div></main>;

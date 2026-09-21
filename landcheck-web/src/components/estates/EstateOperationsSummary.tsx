@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useEffect } from "react";
+import { api } from "../../api/client";
 import EstateIcon, { type EstateIconName } from "./EstateIcon";
 
 type PlotRecord = {
@@ -111,6 +113,12 @@ export default function EstateOperationsSummary({
   publicSettings,
 }: OperationsSummaryProps) {
   const [passportPlotId, setPassportPlotId] = useState<string>("");
+  const [operationsSummary, setOperationsSummary] = useState<{ total_exceptions: number; actions: Array<{ key: string; label: string; count: number; href: string; tone: string }> } | null>(null);
+  useEffect(() => {
+    let mounted = true;
+    api.get(`/estates/${estateId}/operations-summary`).then((response) => { if (mounted) setOperationsSummary(response.data); }).catch(() => { if (mounted) setOperationsSummary(null); });
+    return () => { mounted = false; };
+  }, [estateId]);
   const allocatedCount = Number(dashboard?.statuses?.allocated || 0);
   const reservedCount = Number(dashboard?.statuses?.reserved || 0);
   const pendingPayments = payments.filter((item) => ["recorded", "pending_confirmation"].includes(String(item.status || "")));
@@ -148,6 +156,10 @@ export default function EstateOperationsSummary({
   const passportStakingReady = Boolean(passportStaking && isCompleted(passportStaking.status));
   const passportDocumentReady = passportDocuments.length > 0;
 
+  const serverActionItems: ActionItem[] = (operationsSummary?.actions || []).map((item) => {
+    const icon: EstateIconName = item.key.includes("payment") || item.key.includes("commission") ? "payments" : item.key.includes("document") ? "documents" : item.key.includes("survey") ? "survey" : item.key.includes("stak") ? "staking" : item.key.includes("reservation") ? "customers" : "map";
+    return { key: item.key, title: item.label, detail: "Exception detected in the Estate operations workflow.", count: item.count, tone: item.tone as ActionItem["tone"], icon, href: item.href };
+  });
   const actionItems: ActionItem[] = (() => {
     const items: ActionItem[] = [];
     if (Number(dashboard?.geometry_issues || 0) > 0) items.push({ key: "geometry", title: "Resolve map quality issues", detail: "Some plot boundaries need review before publishing.", count: Number(dashboard?.geometry_issues || 0), tone: "danger", icon: "map", href: `/estates/${estateId}/map` });
@@ -156,6 +168,10 @@ export default function EstateOperationsSummary({
     if (pendingStaking.length) items.push({ key: "staking", title: "Complete staking work", detail: "Survey-ready plots still need field staking evidence.", count: pendingStaking.length, tone: "info", icon: "staking", href: `/estates/${estateId}/staking` });
     if (allocationsWithoutDocuments.length) items.push({ key: "documents", title: "Complete buyer document packs", detail: "Reserved or allocated buyers have no linked document yet.", count: allocationsWithoutDocuments.length, tone: "warn", icon: "documents", href: "/estates/documents" });
     if (!publicSettings?.public_enabled) items.push({ key: "public", title: "Publish the public plot page", detail: "Give buyers a trusted map and enquiry entry point.", count: 1, tone: "good", icon: "map", href: `/estates/${estateId}/settings` });
+    if (operationsSummary) {
+      const localContext = items.filter((item) => item.key === "geometry" || item.key === "public");
+      return [...serverActionItems, ...localContext.filter((item) => !serverActionItems.some((serverItem) => serverItem.key === item.key))].slice(0, 8);
+    }
     return items.slice(0, 6);
   })();
 
@@ -174,7 +190,7 @@ export default function EstateOperationsSummary({
       </div>
 
       <div className="edash-ops-metrics">
-        <Metric label="Open actions" value={actionItems.length} detail="Across this Estate" tone={actionItems.length ? "warn" : "good"} />
+        <Metric label="Open actions" value={operationsSummary?.total_exceptions ?? actionItems.length} detail="Across this Estate" tone={actionItems.length ? "warn" : "good"} />
         <Metric label="Sales pipeline" value={formatMoney(dashboard?.financial?.contracted_sales_value)} detail={`${allocatedCount + reservedCount} reserved or allocated`} tone="info" />
         <Metric label="Outstanding" value={formatMoney(dashboard?.financial?.outstanding_balance)} detail="Customer balances to follow up" tone="warn" />
         <Metric label="Buyer records" value={customers.length} detail={`${estateDocuments.length} linked documents`} tone="good" />

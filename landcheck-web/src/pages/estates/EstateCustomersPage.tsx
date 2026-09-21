@@ -22,6 +22,7 @@ export default function EstateCustomersPage() {
   const [newPhone, setNewPhone] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [portalLink, setPortalLink] = useState("");
 
   const load = () => {
     if (!estateId) return;
@@ -42,6 +43,7 @@ export default function EstateCustomersPage() {
     setSelectedId(id);
     setDetail(null);
     setStatement(null);
+    setPortalLink("");
     if (!id) return;
     try {
       const [financial, statementResponse] = await Promise.all([
@@ -52,6 +54,18 @@ export default function EstateCustomersPage() {
       setStatement(statementResponse.data);
     } catch (error) {
       setMessage(await extractApiErrorMessage(error, "Customer financial detail could not be loaded."));
+    }
+  };
+
+  const createPortalLink = async () => {
+    if (!selectedCustomer) return;
+    try {
+      const response = await api.post(`/estates/customers/${selectedCustomer.id}/portal-token`, { expires_in_days: 90 });
+      setPortalLink(response.data?.url || "");
+      if (response.data?.url && navigator.clipboard) await navigator.clipboard.writeText(response.data.url);
+      toast.success("Buyer portal link created and copied.");
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "Buyer portal link could not be created."));
     }
   };
 
@@ -108,7 +122,8 @@ export default function EstateCustomersPage() {
               <p className="edash-tab-empty">Select a customer to see their financial summary and statement.</p>
             ) : (
               <>
-                <p className="edash-info-card-name" style={{ marginBottom: 10 }}>{selectedCustomer.name}</p>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10 }}><p className="edash-info-card-name" style={{ margin: 0 }}>{selectedCustomer.name}</p><button type="button" className="edash-btn-outline" onClick={() => void createPortalLink()}>Buyer portal link</button></div>
+                {portalLink && <p className="edash-field-note" style={{ overflowWrap: "anywhere" }}>Copied link: {portalLink}</p>}
                 {detail ? (
                   <div className="edash-overview-grid edash-overview-grid--2">
                     <div className="edash-overview-field"><span>Agreed</span><strong>{money(detail.totals?.agreed_price ?? detail.financial?.agreed_price ?? 0)}</strong></div>
