@@ -1549,6 +1549,10 @@
 .estate-buyer-documents { display: grid; gap: 6px; }
 .estate-buyer-documents button { width: 100%; padding: 9px 10px; border: 1px solid #b9ddc7; border-radius: 9px; background: #f4fcf6; color: #087942; font: inherit; font-size: .75rem; font-weight: 700; text-align: left; cursor: pointer; }
 .estate-buyer-documents button:hover { border-color: #159957; background: #e2f8e9; }
+.edash-allocation-record { display: grid; gap: 14px; }
+.edash-allocation-record-section { padding-top: 12px; border-top: 1px solid var(--edash-border-soft); }
+.edash-allocation-record-section h4 { margin: 0 0 8px; color: var(--edash-ink); font-size: .82rem; }
+.edash-allocation-record-section .edash-mini-table { min-width: 620px; }
 .estate-buyer-payments { display: grid; gap: 6px; }
 .estate-buyer-payments div { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; padding: 8px 0; border-bottom: 1px solid #edf1ee; font-size: .74rem; }
 .estate-buyer-payments small { grid-column: 1 / -1; color: #71867a; }

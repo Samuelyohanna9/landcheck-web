@@ -7,10 +7,35 @@ import EstateModal from "../components/estates/EstateModal";
 import EstateIcon from "../components/estates/EstateIcon";
 
 type Payment = { id: number; date: string; amount: string; currency: string; status: string; method: string; reference?: string; customer: { name: string }; estate: { name: string }; plot: { number: string }; can_confirm?: boolean };
-type Allocation = { id: number; estate_name: string; plot_number: string; customer_name: string };
+type Allocation = { id: number; estate_id: number; plot_id: number; customer_id: number; estate_name: string; plot_number: string; customer_name: string };
 type Customer = { id: number; name: string };
 type Detail = { payment: Payment & { notes?: string }; customer: { name: string }; estate: { name: string }; plot: { number: string }; financial: { agreed_price: string; confirmed: string; pending: string; outstanding: string }; capabilities: { can_confirm: boolean; can_void: boolean }; evidence: { id: number; filename: string }[] };
 type Statement = { organization: { name: string }; customer: { id: number; name: string; reference?: string }; statement_date: string; allocations: any[] };
+type Plot = { id: number; plot_number: string; estate_id: number; estate_name: string; area_sqm: number };
+
+const DOCUMENT_TYPES = [
+  ["deed_of_assignment", "Deed of assignment"],
+  ["sale_agreement", "Sale agreement"],
+  ["reservation_agreement", "Reservation agreement"],
+  ["allocation_letter", "Allocation letter"],
+  ["survey_plan", "Survey plan"],
+  ["title_document", "Title document"],
+  ["certificate_of_occupancy", "Certificate of occupancy"],
+  ["governors_consent", "Governor's consent"],
+  ["power_of_attorney", "Power of attorney"],
+  ["development_agreement", "Development agreement"],
+  ["offer_letter", "Offer letter"],
+  ["payment_plan", "Payment plan"],
+  ["consent", "Consent"],
+  ["tax_clearance", "Tax clearance"],
+  ["building_plan", "Building plan"],
+  ["site_plan", "Site plan"],
+  ["handover_pack", "Handover pack"],
+  ["proof_of_identity", "Proof of identity"],
+  ["staking_evidence", "Staking evidence"],
+  ["receipt", "Payment receipt"],
+  ["other", "Other document"],
+] as const;
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -30,6 +55,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
   const [payments, setPayments] = useState<Payment[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
+  const [plots, setPlots] = useState<Plot[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [summary, setSummary] = useState<any>(null);
   const [page, setPage] = useState(1);
@@ -57,15 +83,18 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
   const [showStatement, setShowStatement] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [documentType, setDocumentType] = useState("");
-  const [entityType, setEntityType] = useState("");
+  const [documentDescription, setDocumentDescription] = useState("");
+  const [entityType, setEntityType] = useState("allocation");
   const [entityId, setEntityId] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [recordDetail, setRecordDetail] = useState<any>(null);
 
   const fail = async (error: unknown, message: string) => toast.error(await extractApiErrorMessage(error, message));
 
   const setup = async () => {
     const [selectors, totals] = await Promise.all([api.get("/estates/selectors"), api.get("/estates/financial-summary")]);
     setAllocations(selectors.data.allocations || []);
+    setPlots(selectors.data.plots || []);
     setCustomers(selectors.data.customers || []);
     setSummary((totals.data || []).reduce((acc: any, row: any) => ({
       agreed_price: String(Number(acc.agreed_price || 0) + Number(row.contracted_sales_value || 0)),
@@ -121,6 +150,26 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
     catch (error) { await fail(error, "Allocation financial detail could not be loaded."); }
   };
 
+  const viewAllocation = async (id: number) => {
+    try { setRecordDetail((await api.get(`/estates/allocations/${id}/record`)).data); }
+    catch (error) { await fail(error, "Plot record could not be loaded."); }
+  };
+
+  const printAllocation = async (id: number) => {
+    if (!customerId) return;
+    try { await download(`/estates/customers/${customerId}/statement.pdf?allocation_id=${id}`, `plot-${id}-customer-record.pdf`); }
+    catch (error) { await fail(error, "Plot record PDF could not be generated."); }
+  };
+
+  const openUpload = () => {
+    setEntityType("allocation");
+    setEntityId("");
+    setDocumentType("");
+    setDocumentDescription("");
+    setFile(null);
+    setShowUpload(true);
+  };
+
   const record = async () => {
     if (!allocationId || !amount) { toast.error("Select an allocation and enter an amount."); return; }
     const resolvedMethod = paymentMethod === "other" ? paymentMethodOther.trim() : paymentMethod;
@@ -172,9 +221,10 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
     try {
       const body = new FormData();
       body.append("file", file);
-      await api.post("/estates/documents", body, { params: { entity_type: entityType, entity_id: entityId, document_type: documentType } });
+      await api.post("/estates/documents", body, { params: { entity_type: entityType, entity_id: entityId, document_type: documentType, description: documentDescription.trim() || undefined } });
       toast.success("Private document uploaded.");
       setFile(null);
+      setDocumentDescription("");
       setShowUpload(false);
       await load();
     } catch (error) {
@@ -191,7 +241,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
           <div className="edash-card-inner">
             <div className="edash-card-head">
               <h3 className="edash-card-title">Private documents ({total})</h3>
-              <button type="button" className="edash-tool-btn" onClick={() => setShowUpload(true)}>
+              <button type="button" className="edash-tool-btn" onClick={openUpload}>
                 <EstateIcon name="plus" /> Add document
               </button>
             </div>
@@ -203,7 +253,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
                     {documents.map((row) => (
                       <tr key={row.id}>
                         <td data-label="File">{row.filename}</td>
-                        <td data-label="Type">{row.type}</td>
+                        <td data-label="Type">{DOCUMENT_TYPES.find(([code]) => code === row.type)?.[1] || row.type}</td>
                         <td data-label="Record">{row.entity_type} #{row.entity_id}</td>
                         <td><button type="button" className="edash-btn-outline" onClick={() => void download(`/estates/documents/${row.id}/download`, row.filename).catch((error) => fail(error, "Document could not be downloaded."))}>Download</button></td>
                       </tr>
@@ -219,15 +269,19 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
         {showUpload && (
           <EstateModal title="Add document" subtitle="Files are stored privately and linked to one estate record." onClose={() => setShowUpload(false)}>
             <label className="edash-field" style={{ marginBottom: 12 }}><span>File</span><input type="file" onChange={(event) => setFile(event.target.files?.[0] || null)} /></label>
+            <label className="edash-field" style={{ marginBottom: 12 }}><span>Document type</span><select value={documentType} onChange={(event) => setDocumentType(event.target.value)}><option value="">Choose a document type</option>{DOCUMENT_TYPES.map(([code, label]) => <option key={code} value={code}>{label}</option>)}</select></label>
             <label className="edash-field" style={{ marginBottom: 12 }}>
-              <span>Linked record type</span>
-              <select value={entityType} onChange={(event) => setEntityType(event.target.value)}>
-                <option value="">Choose a type</option>
-                {["estate", "plot", "customer", "allocation", "payment"].map((value) => <option key={value} value={value}>{value}</option>)}
+              <span>Attach to</span>
+              <select value={entityType} onChange={(event) => { setEntityType(event.target.value); setEntityId(""); }}>
+                <option value="allocation">Buyer plot allocation</option>
+                <option value="plot">Plot only</option>
+                <option value="customer">Customer</option>
+                <option value="estate">Estate</option>
+                <option value="payment">Payment</option>
               </select>
             </label>
-            <label className="edash-field" style={{ marginBottom: 12 }}><span>Linked record ID</span><input value={entityId} onChange={(event) => setEntityId(event.target.value)} /></label>
-            <label className="edash-field" style={{ marginBottom: 12 }}><span>Document type</span><input value={documentType} onChange={(event) => setDocumentType(event.target.value)} placeholder="e.g. receipt, allocation_letter" /></label>
+            {entityType === "allocation" ? <label className="edash-field" style={{ marginBottom: 12 }}><span>Buyer and plot</span><select value={entityId} onChange={(event) => setEntityId(event.target.value)}><option value="">Choose buyer and plot</option>{allocations.map((allocation) => <option key={allocation.id} value={allocation.id}>{allocation.estate_name} / Plot {allocation.plot_number} / {allocation.customer_name}</option>)}</select></label> : entityType === "plot" ? <label className="edash-field" style={{ marginBottom: 12 }}><span>Plot</span><select value={entityId} onChange={(event) => setEntityId(event.target.value)}><option value="">Choose plot</option>{plots.map((plot) => <option key={plot.id} value={plot.id}>{plot.estate_name} / Plot {plot.plot_number}</option>)}</select></label> : <label className="edash-field" style={{ marginBottom: 12 }}><span>Linked record ID</span><input value={entityId} onChange={(event) => setEntityId(event.target.value)} inputMode="numeric" /></label>}
+            <label className="edash-field" style={{ marginBottom: 12 }}><span>Description (optional)</span><textarea value={documentDescription} onChange={(event) => setDocumentDescription(event.target.value)} placeholder="e.g. Signed copy received from buyer" rows={3} /></label>
             <button type="button" className="edash-btn-primary" onClick={() => void upload()}>Upload private document</button>
           </EstateModal>
         )}
@@ -256,7 +310,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
             <option value="">Select customer</option>
             {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
           </select>
-          {customerDetail && <CustomerAllocations detail={customerDetail} />}
+          {customerDetail && <CustomerAllocations detail={customerDetail} onView={viewAllocation} onPrint={printAllocation} />}
           {statement && <button type="button" className="edash-btn-outline" style={{ marginTop: 10 }} onClick={() => setShowStatement(true)}>View customer payment statement</button>}
         </div>
       </div>
@@ -351,6 +405,12 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
           <CustomerStatement statement={statement} />
         </EstateModal>
       )}
+
+      {recordDetail && (
+        <EstateModal title={`Plot ${recordDetail.plot?.number || "record"}`} subtitle={`${recordDetail.customer?.name || "Customer"} - ${recordDetail.estate?.name || "Estate"}`} onClose={() => setRecordDetail(null)}>
+          <AllocationRecordView record={recordDetail} onPrint={() => void printAllocation(recordDetail.allocation.id)} />
+        </EstateModal>
+      )}
     </EstateShell>
   );
 }
@@ -372,7 +432,7 @@ function AllocationPanel({ detail }: { detail: any }) {
   );
 }
 
-function CustomerAllocations({ detail }: { detail: any }) {
+function CustomerAllocations({ detail, onView, onPrint }: { detail: any; onView: (allocationId: number) => void; onPrint: (allocationId: number) => void }) {
   const totals = (detail.allocations || []).reduce((acc: any, allocation: any) => ({
     agreed_price: String(Number(acc.agreed_price || 0) + Number(allocation.agreed_price || 0)),
     confirmed_paid: String(Number(acc.confirmed_paid || 0) + Number(allocation.confirmed || 0)),
@@ -384,7 +444,7 @@ function CustomerAllocations({ detail }: { detail: any }) {
       <FinancialSummaryCards summary={totals} />
       <div style={{ overflowX: "auto", marginTop: 10 }}>
         <table className="edash-mini-table">
-          <thead><tr><th>Estate</th><th>Plot</th><th>Agreed</th><th>Confirmed</th><th>Pending</th><th>Outstanding</th><th>Progress</th><th>Payments</th></tr></thead>
+          <thead><tr><th>Estate</th><th>Plot</th><th>Agreed</th><th>Confirmed</th><th>Pending</th><th>Outstanding</th><th>Progress</th><th>Payments</th><th>Record</th></tr></thead>
           <tbody>
             {detail.allocations.map((allocation: any) => (
               <tr key={allocation.allocation_id}>
@@ -396,12 +456,34 @@ function CustomerAllocations({ detail }: { detail: any }) {
                 <td data-label="Outstanding">{money(allocation.outstanding)}</td>
                 <td data-label="Progress">{allocation.percentage}%</td>
                 <td data-label="Payments">{allocation.payment_count}</td>
+                <td data-label="Record"><div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}><button type="button" className="edash-btn-outline" onClick={() => onView(allocation.allocation_id)}>View</button><button type="button" className="edash-btn-outline" onClick={() => onPrint(allocation.allocation_id)}>Print PDF</button></div></td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
     </>
+  );
+}
+
+function AllocationRecordView({ record, onPrint }: { record: any; onPrint: () => void }) {
+  const downloadDocument = async (documentId: number, filename: string) => {
+    try { await download(`/estates/documents/${documentId}/download`, filename); }
+    catch { window.alert("Document could not be downloaded."); }
+  };
+  return (
+    <div className="edash-allocation-record">
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 12 }}><button type="button" className="edash-btn-primary" onClick={onPrint}>Print PDF</button><button type="button" className="edash-btn-outline" onClick={() => window.print()}>Print view</button></div>
+      <div className="edash-overview-grid edash-overview-grid--2">
+        <div className="edash-overview-field"><span>Customer</span><strong>{record.customer?.name || "-"}</strong><small>{record.customer?.phone || record.customer?.email || "No contact details"}</small></div>
+        <div className="edash-overview-field"><span>Plot</span><strong>{record.plot?.number || "-"}</strong><small>{record.plot?.area_sqm ? `${Number(record.plot.area_sqm).toLocaleString()} m2` : "Area not recorded"}</small></div>
+        <div className="edash-overview-field"><span>Allocation status</span><strong>{String(record.allocation.status || "").replaceAll("_", " ")}</strong><small>{record.allocation.allocation_date ? new Date(record.allocation.allocation_date).toLocaleDateString() : "Not allocated"}</small></div>
+        <div className="edash-overview-field"><span>Outstanding</span><strong>{money(record.financial.outstanding)}</strong><small>{Number(record.financial.percentage || 0).toFixed(0)}% paid</small></div>
+      </div>
+      <div className="edash-allocation-record-section"><h4>Plot and workflow</h4><p className="edash-status-row-desc">{record.estate?.name || "Estate"} {record.plot?.public_address ? `- ${record.plot.public_address}` : ""} {record.plot?.land_use ? `- ${record.plot.land_use}` : ""}</p><p className="edash-status-row-desc">Survey: <strong>{record.survey?.status || "Not started"}</strong> - Staking: <strong>{record.staking?.status || "Not started"}</strong></p><p className="edash-status-row-desc">Payment plan: {record.allocation.payment_plan || "Not specified"}</p></div>
+      <div className="edash-allocation-record-section"><h4>Documents</h4><div className="edash-chip-row">{record.documents?.length ? record.documents.map((document: any) => <button type="button" className="edash-chip" key={document.id} onClick={() => void downloadDocument(document.id, document.filename)}>{document.filename}</button>) : <span className="edash-status-row-desc">No documents uploaded.</span>}</div></div>
+      <div className="edash-allocation-record-section"><h4>Payment receipts and transactions</h4>{record.payments?.length ? <div style={{ overflowX: "auto" }}><table className="edash-mini-table"><thead><tr><th>Date</th><th>Amount</th><th>Status</th><th>Reference</th><th>Receipt</th></tr></thead><tbody>{record.payments.map((payment: any) => <tr key={payment.id}><td data-label="Date">{new Date(payment.date).toLocaleDateString()}</td><td data-label="Amount">{money(payment.amount)}</td><td data-label="Status"><PaymentStatusBadge status={payment.status} /></td><td data-label="Reference">{payment.reference || "-"}</td><td data-label="Receipt"><div>{payment.receipt_number || payment.evidence?.[0]?.filename || "Pending"}</div><button type="button" className="edash-card-link" onClick={() => void download(`/estates/payments/${payment.id}/receipt.pdf`, `payment-${payment.id}-receipt.pdf`)}>Receipt PDF</button></td></tr>)}</tbody></table></div> : <p className="edash-status-row-desc">No payments recorded.</p>}<p className="edash-status-row-desc" style={{ marginTop: 8 }}>Agreed: {money(record.financial.agreed_price)}. Confirmed: {money(record.financial.confirmed_paid)}. Pending: {money(record.financial.pending_paid)}. Outstanding: {money(record.financial.outstanding)}.</p></div>
+    </div>
   );
 }
 
@@ -466,7 +548,7 @@ function CustomerStatement({ statement }: { statement: Statement }) {
                       <td data-label="Method">{paymentMethodLabel(transaction.method)}</td>
                       <td data-label="Amount">{money(transaction.amount)}</td>
                       <td data-label="Status"><PaymentStatusBadge status={transaction.status} /></td>
-                      <td data-label="Receipt">{renderReceiptCell(transaction)}</td>
+                      <td data-label="Receipt">{transaction.receipt_number ? <span>{transaction.receipt_number}</span> : renderReceiptCell(transaction)}</td>
                     </tr>
                   ))}
                 </tbody>
