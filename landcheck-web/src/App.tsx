@@ -63,6 +63,7 @@ const EstateReportsPage = lazyWithChunkRecovery(() => import("./pages/estates/Es
 const EstateAuditPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateAuditPage"));
 const EstateSettingsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateSettingsPage"));
 const EstateAgentPortalPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateAgentPortalPage"));
+const AgentPortalAccessPage = lazyWithChunkRecovery(() => import("./pages/estates/AgentPortalAccessPage"));
 const BuyerPortalPage = lazyWithChunkRecovery(() => import("./pages/BuyerPortalPage"));
 const EstateReconciliationPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateReconciliationPage"));
 
@@ -314,6 +315,7 @@ export default function App() {
               <Route path="/estates/billing" element={<EstateProtectedRoute element={<EstateBillingPage />} />} />
               <Route path="/estates/plot/:token" element={<PublicPlotView />} />
               <Route path="/estates/buyer/:token" element={<BuyerPortalPage />} />
+              <Route path="/estates/agent-portal/:token" element={<AgentPortalAccessPage />} />
               <Route path="/estates/public/:slug/reserve/:plotId" element={<PublicEstateReservationPage />} />
               <Route path="/estates/public/:slug" element={<PublicEstatePage />} />
               <Route path="/estates/workspace" element={<EstateProtectedRoute element={<Estates />} />} />
