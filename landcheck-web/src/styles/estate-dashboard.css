@@ -2515,6 +2515,54 @@
 .edash-ops-links small { color: var(--edash-muted); font-size: 0.62rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .edash-ops-links b { color: var(--edash-faint); font-size: 1rem; font-weight: 400; }
 
+.edash-payment-schedule-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(120px, 0.8fr);
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 9px;
+  border: 1px solid var(--edash-border-soft);
+  border-radius: var(--edash-radius-md);
+  background: var(--edash-neutral-tint);
+}
+.edash-payment-schedule-fields input,
+.edash-payment-schedule-fields select {
+  min-width: 0;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--edash-border);
+  border-radius: 8px;
+  background: var(--edash-surface);
+  color: var(--edash-ink);
+}
+.edash-payment-schedule-fields label { display: grid; gap: 4px; min-width: 0; }
+.edash-payment-schedule-fields label span { color: var(--edash-muted); font-size: 0.68rem; font-weight: 700; }
+.edash-payment-schedule-fields p { grid-column: 1 / -1; margin: 0; color: var(--edash-muted); font-size: 0.68rem; line-height: 1.35; }
+
+.edash-notification-log-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+.edash-notification-log-summary button { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; padding: 10px 12px; border: 1px solid var(--edash-border); border-radius: var(--edash-radius-md); background: var(--edash-surface); color: var(--edash-muted); cursor: pointer; text-align: left; }
+.edash-notification-log-summary button:hover, .edash-notification-log-summary button.is-active { border-color: var(--edash-brand); background: var(--edash-brand-tint); color: var(--edash-brand-dark); }
+.edash-notification-log-summary button.is-good.is-active { border-color: var(--edash-good); background: var(--edash-good-tint); color: var(--edash-good); }
+.edash-notification-log-summary button.is-danger.is-active { border-color: var(--edash-danger); background: var(--edash-danger-tint); color: var(--edash-danger); }
+.edash-notification-log-summary button.is-neutral.is-active { border-color: var(--edash-faint); background: var(--edash-neutral-tint); color: var(--edash-ink); }
+.edash-notification-log-summary span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.7rem; font-weight: 700; }
+.edash-notification-log-summary strong { font-size: 1rem; }
+.edash-notification-log-list { display: grid; gap: 7px; }
+.edash-notification-log-row { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 9px; padding: 10px; border: 1px solid var(--edash-border-soft); border-left: 3px solid var(--edash-faint); border-radius: var(--edash-radius-md); background: var(--edash-surface); }
+.edash-notification-log-row.status-sent { border-left-color: var(--edash-good); }
+.edash-notification-log-row.status-failed { border-left-color: var(--edash-danger); background: var(--edash-danger-tint); }
+.edash-notification-log-row.status-skipped { border-left-color: var(--edash-faint); }
+.edash-notification-log-icon { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 9px; background: var(--edash-neutral-tint); color: var(--edash-muted); }
+.status-sent .edash-notification-log-icon { background: var(--edash-good-tint); color: var(--edash-good); }
+.status-failed .edash-notification-log-icon { background: var(--edash-danger-tint); color: var(--edash-danger); }
+.edash-notification-log-icon svg { width: 15px; height: 15px; }
+.edash-notification-log-main { display: grid; gap: 2px; min-width: 0; }
+.edash-notification-log-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.edash-notification-log-head strong { min-width: 0; overflow: hidden; color: var(--edash-ink); font-size: 0.78rem; text-overflow: ellipsis; white-space: nowrap; }
+.edash-notification-log-main p, .edash-notification-log-main small { margin: 0; color: var(--edash-muted); font-size: 0.68rem; line-height: 1.35; }
+.edash-notification-log-main small { color: var(--edash-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.edash-notification-log-error { color: var(--edash-danger) !important; white-space: normal !important; }
+
 @media (max-width: 1080px) {
   .edash-ops-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .edash-ops-grid { grid-template-columns: 1fr; }
@@ -2536,4 +2584,7 @@
   .edash-passport-toolbar .edash-btn-outline { flex-shrink: 0; }
   .edash-passport-grid { grid-template-columns: 1fr; }
   .edash-ops-links { grid-template-columns: 1fr; }
+  .edash-payment-schedule-fields { grid-template-columns: 1fr; }
+  .edash-notification-log-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .edash-notification-log-head { align-items: flex-start; }
 }

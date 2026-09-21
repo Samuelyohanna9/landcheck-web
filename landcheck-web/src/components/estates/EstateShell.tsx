@@ -12,7 +12,7 @@ import "../../styles/estate-dashboard.css";
 
 export type EstateNavKey =
   | "dashboard" | "map" | "plots" | "customers" | "payments" | "commissions" | "survey" | "staking"
-  | "documents" | "development" | "hazard" | "reports" | "audit" | "agent" | "reconciliation" | "settings";
+  | "documents" | "development" | "hazard" | "reports" | "audit" | "agent" | "reconciliation" | "settings" | "notifications";
 
 export const estateNavItems: Array<{ key: EstateNavKey; label: string; icon: EstateIconName; path: (estateId: string) => string }> = [
   { key: "dashboard", label: "Dashboard", icon: "dashboard", path: (id) => `/estates/${id}` },
@@ -31,6 +31,7 @@ export const estateNavItems: Array<{ key: EstateNavKey; label: string; icon: Est
   { key: "reports", label: "Reports", icon: "reports", path: (id) => `/estates/${id}/reports` },
   { key: "audit", label: "Audit Timeline", icon: "audit", path: (id) => `/estates/${id}/timeline` },
   { key: "settings", label: "Settings", icon: "settings", path: (id) => `/estates/${id}/settings` },
+  { key: "notifications", label: "Message Delivery", icon: "mail", path: (id) => `/estates/${id}/notifications` },
 ];
 
 function relativeTime(value: string) {
