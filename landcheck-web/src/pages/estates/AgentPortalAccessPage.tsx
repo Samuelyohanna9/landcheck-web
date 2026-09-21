@@ -8,7 +8,7 @@ type EstateMapRecord = {
   id: number;
   name: string;
   public_url?: string | null;
-  plots: Array<{ id: number; plot_number: string; status: string; agent_record: boolean; geometry: Record<string, unknown> | null }>;
+  plots: Array<{ id: number; plot_number: string; status: string; agent_record: boolean; agent_lead?: boolean; agent_sale?: boolean; geometry: Record<string, unknown> | null }>;
   leads: Array<any>;
   sales: Array<any>;
   campaigns: Array<any>;
@@ -64,7 +64,7 @@ export default function AgentPortalAccessPage() {
   const mapFeatures = useMemo<ProjectMapFeature[]>(() => (selectedEstate?.plots || []).filter((plot) => plot.geometry).map((plot) => ({
     type: "Feature",
     geometry: plot.geometry as Record<string, unknown>,
-    properties: { plot_number: plot.plot_number, commercial_status: plot.status, agent_record: plot.agent_record },
+    properties: { plot_number: plot.plot_number, commercial_status: plot.status, agent_record: plot.agent_record, agent_lead: plot.agent_lead, agent_sale: plot.agent_sale },
   })), [selectedEstate]);
 
   const createCampaign = async () => {
@@ -114,7 +114,7 @@ export default function AgentPortalAccessPage() {
             <article><span className="agent-public-metric-icon tone-good"><EstateIcon name="wallet" /></span><small>Commission due</small><strong>{money(workspace.summary.commission_due)}</strong><span>Earned minus paid</span></article>
           </section>
 
-          <section id="map" className="agent-public-card agent-public-map-card"><div className="agent-public-card-head"><div><span className="agent-public-kicker">Estate portfolio</span><h2>Map and plot records</h2><p>All estate layouts are visible. Plots connected to your leads or sales are highlighted in your records.</p></div><select value={selectedEstate?.id || ""} onChange={(event) => setSelectedEstateId(Number(event.target.value))}>{workspace.estates.map((estate) => <option key={estate.id} value={estate.id}>{estate.name}</option>)}</select></div>{selectedEstate && mapFeatures.length ? <ProjectMap points={[]} features={mapFeatures} mode="estate" /> : <div className="agent-public-empty">No mapped plots are available for this estate yet.</div>}</section>
+          <section id="map" className="agent-public-card agent-public-map-card"><div className="agent-public-card-head"><div><span className="agent-public-kicker">Estate portfolio</span><h2>Map and plot records</h2><p>Open plots, reservations, and allocations remain visible. Plots chosen by your leads use the highlighted lead colour.</p></div><select value={selectedEstate?.id || ""} onChange={(event) => setSelectedEstateId(Number(event.target.value))}>{workspace.estates.map((estate) => <option key={estate.id} value={estate.id}>{estate.name}</option>)}</select></div>{selectedEstate && mapFeatures.length ? <><ProjectMap points={[]} features={mapFeatures} mode="estate" /><div className="agent-public-map-legend"><span><i className="is-available" />Open / available</span><span><i className="is-reserved" />Reserved</span><span><i className="is-allocated" />Allocated</span><span><i className="is-lead" />My lead</span><span><i className="is-sale" />My sale</span></div></> : <div className="agent-public-empty">No mapped plots are available for this estate yet.</div>}</section>
 
           <div className="agent-public-columns">
             <section id="leads" className="agent-public-card"><div className="agent-public-card-head"><div><h2>My leads</h2><p>Reservations from your QR codes are assigned automatically.</p></div><span className="agent-public-count">{workspace.leads.length}</span></div>{workspace.leads.length ? <div className="agent-public-list">{workspace.leads.map((lead) => <div className="agent-public-row" key={lead.id}><div><strong>{lead.name}</strong><small>{lead.phone}{lead.email ? ` · ${lead.email}` : ""}</small></div><div><b>{lead.status}</b><small>{lead.estate_name} · {lead.plot ? `Plot ${lead.plot}` : "Plot enquiry"}</small></div></div>)}</div> : <div className="agent-public-empty">No leads assigned yet.</div>}</section>

@@ -41,6 +41,22 @@ const modeFill = (mode: string) => {
   return "#22c55e";
 };
 
+const estateFeatureColor = (feature: StaticMapFeature) => {
+  const properties = feature.properties || {};
+  if (properties.agent_lead === true) return "#e11d48";
+  if (properties.agent_sale === true) return "#7c3aed";
+  const statusColors: Record<string, string> = {
+    available: "#16a34a",
+    reserved: "#d97706",
+    allocated: "#2563eb",
+    on_hold: "#64748b",
+    under_survey: "#ea580c",
+    under_staking: "#7c3aed",
+    developed: "#0f766e",
+  };
+  return statusColors[String(properties.commercial_status || "")] || "#94a3b8";
+};
+
 const pushCoordinatePairs = (value: unknown, bucket: number[][]) => {
   if (!Array.isArray(value)) return;
   if (
@@ -157,15 +173,16 @@ const buildOverlayCollection = (
   features.forEach((feature) => {
     const geometry = simplifyGeometry(feature);
     if (!geometry) return;
+    const color = mode === "estate" ? estateFeatureColor(feature) : accent;
     overlayFeatures.push({
       type: "Feature",
       geometry: geometry as GeoJSON.Geometry,
       properties: {
-        stroke: accent,
+        stroke: color,
         "stroke-width": 2,
         "stroke-opacity": 0.94,
-        fill,
-        "fill-opacity": geometry.type.includes("Polygon") ? 0.18 : 0,
+        fill: mode === "estate" ? color : fill,
+        "fill-opacity": geometry.type.includes("Polygon") ? mode === "estate" && feature.properties?.agent_lead === true ? 0.48 : 0.18 : 0,
       },
     });
   });

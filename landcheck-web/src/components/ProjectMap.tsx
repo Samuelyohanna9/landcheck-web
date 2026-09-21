@@ -25,6 +25,21 @@ export function ProjectMap({
 
   const accentColor =
     mode === "agric" ? "#b45309" : mode === "relief_recovery" ? "#1d4ed8" : "#16a34a";
+  const polygonColor = mode === "estate" ? [
+    "case",
+    ["==", ["get", "agent_lead"], true], "#e11d48",
+    ["==", ["get", "agent_sale"], true], "#7c3aed",
+    ["match", ["get", "commercial_status"],
+      "available", "#16a34a",
+      "reserved", "#d97706",
+      "allocated", "#2563eb",
+      "on_hold", "#64748b",
+      "under_survey", "#ea580c",
+      "under_staking", "#7c3aed",
+      "developed", "#0f766e",
+      "#94a3b8",
+    ],
+  ] : accentColor;
 
   const hasPolygons = features.length > 0;
   const totalLocations = hasPolygons ? features.length : points.length;
@@ -143,13 +158,13 @@ export function ProjectMap({
             id: "polygon-fill",
             type: "fill",
             source: "impact-polygons",
-            paint: { "fill-color": accentColor, "fill-opacity": 0.25 },
+            paint: { "fill-color": polygonColor, "fill-opacity": ["case", ["==", ["get", "agent_lead"], true], 0.52, 0.28] },
           });
           map.addLayer({
             id: "polygon-outline",
             type: "line",
             source: "impact-polygons",
-            paint: { "line-color": accentColor, "line-width": 2.5, "line-opacity": 0.95 },
+            paint: { "line-color": polygonColor, "line-width": ["case", ["==", ["get", "agent_lead"], true], 3, 2.2], "line-opacity": 0.95 },
           });
 
           map.addLayer({
