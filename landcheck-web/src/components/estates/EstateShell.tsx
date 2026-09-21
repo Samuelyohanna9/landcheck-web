@@ -152,12 +152,12 @@ export default function EstateShell({
         setDeliveryRows(items.map((item: DeliverySignal) => ({ id: Number(item.id), created_at: String(item.created_at || "") })).filter((item: DeliverySignal) => item.created_at));
       })
       .catch(() => { if (mounted) setDeliveryRows([]); });
-    api.get(`/estates/${estateId}/reservation-requests`, { params: { status: "new" } })
+    api.get(`/estates/${estateId}/reservation-requests`, { params: { status: "new", page: 1, page_size: 1 } })
       .then((response) => {
         if (!mounted) return;
-        const rows = Array.isArray(response.data) ? response.data : [];
+        const rows = Array.isArray(response.data) ? response.data : (response.data?.items || []);
         const latestId = rows.reduce((latest: number | null, row: { id?: number }) => Math.max(latest || 0, Number(row.id || 0)), 0) || null;
-        setNewReservationCount(rows.length);
+        setNewReservationCount(Number(response.data?.new_count ?? rows.length));
         setNewReservationLatestId(latestId);
         let seenId = 0;
         try { seenId = Number(window.localStorage.getItem(reservationNoticeStorageKey) || 0); } catch { /* continue without persisted dismissal */ }

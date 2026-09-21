@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
+import EstatePagination from "../../components/estates/EstatePagination";
 
 export default function EstateStakingPage() {
   const { estateId } = useParams();
@@ -11,14 +12,16 @@ export default function EstateStakingPage() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [activity, setActivity] = useState<any[]>([]);
   const [actionBusy, setActionBusy] = useState("");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const load = () => {
     if (!estateId) return;
     api.get(`/estates/${estateId}`).then((response) => setEstateName(response.data.name)).catch(() => undefined);
-    api.get("/estates/staking-tasks").then((response) => setTasks((response.data || []).filter((item: any) => item.estate_id === Number(estateId)))).catch(() => setTasks([]));
+    api.get("/estates/staking-tasks", { params: { estate_id: estateId, page, page_size: 20 } }).then((response) => { setTasks(response.data?.items || []); setTotal(Number(response.data?.total || 0)); }).catch(() => { setTasks([]); setTotal(0); });
     api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));
   };
-  useEffect(load, [estateId]);
+  useEffect(load, [estateId, page]);
 
   const run = async (label: string, action: () => Promise<unknown>) => {
     if (actionBusy) return;
@@ -65,6 +68,7 @@ export default function EstateStakingPage() {
               ))}
             </div>
           ) : <p className="edash-tab-empty">No staking tasks yet. Prepare one from a completed Survey on the Map &amp; Plots page.</p>}
+          <EstatePagination page={page} pageSize={20} total={total} onChange={setPage} />
         </div>
       </div>
     </EstateShell>

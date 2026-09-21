@@ -5,6 +5,7 @@ import { api, extractApiErrorMessage } from "../../api/client";
 import { claimEstateSurveyRequestSession } from "../../auth/surveyAuth";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
+import EstatePagination from "../../components/estates/EstatePagination";
 import { clearSurveyPlanDraft } from "../../offline/surveyPlanDraft";
 
 export default function EstateSurveyPage() {
@@ -14,14 +15,16 @@ export default function EstateSurveyPage() {
   const [requests, setRequests] = useState<any[]>([]);
   const [activity, setActivity] = useState<any[]>([]);
   const [actionBusy, setActionBusy] = useState("");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const load = () => {
     if (!estateId) return;
     api.get(`/estates/${estateId}`).then((response) => setEstateName(response.data.name)).catch(() => undefined);
-    api.get("/estates/survey-requests").then((response) => setRequests((response.data || []).filter((item: any) => item.estate.id === Number(estateId)))).catch(() => setRequests([]));
+    api.get("/estates/survey-requests", { params: { estate_id: estateId, page, page_size: 20 } }).then((response) => { setRequests(response.data?.items || []); setTotal(Number(response.data?.total || 0)); }).catch(() => { setRequests([]); setTotal(0); });
     api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));
   };
-  useEffect(load, [estateId]);
+  useEffect(load, [estateId, page]);
 
   const run = async (label: string, action: () => Promise<unknown>) => {
     if (actionBusy) return;
@@ -70,6 +73,7 @@ export default function EstateSurveyPage() {
               ))}
             </div>
           ) : <p className="edash-tab-empty">No Survey requests yet. Prepare one from an allocated plot's drawer on the Map &amp; Plots page.</p>}
+          <EstatePagination page={page} pageSize={20} total={total} onChange={setPage} />
         </div>
       </div>
     </EstateShell>

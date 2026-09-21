@@ -1466,6 +1466,10 @@
 }
 
 .edash-public-leads { margin-bottom: 16px; }
+.edash-pagination { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--edash-border-soft); color: var(--edash-muted); font-size: .68rem; }
+.edash-pagination > div { display: flex; align-items: center; gap: 7px; }
+.edash-pagination strong { color: var(--edash-ink); font-size: .68rem; white-space: nowrap; }
+.edash-pagination .edash-btn-outline { min-height: 29px; padding: 4px 8px; font-size: .66rem; }
 .edash-public-leads-subtitle { margin: 4px 0 0; color: var(--edash-muted); font-size: .76rem; }
 .edash-public-leads-count { padding: 5px 9px; border-radius: 999px; background: var(--edash-brand-tint); color: var(--edash-brand-dark); font-size: .7rem; font-weight: 800; white-space: nowrap; }
 .edash-public-lead-list { display: grid; gap: 8px; }
@@ -1526,6 +1530,8 @@
 .edash-plot-price-modes label { display: flex; align-items: center; gap: 5px; color: var(--edash-ink); font-size: .78rem; font-weight: 600; letter-spacing: 0; text-transform: none; }
 .edash-plot-price-modes input { accent-color: var(--edash-brand); }
 @media (max-width: 560px) {
+  .edash-pagination { align-items: flex-start; flex-direction: column; }
+  .edash-pagination > div { width: 100%; justify-content: space-between; }
   .edash-public-lead { flex-direction: column; gap: 10px; }
   .edash-public-lead-actions { align-items: flex-start; flex-direction: row; width: 100%; }
   .edash-public-settings-grid { grid-template-columns: 1fr; }
