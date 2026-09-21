@@ -456,7 +456,7 @@ function CustomerAllocations({ detail, onView, onPrint }: { detail: any; onView:
                 <td data-label="Outstanding">{money(allocation.outstanding)}</td>
                 <td data-label="Progress">{allocation.percentage}%</td>
                 <td data-label="Payments">{allocation.payment_count}</td>
-                <td data-label="Record"><div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}><button type="button" className="edash-btn-outline" onClick={() => onView(allocation.allocation_id)}>View</button><button type="button" className="edash-btn-outline" onClick={() => onPrint(allocation.allocation_id)}>Print PDF</button></div></td>
+                <td data-label="Record"><div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}><button type="button" className="edash-btn-outline" onClick={() => onView(allocation.allocation_id)}>View</button><button type="button" className="edash-btn-outline" onClick={() => onPrint(allocation.allocation_id)}>Download customer packet</button></div></td>
               </tr>
             ))}
           </tbody>
@@ -473,7 +473,7 @@ function AllocationRecordView({ record, onPrint }: { record: any; onPrint: () =>
   };
   return (
     <div className="edash-allocation-record">
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 12 }}><button type="button" className="edash-btn-primary" onClick={onPrint}>Print PDF</button><button type="button" className="edash-btn-outline" onClick={() => window.print()}>Print view</button></div>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 12 }}><button type="button" className="edash-btn-primary" onClick={onPrint}>Download customer packet</button></div>
       <div className="edash-overview-grid edash-overview-grid--2">
         <div className="edash-overview-field"><span>Customer</span><strong>{record.customer?.name || "-"}</strong><small>{record.customer?.phone || record.customer?.email || "No contact details"}</small></div>
         <div className="edash-overview-field"><span>Plot</span><strong>{record.plot?.number || "-"}</strong><small>{record.plot?.area_sqm ? `${Number(record.plot.area_sqm).toLocaleString()} m2` : "Area not recorded"}</small></div>
