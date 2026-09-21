@@ -113,10 +113,19 @@ export default function EstateOperationsSummary({
   publicSettings,
 }: OperationsSummaryProps) {
   const [passportPlotId, setPassportPlotId] = useState<string>("");
+  const [qrCampaigns, setQrCampaigns] = useState<any[]>([]);
+  const [qrCampaignName, setQrCampaignName] = useState("");
+  const [qrChannel, setQrChannel] = useState("entrance_sign");
+  const [qrBusy, setQrBusy] = useState(false);
   const [operationsSummary, setOperationsSummary] = useState<{ total_exceptions: number; actions: Array<{ key: string; label: string; count: number; href: string; tone: string }> } | null>(null);
   useEffect(() => {
     let mounted = true;
     api.get(`/estates/${estateId}/operations-summary`).then((response) => { if (mounted) setOperationsSummary(response.data); }).catch(() => { if (mounted) setOperationsSummary(null); });
+    return () => { mounted = false; };
+  }, [estateId]);
+  useEffect(() => {
+    let mounted = true;
+    api.get(`/estates/${estateId}/qr-campaigns`).then((response) => { if (mounted) setQrCampaigns(response.data || []); }).catch(() => { if (mounted) setQrCampaigns([]); });
     return () => { mounted = false; };
   }, [estateId]);
   const allocatedCount = Number(dashboard?.statuses?.allocated || 0);
@@ -175,6 +184,24 @@ export default function EstateOperationsSummary({
     return items.slice(0, 6);
   })();
 
+  const createQrCampaign = async () => {
+    if (!qrCampaignName.trim()) return;
+    setQrBusy(true);
+    try {
+      const response = await api.post(`/estates/${estateId}/qr-campaigns`, { name: qrCampaignName.trim(), channel: qrChannel });
+      setQrCampaigns((current) => [response.data, ...current]);
+      setQrCampaignName("");
+    } finally {
+      setQrBusy(false);
+    }
+  };
+
+  const downloadQr = async (campaign: any) => {
+    const response = await api.get(`/estates/qr-campaigns/${campaign.id}/print.pdf`, { responseType: "blob" });
+    const url = URL.createObjectURL(response.data as Blob);
+    const link = document.createElement("a"); link.href = url; link.download = `${campaign.code}-qr.pdf`; link.click(); URL.revokeObjectURL(url);
+  };
+
   return (
     <section className="edash-ops" aria-labelledby="estate-operations-title">
       <div className="edash-ops-heading">
@@ -195,6 +222,14 @@ export default function EstateOperationsSummary({
         <Metric label="Outstanding" value={formatMoney(dashboard?.financial?.outstanding_balance)} detail="Customer balances to follow up" tone="warn" />
         <Metric label="Buyer records" value={customers.length} detail={`${estateDocuments.length} linked documents`} tone="good" />
       </div>
+
+      <article className="edash-card edash-dashboard-qr-card">
+        <div className="edash-card-inner">
+          <div className="edash-card-head"><div><h3 className="edash-card-title">Public QR campaigns</h3><p className="edash-ops-card-subtitle">Create a different tracked link for signs, brochures, WhatsApp, or company enquiries.</p></div><EstateIcon name="qr" /></div>
+          <div className="edash-dashboard-qr-form"><input value={qrCampaignName} onChange={(event) => setQrCampaignName(event.target.value)} placeholder="Campaign name, e.g. Main entrance" /><select value={qrChannel} onChange={(event) => setQrChannel(event.target.value)}><option value="entrance_sign">Entrance sign</option><option value="brochure">Brochure</option><option value="whatsapp">WhatsApp</option><option value="company">Company page</option></select><button type="button" className="edash-btn-primary" disabled={qrBusy || !qrCampaignName.trim()} onClick={() => void createQrCampaign()}>{qrBusy ? "Creating..." : "Create QR"}</button></div>
+          {qrCampaigns.length ? <div className="edash-dashboard-qr-list">{qrCampaigns.slice(0, 4).map((campaign) => <div className="edash-dashboard-qr-row" key={campaign.id}><div><strong>{campaign.name}</strong><small>{campaign.channel} · {campaign.scan_count} scans</small></div><div><button type="button" className="edash-btn-outline" onClick={() => void navigator.clipboard?.writeText(campaign.public_url)}>Copy link</button><button type="button" className="edash-btn-outline" onClick={() => void downloadQr(campaign)}>Print QR</button></div></div>)}</div> : <p className="edash-tab-empty">No QR campaigns yet.</p>}
+        </div>
+      </article>
 
       <div className="edash-ops-grid">
         <article className="edash-card edash-ops-actions-card">

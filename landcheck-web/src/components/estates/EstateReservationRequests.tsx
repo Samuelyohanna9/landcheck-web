@@ -35,7 +35,7 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [migratingId, setMigratingId] = useState<number | null>(null);
   const role = getEstateAuthSession()?.user.role_key;
-  const canUpdate = role === "owner" || role === "manager" || role === "sales";
+  const canUpdate = role === "owner" || role === "manager" || role === "sales" || role === "marketer";
 
   const load = () => {
     api.get(`/estates/${estateId}/reservation-requests`)

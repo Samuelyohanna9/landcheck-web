@@ -30,6 +30,8 @@ export default function EstateCommissionsPage() {
   const [message, setMessage] = useState("");
   const [agents, setAgents] = useState<any[]>([]);
   const [newAgentName, setNewAgentName] = useState("");
+  const [newAgentEmail, setNewAgentEmail] = useState("");
+  const [newAgentPhone, setNewAgentPhone] = useState("");
   const [newAgentRole, setNewAgentRole] = useState("sales");
   const [agentBusy, setAgentBusy] = useState(false);
   const [showAddAgent, setShowAddAgent] = useState(false);
@@ -94,9 +96,9 @@ export default function EstateCommissionsPage() {
     if (!organizationId || !newAgentName.trim()) return;
     setAgentBusy(true);
     try {
-      await api.post(`/estates/organizations/${organizationId}/members`, { subject_type: "manual_agent", subject_id: newAgentName.trim(), role_key: newAgentRole });
-      toast.success(`${newAgentName.trim()} added.`);
-      setNewAgentName("");
+      const response = await api.post(`/estates/organizations/${organizationId}/members`, { subject_type: "manual_agent", subject_id: newAgentName.trim(), role_key: newAgentRole, email: newAgentEmail.trim() || null, phone: newAgentPhone.trim() || null });
+      toast.success(response.data?.email_sent ? `${newAgentName.trim()} added and invite sent.` : `${newAgentName.trim()} added.`);
+      setNewAgentName(""); setNewAgentEmail(""); setNewAgentPhone("");
       setShowAddAgent(false);
       await loadAgents(organizationId);
     } catch (error) {
@@ -206,7 +208,7 @@ export default function EstateCommissionsPage() {
               <EstateIcon name="plus" /> Add agent
             </button>
           </div>
-          <p className="edash-field-note" style={{ marginBottom: 10 }}>Add anyone who should be selectable as a sales agent when reserving or allocating a plot - they don't need a LandCheck login, just a name to attribute sales and commission to.</p>
+          <p className="edash-field-note" style={{ marginBottom: 10 }}>Add sales agents or marketers. Each agent can receive a secure workspace link for their QR leads, estate map, payment progress, and commission records.</p>
           {agents.length ? (
             <div style={{ overflowX: "auto" }}>
               <table className="edash-mini-table">
@@ -220,6 +222,7 @@ export default function EstateCommissionsPage() {
                       <td data-label="Status"><span className={`edash-status-pill tone-${member.is_active ? "good" : "neutral"}`}>{member.is_active ? "Active" : "Inactive"}</span></td>
                       <td style={{ display: "flex", gap: 6 }}>
                         <button type="button" className="edash-btn-outline" onClick={() => void openAgentDetail(member.subject_type, member.subject_id)}>View</button>
+                        {member.role === "sales" || member.role === "marketer" ? <button type="button" className="edash-btn-outline" disabled={!member.email} title={member.email ? "Send or regenerate the workspace link" : "Add an email address when creating this agent"} onClick={async () => { try { const response = await api.post(`/estates/organizations/${organizationId}/members/${member.id}/portal-invite`); await navigator.clipboard?.writeText(response.data.portal_url); toast.success(response.data.email_sent ? "Workspace invite sent." : "Workspace link regenerated and copied."); } catch (error) { toast.error(await extractApiErrorMessage(error, "Workspace invite could not be sent.")); } }}>{member.email ? "Send link" : "No email"}</button> : null}
                         <button type="button" className="edash-btn-outline" onClick={() => void toggleAgentActive(member)}>{member.is_active ? "Deactivate" : "Reactivate"}</button>
                       </td>
                     </tr>
@@ -288,7 +291,7 @@ export default function EstateCommissionsPage() {
       </div>
 
       {showAddAgent && (
-        <EstateModal title="Add agent" subtitle="They don't need a LandCheck login - just a name to attribute sales and commission to." onClose={() => setShowAddAgent(false)}>
+        <EstateModal title="Add agent or marketer" subtitle="Add contact details to send a secure workspace link automatically." onClose={() => setShowAddAgent(false)}>
           <label className="edash-field" style={{ marginBottom: 12 }}>
             <span>Name</span>
             <input value={newAgentName} onChange={(event) => setNewAgentName(event.target.value)} placeholder="e.g. Chidinma Okafor" autoFocus />
@@ -297,12 +300,21 @@ export default function EstateCommissionsPage() {
             <span>Role</span>
             <select value={newAgentRole} onChange={(event) => setNewAgentRole(event.target.value)}>
               <option value="sales">Sales agent</option>
+              <option value="marketer">Marketer</option>
               <option value="manager">Manager</option>
               <option value="accounts">Accounts</option>
               <option value="field_officer">Field officer</option>
               <option value="surveyor">Surveyor</option>
               <option value="viewer">Viewer</option>
             </select>
+          </label>
+          <label className="edash-field" style={{ marginBottom: 12 }}>
+            <span>Email for workspace invite</span>
+            <input type="email" value={newAgentEmail} onChange={(event) => setNewAgentEmail(event.target.value)} placeholder="agent@example.com" />
+          </label>
+          <label className="edash-field" style={{ marginBottom: 12 }}>
+            <span>Phone number</span>
+            <input type="tel" value={newAgentPhone} onChange={(event) => setNewAgentPhone(event.target.value)} placeholder="080..." />
           </label>
           <button type="button" className="edash-btn-primary" disabled={agentBusy || !newAgentName.trim()} onClick={() => void addAgent()}>
             {agentBusy ? <><Spinner size={13} /> Adding...</> : "Add agent"}
