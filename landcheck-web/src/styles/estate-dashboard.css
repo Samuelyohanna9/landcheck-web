@@ -1534,13 +1534,6 @@
   .edash-plot-listing-defaults-grid { grid-template-columns: 1fr; }
 }
 
-.edash-reconciliation-list { display: grid; gap: 8px; }
-.edash-reconciliation-row { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(220px, 1.4fr) auto; align-items: center; gap: 10px; padding: 11px; border: 1px solid var(--edash-border-soft); border-left: 3px solid var(--edash-warn); border-radius: var(--edash-radius-md); background: var(--edash-surface); }
-.edash-reconciliation-row > div { display: grid; gap: 3px; }
-.edash-reconciliation-row strong { color: var(--edash-ink); font-size: .82rem; }
-.edash-reconciliation-row small { color: var(--edash-muted); font-size: .66rem; }
-.edash-reconciliation-row select { height: 36px; min-width: 0; padding: 0 8px; border: 1px solid var(--edash-border); border-radius: var(--edash-radius-sm); background: var(--edash-surface); color: var(--edash-ink); }
-@media (max-width: 700px) { .edash-reconciliation-row { grid-template-columns: 1fr; } .edash-reconciliation-row > div:last-child { display: flex; } }
 
 .edash-dashboard-qr-card { margin-top: 0; }
 .edash-dashboard-qr-card > .edash-card-inner > .edash-card-head > svg { width: 20px; height: 20px; color: var(--edash-brand); }

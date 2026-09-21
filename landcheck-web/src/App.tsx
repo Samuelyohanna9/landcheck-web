@@ -64,7 +64,6 @@ const EstateAuditPage = lazyWithChunkRecovery(() => import("./pages/estates/Esta
 const EstateSettingsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateSettingsPage"));
 const AgentPortalAccessPage = lazyWithChunkRecovery(() => import("./pages/estates/AgentPortalAccessPage"));
 const BuyerPortalPage = lazyWithChunkRecovery(() => import("./pages/BuyerPortalPage"));
-const EstateReconciliationPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateReconciliationPage"));
 const EstateNotificationLogPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateNotificationLogPage"));
 
 type ChunkLoadBoundaryProps = {
@@ -332,7 +331,7 @@ export default function App() {
               <Route path="/estates/:estateId/settings" element={<EstateProtectedRoute element={<EstateSettingsPage />} />} />
               <Route path="/estates/:estateId/notifications" element={<EstateProtectedRoute element={<EstateNotificationLogPage />} />} />
               <Route path="/estates/payments" element={<EstateProtectedRoute element={<EstateFinance mode="payments" />} />} />
-              <Route path="/estates/reconciliation" element={<EstateProtectedRoute element={<EstateReconciliationPage />} />} />
+              <Route path="/estates/reconciliation" element={<Navigate to="/estates/payments" replace />} />
               <Route path="/estates/commissions" element={<EstateProtectedRoute element={<EstateCommissionsPage />} />} />
               <Route path="/estates/documents" element={<EstateProtectedRoute element={<EstateFinance mode="documents" />} />} />
               <Route path="/flood" element={<FloodAnalysisLanding />} />

@@ -5,6 +5,7 @@ import { FinancialSummaryCards, PaymentStatusBadge, money, PAYMENT_METHODS, paym
 import EstateShell from "../components/estates/EstateShell";
 import EstateModal from "../components/estates/EstateModal";
 import EstateIcon from "../components/estates/EstateIcon";
+import Spinner from "../components/estates/EstateSpinner";
 
 type Payment = { id: number; date: string; amount: string; currency: string; status: string; method: string; reference?: string; customer: { name: string }; estate: { name: string }; plot: { number: string }; can_confirm?: boolean };
 type Allocation = { id: number; estate_id: number; plot_id: number; customer_id: number; estate_name: string; plot_number: string; customer_name: string };
@@ -76,6 +77,10 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
   const [paymentMethodOther, setPaymentMethodOther] = useState("");
   const [reference, setReference] = useState("");
   const [receipt, setReceipt] = useState<File | null>(null);
+  const [recordBusy, setRecordBusy] = useState(false);
+  const [paymentActionBusy, setPaymentActionBusy] = useState<number | null>(null);
+  const [detailActionBusy, setDetailActionBusy] = useState<"confirm" | "void" | null>(null);
+  const [loadBusy, setLoadBusy] = useState(false);
 
   const [customerId, setCustomerId] = useState("");
   const [customerDetail, setCustomerDetail] = useState<any>(null);
@@ -88,6 +93,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
   const [entityId, setEntityId] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [recordDetail, setRecordDetail] = useState<any>(null);
+  const [uploadBusy, setUploadBusy] = useState(false);
 
   const fail = async (error: unknown, message: string) => toast.error(await extractApiErrorMessage(error, message));
 
@@ -105,6 +111,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
   };
 
   const load = async () => {
+    setLoadBusy(true);
     try {
       await setup();
       if (mode === "payments") {
@@ -118,7 +125,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
       }
     } catch (error) {
       await fail(error, "Estate financial information could not be loaded.");
-    }
+    } finally { setLoadBusy(false); }
   };
   useEffect(() => { void load(); }, [mode, page]);
   useEffect(() => {
@@ -171,9 +178,11 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
   };
 
   const record = async () => {
+    if (recordBusy) return;
     if (!allocationId || !amount) { toast.error("Select an allocation and enter an amount."); return; }
     const resolvedMethod = paymentMethod === "other" ? paymentMethodOther.trim() : paymentMethod;
     if (!resolvedMethod) { toast.error("Enter the payment method."); return; }
+    setRecordBusy(true);
     try {
       const made = await api.post(`/estates/allocations/${allocationId}/payments`, { amount, payment_date: paymentDate, payment_method: resolvedMethod, reference_no: reference || null });
       let noticeText = "Payment recorded and pending confirmation.";
@@ -189,23 +198,27 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
       await load();
     } catch (error) {
       await fail(error, "Payment could not be recorded.");
-    }
+    } finally { setRecordBusy(false); }
   };
 
   const quickConfirm = async (id: number) => {
+    if (paymentActionBusy !== null) return;
+    setPaymentActionBusy(id);
     try {
       const response = await api.post(`/estates/payments/${id}/confirm`);
       toast.success(`Payment confirmed.${response.data.customer_notified ? " A confirmation email has been sent to the customer." : ""}`);
       await load();
     } catch (error) {
       await fail(error, "Payment could not be confirmed.");
-    }
+    } finally { setPaymentActionBusy(null); }
   };
 
   const act = async (kind: "confirm" | "void") => {
     if (!detail) return;
     const reason = kind === "void" ? window.prompt("Reason for voiding this payment:") : "";
     if (kind === "void" && !reason) return;
+    if (detailActionBusy) return;
+    setDetailActionBusy(kind);
     try {
       const response = await api.post(`/estates/payments/${detail.payment.id}/${kind}`, kind === "void" ? { reason } : undefined);
       setDetail(null);
@@ -213,11 +226,13 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
       await load();
     } catch (error) {
       await fail(error, `Payment could not be ${kind}ed.`);
-    }
+    } finally { setDetailActionBusy(null); }
   };
 
   const upload = async () => {
+    if (uploadBusy) return;
     if (!file || !documentType || !entityType || !entityId) { toast.error("Select a file and complete its linked record fields."); return; }
+    setUploadBusy(true);
     try {
       const body = new FormData();
       body.append("file", file);
@@ -229,7 +244,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
       await load();
     } catch (error) {
       await fail(error, "Document could not be uploaded.");
-    }
+    } finally { setUploadBusy(false); }
   };
 
   if (!sidebarEstateId) return null;
@@ -282,7 +297,9 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
             </label>
             {entityType === "allocation" ? <label className="edash-field" style={{ marginBottom: 12 }}><span>Buyer and plot</span><select value={entityId} onChange={(event) => setEntityId(event.target.value)}><option value="">Choose buyer and plot</option>{allocations.map((allocation) => <option key={allocation.id} value={allocation.id}>{allocation.estate_name} / Plot {allocation.plot_number} / {allocation.customer_name}</option>)}</select></label> : entityType === "plot" ? <label className="edash-field" style={{ marginBottom: 12 }}><span>Plot</span><select value={entityId} onChange={(event) => setEntityId(event.target.value)}><option value="">Choose plot</option>{plots.map((plot) => <option key={plot.id} value={plot.id}>{plot.estate_name} / Plot {plot.plot_number}</option>)}</select></label> : <label className="edash-field" style={{ marginBottom: 12 }}><span>Linked record ID</span><input value={entityId} onChange={(event) => setEntityId(event.target.value)} inputMode="numeric" /></label>}
             <label className="edash-field" style={{ marginBottom: 12 }}><span>Description (optional)</span><textarea value={documentDescription} onChange={(event) => setDocumentDescription(event.target.value)} placeholder="e.g. Signed copy received from buyer" rows={3} /></label>
-            <button type="button" className="edash-btn-primary" onClick={() => void upload()}>Upload private document</button>
+            <button type="button" className="edash-btn-primary" disabled={uploadBusy} onClick={() => void upload()}>
+              {uploadBusy ? <><Spinner size={14} /> Uploading...</> : "Upload private document"}
+            </button>
           </EstateModal>
         )}
       </EstateShell>
@@ -336,7 +353,9 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
             </label>
             <label className="edash-field"><span>From</span><input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} /></label>
             <label className="edash-field"><span>To</span><input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} /></label>
-            <button type="button" className="edash-btn-primary" style={{ alignSelf: "flex-end" }} onClick={() => { setPage(1); void load(); }}>Apply filters</button>
+            <button type="button" className="edash-btn-primary" style={{ alignSelf: "flex-end" }} disabled={loadBusy} onClick={() => { setPage(1); void load(); }}>
+              {loadBusy ? <><Spinner size={14} /> Loading...</> : "Apply filters"}
+            </button>
           </div>
         </div>
       </div>
@@ -344,7 +363,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
       <div className="edash-card">
         <div className="edash-card-inner">
           <div className="edash-card-head"><h3 className="edash-card-title">Payments ({total})</h3></div>
-          <PaymentTable rows={payments} open={async (id) => { try { setDetail((await api.get(`/estates/payments/${id}`)).data); } catch (error) { await fail(error, "Payment detail could not be loaded."); } }} onConfirm={quickConfirm} />
+          <PaymentTable rows={payments} open={async (id) => { try { setDetail((await api.get(`/estates/payments/${id}`)).data); } catch (error) { await fail(error, "Payment detail could not be loaded."); } }} onConfirm={quickConfirm} confirmingId={paymentActionBusy} />
           <Pager page={page} total={total} change={setPage} />
         </div>
       </div>
@@ -372,7 +391,9 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
           )}
           <label className="edash-field" style={{ marginBottom: 12 }}><span>Reference</span><input value={reference} onChange={(event) => setReference(event.target.value)} /></label>
           <label className="edash-field" style={{ marginBottom: 12 }}><span>Receipt</span><input type="file" onChange={(event) => setReceipt(event.target.files?.[0] || null)} /></label>
-          <button type="button" className="edash-btn-primary" onClick={() => void record()}>Record payment</button>
+          <button type="button" className="edash-btn-primary" disabled={recordBusy} onClick={() => void record()}>
+            {recordBusy ? <><Spinner size={14} /> Recording...</> : "Record payment"}
+          </button>
         </EstateModal>
       )}
 
@@ -394,8 +415,8 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
             </div>
           )}
           <div style={{ display: "flex", gap: 8 }}>
-            {detail.capabilities.can_confirm && <button type="button" className="edash-btn-primary" onClick={() => void act("confirm")}>Confirm</button>}
-            {detail.capabilities.can_void && <button type="button" className="edash-btn-outline" style={{ color: "var(--edash-danger)", borderColor: "var(--edash-danger-tint)" }} onClick={() => void act("void")}>Void</button>}
+            {detail.capabilities.can_confirm && <button type="button" className="edash-btn-primary" disabled={Boolean(detailActionBusy)} onClick={() => void act("confirm")}>{detailActionBusy === "confirm" ? <><Spinner size={14} /> Confirming...</> : "Confirm"}</button>}
+            {detail.capabilities.can_void && <button type="button" className="edash-btn-outline" style={{ color: "var(--edash-danger)", borderColor: "var(--edash-danger-tint)" }} disabled={Boolean(detailActionBusy)} onClick={() => void act("void")}>{detailActionBusy === "void" ? <><Spinner size={14} /> Voiding...</> : "Void"}</button>}
           </div>
         </EstateModal>
       )}
@@ -562,7 +583,7 @@ function CustomerStatement({ statement }: { statement: Statement }) {
   );
 }
 
-function PaymentTable({ rows, open, onConfirm }: { rows: Payment[]; open: (id: number) => void; onConfirm: (id: number) => void }) {
+function PaymentTable({ rows, open, onConfirm, confirmingId }: { rows: Payment[]; open: (id: number) => void; onConfirm: (id: number) => void; confirmingId: number | null }) {
   if (!rows.length) return <p className="edash-tab-empty">No payments match this filter yet.</p>;
   return (
     <div style={{ overflowX: "auto" }}>
@@ -583,9 +604,10 @@ function PaymentTable({ rows, open, onConfirm }: { rows: Payment[]; open: (id: n
                   <button
                     type="button"
                     className="edash-btn-primary"
+                    disabled={confirmingId !== null}
                     onClick={(event) => { event.stopPropagation(); onConfirm(payment.id); }}
                   >
-                    Confirm
+                    {confirmingId === payment.id ? <><Spinner size={14} /> Confirming...</> : "Confirm"}
                   </button>
                 )}
               </td>

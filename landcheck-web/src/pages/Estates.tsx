@@ -505,6 +505,9 @@ export default function Estates() {
   const [salesAgentSubject, setSalesAgentSubject] = useState("");
   const [salesAgents, setSalesAgents] = useState<any[]>([]);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const [assignmentBusy, setAssignmentBusy] = useState<"reserve" | "allocate" | null>(null);
+  const [customerBusy, setCustomerBusy] = useState(false);
+  const [workflowBusy, setWorkflowBusy] = useState("");
   const [inspectionNotes, setInspectionNotes] = useState("");
   const [inspectionOutcome, setInspectionOutcome] = useState("observed");
   const [hazards, setHazards] = useState<any>(null);
@@ -884,10 +887,13 @@ export default function Estates() {
   const createCustomer = async () => {
     const estate = estates.find((item) => item.id === Number(estateId));
     if (!estate || !customerName.trim()) { toast.error("Enter the customer name."); return; }
+    setCustomerBusy(true);
     try { const response = await api.post(`/estates/organizations/${estate.organization_id}/customers`, { full_name: customerName.trim(), phone: customerPhone.trim() || null, email: customerEmail.trim() || null }); setSelectedCustomerId(String(response.data.id)); setCustomerName(""); setCustomerPhone(""); setCustomerEmail(""); stashPendingNotice("Customer added."); window.location.reload(); }
     catch (error) { toast.error(await extractApiErrorMessage(error, "Customer could not be created.")); }
+    finally { setCustomerBusy(false); }
   };
   const assignCustomer = async (allocate: boolean) => {
+    if (assignmentBusy) return;
     if (!estateId || !selectedPlot || !selectedCustomerId) { toast.error("Choose a parcel and customer first."); return; }
     if (!amountPaidNow || Number(amountPaidNow) <= 0) {
       toast.error("Record the customer's first payment before reserving or allocating this plot.");
@@ -897,6 +903,7 @@ export default function Estates() {
       toast.error("Enter the instalment amount, repeat interval in months, and next payment due date.");
       return;
     }
+    setAssignmentBusy(allocate ? "allocate" : "reserve");
     try {
       const [agentSubjectType, agentSubjectId] = salesAgentSubject ? salesAgentSubject.split("::") : [null, null];
       const response = await api.post(`/estates/${estateId}/plots/${selectedPlot.id}/${allocate ? "allocate" : "reserve"}`, {
@@ -922,6 +929,7 @@ export default function Estates() {
       window.location.reload();
     }
     catch (error) { toast.error(await extractApiErrorMessage(error, "Parcel action could not be completed.")); }
+    finally { setAssignmentBusy(null); }
   };
   const recordInspection = async () => {
     if (!selectedPlot) return;
@@ -1181,13 +1189,13 @@ export default function Estates() {
   useEffect(() => {
     setMapError("");
     setMapReady(false);
-    if (!estateId || !mapContainer.current || !MAPBOX_TOKEN || mapRef.current) return;
+    if (!isMapView || !estateId || !mapContainer.current || !MAPBOX_TOKEN || mapRef.current) return;
     let cancelled = false;
     let mapLoaded = false;
     let handlersAttached = false;
     const mapLoadTimeout = window.setTimeout(() => {
-      if (!mapLoaded && !cancelled) setMapError("The basemap is taking too long to load. Showing your plot layout instead.");
-    }, 10000);
+      if (!mapLoaded && !cancelled) setMapError("The basemap is taking longer than usual. Your plot layout remains available while imagery loads.");
+    }, 20000);
     void Promise.all([loadMapboxGl(), loadMapboxGlCss()]).then(([mapboxgl]) => {
       if (cancelled || !mapContainer.current || mapRef.current) return;
       const map = new mapboxgl.Map({
@@ -1201,9 +1209,11 @@ export default function Estates() {
       resizeObserver.observe(mapContainer.current);
       (map as any)._edashResizeObserver = resizeObserver;
       map.on("error", (event: any) => {
-        const sourceId = String(event?.sourceId || "");
-        if (!cancelled && (!mapLoaded || sourceId === "estate-plots" || sourceId === "estate-boundary")) {
-          setMapError("The map could not draw this layout. Showing your plot layout instead.");
+        // Raster satellite tiles can fail transiently on slow connections. Keep the live map
+        // mounted so Mapbox can retry instead of replacing it with the SVG fallback after one
+        // tile error. Only a repeated pre-style failure should switch to the fallback message.
+        if (!cancelled && !mapLoaded && event?.error?.status >= 400) {
+          setMapError("Satellite imagery is still loading. Your plot layout remains available.");
         }
       });
       // "style.load" fires both on the very first style load AND after every future
@@ -1212,6 +1222,7 @@ export default function Estates() {
       map.on("style.load", () => {
         mapLoaded = true;
         window.clearTimeout(mapLoadTimeout);
+        setMapError("");
         map.resize();
         attachEstateMapLayers(map);
         if (!handlersAttached) {
@@ -1263,7 +1274,7 @@ export default function Estates() {
       });
     });
     return () => { cancelled = true; window.clearTimeout(mapLoadTimeout); (mapRef.current as any)?._edashResizeObserver?.disconnect(); mapRef.current?.remove(); mapRef.current = null; setMapReady(false); };
-  }, [estateId]);
+  }, [estateId, isMapView]);
 
   // Keeps the already-built map's sources in sync whenever the underlying data (or a style
   // reload, which wipes custom sources/layers) changes, without ever destroying/recreating the
@@ -1343,6 +1354,8 @@ export default function Estates() {
     void api.get("/estates/documents", { params: { page_size: 100 } }).then((response) => setEstateDocuments(response.data?.items || [])).catch(() => setEstateDocuments([]));
   };
   const runWorkflow = async (label: string, action: () => Promise<any>) => {
+    if (workflowBusy) return;
+    setWorkflowBusy(label);
     try {
       const result = await action();
       await refreshWorkflow();
@@ -1350,6 +1363,7 @@ export default function Estates() {
       toast.success(`${label} completed.${notified ? " A confirmation email has been sent to the customer." : ""}`);
     }
     catch (error) { toast.error(await extractApiErrorMessage(error, `${label} could not be completed.`)); }
+    finally { setWorkflowBusy(""); }
   };
   const getCurrentSurveyStationNames = (plotId: number) => {
     const feature = plotGeojson.features.find((item: any) => Number(item.properties?.id) === plotId);
@@ -1719,7 +1733,7 @@ export default function Estates() {
           </button>
         </div>
         <div className="edash-map-canvas-wrap">
-          {MAPBOX_TOKEN && !mapError ? (
+          {MAPBOX_TOKEN ? (
             <>
               {!mapReady && <EstatePlotMapFallback features={mapPlotGeojson.features} boundary={mapBoundary} message="Loading the interactive map..." onSelect={(plotId) => {
                 setSelectedPlotId(plotId);
@@ -1729,6 +1743,7 @@ export default function Estates() {
                 else { setAllocationId(""); setFinancial(null); }
               }} />}
               <div ref={mapContainer} className="edash-map-canvas" />
+              {mapError && <div className="edash-map-fallback-note" role="status">{mapError}</div>}
             </>
           ) : (
             <EstatePlotMapFallback
@@ -2194,15 +2209,17 @@ export default function Estates() {
                         </div>
                       )}
                       <div style={{ display: "flex", gap: 8 }}>
-                        <button type="button" className="edash-btn-outline" disabled={!amountPaidNow} title={!amountPaidNow ? "Record the first payment before reserving." : undefined} onClick={() => void assignCustomer(false)}>Reserve</button>
+                        <button type="button" className="edash-btn-outline" disabled={!amountPaidNow || Boolean(assignmentBusy)} title={!amountPaidNow ? "Record the first payment before reserving." : undefined} onClick={() => void assignCustomer(false)}>
+                          {assignmentBusy === "reserve" ? <><Spinner size={14} /> Reserving...</> : "Reserve"}
+                        </button>
                         <button
                           type="button"
                           className="edash-btn-primary"
-                          disabled={!amountPaidNow || (Number(agreedPrice) > 0 && (Number(amountPaidNow) || 0) < Number(agreedPrice))}
+                          disabled={!amountPaidNow || Boolean(assignmentBusy) || (Number(agreedPrice) > 0 && (Number(amountPaidNow) || 0) < Number(agreedPrice))}
                           title={!amountPaidNow ? "Record the first payment before allocating." : Number(agreedPrice) > 0 && (Number(amountPaidNow) || 0) < Number(agreedPrice) ? "Allocation is only available once the agreed price is fully paid - use Reserve until then." : undefined}
                           onClick={() => void assignCustomer(true)}
                         >
-                          Allocate / sell
+                          {assignmentBusy === "allocate" ? <><Spinner size={14} /> Allocating...</> : "Allocate / sell"}
                         </button>
                       </div>
                       <p className="edash-tab-empty" style={{ padding: "6px 0 0", textAlign: "left", fontSize: "0.78rem" }}>
@@ -2224,7 +2241,7 @@ export default function Estates() {
                           <p className="edash-status-row-desc">{selectedSurvey.survey_reference ? `Reference ${selectedSurvey.survey_reference}` : "No reference assigned yet."}</p>
                         </div>
                       </div>
-                      {!selectedSurvey.materialized && <button type="button" className="edash-btn-primary" onClick={() => void runWorkflow("Survey workspace", () => api.post(`/estates/survey-requests/${selectedSurvey.id}/start`))}>Open Survey preparation</button>}
+                      {!selectedSurvey.materialized && <button type="button" className="edash-btn-primary" disabled={Boolean(workflowBusy)} onClick={() => void runWorkflow("Survey workspace", () => api.post(`/estates/survey-requests/${selectedSurvey.id}/start`))}>{workflowBusy === "Survey workspace" ? <><Spinner size={14} /> Opening...</> : "Open Survey preparation"}</button>}
                       {selectedSurvey.materialized && (
                         <button
                           type="button"
@@ -2235,13 +2252,13 @@ export default function Estates() {
                           Open approved plot in Survey
                         </button>
                       )}
-                      {selectedSurvey.materialized && selectedSurvey.status !== "completed" && <button type="button" className="edash-btn-primary" onClick={() => void runWorkflow("Survey completion", () => api.post(`/estates/survey-requests/${selectedSurvey.id}/complete`))}>Mark Survey complete</button>}
+                      {selectedSurvey.materialized && selectedSurvey.status !== "completed" && <button type="button" className="edash-btn-primary" disabled={Boolean(workflowBusy)} onClick={() => void runWorkflow("Survey completion", () => api.post(`/estates/survey-requests/${selectedSurvey.id}/complete`))}>{workflowBusy === "Survey completion" ? <><Spinner size={14} /> Completing...</> : "Mark Survey complete"}</button>}
                     </>
                   ) : (
                     <div className="edash-tab-empty">
                       <EstateIcon name="survey" />
                       <span>No Survey request yet for this plot.</span>
-                      {selectedAllocation && <button type="button" className="edash-btn-primary" style={{ marginTop: 8 }} onClick={() => void runWorkflow("Survey preparation", () => api.post(`/estates/plots/${selectedAllocation.plot_id}/survey-requests`))}>Prepare Survey</button>}
+                      {selectedAllocation && <button type="button" className="edash-btn-primary" style={{ marginTop: 8 }} disabled={Boolean(workflowBusy)} onClick={() => void runWorkflow("Survey preparation", () => api.post(`/estates/plots/${selectedAllocation.plot_id}/survey-requests`))}>{workflowBusy === "Survey preparation" ? <><Spinner size={14} /> Preparing...</> : "Prepare Survey"}</button>}
                     </div>
                   )}
                 </div>
@@ -2260,8 +2277,8 @@ export default function Estates() {
                       </div>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                         <button type="button" className="edash-btn-outline" onClick={() => void downloadDgps(selectedTask.id)}><EstateIcon name="download" /> Download DGPS CSV</button>
-                        {selectedTask.status === "pending" && <button type="button" className="edash-btn-primary" onClick={() => void runWorkflow("Staking status", () => api.post(`/estates/staking-tasks/${selectedTask.id}/start`))}>Mark in progress</button>}
-                        {selectedTask.status === "in_progress" && <button type="button" className="edash-btn-primary" onClick={() => void runWorkflow("Staking completion", () => api.post(`/estates/staking-tasks/${selectedTask.id}/complete`))}>Mark complete</button>}
+                        {selectedTask.status === "pending" && <button type="button" className="edash-btn-primary" disabled={Boolean(workflowBusy)} onClick={() => void runWorkflow("Staking status", () => api.post(`/estates/staking-tasks/${selectedTask.id}/start`))}>{workflowBusy === "Staking status" ? <><Spinner size={14} /> Updating...</> : "Mark in progress"}</button>}
+                        {selectedTask.status === "in_progress" && <button type="button" className="edash-btn-primary" disabled={Boolean(workflowBusy)} onClick={() => void runWorkflow("Staking completion", () => api.post(`/estates/staking-tasks/${selectedTask.id}/complete`))}>{workflowBusy === "Staking completion" ? <><Spinner size={14} /> Completing...</> : "Mark complete"}</button>}
                       </div>
                       <label className="edash-overview-field" style={{ marginTop: 10 }}>
                         <span>Field evidence</span>
@@ -3158,7 +3175,9 @@ export default function Estates() {
             <span>Email (optional - lifecycle updates are sent here)</span>
             <input type="email" value={customerEmail} onChange={(event) => setCustomerEmail(event.target.value)} />
           </label>
-          <button type="button" className="edash-btn-primary" disabled={!customerName.trim()} onClick={() => void createCustomer()}>Add customer</button>
+          <button type="button" className="edash-btn-primary" disabled={!customerName.trim() || customerBusy} onClick={() => void createCustomer()}>
+            {customerBusy ? <><Spinner size={14} /> Adding...</> : "Add customer"}
+          </button>
         </EstateModal>
       )}
       {showEditPlotBoundary && selectedPlot && (
