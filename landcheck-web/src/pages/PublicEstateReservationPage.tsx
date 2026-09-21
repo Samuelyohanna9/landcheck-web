@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { API_URL, api, extractApiErrorMessage } from "../api/client";
 import { formatArea } from "../utils/unitFormat";
 import "../styles/estate-public.css";
@@ -29,6 +29,8 @@ function paymentPlanItems(estate: ReservationEstate) {
 
 export default function PublicEstateReservationPage() {
   const { slug, plotId } = useParams();
+  const [searchParams] = useSearchParams();
+  const source = searchParams.get("source") || "";
   const [estate, setEstate] = useState<ReservationEstate | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -39,8 +41,8 @@ export default function PublicEstateReservationPage() {
 
   useEffect(() => {
     if (!slug) return;
-    api.get(`/estates/public/${slug}`).then((response) => setEstate(response.data as ReservationEstate)).catch(async (err) => setError(await extractApiErrorMessage(err, "This Estate page is not available."))).finally(() => setLoading(false));
-  }, [slug]);
+    api.get(`/estates/public/${slug}`, { params: source ? { source } : undefined }).then((response) => setEstate(response.data as ReservationEstate)).catch(async (err) => setError(await extractApiErrorMessage(err, "This Estate page is not available."))).finally(() => setLoading(false));
+  }, [slug, source]);
 
   const plot = estate?.plots.find((item) => String(item.id) === String(plotId)) || null;
   const companyName = estate?.organization_name || "Estate company";
@@ -52,7 +54,7 @@ export default function PublicEstateReservationPage() {
     setBusy(true);
     setFormError("");
     try {
-      await api.post(`/estates/public/${slug}/plots/${plot.id}/reservation`, { ...form, email: form.email || null, message: form.message || null });
+      await api.post(`/estates/public/${slug}/plots/${plot.id}/reservation`, { ...form, email: form.email || null, message: form.message || null, source: source || null });
       setSubmitted(true);
     } catch (err) {
       setFormError(await extractApiErrorMessage(err, "We could not send your reservation request. Please try again."));
