@@ -6,6 +6,7 @@ import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
 import EstateModal from "../../components/estates/EstateModal";
 import Spinner from "../../components/estates/EstateSpinner";
+import EstatePagination from "../../components/estates/EstatePagination";
 
 async function download(path: string, name: string) {
   const response = await api.get(path, { responseType: "blob" });
@@ -26,9 +27,13 @@ export default function EstateCommissionsPage() {
   const [commissionTiers, setCommissionTiers] = useState<any[]>([]);
   const [commissionTiersUsingDefaults, setCommissionTiersUsingDefaults] = useState(true);
   const [commissionReport, setCommissionReport] = useState<any[]>([]);
+  const [commissionPage, setCommissionPage] = useState(1);
+  const [commissionTotal, setCommissionTotal] = useState(0);
   const [commissionTiersBusy, setCommissionTiersBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [agents, setAgents] = useState<any[]>([]);
+  const [agentPage, setAgentPage] = useState(1);
+  const [agentTotal, setAgentTotal] = useState(0);
   const [newAgentName, setNewAgentName] = useState("");
   const [newAgentEmail, setNewAgentEmail] = useState("");
   const [newAgentPhone, setNewAgentPhone] = useState("");
@@ -48,28 +53,31 @@ export default function EstateCommissionsPage() {
   const [payoutBusy, setPayoutBusy] = useState(false);
   const payoutRequestRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
-  const loadCommissionData = async (orgId: number) => {
+  const loadCommissionData = async (orgId: number, requestedPage = commissionPage) => {
     try {
       const [tiersResponse, reportResponse] = await Promise.all([
         api.get(`/estates/organizations/${orgId}/commission-tiers`),
-        api.get(`/estates/organizations/${orgId}/commissions`),
+        api.get(`/estates/organizations/${orgId}/commissions`, { params: { page: requestedPage, page_size: 25 } }),
       ]);
       setCommissionTiers((tiersResponse.data.tiers || []).map((tier: any) => ({ label: tier.label, min_cumulative_sales: tier.min_cumulative_sales, rate_percent: tier.rate_percent })));
       setCommissionTiersUsingDefaults(Boolean(tiersResponse.data.using_defaults));
       setCommissionReport(reportResponse.data.agents || []);
+      setCommissionTotal(Number(reportResponse.data.total || reportResponse.data.agents?.length || 0));
     } catch (error) {
       setMessage(await extractApiErrorMessage(error, "Commission data could not be loaded."));
     }
   };
 
-  const loadAgents = async (orgId: number) => {
+  const loadAgents = async (orgId: number, requestedPage = agentPage) => {
     try {
       const [membersResponse, namesResponse] = await Promise.all([
-        api.get(`/estates/organizations/${orgId}/members`),
+        api.get(`/estates/organizations/${orgId}/members`, { params: { page: requestedPage, page_size: 25 } }),
         api.get(`/estates/organizations/${orgId}/sales-agents`),
       ]);
       const infoByKey = new Map<string, any>((namesResponse.data || []).map((item: any) => [`${item.subject_type}::${item.subject_id}`, item]));
-      setAgents((membersResponse.data || []).map((member: any) => {
+      const members = membersResponse.data.items || [];
+      setAgentTotal(Number(membersResponse.data.total || members.length));
+      setAgents(members.map((member: any) => {
         const info = infoByKey.get(`${member.subject_type}::${member.subject_id}`);
         return { ...member, display_name: info?.display_name || member.subject_id, current_tier_label: info?.current_tier_label, current_tier_rate_percent: info?.current_tier_rate_percent };
       }));
@@ -86,12 +94,16 @@ export default function EstateCommissionsPage() {
         setSidebarEstateName(first.name);
         if (first.organization_id) {
           setOrganizationId(first.organization_id);
-          void loadCommissionData(first.organization_id);
-          void loadAgents(first.organization_id);
         }
       }
     }).catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    if (!organizationId) return;
+    void loadCommissionData(organizationId, commissionPage);
+    void loadAgents(organizationId, agentPage);
+  }, [organizationId, commissionPage, agentPage]);
 
   const addAgent = async () => {
     if (!organizationId || !newAgentName.trim()) return;
@@ -101,7 +113,7 @@ export default function EstateCommissionsPage() {
       toast.success(response.data?.email_sent ? `${newAgentName.trim()} added and invite sent.` : `${newAgentName.trim()} added.`);
       setNewAgentName(""); setNewAgentEmail(""); setNewAgentPhone("");
       setShowAddAgent(false);
-      await loadAgents(organizationId);
+      await loadAgents(organizationId, agentPage);
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "Agent could not be added."));
     } finally {
@@ -252,6 +264,7 @@ export default function EstateCommissionsPage() {
               </table>
             </div>
           ) : <p className="edash-tab-empty">No agents or team members added yet.</p>}
+          <EstatePagination page={agentPage} pageSize={25} total={agentTotal} onChange={setAgentPage} />
         </div>
       </div>
 
@@ -308,6 +321,7 @@ export default function EstateCommissionsPage() {
               </table>
             </div>
           ) : <p className="edash-tab-empty">No fully-paid sales tagged with a sales agent yet.</p>}
+          <EstatePagination page={commissionPage} pageSize={25} total={commissionTotal} onChange={setCommissionPage} />
         </div>
       </div>
 

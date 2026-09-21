@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { api, createIdempotencyKey, extractApiErrorMessage } from "../../api/client";
 import { getEstateAuthSession } from "../../auth/estateAuth";
 import { PAYMENT_METHODS } from "./FinancialComponents";
+import EstatePagination from "./EstatePagination";
 
 type ReservationRequest = {
   id: number;
@@ -65,6 +66,9 @@ function attributionLabel(item: ReservationRequest) {
 export default function EstateReservationRequests({ estateId }: { estateId: string }) {
   const [requests, setRequests] = useState<ReservationRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [newCount, setNewCount] = useState(0);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [migratingId, setMigratingId] = useState<number | null>(null);
   const [paymentRequestId, setPaymentRequestId] = useState<number | null>(null);
@@ -89,8 +93,12 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
   };
 
   const load = () => {
-    api.get(`/estates/${estateId}/reservation-requests`)
-      .then((response) => setRequests(response.data || []))
+    api.get(`/estates/${estateId}/reservation-requests`, { params: { page, page_size: 8 } })
+      .then((response) => {
+        setRequests(response.data?.items || []);
+        setTotal(Number(response.data?.total || 0));
+        setNewCount(Number(response.data?.new_count || 0));
+      })
       .catch(() => setRequests([]))
       .finally(() => setLoading(false));
   };
@@ -99,7 +107,7 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
     load();
     const timer = window.setInterval(load, 30000);
     return () => window.clearInterval(timer);
-  }, [estateId]);
+  }, [estateId, page]);
 
   const updateStatus = async (requestId: number, status: ReservationRequest["status"]) => {
     if (updatingId === requestId || migratingId === requestId) return;
@@ -160,11 +168,11 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
             <h3 className="edash-card-title">Public reservation requests</h3>
             <p className="edash-public-leads-subtitle">People who asked about a plot on your public Estate page.</p>
           </div>
-          <span className="edash-public-leads-count">{requests.filter((item) => item.status === "new").length} new</span>
+          <span className="edash-public-leads-count">{newCount} new</span>
         </div>
-        {loading ? <p className="edash-tab-empty">Loading requests...</p> : requests.length === 0 ? <p className="edash-tab-empty">No public requests yet. Publish your Estate page to start receiving enquiries.</p> : (
+        {loading ? <p className="edash-tab-empty">Loading requests...</p> : total === 0 ? <p className="edash-tab-empty">No public requests yet. Publish your Estate page to start receiving enquiries.</p> : requests.length === 0 ? <p className="edash-tab-empty">No requests on this page.</p> : (
           <div className="edash-public-lead-list">
-            {requests.slice(0, 8).map((item) => (
+            {requests.map((item) => (
               <article className="edash-public-lead" key={item.id}>
                 <div className="edash-public-lead-main">
                   <div className="edash-public-lead-title"><strong>{item.full_name}</strong><span>Plot {item.plot_number || "-"}</span></div>
@@ -200,7 +208,7 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
             ))}
           </div>
         )}
-        {requests.length > 8 && <p className="edash-public-leads-more">Showing the latest 8 requests.</p>}
+        <EstatePagination page={page} pageSize={8} total={total} onChange={setPage} />
       </div>
     </section>
   );

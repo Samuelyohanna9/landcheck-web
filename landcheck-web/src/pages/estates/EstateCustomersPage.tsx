@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
@@ -6,12 +6,16 @@ import { money } from "../../components/estates/FinancialComponents";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
 import EstateModal from "../../components/estates/EstateModal";
+import EstatePagination from "../../components/estates/EstatePagination";
 
 export default function EstateCustomersPage() {
   const { estateId } = useParams();
   const [estateName, setEstateName] = useState("");
   const [organizationId, setOrganizationId] = useState<number | null>(null);
   const [customers, setCustomers] = useState<Array<{ id: number; name: string }>>([]);
+  const [customerPage, setCustomerPage] = useState(1);
+  const [customerTotal, setCustomerTotal] = useState(0);
+  const [customersLoading, setCustomersLoading] = useState(false);
   const [activity, setActivity] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState("");
@@ -27,16 +31,18 @@ export default function EstateCustomersPage() {
 
   const load = () => {
     if (!estateId) return;
-    api.get(`/estates/${estateId}`).then((response) => { setEstateName(response.data.name); setOrganizationId(response.data.organization_id); }).catch(() => undefined);
-    api.get("/estates/selectors", { params: { estate_id: estateId } }).then((response) => setCustomers(response.data.customers || [])).catch(() => setCustomers([]));
+    setCustomersLoading(true);
+    api.get(`/estates/${estateId}`).then((response) => {
+      setEstateName(response.data.name);
+      setOrganizationId(response.data.organization_id);
+      return api.get(`/estates/organizations/${response.data.organization_id}/customers`, { params: { page: customerPage, page_size: 25, search: search.trim() || undefined } });
+    }).then((response) => {
+      setCustomers(response.data.items || []);
+      setCustomerTotal(Number(response.data.total || 0));
+    }).catch(() => { setCustomers([]); setCustomerTotal(0); }).finally(() => setCustomersLoading(false));
     api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));
   };
-  useEffect(load, [estateId]);
-
-  const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return customers.filter((customer) => !query || customer.name.toLowerCase().includes(query));
-  }, [customers, search]);
+  useEffect(load, [estateId, customerPage, search]);
 
   const selectedCustomer = customers.find((customer) => String(customer.id) === selectedId);
 
@@ -103,19 +109,19 @@ export default function EstateCustomersPage() {
   if (!estateId) return null;
 
   return (
-    <EstateShell estateId={estateId} estateName={estateName} activeKey="customers" search={search} onSearchChange={setSearch} searchPlaceholder="Search customers..." recentActivity={activity}>
+    <EstateShell estateId={estateId} estateName={estateName} activeKey="customers" search={search} onSearchChange={(value) => { setSearch(value); setCustomerPage(1); }} searchPlaceholder="Search customers..." recentActivity={activity}>
       <div className="edash-content-row">
         <div className="edash-card">
           <div className="edash-card-inner">
             <div className="edash-card-head">
-              <h3 className="edash-card-title">Customers ({filtered.length})</h3>
+              <h3 className="edash-card-title">Customers ({customerTotal})</h3>
               <button type="button" className="edash-tool-btn" onClick={() => setShowAddCustomer(true)}>
                 <EstateIcon name="plus" /> Add customer
               </button>
             </div>
-            {filtered.length ? (
+            {customersLoading ? <p className="edash-tab-empty">Loading customers...</p> : customers.length ? (
               <div className="edash-activity-list">
-                {filtered.map((customer) => (
+                {customers.map((customer) => (
                   <div
                     key={customer.id}
                     className="edash-info-card"
@@ -131,6 +137,7 @@ export default function EstateCustomersPage() {
             ) : (
               <p className="edash-tab-empty">No customers yet. Use "Add customer" to create your first one.</p>
             )}
+            <EstatePagination page={customerPage} pageSize={25} total={customerTotal} onChange={setCustomerPage} />
           </div>
         </div>
 
