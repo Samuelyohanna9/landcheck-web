@@ -5,6 +5,22 @@ import { clearWorkAuthed, getWorkAuthSession } from "../auth/workAuth";
 import GreenLoadingAnimation from "../components/GreenLoadingAnimation";
 import "../styles/admin-dashboard.css";
 
+type EstateAdminEstate = {
+  id: number;
+  name: string;
+  location: string | null;
+  status: string | null;
+  public_enabled: boolean;
+  plot_count: number;
+  approved_plot_count: number;
+  available_plot_count: number;
+  reserved_plot_count: number;
+  allocated_plot_count: number;
+  area_sqm: number | string | null;
+  reservation_count: number;
+  updated_at: string | null;
+};
+
 type EstateAdminOrganization = {
   organization_id: number;
   company_name: string | null;
@@ -23,6 +39,8 @@ type EstateAdminOrganization = {
   next_charge_at: string | null;
   user_count: number;
   active_user_count: number;
+  online_user_count: number;
+  last_user_activity_at: string | null;
   estate_count: number;
   public_estate_count: number;
   plot_count: number;
@@ -37,6 +55,7 @@ type EstateAdminOrganization = {
   latest_estate_name: string | null;
   latest_estate_location: string | null;
   last_estate_activity_at: string | null;
+  estates: EstateAdminEstate[];
 };
 
 type EstateAdminOverview = {
@@ -56,6 +75,8 @@ type EstateAdminOverview = {
     customers: number;
     subscribed_organizations: number;
     past_due_subscriptions: number;
+    online_users: number;
+    online_organizations: number;
   };
   organizations: EstateAdminOrganization[];
 };
@@ -147,6 +168,10 @@ export default function EstateAdminDashboard() {
       return;
     }
     void loadOverview();
+    const refreshTimer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void loadOverview(true);
+    }, 30000);
+    return () => window.clearInterval(refreshTimer);
   }, [isAuthed]);
 
   const handleLogout = () => {
@@ -237,6 +262,7 @@ export default function EstateAdminDashboard() {
               <div className="stat-card primary"><div className="stat-content"><span className="stat-value">{formatCount(totals?.organizations)}</span><span className="stat-label">Estate companies</span></div></div>
               <div className="stat-card success"><div className="stat-content"><span className="stat-value">{formatCount(totals?.subscribed_organizations)}</span><span className="stat-label">Active or trial plans</span></div></div>
               <div className="stat-card info"><div className="stat-content"><span className="stat-value">{formatCount(totals?.users)}</span><span className="stat-label">Estate users</span></div></div>
+              <div className="stat-card success"><div className="stat-content"><span className="stat-value">{formatCount(totals?.online_users)}</span><span className="stat-label">Users online now</span></div></div>
               <div className="stat-card warning"><div className="stat-content"><span className="stat-value">{formatCount(totals?.estates)}</span><span className="stat-label">Estates created</span></div></div>
               <div className="stat-card primary"><div className="stat-content"><span className="stat-value">{formatCount(totals?.plots)}</span><span className="stat-label">Plots registered</span></div></div>
               <div className="stat-card warning"><div className="stat-content"><span className="stat-value">{formatCount(totals?.open_reservations)}</span><span className="stat-label">Open enquiries</span></div></div>
@@ -247,7 +273,7 @@ export default function EstateAdminDashboard() {
             <div className="section-head">
               <div>
                 <h2>Estate companies</h2>
-                <p>Select a company to see its latest estate, plot progress, public page, customers and billing dates.</p>
+                <p>Select a company to see live user activity, every estate, plot progress, public page, customers and billing dates.</p>
               </div>
             </div>
             {overview?.organizations?.length ? (
@@ -257,6 +283,7 @@ export default function EstateAdminDashboard() {
                     <tr>
                       <th>Company</th>
                       <th>Users</th>
+                      <th>Active status</th>
                       <th>Plan</th>
                       <th>Subscription</th>
                       <th>Estates</th>
@@ -268,6 +295,8 @@ export default function EstateAdminDashboard() {
                   <tbody>
                     {overview.organizations.map((organization) => {
                       const isExpanded = expandedOrganizationId === organization.organization_id;
+                      const onlineNow = organization.online_user_count > 0;
+                      const lastActivity = organization.last_user_activity_at || organization.last_estate_activity_at || organization.updated_at;
                       return (
                         <Fragment key={organization.organization_id}>
                           <tr
@@ -280,23 +309,52 @@ export default function EstateAdminDashboard() {
                               <span className="estate-admin-muted">{organization.contact_email || "No contact email"}</span>
                             </td>
                             <td><strong>{formatCount(organization.active_user_count)}</strong><span className="estate-admin-muted">of {formatCount(organization.user_count)} active</span></td>
+                            <td><span className={statusClass(onlineNow ? "online" : "offline")}>{onlineNow ? "Online now" : "Offline"}</span><span className="estate-admin-muted">{onlineNow ? `${formatCount(organization.online_user_count)} user${organization.online_user_count === 1 ? "" : "s"} working` : "No active session"}</span></td>
                             <td><strong>{formatPlan(organization.plan_key)}</strong><span className="estate-admin-muted">{organization.billing_cycle ? formatLabel(organization.billing_cycle) : "Not subscribed"}</span></td>
                             <td><span className={statusClass(organization.subscription_status)}>{formatLabel(organization.subscription_status)}</span><span className="estate-admin-muted">{formatMoney(organization.amount, organization.currency)}</span></td>
                             <td><strong>{formatCount(organization.estate_count)}</strong><span className="estate-admin-muted">{formatCount(organization.public_estate_count)} public</span></td>
                             <td><strong>{formatCount(organization.plot_count)}</strong><span className="estate-admin-muted">{formatCount(organization.approved_plot_count)} approved</span></td>
                             <td><strong>{formatCount(organization.open_reservation_count)}</strong><span className="estate-admin-muted">{formatCount(organization.customer_count)} customers</span></td>
-                            <td><span className="estate-admin-muted">{formatDateTime(organization.last_estate_activity_at || organization.updated_at)}</span></td>
+                            <td><span className="estate-admin-muted">{formatDateTime(lastActivity)}</span><span className="estate-admin-muted">{organization.last_user_activity_at ? "Last user activity" : "Last estate update"}</span></td>
                           </tr>
                           {isExpanded ? (
                             <tr className="estate-admin-detail-row">
-                              <td colSpan={8}>
+                              <td colSpan={9}>
                                 <div className="estate-admin-detail-grid">
                                   <div><span>Latest estate</span><strong>{organization.latest_estate_name || "No estate created"}</strong><small>{organization.latest_estate_location || "Location not set"}</small></div>
                                   <div><span>Plot progress</span><strong>{formatCount(organization.available_plot_count)} available</strong><small>{formatCount(organization.reserved_plot_count)} reserved · {formatCount(organization.allocated_plot_count)} allocated</small></div>
                                   <div><span>Area mapped</span><strong>{Number(organization.total_plot_area_sqm || 0).toLocaleString()} m²</strong><small>{formatCount(organization.approved_plot_count)} approved plots</small></div>
                                   <div><span>Public activity</span><strong>{formatCount(organization.reservation_count)} enquiries</strong><small>{formatCount(organization.customer_count)} customer records</small></div>
+                                  <div><span>Live activity</span><strong>{onlineNow ? `${formatCount(organization.online_user_count)} online now` : "No one online"}</strong><small>{organization.last_user_activity_at ? `Last active ${formatDateTime(organization.last_user_activity_at)}` : "No user session yet"}</small></div>
                                   <div><span>Billing</span><strong>{organization.subscription_status === "trialing" ? "Trial ends" : "Next billing"}</strong><small>{formatDate(organization.subscription_status === "trialing" ? organization.trial_ends_at : organization.next_charge_at || organization.current_period_end)}</small></div>
                                   <div><span>Company status</span><strong>{formatLabel(organization.organization_status)}</strong><small>Joined {formatDate(organization.created_at)}</small></div>
+                                </div>
+                                <div className="estate-admin-estates">
+                                  <div className="estate-admin-estates-head">
+                                    <div><strong>Estate details</strong><small>All estates created by this company</small></div>
+                                    <span>{formatCount(organization.estate_count)} total</span>
+                                  </div>
+                                  {organization.estates?.length ? (
+                                    <div className="estate-admin-estate-list">
+                                      {organization.estates.map((estate) => (
+                                        <article className="estate-admin-estate-card" key={estate.id}>
+                                          <div className="estate-admin-estate-card-head">
+                                            <div><strong>{estate.name}</strong><small>{estate.location || "Location not set"}</small></div>
+                                            <span className={statusClass(estate.status)}>{formatLabel(estate.status)}</span>
+                                          </div>
+                                          <div className="estate-admin-estate-meta">
+                                            <span><strong>{formatCount(estate.plot_count)}</strong> plots</span>
+                                            <span><strong>{formatCount(estate.approved_plot_count)}</strong> approved</span>
+                                            <span><strong>{formatCount(estate.available_plot_count)}</strong> available</span>
+                                            <span><strong>{formatCount(estate.reserved_plot_count)}</strong> reserved</span>
+                                            <span><strong>{formatCount(estate.allocated_plot_count)}</strong> allocated</span>
+                                            <span><strong>{Number(estate.area_sqm || 0).toLocaleString()} m2</strong> mapped</span>
+                                          </div>
+                                          <div className="estate-admin-estate-footer"><span className={estate.public_enabled ? "estate-admin-public is-public" : "estate-admin-public"}>{estate.public_enabled ? "Public page live" : "Public page off"}</span><span>{formatCount(estate.reservation_count)} enquiries - updated {formatDate(estate.updated_at)}</span></div>
+                                        </article>
+                                      ))}
+                                    </div>
+                                  ) : <p className="estate-admin-empty-estates">No estates created yet.</p>}
                                 </div>
                                 {!organization.plan_key && (
                                   <div className="estate-admin-reconcile">

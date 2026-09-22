@@ -1312,6 +1312,16 @@
   color: #6ee7b7 !important;
 }
 
+.estate-admin-status--online {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7 !important;
+}
+
+.estate-admin-status--offline {
+  background: rgba(148, 163, 184, 0.14);
+  color: #cbd5e1 !important;
+}
+
 .estate-admin-status--past_due {
   background: rgba(245, 158, 11, 0.16);
   color: #fbbf24 !important;
@@ -1365,6 +1375,122 @@
   color: #94a3b8;
   font-size: 0.74rem;
   line-height: 1.4;
+}
+
+.estate-admin-estates {
+  padding: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.estate-admin-estates-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.estate-admin-estates-head strong,
+.estate-admin-estates-head small {
+  display: block;
+}
+
+.estate-admin-estates-head strong {
+  color: #f8fafc;
+  font-size: 0.86rem;
+}
+
+.estate-admin-estates-head small {
+  margin-top: 0.25rem;
+  color: #94a3b8;
+  font-size: 0.74rem;
+}
+
+.estate-admin-estates-head > span {
+  color: #a7f3d0;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.estate-admin-estate-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.65rem;
+}
+
+.estate-admin-estate-card {
+  padding: 0.8rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 0.7rem;
+  background: rgba(15, 23, 42, 0.7);
+}
+
+.estate-admin-estate-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.estate-admin-estate-card-head strong,
+.estate-admin-estate-card-head small {
+  display: block;
+}
+
+.estate-admin-estate-card-head strong {
+  color: #f8fafc;
+  font-size: 0.82rem;
+}
+
+.estate-admin-estate-card-head small {
+  margin-top: 0.25rem;
+  color: #94a3b8;
+  font-size: 0.72rem;
+}
+
+.estate-admin-estate-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+
+.estate-admin-estate-meta span {
+  color: #94a3b8;
+  font-size: 0.68rem;
+}
+
+.estate-admin-estate-meta strong {
+  display: block;
+  color: #e2e8f0;
+  font-size: 0.78rem;
+}
+
+.estate-admin-estate-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  font-size: 0.68rem;
+}
+
+.estate-admin-public {
+  color: #fbbf24;
+  font-weight: 800;
+}
+
+.estate-admin-public.is-public {
+  color: #6ee7b7;
+}
+
+.estate-admin-empty-estates {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.78rem;
 }
 
 .estate-admin-reconcile {
