@@ -13,6 +13,7 @@ type BillingStatus = {
   plan_label?: string;
   billing_cycle?: EstateBillingCycle;
   amount?: string;
+  payment_method?: "card" | "bank_transfer";
   hazard_analysis?: boolean;
   trial_ends_at?: string | null;
   current_period_end?: string | null;
@@ -148,6 +149,7 @@ export default function EstateBillingPage() {
                 </div>
                 <div className="edash-overview-field"><span>Amount</span><strong>{money(status.amount)} / {status.billing_cycle === "yearly" ? "year" : "month"}</strong></div>
                 <div className="edash-overview-field"><span>Card on file</span><strong>{status.card_last4 ? `${status.card_brand || "Card"} ending ${status.card_last4}` : "None"}</strong></div>
+                <div className="edash-overview-field"><span>Payment method</span><strong>{status.payment_method === "bank_transfer" ? "Bank transfer" : status.payment_method === "card" ? "Card" : "Not set"}</strong></div>
                 {status.cancel_at_period_end && <div className="edash-overview-field"><span>Cancellation</span><strong>Ends at period end</strong></div>}
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

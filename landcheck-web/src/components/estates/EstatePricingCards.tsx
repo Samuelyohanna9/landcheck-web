@@ -63,7 +63,7 @@ export default function EstatePricingCards({
               {key === "plus" && <span className="estate-pricing-badge">Includes hazard analysis</span>}
               <h3>{plan.label}</h3>
               <p className="estate-pricing-price">{naira(price)}<span>/{billingCycle === "monthly" ? "month" : "year"}</span></p>
-              <p className="estate-pricing-trial">3-day free trial &middot; cancel anytime</p>
+              <p className="estate-pricing-trial">3-day free trial &middot; card or bank transfer &middot; cancel anytime</p>
               <ul className="estate-pricing-features">
                 {PLAN_FEATURES[key].map((feature) => <li key={feature}>{feature}</li>)}
               </ul>

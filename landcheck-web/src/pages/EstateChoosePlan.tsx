@@ -63,7 +63,7 @@ export default function EstateChoosePlan() {
         <p className="estate-kicker">Company workspace</p>
         <h1 style={{ margin: "10px 0 0", fontFamily: "'Iowan Old Style', 'Palatino Linotype', Georgia, serif", fontWeight: 500, fontSize: "clamp(1.9rem, 4vw, 2.6rem)" }}>Choose a plan to get started</h1>
         <p style={{ maxWidth: 480, margin: "12px auto 40px", color: "var(--estate-slate)" }}>
-          Every plan includes a 3-day free trial - we'll only charge your card once the trial ends, and you can cancel anytime before then at no cost.
+          Every plan includes a 3-day free trial. A refundable NGN 50 payment verifies your payment method. Card renewals are automatic; bank-transfer renewals use scheduled email reminders and a secure payment link.
         </p>
         {error && <div className="estate-auth-error" role="alert" style={{ maxWidth: 480, margin: "0 auto 24px", textAlign: "left" }}>{error}</div>}
         <EstatePricingCards onSelectPlan={selectPlan} busyPlan={busyPlan} />
