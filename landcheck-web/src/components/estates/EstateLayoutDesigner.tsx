@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import EstateIcon from "./EstateIcon";
 import Spinner from "./EstateSpinner";
 import { loadMapboxDraw, loadMapboxDrawCss, loadMapboxGl, loadMapboxGlCss, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
+import { computeParcelAreaSqMeters } from "../../utils/surveyGeometry";
 import { areaUnitLabel, feetToMeters, formatArea, metersToFeet, sqftToSqm, sqmToSqft, type UnitSystem } from "../../utils/unitFormat";
 
 type LayoutCriteria = {
@@ -136,10 +137,11 @@ const coordinatePairs = (value: any): number[][] => {
   return value.flatMap(coordinatePairs);
 };
 
-function LayoutPreview({ proposal }: { proposal: any }) {
+function LayoutPreview({ proposal, unitSystem = "m" }: { proposal: any; unitSystem?: UnitSystem }) {
   const geometries = [
     ...(proposal?.candidates || []).map((candidate: any) => ({ geometry: candidate.geometry, kind: "plot", label: candidate.plot_number })),
     ...(proposal?.features || []).map((feature: any) => ({ geometry: feature.geometry, kind: feature.feature_type, label: feature.name })),
+    ...(proposal?.diagnostics?.unallocated_areas || []).map((area: any) => ({ geometry: area.geometry, kind: "unallocated", label: String(area.label || "Unallocated area") + "\n" + formatArea(Number(area.area_sqm || 0), unitSystem) })),
   ];
   const coordinates = geometries.flatMap((item) => coordinatePairs(item.geometry?.coordinates));
   if (!coordinates.length) return <p className="edash-tab-empty">Your preview will appear here.</p>;
@@ -164,6 +166,7 @@ function LayoutPreview({ proposal }: { proposal: any }) {
         {geometries.filter((item) => item.kind === "road").map((item, index) => <polyline key={`road-${index}`} fill="none" stroke="#445066" strokeWidth="0.8" points={linePoints(item.geometry)} />)}
         {geometries.filter((item) => item.kind === "drainage").map((item, index) => <polygon key={`drainage-${index}`} fill="rgba(42,120,214,0.18)" stroke="#2a78d6" strokeWidth="0.4" points={firstRing(item.geometry).map(project).join(" ")} />)}
         {geometries.filter((item) => item.kind === "open_space").map((item, index) => <polygon key={`space-${index}`} fill="rgba(30,138,76,0.14)" stroke="#1e8a4c" strokeWidth="0.4" points={firstRing(item.geometry).map(project).join(" ")} />)}
+        {geometries.filter((item) => item.kind === "unallocated").map((item, index) => <g key={`unallocated-${index}`}><polygon fill="rgba(217,119,6,0.16)" stroke="#d97706" strokeWidth="0.5" strokeDasharray="1.5 1" points={firstRing(item.geometry).map(project).join(" ")} /><text fill="#92400e" fontSize="2.1" fontWeight="700" x={firstRing(item.geometry).length ? firstRing(item.geometry).map(project).map((value) => Number(value.split(",")[0])).reduce((sum, value) => sum + value, 0) / firstRing(item.geometry).length : 50} y={firstRing(item.geometry).length ? firstRing(item.geometry).map(project).map((value) => Number(value.split(",")[1])).reduce((sum, value) => sum + value, 0) / firstRing(item.geometry).length : 50}>{item.label}</text></g>)}
         {geometries.filter((item) => item.kind === "plot").map((item, index) => <g key={`plot-${index}`}><polygon points={firstRing(item.geometry).map(project).join(" ")} /><text x={firstRing(item.geometry).length ? firstRing(item.geometry).map(project).map((value) => Number(value.split(",")[0])).reduce((sum, value) => sum + value, 0) / firstRing(item.geometry).length : 50} y={firstRing(item.geometry).length ? firstRing(item.geometry).map(project).map((value) => Number(value.split(",")[1])).reduce((sum, value) => sum + value, 0) / firstRing(item.geometry).length : 50}>{item.label}</text></g>)}
       </svg>
       <span>{proposal.candidates?.length || 0} plots in this draft</span>
@@ -343,6 +346,8 @@ function LayoutPreviewMap({ proposal, unitSystem = "m", onEditCandidates, onAddF
         // genuinely big enough on screen to hold them) plus explicit collision handling keeps the
         // map itself legible instead of a wall of overlapping text at the "fit whole estate" zoom.
         map.addLayer({ id: "preview-plots-labels", type: "symbol", source: "preview-plots", minzoom: 18.5, layout: { "text-field": ["get", "label"], "text-size": 11, "text-line-height": 1.15, "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"], "text-allow-overlap": false, "text-optional": true, "text-padding": 2 }, paint: { "text-color": "#0f1e17", "text-halo-color": "#ffffff", "text-halo-width": 1.6 } });
+        map.addSource("preview-edit-labels", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        map.addLayer({ id: "preview-edit-labels", type: "symbol", source: "preview-edit-labels", layout: { "text-field": ["get", "label"], "text-size": 10, "text-line-height": 1.1, "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"], "text-allow-overlap": true, "text-ignore-placement": true, "text-padding": 1 }, paint: { "text-color": "#0f1e17", "text-halo-color": "#ffffff", "text-halo-width": 1.8 } });
 
         // Roads generated by the criteria-driven algorithm are plain LineString centrelines (no
         // stored width); roads added by hand via "Add road" below are stored as real buffered
@@ -353,6 +358,10 @@ function LayoutPreviewMap({ proposal, unitSystem = "m", onEditCandidates, onAddF
         map.addLayer({ id: "preview-roads-casing", type: "line", source: "preview-roads", filter: ["==", ["geometry-type"], "LineString"], paint: { "line-color": "#ffffff", "line-width": 5, "line-opacity": 0.9 } });
         map.addLayer({ id: "preview-roads-line", type: "line", source: "preview-roads", filter: ["==", ["geometry-type"], "LineString"], paint: { "line-color": "#2b2f36", "line-width": 3 } });
         map.addLayer({ id: "preview-roads-labels", type: "symbol", source: "preview-roads", minzoom: 15, layout: { "text-field": ["get", "label"], "text-size": 10, "symbol-placement": "line", "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"] }, paint: { "text-color": "#0f1e17", "text-halo-color": "rgba(255,255,255,0.9)", "text-halo-width": 1.4 } });
+        map.addSource("preview-unallocated", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        map.addLayer({ id: "preview-unallocated-fill", type: "fill", source: "preview-unallocated", paint: { "fill-color": "#d97706", "fill-opacity": 0.16 } });
+        map.addLayer({ id: "preview-unallocated-outline", type: "line", source: "preview-unallocated", paint: { "line-color": "#d97706", "line-width": 1.6, "line-dasharray": [2, 2] } });
+        map.addLayer({ id: "preview-unallocated-labels", type: "symbol", source: "preview-unallocated", layout: { "text-field": ["get", "label"], "text-size": 10, "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"], "text-allow-overlap": true, "text-ignore-placement": true }, paint: { "text-color": "#92400e", "text-halo-color": "#ffffff", "text-halo-width": 1.6 } });
 
         setMapReady(true);
       });
@@ -378,15 +387,17 @@ function LayoutPreviewMap({ proposal, unitSystem = "m", onEditCandidates, onAddF
     }));
     const drainageFeatures = (proposal?.features || []).filter((feature: any) => feature.feature_type === "drainage").map((feature: any) => ({ type: "Feature", properties: {}, geometry: feature.geometry }));
     const openSpaceFeatures = (proposal?.features || []).filter((feature: any) => feature.feature_type === "open_space").map((feature: any) => ({ type: "Feature", properties: { label: feature.name }, geometry: feature.geometry }));
+    const unallocatedFeatures = (proposal?.diagnostics?.unallocated_areas || []).map((area: any) => ({ type: "Feature", properties: { label: String(area.label || "Unallocated area") + "\n" + formatArea(Number(area.area_sqm || 0), unitSystem) }, geometry: area.geometry }));
     (map.getSource("preview-open-space") as any)?.setData({ type: "FeatureCollection", features: openSpaceFeatures });
     (map.getSource("preview-drainage") as any)?.setData({ type: "FeatureCollection", features: drainageFeatures });
     (map.getSource("preview-plots") as any)?.setData({ type: "FeatureCollection", features: plotFeatures });
     (map.getSource("preview-roads") as any)?.setData({ type: "FeatureCollection", features: roadFeatures });
+    (map.getSource("preview-unallocated") as any)?.setData({ type: "FeatureCollection", features: unallocatedFeatures });
 
     void loadMapboxGl().then((mapboxgl) => {
       if (mapRef.current !== map) return;
       const fitBounds = new mapboxgl.LngLatBounds();
-      [...plotFeatures, ...roadFeatures, ...drainageFeatures, ...openSpaceFeatures].forEach((feature) => walkCoordinates(feature.geometry?.coordinates, (point) => fitBounds.extend(point)));
+      [...plotFeatures, ...roadFeatures, ...drainageFeatures, ...openSpaceFeatures, ...unallocatedFeatures].forEach((feature) => walkCoordinates(feature.geometry?.coordinates, (point) => fitBounds.extend(point)));
       if (!fitBounds.isEmpty()) map.fitBounds(fitBounds, { padding: 30 });
     });
   }, [proposal, mapReady, unitSystem]);
@@ -423,9 +434,27 @@ function LayoutPreviewMap({ proposal, unitSystem = "m", onEditCandidates, onAddF
       deletedIdsRef.current = new Set();
       extraCandidateMetaRef.current = {};
 
+      const syncEditingPlotLabels = () => {
+        const features = Object.entries(workingCandidatesRef.current).map(([plotNumber, geometry]: [string, any]) => {
+          const ring = geometry?.type === "Polygon" ? geometry.coordinates?.[0] || [] : [];
+          const isClosed = ring.length > 1 && ring[0]?.[0] === ring[ring.length - 1]?.[0] && ring[0]?.[1] === ring[ring.length - 1]?.[1];
+          const openRing = isClosed ? ring.slice(0, -1) : ring;
+          if (openRing.length < 3) return null;
+          const center = openRing.reduce((sum: { lng: number; lat: number }, point: number[]) => ({ lng: sum.lng + point[0], lat: sum.lat + point[1] }), { lng: 0, lat: 0 });
+          const areaSqm = computeParcelAreaSqMeters(openRing as [number, number][]);
+          return {
+            type: "Feature",
+            properties: { label: plotNumber + "\n" + formatArea(areaSqm, unitSystem) },
+            geometry: { type: "Point", coordinates: [center.lng / openRing.length, center.lat / openRing.length] },
+          };
+        }).filter(Boolean);
+        (map.getSource("preview-edit-labels") as any)?.setData({ type: "FeatureCollection", features });
+      };
+
       const plotFeatures = (proposal?.candidates || []).map((candidate: any) => ({ type: "Feature", id: `plot:${candidate.plot_number}`, properties: { plot_number: candidate.plot_number }, geometry: candidate.geometry }));
       const otherFeatures = (proposal?.features || []).map((feature: any, index: number) => ({ type: "Feature", id: `feat:${index}`, properties: { feature_type: feature.feature_type }, geometry: feature.geometry }));
       draw.set({ type: "FeatureCollection", features: [...plotFeatures, ...otherFeatures] });
+      syncEditingPlotLabels();
       EDITABLE_LAYOUT_LAYERS.forEach((id) => { try { map.setLayoutProperty(id, "visibility", "none"); } catch { /* layer not ready yet */ } });
 
       const captureUpdate = (event: any) => {
@@ -455,6 +484,7 @@ function LayoutPreviewMap({ proposal, unitSystem = "m", onEditCandidates, onAddF
         });
         if (Object.keys(touchedPlots).length) setPendingGeometry((current) => ({ ...current, ...touchedPlots }));
         if (Object.keys(touchedFeatures).length) setFeatureEdits((current) => ({ ...current, ...touchedFeatures }));
+        syncEditingPlotLabels();
       };
       // Deleting a plot is a local, staged edit like moving a vertex - "Save changes" applies it.
       // Deleting a road/open space is immediate instead: giving its vacated space back to the
@@ -477,6 +507,7 @@ function LayoutPreviewMap({ proposal, unitSystem = "m", onEditCandidates, onAddF
           }
         });
         if (newlyDeletedPlots.length) setDeletedIds(new Set(deletedIdsRef.current));
+        if (newlyDeletedPlots.length) syncEditingPlotLabels();
 
         if (featureIndexToRemove !== null && onRemoveFeature && proposal?.id) {
           const plotCandidates = Object.keys(workingCandidatesRef.current)
@@ -486,7 +517,7 @@ function LayoutPreviewMap({ proposal, unitSystem = "m", onEditCandidates, onAddF
               const geometry = workingCandidatesRef.current[plotNumber];
               return original ? { ...original, geometry } : { plot_number: plotNumber, geometry, valid: true, issues: [] };
             });
-          const featureCandidates = (proposal.features || []).map((feature: any, index: number) => (featureEdits[index] ? { ...feature, geometry: featureEdits[index] } : feature));
+          const featureCandidates = workingFeaturesRef.current.map((feature: any) => ({ ...feature }));
           setRemovingFeature(true);
           void onRemoveFeature(proposal.id, featureIndexToRemove, plotCandidates, featureCandidates)
             .then(() => {
@@ -520,6 +551,7 @@ function LayoutPreviewMap({ proposal, unitSystem = "m", onEditCandidates, onAddF
           const geometry = { type: "Polygon", coordinates: [ring] };
           workingCandidatesRef.current[plotNumber] = geometry;
           setAddedPlotNumbers((current) => new Set(current).add(plotNumber));
+          syncEditingPlotLabels();
           draw.add({ type: "Feature", id: `plot:${plotNumber}`, properties: { plot_number: plotNumber }, geometry });
           return;
         }
@@ -554,6 +586,7 @@ function LayoutPreviewMap({ proposal, unitSystem = "m", onEditCandidates, onAddF
       const handlers = (map as any)?._edashDrawHandlers;
       if (handlers) { map.off("draw.update", handlers.captureUpdate); map.off("draw.delete", handlers.captureDelete); map.off("draw.create", handlers.captureCreate); }
       if (drawRef.current) { try { map.removeControl(drawRef.current); } catch { /* map already gone */ } }
+      (map.getSource("preview-edit-labels") as any)?.setData({ type: "FeatureCollection", features: [] });
       drawRef.current = null;
       EDITABLE_LAYOUT_LAYERS.forEach((id) => { try { map.setLayoutProperty(id, "visibility", "visible"); } catch { /* layer not ready */ } });
     };
@@ -606,7 +639,7 @@ function LayoutPreviewMap({ proposal, unitSystem = "m", onEditCandidates, onAddF
     }
   };
 
-  if (!MAPBOX_TOKEN) return <LayoutPreview proposal={proposal} />;
+  if (!MAPBOX_TOKEN) return <LayoutPreview proposal={proposal} unitSystem={unitSystem} />;
 
   return (
     <div ref={wrapRef} className="edash-layout-preview-wrap">
@@ -847,6 +880,7 @@ export default function EstateLayoutDesigner({ boundaryPresent, boundaryAreaSqm,
             </div>
             <p className="edash-status-row-desc">{proposal.diagnostics?.estimated_plot_count || proposal.candidates?.length || 0} plots, about {formatArea(Number(proposal.diagnostics?.total_plot_area_sqm || 0), unitSystem)} of plot area.</p>
             <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>{proposal.diagnostics?.road_count || 0} access roads and {Number(proposal.diagnostics?.open_space_percent || 0).toFixed(1)}% open-space reserve.</p>
+            {Number(proposal.diagnostics?.unallocated_area_sqm || 0) > 0 && <p className="edash-status-row-desc" style={{ marginBottom: 10, color: "#92400e" }}>Unallocated planning area: {formatArea(Number(proposal.diagnostics.unallocated_area_sqm), unitSystem)}. These highlighted areas can be reviewed for future subdivision.</p>}
             <LayoutPreviewMap proposal={proposal} unitSystem={unitSystem} onEditCandidates={onEditCandidates} onAddFeature={onAddFeature} onRemoveFeature={onRemoveFeature} />
             {proposal.status === "review_required" && (
               <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
