@@ -880,6 +880,7 @@ export default function EstateLayoutDesigner({ boundaryPresent, boundaryAreaSqm,
             </div>
             <p className="edash-status-row-desc">{proposal.diagnostics?.estimated_plot_count || proposal.candidates?.length || 0} plots, about {formatArea(Number(proposal.diagnostics?.total_plot_area_sqm || 0), unitSystem)} of plot area.</p>
             <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>{proposal.diagnostics?.road_count || 0} access roads and {Number(proposal.diagnostics?.open_space_percent || 0).toFixed(1)}% open-space reserve.</p>
+            {proposal.diagnostics?.road_gap_compacted && <p className="edash-status-row-desc" style={{ marginBottom: 10, color: "#166534" }}>Deleted road corridor compacted to the estate edge; plot sizes were preserved.</p>}
             {Number(proposal.diagnostics?.unallocated_area_sqm || 0) > 0 && <p className="edash-status-row-desc" style={{ marginBottom: 10, color: "#92400e" }}>Unallocated planning area: {formatArea(Number(proposal.diagnostics.unallocated_area_sqm), unitSystem)}. These highlighted areas can be reviewed for future subdivision.</p>}
             <LayoutPreviewMap proposal={proposal} unitSystem={unitSystem} onEditCandidates={onEditCandidates} onAddFeature={onAddFeature} onRemoveFeature={onRemoveFeature} />
             {proposal.status === "review_required" && (
