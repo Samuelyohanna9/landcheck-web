@@ -195,10 +195,15 @@ function valuePotential(forecast: any) {
   return { level, label: labels[level], summary: `Urban growth around this Estate shows ${level} potential to support future land demand.` };
 }
 
+function directionName(direction: string | null | undefined) {
+  const names: Record<string, string> = { N: "North", NE: "North-east", E: "East", SE: "South-east", S: "South", SW: "South-west", W: "West", NW: "North-west" };
+  return names[String(direction || "")] || direction || "Not available";
+}
+
 function connectionOutlook(years: number) {
-  if (years <= 3) return "Early connection potential";
-  if (years <= 5) return "Stronger connection potential";
-  return "Wider urban growth potential";
+  if (years <= 3) return "More development nearby";
+  if (years <= 5) return "Stronger growth nearby";
+  return "A more developed area";
 }
 
 function DevelopmentForecastPanel({ forecast }: { forecast: any }) {
@@ -210,10 +215,10 @@ function DevelopmentForecastPanel({ forecast }: { forecast: any }) {
   return <section id="outlook" className="estate-public-forecast" aria-labelledby="estate-public-forecast-title">
     <div className="estate-public-forecast-heading"><div><p className="estate-public-kicker">LandCheck outlook</p><h2 id="estate-public-forecast-title">Land value potential</h2><p>{potential.summary} {forecast.reach_estimate?.headline || "The available evidence shows a possible direction of nearby development."}</p></div><span className="estate-public-forecast-badge">{potential.label} potential</span></div>
     <div className="estate-public-forecast-grid">
-      <div className="estate-public-forecast-map"><div className="estate-public-forecast-compass"><span className="estate-public-forecast-arrow" style={{ transform: `rotate(${bearing}deg)` }} /><span className="estate-public-forecast-estate-dot" /><span className="estate-public-forecast-label estate-public-forecast-label--estate">Estate</span><span className="estate-public-forecast-label estate-public-forecast-label--growth">{growth.direction || "Growth direction"}</span></div><small>Directional view of the observed built-up change. Open the satellite map below to see the historical footprint overlays.</small></div>
-      <div className="estate-public-forecast-facts"><div><strong>{potential.label}</strong><span>Urbanisation value potential</span></div><div><strong>{growth.annual_percent_rate == null ? "Not available" : `${growth.annual_percent_rate}% / year`}</strong><span>Urban growth momentum, not price growth</span></div><div><strong>{growth.direction || "Not available"}</strong><span>Observed growth direction</span></div><div><strong>{growth.frontier_distance_m == null ? "Not available" : growth.frontier_distance_m <= 100 ? "At the frontier" : `${Math.round(growth.frontier_distance_m)} m away`}</strong><span>Current built-up connection</span></div></div>
+      <div className="estate-public-forecast-map"><div className="estate-public-forecast-compass"><span className="estate-public-forecast-arrow" style={{ transform: `rotate(${bearing}deg)` }} /><span className="estate-public-forecast-estate-dot" /><span className="estate-public-forecast-label estate-public-forecast-label--estate">Estate</span><span className="estate-public-forecast-label estate-public-forecast-label--growth">{directionName(growth.direction)}</span></div><small>This shows where nearby development has been moving. Open the satellite map below for more detail.</small></div>
+      <div className="estate-public-forecast-facts"><div><strong>{potential.label}</strong><span>Land value potential</span></div><div><strong>{growth.annual_percent_rate == null ? "Not available" : `${growth.annual_percent_rate}% / year`}</strong><span>Area growth, not price growth</span></div><div><strong>{directionName(growth.direction)}</strong><span>Where development is moving</span></div><div><strong>{growth.frontier_distance_m == null ? "Not available" : growth.frontier_distance_m <= 100 ? "Development is nearby" : `${Math.round(growth.frontier_distance_m)} m away`}</strong><span>How close development is</span></div></div>
     </div>
-    <div className="estate-public-forecast-projections"><h3>How development may reach the Estate</h3><div>{projections.map((row: any) => <div className="estate-public-forecast-projection" key={row.horizon_years}><strong>{row.horizon_years} years</strong><span>{connectionOutlook(row.horizon_years)}</span><small>Based on the observed urban growth trend</small></div>)}</div><details className="estate-public-forecast-details"><summary>View analysis details</summary><div>{projections.map((row: any) => <p key={row.horizon_years}><strong>{row.horizon_years} years:</strong> projected surrounding built-up area of {row.conservative_area_ha}–{row.accelerated_area_ha} ha; observed trend {row.observed_trend_area_ha} ha.</p>)}</div></details></div>
+    <div className="estate-public-forecast-projections"><h3>Possible future growth</h3><div>{projections.map((row: any) => <div className="estate-public-forecast-projection" key={row.horizon_years}><strong>{row.horizon_years} years</strong><span>{connectionOutlook(row.horizon_years)}</span><small>Based on past growth in this area</small></div>)}</div><details className="estate-public-forecast-details"><summary>View analysis details</summary><div>{projections.map((row: any) => <p key={row.horizon_years}><strong>{row.horizon_years} years:</strong> projected surrounding built-up area of {row.conservative_area_ha}–{row.accelerated_area_ha} ha; observed trend {row.observed_trend_area_ha} ha.</p>)}</div></details></div>
     <div className="estate-public-forecast-support"><h3>What supports the outlook</h3><ul>{(forecast.factors?.supporting || []).map((item: string) => <li key={item}>{item}</li>)}</ul></div>
     <p className="estate-public-forecast-disclaimer">{forecast.public_disclaimer}</p><p className="estate-public-forecast-method">Method: {forecast.analysis?.method || "Historical built-up land-cover change around the Estate."} Source: annual Esri 10 m land-cover classification, combined with LandCheck flood and erosion screening.</p>
   </section>;
