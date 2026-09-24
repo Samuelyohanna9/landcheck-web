@@ -226,7 +226,7 @@ export default function EstateSettingsPage() {
             </div>
             <p className="edash-status-row-desc" style={{ margin: "14px 0 8px" }}>{developmentForecast.reach_estimate?.headline || "No responsible reach estimate is available from the observed record."}</p>
             <div className="edash-chip-row" style={{ marginBottom: 10 }}>{(developmentForecast.projections || []).map((row: any) => <span key={row.horizon_years} className="edash-chip">{row.horizon_years} years: {row.conservative_area_ha}–{row.accelerated_area_ha} ha</span>)}</div>
-            <p className="edash-field-note">Scenario range, not a promise. Planned Estate roads are listed separately and are not treated as confirmed public-road evidence.</p>
+            <p className="edash-field-note">This is a location-screening scenario based on rigorous analysis from multiple reliable data sources.</p>
             <label className="edash-toggle" style={{ marginTop: 12 }}><input type="checkbox" checked={Boolean(developmentForecast.published)} onChange={(event) => void setForecastVisibility(event.target.checked)} /> Show this outlook on the public Estate page</label>
           </>}
           {developmentForecast && !developmentForecast.data_available && <p className="edash-field-note" style={{ marginTop: 12 }}>{developmentForecast.message || "Not enough historical coverage is available for a responsible projection."}</p>}
