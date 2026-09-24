@@ -156,7 +156,7 @@
 .estate-public-forecast-heading p:not(.estate-public-kicker) { max-width: 760px; margin: 8px 0 0; color: var(--estate-public-muted); line-height: 1.55; }
 .estate-public-forecast-badge { flex-shrink: 0; padding: 8px 12px; border: 1px solid #b9dfc6; border-radius: 999px; background: #fff; color: var(--estate-public-brand-dark); font-size: .72rem; font-weight: 800; text-transform: capitalize; }
 .estate-public-forecast-grid { display: grid; grid-template-columns: minmax(260px, .8fr) minmax(0, 1.2fr); gap: 18px; margin-top: 22px; }
-.estate-public-forecast-map, .estate-public-forecast-facts, .estate-public-forecast-projections, .estate-public-forecast-columns > div { border: 1px solid #cfe5d5; border-radius: 12px; background: rgba(255,255,255,.74); }
+.estate-public-forecast-map, .estate-public-forecast-facts, .estate-public-forecast-projections, .estate-public-forecast-support { border: 1px solid #cfe5d5; border-radius: 12px; background: rgba(255,255,255,.74); }
 .estate-public-forecast-map { display: flex; min-height: 180px; align-items: center; justify-content: center; flex-direction: column; padding: 18px; }
 .estate-public-forecast-compass { position: relative; width: 154px; height: 118px; border: 1px dashed #a8cfb3; border-radius: 50%; background: radial-gradient(circle, #fff 0 14%, transparent 15%), linear-gradient(90deg, transparent 49.5%, #d4ead9 49.5% 50.5%, transparent 50.5%), linear-gradient(0deg, transparent 49.5%, #d4ead9 49.5% 50.5%, transparent 50.5%); }
 .estate-public-forecast-arrow { position: absolute; top: 53px; left: 76px; width: 3px; height: 49px; transform-origin: 50% 0; border-radius: 5px; background: var(--estate-public-brand); }
@@ -173,15 +173,14 @@
 .estate-public-forecast-facts strong { display: block; color: var(--estate-public-ink); font-size: 1.2rem; letter-spacing: -.03em; }
 .estate-public-forecast-facts span { display: block; margin-top: 5px; color: var(--estate-public-muted); font-size: .72rem; line-height: 1.35; }
 .estate-public-forecast-projections { margin-top: 18px; padding: 18px; }
-.estate-public-forecast-projections h3, .estate-public-forecast-columns h3 { margin: 0 0 12px; color: var(--estate-public-ink); font-size: .9rem; }
+.estate-public-forecast-projections h3, .estate-public-forecast-support h3 { margin: 0 0 12px; color: var(--estate-public-ink); font-size: .9rem; }
 .estate-public-forecast-projections > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .estate-public-forecast-projection { display: flex; min-height: 86px; flex-direction: column; justify-content: center; gap: 4px; padding: 11px; border: 1px solid #d8eadd; border-radius: 8px; background: #fff; }
 .estate-public-forecast-projection strong { color: var(--estate-public-brand-dark); font-size: .76rem; }
 .estate-public-forecast-projection span { color: var(--estate-public-ink); font-size: .98rem; font-weight: 800; }
 .estate-public-forecast-projection small { color: var(--estate-public-muted); font-size: .68rem; }
-.estate-public-forecast-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 18px; }
-.estate-public-forecast-columns > div { padding: 18px; }
-.estate-public-forecast-columns ul { display: grid; gap: 7px; margin: 0; padding-left: 17px; color: var(--estate-public-muted); font-size: .76rem; line-height: 1.45; }
+.estate-public-forecast-support { margin-top: 18px; padding: 18px; }
+.estate-public-forecast-support ul { display: grid; gap: 7px; margin: 0; padding-left: 17px; color: var(--estate-public-muted); font-size: .76rem; line-height: 1.45; }
 .estate-public-forecast-disclaimer { margin: 18px 0 0; color: var(--estate-public-faint); font-size: .7rem; line-height: 1.5; }
 .estate-public-forecast-method { margin: 7px 0 0; color: var(--estate-public-faint); font-size: .68rem; line-height: 1.5; }
 
@@ -189,7 +188,7 @@
   .estate-public-forecast { margin-bottom: 22px; padding: 22px 16px; }
   .estate-public-forecast-heading { display: block; }
   .estate-public-forecast-badge { display: inline-block; margin-top: 12px; }
-  .estate-public-forecast-grid, .estate-public-forecast-columns { grid-template-columns: 1fr; }
+  .estate-public-forecast-grid { grid-template-columns: 1fr; }
   .estate-public-forecast-projections > div { grid-template-columns: 1fr; }
 }
 .estate-public-selection-status { flex-shrink: 0; font-size: .74rem; font-weight: 800; }
