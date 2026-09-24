@@ -32,6 +32,7 @@ type PublicEstate = {
   boundary: any | null;
   plots: PublicPlot[];
   counts: Record<string, number>;
+  development_forecast?: any | null;
 };
 
 const statusLabels: Record<string, string> = {
@@ -102,6 +103,18 @@ function featureCollection(estate: PublicEstate) {
   };
 }
 
+function developmentForecastFeatures(estate: PublicEstate) {
+  const forecast = estate.development_forecast;
+  if (!forecast) return { type: "FeatureCollection", features: [] };
+  const footprints = (forecast.built_up_footprints || []).map((item: any) => ({
+    type: "Feature",
+    properties: { kind: "footprint", year: item.year },
+    geometry: item.geometry,
+  }));
+  const direction = forecast.direction_line ? [{ ...forecast.direction_line, properties: { ...(forecast.direction_line.properties || {}), kind: "direction" } }] : [];
+  return { type: "FeatureCollection", features: [...footprints, ...direction] };
+}
+
 function PublicEstateMap({ estate, selectedPlotId, onSelect, onReserve }: { estate: PublicEstate; selectedPlotId: number | null; onSelect: (plotId: number | null) => void; onReserve: (plotId: number) => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -123,6 +136,13 @@ function PublicEstateMap({ estate, selectedPlotId, onSelect, onReserve }: { esta
         map.addLayer({ id: "public-estate-plot-line", type: "line", source: "public-estate-plots", paint: { "line-color": "#ffffff", "line-width": 1.5, "line-opacity": 0.9 } });
         map.addLayer({ id: "public-estate-plot-label", type: "symbol", source: "public-estate-plots", layout: { "text-field": ["get", "plot_label"], "text-size": 10, "text-line-height": 1.1, "text-max-width": 9, "text-allow-overlap": false }, paint: { "text-color": "#ffffff", "text-halo-color": "#102033", "text-halo-width": 1.2 } });
         map.addLayer({ id: "public-estate-plot-selected", type: "line", source: "public-estate-plots", paint: { "line-color": "#ffffff", "line-width": 4, "line-opacity": 1 }, filter: ["==", ["id"], -1] });
+        const forecastFeatures = developmentForecastFeatures(estate);
+        if (forecastFeatures.features.length) {
+          map.addSource("public-development-forecast", { type: "geojson", data: forecastFeatures as any });
+          map.addLayer({ id: "public-development-footprint", type: "fill", source: "public-development-forecast", filter: ["==", ["get", "kind"], "footprint"], paint: { "fill-color": "#f2c14e", "fill-opacity": 0.18 } });
+          map.addLayer({ id: "public-development-footprint-line", type: "line", source: "public-development-forecast", filter: ["==", ["get", "kind"], "footprint"], paint: { "line-color": "#f2c14e", "line-width": 1.2, "line-opacity": 0.7 } });
+          map.addLayer({ id: "public-development-direction", type: "line", source: "public-development-forecast", filter: ["==", ["get", "kind"], "direction"], paint: { "line-color": "#7de0a6", "line-width": 4, "line-dasharray": [1.4, 1.2], "line-opacity": 0.95 } });
+        }
         map.on("click", "public-estate-plot-fill", (event: any) => {
           const id = Number(event.features?.[0]?.id);
           if (Number.isFinite(id)) onSelectRef.current(id);
@@ -133,7 +153,7 @@ function PublicEstateMap({ estate, selectedPlotId, onSelect, onReserve }: { esta
         });
         map.on("mouseenter", "public-estate-plot-fill", () => { map.getCanvas().style.cursor = "pointer"; });
         map.on("mouseleave", "public-estate-plot-fill", () => { map.getCanvas().style.cursor = ""; });
-        const points = [...coordinatesOf(estate.boundary?.coordinates), ...estate.plots.flatMap((plot) => coordinatesOf(plot.geometry?.coordinates))];
+        const points = [...coordinatesOf(estate.boundary?.coordinates), ...estate.plots.flatMap((plot) => coordinatesOf(plot.geometry?.coordinates)), ...coordinatesOf(estate.development_forecast?.direction_line?.geometry?.coordinates)];
         if (points.length) {
           const bounds = points.reduce((current, point) => current.extend(point), new mapboxgl.LngLatBounds(points[0], points[0]));
           map.fitBounds(bounds, { padding: 50, maxZoom: 17, duration: 0 });
@@ -150,11 +170,31 @@ function PublicEstateMap({ estate, selectedPlotId, onSelect, onReserve }: { esta
   useEffect(() => {
     const source = mapRef.current?.getSource("public-estate-plots");
     if (source) source.setData(featureCollection(estate));
+    const forecastSource = mapRef.current?.getSource("public-development-forecast");
+    if (forecastSource) forecastSource.setData(developmentForecastFeatures(estate) as any);
     if (mapRef.current?.getLayer("public-estate-plot-selected")) mapRef.current.setFilter("public-estate-plot-selected", ["==", ["id"], selectedPlotId ?? -1]);
   }, [estate, selectedPlotId]);
 
   if (!MAPBOX_TOKEN) return <div className="estate-public-map-fallback">The live layout map is not available right now. Browse the plot register below to see the available land.</div>;
   return <div className="estate-public-map-shell"><div ref={containerRef} className="estate-public-map" aria-label={`Satellite map of ${estate.name}`} />{selectedPlot && <div className="estate-public-map-selection"><div><strong>Plot {selectedPlot.plot_number}</strong><span>{selectedPlot.address || (selectedPlot.area_sqm ? formatArea(selectedPlot.area_sqm) : "Area on request")}</span></div>{selectedPlot.status === "available" ? <button type="button" onClick={() => onReserve(selectedPlot.id)}>Reserve plot</button> : <span className="estate-public-selection-status" style={{ color: statusColors[selectedPlot.status] || statusColors.on_hold }}>{labelForStatus(selectedPlot.status)}</span>}</div>}</div>;
+}
+
+function DevelopmentForecastPanel({ forecast }: { forecast: any }) {
+  if (!forecast?.data_available) return null;
+  const growth = forecast.growth || {};
+  const confidence = forecast.confidence?.level || "low";
+  const bearing = Number(growth.direction_bearing_deg ?? 90);
+  const projections = forecast.projections || [];
+  return <section id="outlook" className="estate-public-forecast" aria-labelledby="estate-public-forecast-title">
+    <div className="estate-public-forecast-heading"><div><p className="estate-public-kicker">LandCheck outlook</p><h2 id="estate-public-forecast-title">How the area may grow</h2><p>{forecast.reach_estimate?.headline || "The available evidence shows a possible direction of nearby development, but not a guaranteed outcome."}</p></div><span className="estate-public-forecast-badge">{confidence} confidence</span></div>
+    <div className="estate-public-forecast-grid">
+      <div className="estate-public-forecast-map"><div className="estate-public-forecast-compass"><span className="estate-public-forecast-arrow" style={{ transform: `rotate(${bearing}deg)` }} /><span className="estate-public-forecast-estate-dot" /><span className="estate-public-forecast-label estate-public-forecast-label--estate">Estate</span><span className="estate-public-forecast-label estate-public-forecast-label--growth">{growth.direction || "Growth direction"}</span></div><small>Directional view of the observed built-up change. Open the satellite map below to see the historical footprint overlays.</small></div>
+      <div className="estate-public-forecast-facts"><div><strong>{growth.annual_area_rate_ha ?? 0} ha</strong><span>Average built-up change per year</span></div><div><strong>{growth.frontier_distance_m == null ? "Not available" : `${Math.round(growth.frontier_distance_m)} m`}</strong><span>Nearest observed built-up frontier</span></div><div><strong>{growth.annual_percent_rate == null ? "Not available" : `${growth.annual_percent_rate}%`}</strong><span>Annual area growth rate</span></div><div><strong>{forecast.analysis?.historical_start_year}–{forecast.analysis?.historical_end_year}</strong><span>Historical land-cover record</span></div></div>
+    </div>
+    <div className="estate-public-forecast-projections"><h3>Possible built-up footprint</h3><div>{projections.map((row: any) => <div className="estate-public-forecast-projection" key={row.horizon_years}><strong>{row.horizon_years} years</strong><span>{row.conservative_area_ha}–{row.accelerated_area_ha} ha</span><small>observed trend: {row.observed_trend_area_ha} ha</small></div>)}</div></div>
+    <div className="estate-public-forecast-columns"><div><h3>What supports the outlook</h3><ul>{(forecast.factors?.supporting || []).map((item: string) => <li key={item}>{item}</li>)}</ul></div><div><h3>What may constrain it</h3><ul>{(forecast.factors?.constraining || []).map((item: string) => <li key={item}>{item}</li>)}</ul></div></div>
+    <p className="estate-public-forecast-disclaimer">{forecast.public_disclaimer}</p><p className="estate-public-forecast-method">Method: {forecast.analysis?.method || "Historical built-up land-cover change around the Estate."} Source: annual Esri 10 m land-cover classification, combined with LandCheck flood and erosion screening.</p>
+  </section>;
 }
 
 export default function PublicEstatePage() {
@@ -196,10 +236,11 @@ export default function PublicEstatePage() {
   if (error || !estate) return <main className="estate-public-app"><div className="estate-public-message"><h1>Estate page unavailable</h1><p>{error || "This page is not available."}</p></div></main>;
 
   return <div className="estate-public-app">
-    <header className="estate-public-header"><a className="estate-public-company" href="#overview" aria-label={`${companyName} home`}>{estate.logo_url ? <img src={assetUrl(estate.logo_url)} alt={`${companyName} logo`} /> : <strong>{companyName}</strong>}</a><button type="button" className="estate-public-menu-button" aria-label={menuOpen ? "Close navigation" : "Open navigation"} aria-expanded={menuOpen} aria-controls="estate-public-navigation" onClick={() => setMenuOpen((open) => !open)}><span /><span /><span /></button><nav id="estate-public-navigation" className={`estate-public-navigation${menuOpen ? " is-open" : ""}`}><a href="#layout" onClick={() => setMenuOpen(false)}>Plots</a><a href="#about" onClick={() => setMenuOpen(false)}>About</a><a href="#contact" onClick={() => setMenuOpen(false)}>Contact</a>{(estate.contact_phone || estate.organization_email) && <div className="estate-public-menu-contact">{estate.contact_phone && <a href={`tel:${estate.contact_phone}`}>{estate.contact_phone}</a>}{estate.organization_email && <a href={`mailto:${estate.organization_email}`}>{estate.organization_email}</a>}</div>}</nav></header>
+    <header className="estate-public-header"><a className="estate-public-company" href="#overview" aria-label={`${companyName} home`}>{estate.logo_url ? <img src={assetUrl(estate.logo_url)} alt={`${companyName} logo`} /> : <strong>{companyName}</strong>}</a><button type="button" className="estate-public-menu-button" aria-label={menuOpen ? "Close navigation" : "Open navigation"} aria-expanded={menuOpen} aria-controls="estate-public-navigation" onClick={() => setMenuOpen((open) => !open)}><span /><span /><span /></button><nav id="estate-public-navigation" className={`estate-public-navigation${menuOpen ? " is-open" : ""}`}><a href="#layout" onClick={() => setMenuOpen(false)}>Plots</a>{estate.development_forecast && <a href="#outlook" onClick={() => setMenuOpen(false)}>Outlook</a>}<a href="#about" onClick={() => setMenuOpen(false)}>About</a><a href="#contact" onClick={() => setMenuOpen(false)}>Contact</a>{(estate.contact_phone || estate.organization_email) && <div className="estate-public-menu-contact">{estate.contact_phone && <a href={`tel:${estate.contact_phone}`}>{estate.contact_phone}</a>}{estate.organization_email && <a href={`mailto:${estate.organization_email}`}>{estate.organization_email}</a>}</div>}</nav></header>
     <main>
       <section id="overview" className="estate-public-intro"><p className="estate-public-kicker">{companyName}</p><h1>{estate.name}</h1>{estate.tagline && <p className="estate-public-tagline">{estate.tagline}</p>}{estate.location && <p className="estate-public-location">{estate.location}</p>}{estate.description && <p className="estate-public-description">{estate.description}</p>}{paymentPlanItems(estate).length > 0 && <p className="estate-public-payment-plan-summary">Payment options: {paymentPlanItems(estate).map((item) => item.label + " " + item.percentage + "%").join(" / ")}</p>}<a className="estate-public-text-link estate-public-intro-link" href="#layout">Explore available plots</a></section>
       <section className="estate-public-metrics" aria-label="Estate availability summary"><div><strong>{estate.plots.length}</strong><span>Total plots</span></div><div><strong>{estate.counts.available || 0}</strong><span>Available</span></div><div><strong>{estate.counts.reserved || 0}</strong><span>Reserved</span></div><div><strong>{estate.counts.allocated || 0}</strong><span>Allocated</span></div></section>
+      <DevelopmentForecastPanel forecast={estate.development_forecast} />
       <section id="layout" className="estate-public-workspace"><div className="estate-public-map-column"><div className="estate-public-section-head"><div><p className="estate-public-kicker">Estate layout</p><h2>Choose a plot on the map.</h2></div><span className="estate-public-map-note">Satellite view</span></div><PublicEstateMap estate={estate} selectedPlotId={selectedPlotId} onSelect={setSelectedPlotId} onReserve={reservePlot} /><div className="estate-public-legend">{["available", "reserved", "allocated", "on_hold"].map((status) => <span key={status}><i style={{ background: statusColors[status] }} />{labelForStatus(status)}</span>)}</div></div>
         <aside className="estate-public-inventory" aria-label="Plot register"><div className="estate-public-section-head"><div><p className="estate-public-kicker">Plot register</p><h2>Find your plot.</h2></div><strong>{filteredPlots.length}</strong></div><div className="estate-public-filters"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search plot, block or address" aria-label="Search plot, block or address" /><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter plots by status"><option value="all">All plots</option><option value="available">Available</option><option value="reserved">Reserved</option><option value="allocated">Allocated</option></select></div><div className="estate-public-plot-list">{filteredPlots.length ? filteredPlots.map((plot) => <button key={plot.id} type="button" className={`estate-public-plot-row${plot.id === selectedPlotId ? " is-selected" : ""}`} onClick={() => setSelectedPlotId(plot.id)}><span><strong>Plot {plot.plot_number}</strong><small>{plot.address || `${plot.block ? `Block ${plot.block} | ` : ""}${plot.area_sqm ? formatArea(plot.area_sqm) : "Area on request"}`}</small>{estate.show_prices && <small className="estate-public-plot-price">{money(plot.price)}</small>}</span><span className="estate-public-status" style={{ color: statusColors[plot.status] || statusColors.on_hold }}>{labelForStatus(plot.status)}</span></button>) : <p className="estate-public-empty">No plots match your search.</p>}</div>{selectedPlot && <div className="estate-public-plot-detail"><div className="estate-public-detail-top"><div><p className="estate-public-kicker">Selected plot</p><h3>Plot {selectedPlot.plot_number}</h3></div><span className="estate-public-status-pill" style={{ background: `${statusColors[selectedPlot.status] || statusColors.on_hold}18`, color: statusColors[selectedPlot.status] || statusColors.on_hold }}>{labelForStatus(selectedPlot.status)}</span></div><dl><div><dt>Address</dt><dd>{selectedPlot.address || "Address on request"}</dd></div><div><dt>Area</dt><dd>{selectedPlot.area_sqm ? formatArea(selectedPlot.area_sqm) : "On request"}</dd></div>{estate.show_prices && <div><dt>Price</dt><dd>{money(selectedPlot.price)}</dd></div>}</dl>{selectedPlot.status === "available" ? <button type="button" className="estate-public-primary" onClick={() => reservePlot(selectedPlot.id)}>Reserve this plot</button> : <p className="estate-public-unavailable">This plot is not currently available for reservation.</p>}</div>}</aside>
       </section>

@@ -30,6 +30,10 @@ export default function EstateSettingsPage() {
   const [paymentPlan, setPaymentPlan] = useState<Array<{ id: string; label: string; percentage: string }>>([]);
   const [publicCanPublish, setPublicCanPublish] = useState(false);
   const [publicUrlPath, setPublicUrlPath] = useState<string | null>(null);
+  const [developmentForecast, setDevelopmentForecast] = useState<any>(null);
+  const [forecastBusy, setForecastBusy] = useState(false);
+  const [forecastProgress, setForecastProgress] = useState<{ stage?: string; progress_pct?: number }>({});
+  const [forecastUpgrade, setForecastUpgrade] = useState(false);
 
   const load = () => {
     if (!estateId) return;
@@ -59,6 +63,14 @@ export default function EstateSettingsPage() {
         setPublicCanPublish(Boolean(publicPage.can_publish));
         setPublicUrlPath(publicPage.public_url_path || null);
       } catch { /* public showcase is optional until its migration is deployed */ }
+      try {
+        const forecastPage = (await api.get(`/estates/${estateId}/development-forecast`)).data;
+        setDevelopmentForecast(forecastPage.forecast || null);
+        setForecastUpgrade(false);
+      } catch (error: any) {
+        setDevelopmentForecast(null);
+        setForecastUpgrade(error?.response?.status === 402);
+      }
     }).catch(() => setEstateDetail(null));
     api.get(`/estates/${estateId}/blocks`).then((response) => setBlocks(response.data || [])).catch(() => setBlocks([]));
     api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));
@@ -122,6 +134,44 @@ export default function EstateSettingsPage() {
     setPaymentPlan((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value } : item));
   };
 
+  const runDevelopmentForecast = async () => {
+    if (forecastBusy) return;
+    setForecastBusy(true);
+    setForecastProgress({ stage: "Queueing forecast...", progress_pct: 0 });
+    try {
+      const response = await api.post(`/estates/${estateId}/development-forecast/run`);
+      const jobId = response.data?.id;
+      if (!jobId) throw new Error("The forecast job was not created.");
+      for (let attempt = 0; attempt < 240; attempt += 1) {
+        const job = (await api.get(`/hazards/jobs/${jobId}`)).data;
+        setForecastProgress({ stage: job.stage || "Analysing...", progress_pct: Number(job.progress_pct || 0) });
+        if (job.status === "completed") {
+          setDevelopmentForecast(job.result || null);
+          toast.success("Development forecast is ready for review.");
+          return;
+        }
+        if (job.status === "failed") throw new Error(job.error_text || "The development forecast failed.");
+        await new Promise((resolve) => window.setTimeout(resolve, 1500));
+      }
+      throw new Error("The forecast is taking longer than expected. Refresh this page to check its status.");
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "Development forecast could not be completed."));
+    } finally {
+      setForecastBusy(false);
+      setForecastProgress({});
+    }
+  };
+
+  const setForecastVisibility = async (publicEnabled: boolean) => {
+    try {
+      const response = await api.patch(`/estates/${estateId}/development-forecast/public`, { public_enabled: publicEnabled });
+      setDevelopmentForecast(response.data.forecast || null);
+      toast.success(publicEnabled ? "Development outlook added to the public page." : "Development outlook hidden from the public page.");
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "Forecast visibility could not be updated."));
+    }
+  };
+
   const addPaymentPlanStage = () => {
     const stage = { id: `payment-stage-${paymentPlanStageIdRef.current++}`, label: "", percentage: "" };
     setPaymentPlan((current) => [...current, stage]);
@@ -156,6 +206,30 @@ export default function EstateSettingsPage() {
             <Link className="edash-card-link" to="/estates/billing">Manage billing</Link>
           </div>
           <p className="edash-status-row-desc">View your current plan, trial or renewal date, payment method and billing history, or upgrade to Plus for flood and erosion hazard analysis.</p>
+        </div>
+      </div>
+      <div className="edash-card" style={{ marginBottom: 16 }}>
+        <div className="edash-card-inner">
+          <div className="edash-card-head">
+            <div><h3 className="edash-card-title">Development outlook</h3><p className="edash-status-row-desc" style={{ marginTop: 4 }}>Use LandCheck flood, erosion and annual land-cover evidence to create a transparent growth scenario for buyers.</p></div>
+            <button type="button" className="edash-btn-primary" disabled={forecastBusy || forecastUpgrade} onClick={() => void runDevelopmentForecast()}>{forecastBusy ? "Analysing..." : developmentForecast ? "Run again" : "Run forecast"}</button>
+          </div>
+          {forecastUpgrade && <p className="edash-field-note" style={{ color: "var(--edash-danger)" }}>Development outlook uses the Plus hazard analysis entitlement.</p>}
+          {forecastBusy && <div style={{ margin: "12px 0", padding: 12, borderRadius: 10, background: "var(--edash-surface-muted, #f4f7f5)" }}><strong>{forecastProgress.stage || "Analysing..."}</strong><div style={{ height: 7, marginTop: 8, overflow: "hidden", borderRadius: 99, background: "#dce7e0" }}><div style={{ width: `${Math.max(4, Math.min(100, forecastProgress.progress_pct || 0))}%`, height: "100%", background: "var(--edash-brand)", transition: "width .3s ease" }} /></div></div>}
+          {!forecastBusy && !developmentForecast && !forecastUpgrade && <p className="edash-field-note" style={{ marginTop: 12 }}>Run it after confirming the Estate boundary. The result will remain private until you publish it.</p>}
+          {developmentForecast && developmentForecast.data_available && <>
+            <div className="edash-public-settings-grid" style={{ marginTop: 14 }}>
+              <div className="edash-field"><span>Growth direction</span><strong style={{ color: "var(--edash-ink)" }}>{developmentForecast.growth?.direction || "No clear direction"}</strong></div>
+              <div className="edash-field"><span>Observed annual change</span><strong style={{ color: "var(--edash-ink)" }}>{developmentForecast.growth?.annual_area_rate_ha ?? 0} ha/year</strong></div>
+              <div className="edash-field"><span>Nearest built-up frontier</span><strong style={{ color: "var(--edash-ink)" }}>{developmentForecast.growth?.frontier_distance_m == null ? "Not available" : `${Math.round(developmentForecast.growth.frontier_distance_m)} m`}</strong></div>
+              <div className="edash-field"><span>Confidence</span><strong style={{ color: "var(--edash-ink)" }}>{developmentForecast.confidence?.level || "Low"}</strong></div>
+            </div>
+            <p className="edash-status-row-desc" style={{ margin: "14px 0 8px" }}>{developmentForecast.reach_estimate?.headline || "No responsible reach estimate is available from the observed record."}</p>
+            <div className="edash-chip-row" style={{ marginBottom: 10 }}>{(developmentForecast.projections || []).map((row: any) => <span key={row.horizon_years} className="edash-chip">{row.horizon_years} years: {row.conservative_area_ha}–{row.accelerated_area_ha} ha</span>)}</div>
+            <p className="edash-field-note">Scenario range, not a promise. Planned Estate roads are listed separately and are not treated as confirmed public-road evidence.</p>
+            <label className="edash-toggle" style={{ marginTop: 12 }}><input type="checkbox" checked={Boolean(developmentForecast.published)} onChange={(event) => void setForecastVisibility(event.target.checked)} /> Show this outlook on the public Estate page</label>
+          </>}
+          {developmentForecast && !developmentForecast.data_available && <p className="edash-field-note" style={{ marginTop: 12 }}>{developmentForecast.message || "Not enough historical coverage is available for a responsible projection."}</p>}
         </div>
       </div>
       <div className="edash-card" style={{ marginBottom: 16 }}>
