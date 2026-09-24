@@ -212,24 +212,33 @@ export default function EstateSettingsPage() {
         <div className="edash-card-inner">
           <div className="edash-card-head">
             <div><h3 className="edash-card-title">Development outlook</h3><p className="edash-status-row-desc" style={{ marginTop: 4 }}>Use LandCheck flood, erosion and annual land-cover evidence to create a transparent growth scenario for buyers.</p></div>
-            <button type="button" className="edash-btn-primary" disabled={forecastBusy || forecastUpgrade} onClick={() => void runDevelopmentForecast()}>{forecastBusy ? "Analysing..." : developmentForecast ? "Run again" : "Run forecast"}</button>
+            {forecastUpgrade ? <span className="edash-status-pill tone-neutral">Plus plan</span> : <button type="button" className="edash-btn-primary" disabled={forecastBusy} onClick={() => void runDevelopmentForecast()}>{forecastBusy ? "Analysing..." : developmentForecast ? "Run again" : "Run forecast"}</button>}
           </div>
-          {forecastUpgrade && <p className="edash-field-note" style={{ color: "var(--edash-danger)" }}>Development outlook uses the Plus hazard analysis entitlement.</p>}
-          {forecastBusy && <div style={{ margin: "12px 0", padding: 12, borderRadius: 10, background: "var(--edash-surface-muted, #f4f7f5)" }}><strong>{forecastProgress.stage || "Analysing..."}</strong><div style={{ height: 7, marginTop: 8, overflow: "hidden", borderRadius: 99, background: "#dce7e0" }}><div style={{ width: `${Math.max(4, Math.min(100, forecastProgress.progress_pct || 0))}%`, height: "100%", background: "var(--edash-brand)", transition: "width .3s ease" }} /></div></div>}
-          {!forecastBusy && !developmentForecast && !forecastUpgrade && <p className="edash-field-note" style={{ marginTop: 12 }}>Run it after confirming the Estate boundary. The result will remain private until you publish it.</p>}
-          {developmentForecast && developmentForecast.data_available && <>
-            <div className="edash-public-settings-grid" style={{ marginTop: 14 }}>
-              <div className="edash-field"><span>Growth direction</span><strong style={{ color: "var(--edash-ink)" }}>{developmentForecast.growth?.direction || "No clear direction"}</strong></div>
-              <div className="edash-field"><span>Observed annual change</span><strong style={{ color: "var(--edash-ink)" }}>{developmentForecast.growth?.annual_area_rate_ha ?? 0} ha/year</strong></div>
-              <div className="edash-field"><span>Nearest built-up frontier</span><strong style={{ color: "var(--edash-ink)" }}>{developmentForecast.growth?.frontier_distance_m == null ? "Not available" : `${Math.round(developmentForecast.growth.frontier_distance_m)} m`}</strong></div>
-              <div className="edash-field"><span>Confidence</span><strong style={{ color: "var(--edash-ink)" }}>{developmentForecast.confidence?.level || "Low"}</strong></div>
+          {forecastUpgrade ? (
+            <div style={{ marginTop: 16, padding: "22px 20px", border: "1px solid #c8e5d4", borderRadius: 14, background: "linear-gradient(135deg, #f0fbf4, #f8fcf9)" }}>
+              <strong style={{ display: "block", marginBottom: 6, color: "var(--edash-ink)" }}>Development outlook is a Plus plan feature</strong>
+              <p className="edash-status-row-desc" style={{ maxWidth: 620, margin: "0 0 14px" }}>
+                Upgrade to Plus to run flood, erosion and land-cover growth analysis for this Estate and share the result on your public page.
+              </p>
+              <Link className="edash-btn-primary" style={{ display: "inline-flex" }} to="/estates/billing">Upgrade to Plus</Link>
             </div>
-            <p className="edash-status-row-desc" style={{ margin: "14px 0 8px" }}>{developmentForecast.reach_estimate?.headline || "No responsible reach estimate is available from the observed record."}</p>
-            <div className="edash-chip-row" style={{ marginBottom: 10 }}>{(developmentForecast.projections || []).map((row: any) => <span key={row.horizon_years} className="edash-chip">{row.horizon_years} years: {row.conservative_area_ha}–{row.accelerated_area_ha} ha</span>)}</div>
-            <p className="edash-field-note">This is a location-screening scenario based on rigorous analysis from multiple reliable data sources.</p>
-            <label className="edash-toggle" style={{ marginTop: 12 }}><input type="checkbox" checked={Boolean(developmentForecast.published)} onChange={(event) => void setForecastVisibility(event.target.checked)} /> Show this outlook on the public Estate page</label>
+          ) : <>
+            {forecastBusy && <div style={{ margin: "12px 0", padding: 12, borderRadius: 10, background: "var(--edash-surface-muted, #f4f7f5)" }}><strong>{forecastProgress.stage || "Analysing..."}</strong><div style={{ height: 7, marginTop: 8, overflow: "hidden", borderRadius: 99, background: "#dce7e0" }}><div style={{ width: `${Math.max(4, Math.min(100, forecastProgress.progress_pct || 0))}%`, height: "100%", background: "var(--edash-brand)", transition: "width .3s ease" }} /></div></div>}
+            {!forecastBusy && !developmentForecast && <p className="edash-field-note" style={{ marginTop: 12 }}>Run it after confirming the Estate boundary. The result will remain private until you publish it.</p>}
+            {developmentForecast && developmentForecast.data_available && <>
+              <div className="edash-public-settings-grid" style={{ marginTop: 14 }}>
+                <div className="edash-field"><span>Growth direction</span><strong style={{ color: "var(--edash-ink)" }}>{developmentForecast.growth?.direction || "No clear direction"}</strong></div>
+                <div className="edash-field"><span>Observed annual change</span><strong style={{ color: "var(--edash-ink)" }}>{developmentForecast.growth?.annual_area_rate_ha ?? 0} ha/year</strong></div>
+                <div className="edash-field"><span>Nearest built-up frontier</span><strong style={{ color: "var(--edash-ink)" }}>{developmentForecast.growth?.frontier_distance_m == null ? "Not available" : `${Math.round(developmentForecast.growth.frontier_distance_m)} m`}</strong></div>
+                <div className="edash-field"><span>Confidence</span><strong style={{ color: "var(--edash-ink)" }}>{developmentForecast.confidence?.level || "Low"}</strong></div>
+              </div>
+              <p className="edash-status-row-desc" style={{ margin: "14px 0 8px" }}>{developmentForecast.reach_estimate?.headline || "No responsible reach estimate is available from the observed record."}</p>
+              <div className="edash-chip-row" style={{ marginBottom: 10 }}>{(developmentForecast.projections || []).map((row: any) => <span key={row.horizon_years} className="edash-chip">{row.horizon_years} years: {row.conservative_area_ha}-{row.accelerated_area_ha} ha</span>)}</div>
+              <p className="edash-field-note">This is a location-screening scenario based on rigorous analysis from multiple reliable data sources.</p>
+              <label className="edash-toggle" style={{ marginTop: 12 }}><input type="checkbox" checked={Boolean(developmentForecast.published)} onChange={(event) => void setForecastVisibility(event.target.checked)} /> Show this outlook on the public Estate page</label>
+            </>}
+            {developmentForecast && !developmentForecast.data_available && <p className="edash-field-note" style={{ marginTop: 12 }}>{developmentForecast.message || "Not enough historical coverage is available for a responsible projection."}</p>}
           </>}
-          {developmentForecast && !developmentForecast.data_available && <p className="edash-field-note" style={{ marginTop: 12 }}>{developmentForecast.message || "Not enough historical coverage is available for a responsible projection."}</p>}
         </div>
       </div>
       <div className="edash-card" style={{ marginBottom: 16 }}>
