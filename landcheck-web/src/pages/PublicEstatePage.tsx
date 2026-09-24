@@ -179,19 +179,41 @@ function PublicEstateMap({ estate, selectedPlotId, onSelect, onReserve }: { esta
   return <div className="estate-public-map-shell"><div ref={containerRef} className="estate-public-map" aria-label={`Satellite map of ${estate.name}`} />{selectedPlot && <div className="estate-public-map-selection"><div><strong>Plot {selectedPlot.plot_number}</strong><span>{selectedPlot.address || (selectedPlot.area_sqm ? formatArea(selectedPlot.area_sqm) : "Area on request")}</span></div>{selectedPlot.status === "available" ? <button type="button" onClick={() => onReserve(selectedPlot.id)}>Reserve plot</button> : <span className="estate-public-selection-status" style={{ color: statusColors[selectedPlot.status] || statusColors.on_hold }}>{labelForStatus(selectedPlot.status)}</span>}</div>}</div>;
 }
 
+function valuePotential(forecast: any) {
+  if (forecast?.value_outlook) return forecast.value_outlook;
+  const growth = forecast?.growth || {};
+  const annualRate = Number(growth.annual_percent_rate);
+  const frontier = Number(growth.frontier_distance_m);
+  const confidence = forecast?.confidence?.level;
+  let score = 0;
+  if (Number.isFinite(annualRate)) score += annualRate >= 3 ? 2 : annualRate > 0 ? 1 : 0;
+  if (Number.isFinite(frontier)) score += frontier <= 1000 ? 2 : frontier <= 3000 ? 1 : 0;
+  if (growth.direction && growth.direction !== "No clear direction") score += 1;
+  if (confidence === "high") score += 1;
+  const level = score >= 5 ? "strong" : score >= 3 ? "moderate" : score >= 1 ? "emerging" : "unclear";
+  const labels: Record<string, string> = { strong: "Strong", moderate: "Moderate", emerging: "Emerging", unclear: "Unclear" };
+  return { level, label: labels[level], summary: `Urban growth around this Estate shows ${level} potential to support future land demand.` };
+}
+
+function connectionOutlook(years: number) {
+  if (years <= 3) return "Early connection potential";
+  if (years <= 5) return "Stronger connection potential";
+  return "Wider urban growth potential";
+}
+
 function DevelopmentForecastPanel({ forecast }: { forecast: any }) {
   if (!forecast?.data_available) return null;
   const growth = forecast.growth || {};
-  const confidence = forecast.confidence?.level || "low";
+  const potential = valuePotential(forecast);
   const bearing = Number(growth.direction_bearing_deg ?? 90);
   const projections = forecast.projections || [];
   return <section id="outlook" className="estate-public-forecast" aria-labelledby="estate-public-forecast-title">
-    <div className="estate-public-forecast-heading"><div><p className="estate-public-kicker">LandCheck outlook</p><h2 id="estate-public-forecast-title">How the area may grow</h2><p>{forecast.reach_estimate?.headline || "The available evidence shows a possible direction of nearby development, but not a guaranteed outcome."}</p></div><span className="estate-public-forecast-badge">{confidence} confidence</span></div>
+    <div className="estate-public-forecast-heading"><div><p className="estate-public-kicker">LandCheck outlook</p><h2 id="estate-public-forecast-title">Land value potential</h2><p>{potential.summary} {forecast.reach_estimate?.headline || "The available evidence shows a possible direction of nearby development."}</p></div><span className="estate-public-forecast-badge">{potential.label} potential</span></div>
     <div className="estate-public-forecast-grid">
       <div className="estate-public-forecast-map"><div className="estate-public-forecast-compass"><span className="estate-public-forecast-arrow" style={{ transform: `rotate(${bearing}deg)` }} /><span className="estate-public-forecast-estate-dot" /><span className="estate-public-forecast-label estate-public-forecast-label--estate">Estate</span><span className="estate-public-forecast-label estate-public-forecast-label--growth">{growth.direction || "Growth direction"}</span></div><small>Directional view of the observed built-up change. Open the satellite map below to see the historical footprint overlays.</small></div>
-      <div className="estate-public-forecast-facts"><div><strong>{growth.annual_area_rate_ha ?? 0} ha</strong><span>Average built-up change per year</span></div><div><strong>{growth.frontier_distance_m == null ? "Not available" : `${Math.round(growth.frontier_distance_m)} m`}</strong><span>Nearest observed built-up frontier</span></div><div><strong>{growth.annual_percent_rate == null ? "Not available" : `${growth.annual_percent_rate}%`}</strong><span>Annual area growth rate</span></div><div><strong>{forecast.analysis?.historical_start_year}–{forecast.analysis?.historical_end_year}</strong><span>Historical land-cover record</span></div></div>
+      <div className="estate-public-forecast-facts"><div><strong>{potential.label}</strong><span>Urbanisation value potential</span></div><div><strong>{growth.annual_percent_rate == null ? "Not available" : `${growth.annual_percent_rate}% / year`}</strong><span>Urban growth momentum, not price growth</span></div><div><strong>{growth.direction || "Not available"}</strong><span>Observed growth direction</span></div><div><strong>{growth.frontier_distance_m == null ? "Not available" : growth.frontier_distance_m <= 100 ? "At the frontier" : `${Math.round(growth.frontier_distance_m)} m away`}</strong><span>Current built-up connection</span></div></div>
     </div>
-    <div className="estate-public-forecast-projections"><h3>Possible growth around the Estate</h3><div>{projections.map((row: any) => <div className="estate-public-forecast-projection" key={row.horizon_years}><strong>{row.horizon_years} years</strong><span>{row.conservative_area_ha}–{row.accelerated_area_ha} ha</span><small>observed trend: {row.observed_trend_area_ha} ha</small></div>)}</div></div>
+    <div className="estate-public-forecast-projections"><h3>How development may reach the Estate</h3><div>{projections.map((row: any) => <div className="estate-public-forecast-projection" key={row.horizon_years}><strong>{row.horizon_years} years</strong><span>{connectionOutlook(row.horizon_years)}</span><small>Based on the observed urban growth trend</small></div>)}</div><details className="estate-public-forecast-details"><summary>View analysis details</summary><div>{projections.map((row: any) => <p key={row.horizon_years}><strong>{row.horizon_years} years:</strong> projected surrounding built-up area of {row.conservative_area_ha}–{row.accelerated_area_ha} ha; observed trend {row.observed_trend_area_ha} ha.</p>)}</div></details></div>
     <div className="estate-public-forecast-support"><h3>What supports the outlook</h3><ul>{(forecast.factors?.supporting || []).map((item: string) => <li key={item}>{item}</li>)}</ul></div>
     <p className="estate-public-forecast-disclaimer">{forecast.public_disclaimer}</p><p className="estate-public-forecast-method">Method: {forecast.analysis?.method || "Historical built-up land-cover change around the Estate."} Source: annual Esri 10 m land-cover classification, combined with LandCheck flood and erosion screening.</p>
   </section>;
