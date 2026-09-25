@@ -139,17 +139,17 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
             {AD_STYLES.map((item) => <button key={item.key} type="button" title={item.hint} className={style === item.key ? "is-active" : ""} onClick={() => setStyle(item.key)}>{item.label}</button>)}
           </div>
         </div>
-        <p className="edash-mk-hint" style={{ margin: "0 0 12px" }}>{style === "promo" ? "Bright poster with your logo colours, a price ribbon, plot sizes and prices, and a satellite view of the estate." : "Dark premium design with the live plot map."} Always shows today's availability.</p>
+        <p className="edash-mk-hint" style={{ margin: "0 0 12px" }}>{style === "promo" ? "Bright poster, flyer and brochure with your logo and logo colours, a price ribbon, plot sizes and prices, and a satellite view of the estate." : "Dark premium design with your logo and the live plot map."} Always shows today's availability.</p>
         <div className="edash-mk-materials">
           <div className="edash-mk-material">
-            <div className="edash-mk-preview is-doc"><EstateIcon name="documents" /></div>
+            <AdPreview path={`/estates/${estateId}/marketing/materials/ad.png`} params={{ ...(params || {}), format: style === "promo" ? "poster" : "post", style }} alt="Flyer preview" />
             <div className="edash-mk-material-body"><strong>One-page flyer</strong><span>A4 PDF with map, prices and QR code - print or send on WhatsApp.</span>
-              <button type="button" className="edash-btn-outline" disabled={busy === "flyer"} onClick={() => void download("flyer", `/estates/${estateId}/marketing/materials/flyer.pdf`, `${safeName}-flyer.pdf`)}><EstateIcon name="download" />{busy === "flyer" ? "Preparing..." : "Download PDF"}</button></div>
+              <button type="button" className="edash-btn-outline" disabled={busy === "flyer"} onClick={() => void download("flyer", `/estates/${estateId}/marketing/materials/flyer.pdf`, `${safeName}-${style}-flyer.pdf`, { style })}><EstateIcon name="download" />{busy === "flyer" ? "Preparing..." : "Download PDF"}</button></div>
           </div>
           <div className="edash-mk-material">
-            <div className="edash-mk-preview is-doc"><EstateIcon name="reports" /></div>
+            <AdPreview path={`/estates/${estateId}/marketing/materials/ad.png`} params={{ ...(params || {}), format: style === "promo" ? "poster" : "post", style }} alt="Brochure cover preview" />
             <div className="edash-mk-material-body"><strong>Estate brochure</strong><span>Multi-page PDF: about, area outlook, layout, price list and how to buy.</span>
-              <button type="button" className="edash-btn-outline" disabled={busy === "brochure"} onClick={() => void download("brochure", `/estates/${estateId}/marketing/materials/brochure.pdf`, `${safeName}-brochure.pdf`)}><EstateIcon name="download" />{busy === "brochure" ? "Preparing..." : "Download PDF"}</button></div>
+              <button type="button" className="edash-btn-outline" disabled={busy === "brochure"} onClick={() => void download("brochure", `/estates/${estateId}/marketing/materials/brochure.pdf`, `${safeName}-${style}-brochure.pdf`, { style })}><EstateIcon name="download" />{busy === "brochure" ? "Preparing..." : "Download PDF"}</button></div>
           </div>
           {formats.map((format) => (
             <div className="edash-mk-material" key={`${style}-${format.key}`}>
