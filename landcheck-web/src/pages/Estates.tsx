@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { clearEstateAuthSession } from "../auth/estateAuth";
+import { clearEstateAuthSession, getEstateAuthSession } from "../auth/estateAuth";
 import { claimEstateSurveyRequestSession } from "../auth/surveyAuth";
 import { api, createIdempotencyKey, extractApiErrorMessage } from "../api/client";
 import { money, PAYMENT_METHODS } from "../components/estates/FinancialComponents";
@@ -1543,7 +1543,21 @@ export default function Estates() {
     else { setAllocationId(""); setFinancial(null); }
   };
   const selectedBlock = selectedPlot ? blocks.find((block) => block.id === selectedPlot.block_id) : undefined;
-  const selectedExistingEstate = estates.find((estate) => String(estate.id) === selectedExistingEstateId);
+  const [attention, setAttention] = useState<Record<string, { new_reservations: number; upcoming_inspections: number; delivery_timestamps: string[] }>>({});
+  useEffect(() => {
+    if (estateId || estates.length === 0) return;
+    let cancelled = false;
+    api.get("/estates/attention").then((response) => { if (!cancelled) setAttention(response.data?.estates || {}); }).catch(() => { if (!cancelled) setAttention({}); });
+    return () => { cancelled = true; };
+  }, [estateId, estates.length]);
+  const estateAttention = (id: number) => {
+    const row = attention[String(id)];
+    if (!row) return { reservations: 0, messages: 0, inspections: 0, total: 0 };
+    let seen: string | null = null;
+    try { seen = window.localStorage.getItem(`edash_delivery_seen_${id}_${getEstateAuthSession()?.user.id || "user"}`); } catch { /* treat everything as unseen */ }
+    const messages = seen ? row.delivery_timestamps.filter((stamp) => stamp > seen!).length : row.delivery_timestamps.length;
+    return { reservations: row.new_reservations, messages, inspections: row.upcoming_inspections, total: row.new_reservations + messages + row.upcoming_inspections };
+  };
   const buildPlotThumbUrl = (geometry: any): string | null => {
     if (!MAPBOX_TOKEN || !geometry) return null;
     const overlay = encodeURIComponent(JSON.stringify({
@@ -2989,30 +3003,34 @@ export default function Estates() {
             <div className="edash-card edash-onboard-card">
               <div className="edash-card-inner">
                 <div className="edash-onboard-field">
-                  <span id="existing-estate-select-label">Existing Estate</span>
-                  <div className="edash-onboard-existing">
-                    <select aria-labelledby="existing-estate-select-label" value={selectedExistingEstateId} onChange={(event) => setSelectedExistingEstateId(event.target.value)}>
-                      <option value="">Select an Estate</option>
-                      {estates.map((estate) => (
-                        <option key={estate.id} value={estate.id}>
-                          {estate.name}{estate.location ? ` - ${estate.location}` : ""}
-                        </option>
-                      ))}
-                    </select>
-                    <button type="button" className="edash-btn-primary" disabled={!selectedExistingEstate} onClick={() => selectedExistingEstate && navigate(`/estates/${selectedExistingEstate.id}/map`)}>
-                      Open Estate
-                    </button>
-                    {selectedExistingEstate && (
-                      <button
-                        type="button"
-                        className="edash-onboard-estate-delete"
-                        aria-label={`Delete ${selectedExistingEstate.name}`}
-                        title={`Delete ${selectedExistingEstate.name}`}
-                        onClick={() => { setDeleteEstateTarget(selectedExistingEstate); setDeleteEstateConfirmText(""); setDeleteEstateAllocationWarning(null); }}
-                      >
-                        <EstateIcon name="trash" />
-                      </button>
-                    )}
+                  <span>Your estates</span>
+                  <div className="edash-onboard-estate-list">
+                    {estates.map((estate) => {
+                      const pending = estateAttention(estate.id);
+                      const parts = [
+                        pending.reservations ? `${pending.reservations} reservation request${pending.reservations === 1 ? "" : "s"}` : "",
+                        pending.messages ? `${pending.messages} new message${pending.messages === 1 ? "" : "s"}` : "",
+                        pending.inspections ? `${pending.inspections} inspection${pending.inspections === 1 ? "" : "s"} in 48h` : "",
+                      ].filter(Boolean);
+                      return (
+                        <div className="edash-onboard-estate-row" key={estate.id}>
+                          <button type="button" className="edash-onboard-estate-open" onClick={() => navigate(`/estates/${estate.id}/map`)}>
+                            <strong>{estate.name}</strong>
+                            <span>{parts.length ? parts.join(" · ") : estate.location || "Nothing new"}</span>
+                          </button>
+                          {pending.total > 0 && <span className="edash-onboard-estate-badge" title={parts.join(", ")} aria-label={`${pending.total} new`}>{pending.total > 99 ? "99+" : pending.total}</span>}
+                          <button
+                            type="button"
+                            className="edash-onboard-estate-delete"
+                            aria-label={`Delete ${estate.name}`}
+                            title={`Delete ${estate.name}`}
+                            onClick={() => { setDeleteEstateTarget(estate); setDeleteEstateConfirmText(""); setDeleteEstateAllocationWarning(null); }}
+                          >
+                            <EstateIcon name="trash" />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
