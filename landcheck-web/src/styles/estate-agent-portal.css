@@ -128,7 +128,7 @@ a.agent-kit-wa { border-color: #b7e4c7 !important; background: #e9f8ef !importan
 .agent-kit-plot { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 16px; align-items: start; }
 .agent-kit-plot-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .agent-kit-plot-controls select { max-width: 100%; }
-.agent-kit-preview { display: flex; align-items: center; justify-content: center; min-height: 240px; max-height: 520px; border-radius: 12px; background: linear-gradient(160deg, #0a3a26, #06251a); color: #a8e8c4; font-size: .74rem; overflow: hidden; }
+.agent-kit-preview { display: flex; align-items: center; justify-content: center; min-height: 240px; max-height: 520px; border-radius: 12px; background: #e7ece9; color: var(--agent-brand-dark); font-size: .74rem; overflow: hidden; }
 .agent-kit-preview img { max-width: 100%; max-height: 520px; width: auto; height: auto; display: block; }
 .agent-kit-tier { display: flex; gap: 28px; margin-bottom: 12px; }
 .agent-kit-tier small, .agent-kit-money small { display: block; color: var(--agent-muted); font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
@@ -148,3 +148,7 @@ a.agent-kit-wa { border-color: #b7e4c7 !important; background: #e9f8ef !importan
 .agent-kit-plot-controls a { padding: 7px 12px; border: 1px solid var(--agent-border); border-radius: 8px; background: #fff; color: var(--agent-ink); font-size: .74rem; font-weight: 700; text-decoration: none; }
 .agent-public-row-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .agent-public-row-actions b { font-size: .72rem; text-transform: capitalize; color: var(--agent-muted); }
+
+.agent-kit-style { display: inline-flex; margin-top: 14px; padding: 3px; border: 1px solid var(--agent-border); border-radius: 9px; background: #fff; }
+.agent-kit-style button { padding: 6px 12px; border: 0; border-radius: 6px; background: transparent; color: var(--agent-muted); font-size: .74rem; font-weight: 700; cursor: pointer; }
+.agent-kit-style button.is-active { background: var(--agent-brand); color: #fff; }

@@ -108,10 +108,21 @@ export type ShareLinks = {
   plots: Array<{ id: number; plot_number: string; area_sqm: number | null; price: string | null; page_url: string; share_url: string }>;
 };
 
-export type AdFormat = "status" | "post" | "landscape";
+export type AdFormat = "status" | "post" | "landscape" | "poster";
+export type AdStyle = "promo" | "luxury";
 
-export const AD_FORMATS: Array<{ key: AdFormat; label: string; hint: string }> = [
-  { key: "status", label: "WhatsApp Status / Story", hint: "1080 x 1920" },
-  { key: "post", label: "Instagram & Facebook post", hint: "1080 x 1350" },
-  { key: "landscape", label: "Wide banner", hint: "1200 x 630" },
+export const AD_STYLES: Array<{ key: AdStyle; label: string; hint: string }> = [
+  { key: "promo", label: "Bright promo", hint: "Poster style with a price ribbon" },
+  { key: "luxury", label: "Classic dark", hint: "Dark, premium look" },
 ];
+
+const ALL_FORMATS: Array<{ key: AdFormat; label: string; hint: string; short: string }> = [
+  { key: "status", label: "WhatsApp Status / Story", hint: "1080 x 1920", short: "Status" },
+  { key: "post", label: "Instagram & Facebook post", hint: "1080 x 1350", short: "Post" },
+  { key: "poster", label: "Print poster (A4)", hint: "1240 x 1754, print-ready", short: "Poster" },
+  { key: "landscape", label: "Wide banner", hint: "1200 x 630", short: "Banner" },
+];
+
+/** The print poster only exists in the promo style. */
+export const adFormatsFor = (style: AdStyle) => ALL_FORMATS.filter((format) => style === "promo" || format.key !== "poster");
+export const AD_FORMATS = ALL_FORMATS;
