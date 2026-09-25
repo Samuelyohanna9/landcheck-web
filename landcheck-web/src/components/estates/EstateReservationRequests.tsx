@@ -4,6 +4,7 @@ import { api, createIdempotencyKey, extractApiErrorMessage } from "../../api/cli
 import { getEstateAuthSession } from "../../auth/estateAuth";
 import { PAYMENT_METHODS } from "./FinancialComponents";
 import EstatePagination from "./EstatePagination";
+import { whatsappHref } from "../../utils/estateMarketing";
 
 type ReservationRequest = {
   id: number;
@@ -176,7 +177,7 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
               <article className="edash-public-lead" key={item.id}>
                 <div className="edash-public-lead-main">
                   <div className="edash-public-lead-title"><strong>{item.full_name}</strong><span>Plot {item.plot_number || "-"}</span></div>
-                  <div className="edash-public-lead-contact"><a href={`tel:${item.phone}`}>{item.phone}</a>{item.email && <a href={`mailto:${item.email}`}>{item.email}</a>}</div>
+                  <div className="edash-public-lead-contact"><a href={`tel:${item.phone}`}>{item.phone}</a>{whatsappHref(item.phone) && <a href={whatsappHref(item.phone, `Hello ${item.full_name.split(" ")[0]}, this is ${getEstateAuthSession()?.user.organization_name || "the sales team"} about Plot ${item.plot_number || ""} at ${item.estate_name || "our estate"}. How can I help you?`) || "#"} target="_blank" rel="noreferrer">WhatsApp</a>}{item.email && <a href={`mailto:${item.email}`}>{item.email}</a>}</div>
                   <small className="edash-public-lead-attribution">{attributionLabel(item)}{item.attribution?.source_channel ? ` · ${item.attribution.source_channel}` : ""}</small>
                   {item.message && <p>{item.message}</p>}
                   <small>{relativeDate(item.created_at)}</small>

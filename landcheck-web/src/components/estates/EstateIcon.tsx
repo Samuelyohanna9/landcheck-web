@@ -52,7 +52,13 @@ export type EstateIconName =
   | "lock"
   | "draw"
   | "trash"
-  | "qr";
+  | "qr"
+  | "megaphone"
+  | "share"
+  | "camera"
+  | "calendar"
+  | "whatsapp"
+  | "navigation";
 
 export default function EstateIcon({ name, className = "" }: { name: EstateIconName; className?: string }) {
   switch (name) {
@@ -160,6 +166,18 @@ export default function EstateIcon({ name, className = "" }: { name: EstateIconN
       return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.5" /><circle cx="12" cy="12" r="3.4" stroke="currentColor" strokeWidth="1.5" /></svg>;
     case "qr":
       return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z" stroke="currentColor" strokeWidth="1.5" /><path d="M14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z" fill="currentColor" /></svg>;
+    case "megaphone":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 13.5v-3a1 1 0 0 1 1-1h3l8-4v13l-8-4H5a1 1 0 0 1-1-1Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /><path d="M8 14.5 9.2 19h2.3L10.6 15M19 9.5a3.5 3.5 0 0 1 0 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+    case "share":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="17.5" cy="5.5" r="2.4" stroke="currentColor" strokeWidth="1.5" /><circle cx="6.5" cy="12" r="2.4" stroke="currentColor" strokeWidth="1.5" /><circle cx="17.5" cy="18.5" r="2.4" stroke="currentColor" strokeWidth="1.5" /><path d="m8.6 10.8 6.8-4M8.6 13.2l6.8 4" stroke="currentColor" strokeWidth="1.5" /></svg>;
+    case "camera":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.4-2h6.2L16.5 7h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /><circle cx="12" cy="12.8" r="3.2" stroke="currentColor" strokeWidth="1.5" /></svg>;
+    case "calendar":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M3.5 10h17M8 3.5v3M16 3.5v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>;
+    case "whatsapp":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.2 19.8 5.4 16A8 8 0 1 1 8.2 18.7Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /><path d="M9.2 8.9c.2 2.6 2.6 5.1 5.4 5.9.7-.1 1.4-.8 1.4-1.4l-1.8-.9-.9.7c-1.1-.4-2.1-1.4-2.5-2.5l.7-.9-.9-1.8c-.6 0-1.2.6-1.4.9Z" fill="currentColor" /></svg>;
+    case "navigation":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m4 11.5 15.5-7-7 15.5-2-6.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /></svg>;
     default:
       return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.6" /></svg>;
   }

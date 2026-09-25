@@ -65,6 +65,8 @@ const EstateSettingsPage = lazyWithChunkRecovery(() => import("./pages/estates/E
 const AgentPortalAccessPage = lazyWithChunkRecovery(() => import("./pages/estates/AgentPortalAccessPage"));
 const BuyerPortalPage = lazyWithChunkRecovery(() => import("./pages/BuyerPortalPage"));
 const EstateNotificationLogPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateNotificationLogPage"));
+const EstateMarketingPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateMarketingPage"));
+const PublicInspectionBookingPage = lazyWithChunkRecovery(() => import("./pages/estates/PublicInspectionBookingPage"));
 
 type ChunkLoadBoundaryProps = {
   children: ReactNode;
@@ -315,6 +317,7 @@ export default function App() {
               <Route path="/estates/plot/:token" element={<PublicPlotView />} />
               <Route path="/estates/buyer/:token" element={<BuyerPortalPage />} />
               <Route path="/estates/agent-portal/:token" element={<AgentPortalAccessPage />} />
+              <Route path="/estates/inspection/:token" element={<PublicInspectionBookingPage />} />
               <Route path="/estates/public/:slug/reserve/:plotId" element={<PublicEstateReservationPage />} />
               <Route path="/estates/public/:slug" element={<PublicEstatePage />} />
               <Route path="/estates/workspace" element={<EstateProtectedRoute element={<Estates />} />} />
@@ -330,6 +333,7 @@ export default function App() {
               <Route path="/estates/:estateId/timeline" element={<EstateProtectedRoute element={<EstateAuditPage />} />} />
               <Route path="/estates/:estateId/settings" element={<EstateProtectedRoute element={<EstateSettingsPage />} />} />
               <Route path="/estates/:estateId/notifications" element={<EstateProtectedRoute element={<EstateNotificationLogPage />} />} />
+              <Route path="/estates/:estateId/marketing" element={<EstateProtectedRoute element={<EstateMarketingPage />} />} />
               <Route path="/estates/payments" element={<EstateProtectedRoute element={<EstateFinance mode="payments" />} />} />
               <Route path="/estates/reconciliation" element={<Navigate to="/estates/payments" replace />} />
               <Route path="/estates/commissions" element={<EstateProtectedRoute element={<EstateCommissionsPage />} />} />
