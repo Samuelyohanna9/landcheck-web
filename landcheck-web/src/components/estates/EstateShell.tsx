@@ -292,6 +292,10 @@ export default function EstateShell({
           <small className="edash-sidebar-brand-tag">Estates</small>
         </div>
         <nav className="edash-nav" aria-label="Estate navigation">
+          <Link className="edash-nav-item" to="/estates/workspace" onClick={() => setSidebarOpen(false)} title="Switch to another estate or add a new one">
+            <span className="edash-nav-icon"><EstateIcon name="grid" /></span>
+            <span className="edash-nav-label">Switch estate</span>
+          </Link>
           {estateNavItems.map((item) => (
             <Link
               key={item.key}
@@ -364,7 +368,7 @@ export default function EstateShell({
                 <div className="edash-card" style={{ position: "absolute", right: 0, top: 44, width: 180, zIndex: 20 }}>
                   <div className="edash-card-inner" style={{ padding: 6 }}>
                     <Link className="edash-nav-item" to="/estates/workspace" onClick={() => setUserMenuOpen(false)}>
-                      <span className="edash-nav-icon"><EstateIcon name="grid" /></span>All estates
+                      <span className="edash-nav-icon"><EstateIcon name="grid" /></span>Switch estate
                     </Link>
                     <button
                       type="button"
