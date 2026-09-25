@@ -9,6 +9,7 @@ import { clearEstateAuthSession, getEstateAuthSession } from "../../auth/estateA
 import { prefetchMapboxCore } from "../../utils/mapboxLoader";
 import { useFloatingPopoverPosition } from "../../utils/useFloatingPopoverPosition";
 import "../../styles/estate-dashboard.css";
+import "../../styles/estate-monday.css";
 
 export type EstateNavKey =
   | "dashboard" | "map" | "plots" | "customers" | "payments" | "commissions" | "marketing" | "survey" | "staking"

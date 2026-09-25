@@ -1720,19 +1720,34 @@
 .edash-onboard-estate-open:hover { background: var(--edash-brand-tint); }
 .edash-onboard-estate-open strong { font-size: 0.85rem; color: var(--edash-ink); }
 .edash-onboard-estate-open span { font-size: 0.72rem; color: var(--edash-muted); }
-.edash-onboard-estate-badge {
+.edash-onboard-estate-bell {
+  position: relative;
   align-self: center;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--edash-danger);
-  color: #fff;
-  font-size: 0.72rem;
-  font-weight: 800;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 34px;
+  height: 34px;
+  color: var(--edash-faint);
+}
+.edash-onboard-estate-bell svg { width: 20px; height: 20px; }
+.edash-onboard-estate-bell.has-new { color: var(--edash-ink); }
+.edash-onboard-estate-bell b {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  background: var(--edash-danger);
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 14px;
+  text-align: center;
+  box-sizing: border-box;
 }
 .edash-onboard-estate-delete {
   display: flex;

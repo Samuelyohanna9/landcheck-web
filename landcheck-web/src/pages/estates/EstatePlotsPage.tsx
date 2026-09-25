@@ -22,6 +22,16 @@ type PlotFeature = {
   };
 };
 
+// Colour-coded status cells: green = ready/available, orange = in progress or held, blue = sold on, grey = idle.
+function statusTone(value: string): "good" | "warn" | "info" | "danger" | "neutral" {
+  const key = String(value || "").toLowerCase();
+  if (["available", "approved", "completed", "developed", "done"].includes(key)) return "good";
+  if (["reserved", "in_progress", "under_construction", "pending", "draft", "needs_review"].includes(key)) return "warn";
+  if (["allocated", "sold"].includes(key)) return "info";
+  if (["rejected", "disputed", "failed"].includes(key)) return "danger";
+  return "neutral";
+}
+
 export default function EstatePlotsPage() {
   const { estateId } = useParams();
   const navigate = useNavigate();
@@ -200,8 +210,8 @@ export default function EstatePlotsPage() {
                     <tr key={plot.id}>
                       <td data-label="Plot No.">{plot.plot_number}</td>
                       <td data-label="Block">{blockLabel(plot.block_id)}</td>
-                      <td data-label="Status" style={{ textTransform: "capitalize" }}>{plot.commercial_status.replaceAll("_", " ")}</td>
-                      <td data-label="Development" style={{ textTransform: "capitalize" }}>{(plot.development_status || "not_started").replaceAll("_", " ")}</td>
+                      <td data-label="Status"><span className={`edash-status-pill tone-${statusTone(plot.commercial_status)}`}>{plot.commercial_status.replaceAll("_", " ")}</span></td>
+                      <td data-label="Development"><span className={`edash-status-pill tone-${statusTone(plot.development_status || "not_started")}`}>{(plot.development_status || "not_started").replaceAll("_", " ")}</span></td>
                       <td data-label="Area">{formatArea(Number(plot.area_sqm || 0), unitSystem)}</td>
                       <td data-label="Plot address">
                         {editingAddressId === plot.id ? (
@@ -217,7 +227,7 @@ export default function EstatePlotsPage() {
                           <span className="edash-inline-price"><span>{plot.asking_price ? money(plot.asking_price) : "Not set"}</span><button type="button" className="edash-card-link" onClick={() => { setEditingPriceId(plot.id); setPriceDraft(plot.asking_price || ""); }}>{plot.asking_price ? "Edit" : "Set price"}</button></span>
                         )}
                       </td>
-                      <td data-label="Geometry" style={{ textTransform: "capitalize" }}>{plot.geometry_status}</td>
+                      <td data-label="Geometry"><span className={`edash-status-pill tone-${statusTone(plot.geometry_status)}`}>{plot.geometry_status}</span></td>
                       <td>
                         <button type="button" className="edash-btn-outline" onClick={() => navigate(`/estates/${estateId}/map?plot=${plot.id}`)}>
                           <EstateIcon name="map" /> Open
