@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, extractApiErrorMessage } from "../../../api/client";
-import { AD_FORMATS, ageLabel, copyText, downloadFile, fetchBlobUrl, formatDateTime, naira, whatsappShareHref, type AdFormat } from "../../../utils/estateMarketing";
+import { AD_STYLES, adFormatsFor, ageLabel, copyText, downloadFile, fetchBlobUrl, formatDateTime, naira, whatsappShareHref, type AdFormat, type AdStyle } from "../../../utils/estateMarketing";
 import EstateIcon from "../EstateIcon";
 
 type Followup = { id: number; name: string; phone: string; status: "new" | "contacted"; estate_name: string; plot: string | null; age_hours: number; whatsapp_url: string | null };
@@ -35,6 +35,7 @@ export default function AgentKitSections({ token }: { token: string }) {
   const [estateId, setEstateId] = useState<number | null>(null);
   const [plotId, setPlotId] = useState<number | null>(null);
   const [format, setFormat] = useState<AdFormat>("post");
+  const [style, setStyle] = useState<AdStyle>("promo");
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState("");
 
@@ -53,6 +54,8 @@ export default function AgentKitSections({ token }: { token: string }) {
   const estate = useMemo(() => kit?.estates.find((item) => item.id === estateId) || null, [kit, estateId]);
   useEffect(() => { setPlotId(estate?.plots?.[0]?.id ?? null); }, [estate?.id]);
   const plot = estate?.plots?.find((item) => item.id === plotId) || null;
+  const formats = adFormatsFor(style);
+  const activeFormat: AdFormat = formats.some((item) => item.key === format) ? format : "post";
 
   const flash = (message: string) => { setNote(message); window.setTimeout(() => setNote(""), 3500); };
   const run = async (key: string, task: () => Promise<void>, failure: string) => {
@@ -108,21 +111,24 @@ export default function AgentKitSections({ token }: { token: string }) {
             <div className="agent-kit-downloads">
               <button type="button" disabled={busy === "flyer"} onClick={() => void run("flyer", () => downloadFile(estate.materials!.flyer, `${safeName}-flyer.pdf`), "The flyer could not be prepared.")}>Flyer (PDF)</button>
               <button type="button" disabled={busy === "brochure"} onClick={() => void run("brochure", () => downloadFile(estate.materials!.brochure, `${safeName}-brochure.pdf`), "The brochure could not be prepared.")}>Brochure (PDF)</button>
-              {AD_FORMATS.map((item) => <button key={item.key} type="button" disabled={busy === item.key} onClick={() => void run(item.key, () => downloadFile(estate.materials!.ad, `${safeName}-${item.key}.png`, { format: item.key }), "The image could not be prepared.")}>{item.key === "status" ? "WhatsApp Status" : item.key === "post" ? "Social post" : "Wide banner"}</button>)}
+              {formats.map((item) => <button key={item.key} type="button" disabled={busy === item.key} onClick={() => void run(item.key, () => downloadFile(estate.materials!.ad, `${safeName}-${style}-${item.key}.png`, { format: item.key, style }), "The image could not be prepared.")}>{item.key === "status" ? "WhatsApp Status" : item.key === "post" ? "Social post" : item.key === "poster" ? "Print poster" : "Wide banner"}</button>)}
+            </div>
+            <div className="agent-kit-style" role="group" aria-label="Design style">
+              {AD_STYLES.map((item) => <button key={item.key} type="button" title={item.hint} className={style === item.key ? "is-active" : ""} onClick={() => setStyle(item.key)}>{item.label}</button>)}
             </div>
             <h3 className="agent-kit-subhead">Advertise a single plot</h3>
             {!estate.plots?.length ? <div className="agent-public-empty">No plots are available to advertise.</div> : (
               <div className="agent-kit-plot">
                 <div className="agent-kit-plot-controls">
                   <select value={plotId || ""} onChange={(event) => setPlotId(Number(event.target.value))}>{estate.plots.map((item) => <option key={item.id} value={item.id}>Plot {item.plot_number}{item.price ? ` · ${naira(item.price)}` : ""}</option>)}</select>
-                  <select value={format} onChange={(event) => setFormat(event.target.value as AdFormat)}>{AD_FORMATS.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select>
+                  <select value={activeFormat} onChange={(event) => setFormat(event.target.value as AdFormat)}>{formats.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select>
                   {plot && <>
-                    <button type="button" disabled={busy === "plot-ad"} onClick={() => void run("plot-ad", () => downloadFile(estate.materials!.plot_ad.replace("{plot_id}", String(plot.id)), `${safeName}-plot-${plot.plot_number}-${format}.png`, { format }), "The image could not be prepared.")}>Download image</button>
+                    <button type="button" disabled={busy === "plot-ad"} onClick={() => void run("plot-ad", () => downloadFile(estate.materials!.plot_ad.replace("{plot_id}", String(plot.id)), `${safeName}-plot-${plot.plot_number}-${style}-${activeFormat}.png`, { format: activeFormat, style }), "The image could not be prepared.")}>Download image</button>
                     <a className="agent-kit-wa" href={whatsappShareHref(`Plot ${plot.plot_number} at ${estate.name}${plot.price ? ` - ${naira(plot.price)}` : ""}. See it on the live map: ${plot.share_url}`)} target="_blank" rel="noreferrer">Share on WhatsApp</a>
                     <button type="button" onClick={async () => flash((await copyText(plot.share_url)) ? "Plot link copied." : "Copy failed.")}>Copy plot link</button>
                   </>}
                 </div>
-                {plot && <Preview path={estate.materials!.plot_ad.replace("{plot_id}", String(plot.id))} params={{ format }} />}
+                {plot && <Preview path={estate.materials!.plot_ad.replace("{plot_id}", String(plot.id))} params={{ format: activeFormat, style }} />}
               </div>
             )}
           </>

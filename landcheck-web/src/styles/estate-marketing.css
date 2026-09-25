@@ -57,7 +57,7 @@
 
 .edash-mk-materials { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
 .edash-mk-material { display: flex; flex-direction: column; border: 1px solid var(--edash-border); border-radius: var(--edash-radius-md); background: var(--edash-surface); overflow: hidden; }
-.edash-mk-preview { display: flex; align-items: center; justify-content: center; height: 190px; background: linear-gradient(160deg, #0a3a26, #06251a); color: #a8e8c4; overflow: hidden; }
+.edash-mk-preview { display: flex; align-items: center; justify-content: center; height: 190px; background: #e7ece9; color: var(--edash-brand-dark); overflow: hidden; }
 .edash-mk-preview img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; display: block; }
 .edash-mk-preview svg { width: 38px; height: 38px; }
 .edash-mk-preview.is-doc { background: var(--edash-brand-tint); color: var(--edash-brand-dark); }

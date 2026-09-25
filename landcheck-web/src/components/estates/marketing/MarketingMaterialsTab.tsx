@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../../api/client";
-import { AD_FORMATS, copyText, downloadFile, fetchBlobUrl, naira, whatsappShareHref, type AdFormat, type ShareLinks } from "../../../utils/estateMarketing";
+import { AD_STYLES, adFormatsFor, copyText, downloadFile, fetchBlobUrl, naira, whatsappShareHref, type AdFormat, type AdStyle, type ShareLinks } from "../../../utils/estateMarketing";
 import EstateIcon from "../EstateIcon";
 
 type Campaign = { id: number; code: string; name: string; channel: string; assigned_agent_subject_id?: string | null };
@@ -32,6 +32,7 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
   const [share, setShare] = useState<ShareLinks | null>(null);
   const [plotId, setPlotId] = useState<number | null>(null);
   const [plotFormat, setPlotFormat] = useState<AdFormat>("post");
+  const [style, setStyle] = useState<AdStyle>("promo");
   const [plotSearch, setPlotSearch] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [linkName, setLinkName] = useState("");
@@ -61,6 +62,8 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
   }, [estateId, campaignId, published]);
 
   const params = useMemo(() => (campaignId ? { campaign_id: campaignId } : undefined), [campaignId]);
+  const formats = adFormatsFor(style);
+  const activePlotFormat: AdFormat = formats.some((format) => format.key === plotFormat) ? plotFormat : "post";
   const filteredPlots = useMemo(() => {
     const q = plotSearch.trim().toLowerCase();
     return (share?.plots || []).filter((plot) => !q || plot.plot_number.toLowerCase().includes(q));
@@ -130,7 +133,13 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
       </div></div>
 
       <div className="edash-card"><div className="edash-card-inner">
-        <div className="edash-card-head"><h3 className="edash-card-title">2. Estate marketing kit</h3><span className="edash-field-note">Always shows today's availability</span></div>
+        <div className="edash-card-head">
+          <h3 className="edash-card-title">2. Estate marketing kit</h3>
+          <div className="edash-mk-segment" role="group" aria-label="Design style">
+            {AD_STYLES.map((item) => <button key={item.key} type="button" title={item.hint} className={style === item.key ? "is-active" : ""} onClick={() => setStyle(item.key)}>{item.label}</button>)}
+          </div>
+        </div>
+        <p className="edash-mk-hint" style={{ margin: "0 0 12px" }}>{style === "promo" ? "Bright poster with your logo colours, a price ribbon, plot sizes and prices, and a satellite view of the estate." : "Dark premium design with the live plot map."} Always shows today's availability.</p>
         <div className="edash-mk-materials">
           <div className="edash-mk-material">
             <div className="edash-mk-preview is-doc"><EstateIcon name="documents" /></div>
@@ -142,11 +151,11 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
             <div className="edash-mk-material-body"><strong>Estate brochure</strong><span>Multi-page PDF: about, area outlook, layout, price list and how to buy.</span>
               <button type="button" className="edash-btn-outline" disabled={busy === "brochure"} onClick={() => void download("brochure", `/estates/${estateId}/marketing/materials/brochure.pdf`, `${safeName}-brochure.pdf`)}><EstateIcon name="download" />{busy === "brochure" ? "Preparing..." : "Download PDF"}</button></div>
           </div>
-          {AD_FORMATS.map((format) => (
-            <div className="edash-mk-material" key={format.key}>
-              <AdPreview path={`/estates/${estateId}/marketing/materials/ad.png`} params={{ ...(params || {}), format: format.key }} alt={`${format.label} preview`} />
+          {formats.map((format) => (
+            <div className="edash-mk-material" key={`${style}-${format.key}`}>
+              <AdPreview path={`/estates/${estateId}/marketing/materials/ad.png`} params={{ ...(params || {}), format: format.key, style }} alt={`${format.label} preview`} />
               <div className="edash-mk-material-body"><strong>{format.label}</strong><span>{format.hint}</span>
-                <button type="button" className="edash-btn-outline" disabled={busy === `ad-${format.key}`} onClick={() => void download(`ad-${format.key}`, `/estates/${estateId}/marketing/materials/ad.png`, `${safeName}-${format.key}.png`, { format: format.key })}><EstateIcon name="download" />{busy === `ad-${format.key}` ? "Preparing..." : "Download image"}</button></div>
+                <button type="button" className="edash-btn-outline" disabled={busy === `ad-${format.key}`} onClick={() => void download(`ad-${format.key}`, `/estates/${estateId}/marketing/materials/ad.png`, `${safeName}-${style}-${format.key}.png`, { format: format.key, style })}><EstateIcon name="download" />{busy === `ad-${format.key}` ? "Preparing..." : "Download image"}</button></div>
             </div>
           ))}
         </div>
@@ -170,11 +179,11 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
             {selectedPlot && (
               <div className="edash-mk-plot-preview">
                 <div className="edash-mk-segment" role="group" aria-label="Format" style={{ alignSelf: "flex-start" }}>
-                  {AD_FORMATS.map((format) => <button key={format.key} type="button" className={plotFormat === format.key ? "is-active" : ""} onClick={() => setPlotFormat(format.key)}>{format.key === "status" ? "Status" : format.key === "post" ? "Post" : "Banner"}</button>)}
+                  {formats.map((format) => <button key={format.key} type="button" className={activePlotFormat === format.key ? "is-active" : ""} onClick={() => setPlotFormat(format.key)}>{format.short}</button>)}
                 </div>
-                <AdPreview path={`/estates/${estateId}/marketing/materials/plots/${selectedPlot.id}/ad.png`} params={{ ...(params || {}), format: plotFormat }} alt={`Plot ${selectedPlot.plot_number} ad`} />
+                <AdPreview path={`/estates/${estateId}/marketing/materials/plots/${selectedPlot.id}/ad.png`} params={{ ...(params || {}), format: activePlotFormat, style }} alt={`Plot ${selectedPlot.plot_number} ad`} />
                 <div className="edash-mk-actions" style={{ justifyContent: "flex-start" }}>
-                  <button type="button" className="edash-btn-primary" disabled={busy === "plot-ad"} onClick={() => void download("plot-ad", `/estates/${estateId}/marketing/materials/plots/${selectedPlot.id}/ad.png`, `${safeName}-plot-${selectedPlot.plot_number}-${plotFormat}.png`, { format: plotFormat })}><EstateIcon name="download" />{busy === "plot-ad" ? "Preparing..." : "Download image"}</button>
+                  <button type="button" className="edash-btn-primary" disabled={busy === "plot-ad"} onClick={() => void download("plot-ad", `/estates/${estateId}/marketing/materials/plots/${selectedPlot.id}/ad.png`, `${safeName}-plot-${selectedPlot.plot_number}-${style}-${activePlotFormat}.png`, { format: activePlotFormat, style })}><EstateIcon name="download" />{busy === "plot-ad" ? "Preparing..." : "Download image"}</button>
                   <a className="edash-mk-chip-btn is-wa" href={whatsappShareHref(`Plot ${selectedPlot.plot_number} at ${estateName}${selectedPlot.price ? ` - ${naira(selectedPlot.price)}` : ""}. See it on the live map: ${selectedPlot.share_url}`)} target="_blank" rel="noreferrer"><EstateIcon name="whatsapp" />Share on WhatsApp</a>
                   <button type="button" className="edash-mk-chip-btn" onClick={() => void copy(selectedPlot.share_url, "Share link")}><EstateIcon name="share" />Copy share link</button>
                 </div>
