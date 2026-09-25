@@ -23,6 +23,7 @@ import Spinner, { LoadingPanel } from "../components/estates/EstateSpinner";
 import { clearSurveyPlanDraft } from "../offline/surveyPlanDraft";
 import "../styles/estates.css";
 import "../styles/estate-dashboard.css";
+import "../styles/estate-monday.css";
 
 const STATUS_COLORS = {
   available: "#1e8a4c",
@@ -3018,7 +3019,10 @@ export default function Estates() {
                             <strong>{estate.name}</strong>
                             <span>{parts.length ? parts.join(" · ") : estate.location || "Nothing new"}</span>
                           </button>
-                          {pending.total > 0 && <span className="edash-onboard-estate-badge" title={parts.join(", ")} aria-label={`${pending.total} new`}>{pending.total > 99 ? "99+" : pending.total}</span>}
+                          <span className={`edash-onboard-estate-bell${pending.total > 0 ? " has-new" : ""}`} title={parts.length ? parts.join(", ") : "Nothing new"} aria-label={pending.total > 0 ? `${pending.total} new` : "Nothing new"}>
+                            <EstateIcon name="bell" />
+                            {pending.total > 0 && <b>{pending.total > 99 ? "99+" : pending.total}</b>}
+                          </span>
                           <button
                             type="button"
                             className="edash-onboard-estate-delete"

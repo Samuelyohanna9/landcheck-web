@@ -1,0 +1,352 @@
+/* ═══════════════════════════════════════════════════════════════
+   Estate dashboard - work-management look (monday.com inspired)
+   Loaded after estate-dashboard.css. Look and feel only: flat white
+   panels on a soft grey frame, quiet navigation, underline tabs,
+   ghost toolbar buttons, bordered data grids with solid colour
+   status cells, and calm 4px-radius form controls. No behaviour
+   changes. Everything is scoped under .edash / .edash-onboard.
+   ═══════════════════════════════════════════════════════════════ */
+
+.edash, .edash-onboard {
+  --edash-bg: #f6f7fb;
+  --edash-ink: #323338;
+  --edash-muted: #676879;
+  --edash-faint: #9699a6;
+  --edash-border: #d0d4e4;
+  --edash-border-soft: #e6e9ef;
+  --edash-neutral-tint: #e6e9ef;
+  --edash-radius-lg: 10px;
+  --edash-radius-md: 8px;
+  --edash-radius-sm: 4px;
+  --edash-shadow-card: 0 1px 2px rgba(50, 51, 56, 0.06);
+  --edash-shadow-pop: 0 6px 20px rgba(50, 51, 56, 0.18);
+
+  /* solid status colours */
+  --mk-done: #00c875;
+  --mk-working: #fdab3d;
+  --mk-stuck: #df2f4a;
+  --mk-info: #579bfc;
+  --mk-idle: #c4c4c4;
+  --mk-purple: #a25ddc;
+}
+
+/* ─── Frame: grey canvas with white panels ─── */
+.edash {
+  padding: 0 8px 8px 0;
+  font-size: 14px;
+}
+
+.edash .edash-sidebar {
+  padding: 14px 10px 12px 12px;
+  border-right: none;
+  background: transparent;
+}
+
+.edash .edash-main {
+  border: 1px solid var(--edash-border-soft);
+  border-radius: 10px;
+  background: #fff;
+  margin-top: 8px;
+  height: calc(100% - 8px);
+}
+
+.edash .edash-topbar {
+  height: 56px;
+  padding: 0 22px;
+  border-bottom: 1px solid var(--edash-border-soft);
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 10px 10px 0 0;
+}
+
+.edash .edash-body { padding: 20px 26px 32px; gap: 16px; }
+
+/* ─── Navigation ─── */
+.edash .edash-sidebar-brand { padding: 2px 6px 14px; }
+.edash .edash-sidebar-brand-logo { border-radius: 8px; }
+
+.edash .edash-nav { gap: 2px; }
+.edash .edash-nav-item {
+  padding: 8px 10px;
+  border-radius: 4px;
+  color: #323338;
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+.edash .edash-nav-item:hover { background: #e6e9ef; color: #323338; }
+.edash .edash-nav-item.active {
+  background: #e3f2ea;
+  color: var(--edash-brand-dark);
+  font-weight: 500;
+}
+.edash .edash-nav-icon { opacity: 1; color: #676879; }
+.edash .edash-nav-item.active .edash-nav-icon { color: var(--edash-brand-dark); }
+.edash .edash-sidebar-footer { border-top: 1px solid var(--edash-border-soft); border-radius: 4px; font-weight: 400; }
+.edash .edash-sidebar-footer:hover { background: #e6e9ef; }
+
+/* ─── Top bar ─── */
+.edash .edash-breadcrumb { font-weight: 500; }
+.edash .edash-search {
+  height: 36px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: #f0f1f5;
+}
+.edash .edash-search:focus-within {
+  border-color: var(--edash-brand);
+  background: #fff;
+  box-shadow: 0 0 0 2px var(--edash-brand-tint-strong);
+}
+.edash .edash-icon-btn { width: 34px; height: 34px; border: none; border-radius: 4px; background: transparent; }
+.edash .edash-icon-btn:hover { background: #e6e9ef; color: var(--edash-ink); }
+.edash .edash-notif-badge { border-color: #fff; }
+
+/* ─── Page headings ─── */
+.edash .edash-ops-heading h2 { font-size: 1.5rem; font-weight: 500; letter-spacing: -0.01em; }
+.edash .edash-section-kicker { color: var(--edash-muted); font-weight: 500; letter-spacing: 0.06em; }
+.edash .edash-ops-heading p { color: var(--edash-muted); }
+
+/* ─── Buttons ─── */
+.edash .edash-btn-primary,
+.edash-onboard .edash-btn-primary {
+  height: 36px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 4px;
+  background: var(--edash-brand);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.edash .edash-btn-primary:hover,
+.edash-onboard .edash-btn-primary:hover { background: var(--edash-brand-dark); }
+
+.edash .edash-btn-outline,
+.edash-onboard .edash-btn-outline {
+  height: 36px;
+  border: 1px solid var(--edash-border);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--edash-ink);
+}
+.edash .edash-btn-outline:hover,
+.edash-onboard .edash-btn-outline:hover { background: #e6e9ef; border-color: #c3c6d4; color: var(--edash-ink); }
+
+/* toolbar row: quiet ghost buttons with icons */
+.edash .edash-tools-bar { gap: 2px; padding: 4px 0; flex-wrap: wrap; }
+.edash .edash-tool-btn {
+  height: 34px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--edash-ink);
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+.edash .edash-tool-btn svg { color: #676879; }
+.edash .edash-tool-btn:hover { background: #e6e9ef; color: var(--edash-ink); }
+.edash .edash-tool-btn:hover svg { color: var(--edash-ink); }
+
+/* ─── Tabs ─── */
+.edash .edash-map-mode-tabs,
+.edash .edash-drawer-tabs {
+  gap: 4px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border-bottom: 1px solid var(--edash-border-soft);
+}
+.edash .edash-map-mode-tab,
+.edash .edash-drawer-tab {
+  padding: 8px 12px;
+  border-radius: 4px 4px 0 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--edash-ink);
+  font-size: 0.875rem;
+  font-weight: 400;
+  box-shadow: none;
+}
+.edash .edash-map-mode-tab:hover,
+.edash .edash-drawer-tab:hover:not(.active) { background: #e6e9ef; color: var(--edash-ink); }
+.edash .edash-map-mode-tab.active,
+.edash .edash-drawer-tab.active {
+  background: transparent;
+  color: var(--edash-brand-dark);
+  border-bottom-color: var(--edash-brand);
+  box-shadow: none;
+}
+.edash .edash-mk-segment { border-radius: 4px; padding: 2px; }
+.edash .edash-mk-segment button { border-radius: 3px; font-size: 0.8rem; font-weight: 400; }
+.edash .edash-mk-segment button.is-active { font-weight: 500; }
+
+/* ─── Cards: flat bordered boards ─── */
+.edash .edash-card { border-radius: 10px; border-color: var(--edash-border-soft); box-shadow: none; }
+.edash .edash-card-inner { padding: 18px; }
+.edash .edash-card-title { font-size: 1.05rem; font-weight: 500; color: var(--edash-brand-dark); letter-spacing: 0; }
+.edash .edash-card-link { font-weight: 500; }
+.edash .edash-stat-card,
+.edash .edash-ops-metric,
+.edash .edash-mk-metric { border-color: var(--edash-border-soft); box-shadow: none; border-radius: 8px; }
+
+/* a card that holds a data grid reads as a board group: coloured left edge */
+.edash .edash-card:has(.edash-mini-table),
+.edash .edash-card:has(.edash-mk-table) { border-left: 6px solid var(--edash-brand); }
+
+/* ─── Data grids ─── */
+.edash .edash-mini-table,
+.edash .edash-mk-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.875rem;
+}
+.edash .edash-mini-table th,
+.edash .edash-mk-table th {
+  padding: 10px 12px;
+  border-top: 1px solid var(--edash-border-soft);
+  border-bottom: 1px solid var(--edash-border-soft);
+  border-right: 1px solid var(--edash-border-soft);
+  color: var(--edash-ink);
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  text-align: center;
+  background: #fff;
+}
+.edash .edash-mini-table th:first-child,
+.edash .edash-mk-table th:first-child { border-left: 1px solid var(--edash-border-soft); }
+.edash .edash-mini-table td,
+.edash .edash-mk-table td {
+  height: 44px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--edash-border-soft);
+  border-right: 1px solid var(--edash-border-soft);
+  color: var(--edash-ink);
+  font-weight: 400;
+}
+.edash .edash-mini-table td:first-child,
+.edash .edash-mk-table td:first-child { border-left: 1px solid var(--edash-border-soft); }
+.edash .edash-mini-table tr:last-child td,
+.edash .edash-mk-table tr:last-child td { border-bottom: 1px solid var(--edash-border-soft); }
+.edash .edash-mini-table tbody tr:hover td,
+.edash .edash-mk-table tbody tr:hover td { background: #f5f6f8; }
+
+/* ─── Status: solid colour blocks (fill the whole cell inside a grid) ─── */
+.edash .edash-status-pill {
+  justify-content: center;
+  min-width: 92px;
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: #fff;
+}
+.edash .edash-status-pill.tone-good { background: var(--mk-done); color: #fff; }
+.edash .edash-status-pill.tone-info { background: var(--mk-info); color: #fff; }
+.edash .edash-status-pill.tone-warn { background: var(--mk-working); color: #fff; }
+.edash .edash-status-pill.tone-danger { background: var(--mk-stuck); color: #fff; }
+.edash .edash-status-pill.tone-neutral { background: var(--mk-idle); color: #fff; }
+
+.edash td:has(> .edash-status-pill) { padding: 0; }
+.edash td > .edash-status-pill {
+  display: flex;
+  width: 100%;
+  height: 43px;
+  border-radius: 0;
+}
+
+/* ─── Forms and inputs ─── */
+.edash .edash-field { gap: 6px; }
+.edash .edash-field > span,
+.edash .edash-field-label {
+  color: var(--edash-ink);
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.edash .edash-field input,
+.edash .edash-field select,
+.edash .edash-field textarea,
+.edash-onboard .edash-onboard-field input,
+.edash-onboard .edash-onboard-field select,
+.edash .edash-modal input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.edash .edash-modal select,
+.edash .edash-modal textarea {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #c3c6d4;
+  border-radius: 4px;
+  background: #fff;
+  color: var(--edash-ink);
+  font-size: 0.875rem;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.edash .edash-field input:hover,
+.edash .edash-field select:hover,
+.edash .edash-field textarea:hover { border-color: #676879; }
+.edash .edash-field input:focus,
+.edash .edash-field select:focus,
+.edash .edash-field textarea:focus,
+.edash .edash-modal input:focus,
+.edash .edash-modal select:focus,
+.edash .edash-modal textarea:focus {
+  outline: none;
+  border-color: var(--edash-brand);
+  box-shadow: 0 0 0 1px var(--edash-brand);
+}
+.edash .edash-field textarea { font-family: inherit; font-size: 0.875rem; }
+.edash .edash-field-note { font-size: 0.8rem; }
+.edash .edash-chip { border-radius: 4px; }
+
+/* text-style action buttons inside cells and forms ("Edit", "Add address", "Apply to all") */
+.edash button.edash-card-link {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--edash-brand-dark);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.edash button.edash-card-link:hover:not(:disabled) { background: var(--edash-brand-tint); text-decoration: none; }
+.edash button.edash-card-link:disabled { color: var(--edash-faint); cursor: not-allowed; }
+.edash .edash-inline-price { align-items: center; }
+
+/* ─── Modals and drawers ─── */
+.edash .edash-modal { border-radius: 8px; box-shadow: var(--edash-shadow-pop); }
+.edash .edash-modal-head h2 { font-size: 1.15rem; font-weight: 500; }
+.edash .edash-drawer { border-radius: 10px; }
+.edash .edash-modal-close { border: none; border-radius: 4px; }
+
+/* ─── Pagination ─── */
+.edash .edash-pagination { font-size: 0.8rem; }
+.edash .edash-pagination strong { font-size: 0.8rem; font-weight: 500; }
+
+/* ─── Estate picker (before an estate is chosen) ─── */
+.edash-onboard { background: var(--edash-bg); }
+.edash-onboard .edash-card { border-radius: 10px; box-shadow: none; border-color: var(--edash-border-soft); }
+.edash-onboard .edash-onboard-head h1 { font-weight: 500; }
+.edash-onboard .edash-onboard-estate-row { border-radius: 4px; border-color: var(--edash-border-soft); border-left: 6px solid var(--edash-brand); }
+.edash-onboard .edash-onboard-estate-open strong { font-weight: 500; font-size: 0.95rem; }
+.edash-onboard .edash-onboard-estate-open span { text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 0.8rem; }
+.edash-onboard .edash-onboard-estate-open:hover { background: #f5f6f8; }
+.edash-onboard .edash-onboard-field > span { text-transform: none; letter-spacing: 0; font-size: 0.875rem; font-weight: 500; color: var(--edash-ink); }
+
+/* ─── Small screens keep the existing drawer layout ─── */
+@media (max-width: 860px) {
+  .edash { padding: 0; }
+  .edash .edash-sidebar { background: #fff; border-right: 1px solid var(--edash-border-soft); }
+  .edash .edash-main { margin-top: 0; height: 100%; border: none; border-radius: 0; }
+  .edash .edash-topbar { border-radius: 0; }
+  .edash .edash-body { padding: 16px; }
+}
+
+/* Marketing section tabs: underline style like the board views row */
+.edash .edash-mk-tabs { gap: 4px; padding: 0; width: 100%; border: 0; border-bottom: 1px solid var(--edash-border-soft); border-radius: 0; background: transparent; }
+.edash .edash-mk-tab { padding: 8px 12px; border-radius: 4px 4px 0 0; border-bottom: 2px solid transparent; color: var(--edash-ink); font-size: 0.875rem; font-weight: 400; }
+.edash .edash-mk-tab:hover { background: #e6e9ef; }
+.edash .edash-mk-tab.is-active { background: transparent; color: var(--edash-brand-dark); border-bottom-color: var(--edash-brand); font-weight: 500; }
