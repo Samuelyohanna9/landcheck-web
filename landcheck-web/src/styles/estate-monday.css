@@ -350,3 +350,18 @@
 .edash .edash-mk-tab { padding: 8px 12px; border-radius: 4px 4px 0 0; border-bottom: 2px solid transparent; color: var(--edash-ink); font-size: 0.875rem; font-weight: 400; }
 .edash .edash-mk-tab:hover { background: #e6e9ef; }
 .edash .edash-mk-tab.is-active { background: transparent; color: var(--edash-brand-dark); border-bottom-color: var(--edash-brand); font-weight: 500; }
+
+/* Compact navigation: every tool fits one viewport without a sidebar scrollbar */
+.edash .edash-sidebar { padding-top: 10px; padding-bottom: 8px; }
+.edash .edash-sidebar-brand { padding: 0 6px 8px; }
+.edash .edash-nav { gap: 0; }
+.edash .edash-nav-item { padding: 6px 10px; gap: 10px; font-size: 0.84rem; line-height: 1.25; }
+.edash .edash-nav-icon svg { width: 16px; height: 16px; }
+.edash .edash-sidebar-footer { margin-top: 4px; padding: 7px 10px; }
+@media (max-height: 800px) {
+  .edash .edash-nav-item { padding: 4px 10px; }
+  .edash .edash-sidebar-brand-logo { padding: 6px 12px; }
+}
+@media (max-height: 680px) {
+  .edash .edash-nav-item { padding: 3px 10px; font-size: 0.8rem; }
+}
