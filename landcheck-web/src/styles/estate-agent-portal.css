@@ -85,6 +85,9 @@
 .agent-public-error-card strong { font-size: 1rem; }
 .agent-public-error-card p { color: var(--agent-muted); font-size: .78rem; }
 
+/* The mobile menu backdrop must not occupy a grid cell on desktop. */
+.agent-public-backdrop { display: none; }
+
 @media (max-width: 900px) {
   .agent-public { grid-template-columns: 1fr; }
   .agent-public-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 20; width: 245px; transform: translateX(-105%); transition: transform .18s ease; box-shadow: 16px 0 30px rgba(16,24,39,.12); }
@@ -108,3 +111,40 @@
   .agent-public-row-actions { width: 100%; }
   .agent-public-row-actions button { flex: 1; }
 }
+
+/* ── Agent marketing kit ── */
+.agent-kit-toast { position: fixed; right: 18px; bottom: 18px; z-index: 60; padding: 11px 16px; border-radius: 10px; background: #101827; color: #fff; font-size: .8rem; font-weight: 650; box-shadow: 0 10px 28px rgba(16, 24, 39, .3); }
+.agent-kit-link { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 14px; border: 1px dashed var(--agent-border); border-radius: 12px; background: #fafbfc; }
+.agent-kit-link small { display: block; color: var(--agent-muted); font-size: .68rem; font-weight: 700; }
+.agent-kit-link strong { display: block; margin-top: 2px; font-size: .8rem; word-break: break-all; }
+.agent-kit-stats { display: flex; gap: 16px; margin: 12px 0; color: var(--agent-muted); font-size: .78rem; flex-wrap: wrap; }
+.agent-kit-stats b { color: var(--agent-ink); }
+.agent-kit-downloads { display: flex; flex-wrap: wrap; gap: 8px; }
+.agent-kit-downloads button, .agent-kit-link button, .agent-kit-plot-controls button, .agent-public-row-actions a, .agent-public-row-actions button { padding: 7px 12px; border: 1px solid var(--agent-border); border-radius: 8px; background: #fff; color: var(--agent-ink); font-size: .74rem; font-weight: 700; text-decoration: none; cursor: pointer; }
+.agent-kit-downloads button:hover, .agent-kit-link button:hover, .agent-kit-plot-controls button:hover, .agent-public-row-actions a:hover, .agent-public-row-actions button:hover { border-color: var(--agent-brand); color: var(--agent-brand-dark); }
+.agent-kit-downloads button:disabled, .agent-public-row-actions button:disabled { opacity: .5; cursor: not-allowed; }
+a.agent-kit-wa { border-color: #b7e4c7 !important; background: #e9f8ef !important; color: #12703f !important; }
+.agent-kit-subhead { margin: 20px 0 10px; font-size: .9rem; }
+.agent-kit-plot { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 16px; align-items: start; }
+.agent-kit-plot-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.agent-kit-plot-controls select { max-width: 100%; }
+.agent-kit-preview { display: flex; align-items: center; justify-content: center; min-height: 240px; max-height: 520px; border-radius: 12px; background: linear-gradient(160deg, #0a3a26, #06251a); color: #a8e8c4; font-size: .74rem; overflow: hidden; }
+.agent-kit-preview img { max-width: 100%; max-height: 520px; width: auto; height: auto; display: block; }
+.agent-kit-tier { display: flex; gap: 28px; margin-bottom: 12px; }
+.agent-kit-tier small, .agent-kit-money small { display: block; color: var(--agent-muted); font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.agent-kit-tier strong { display: block; margin-top: 3px; font-size: 1.05rem; }
+.agent-kit-bar { height: 9px; border-radius: 999px; background: #e8edf2; overflow: hidden; }
+.agent-kit-bar i { display: block; height: 100%; border-radius: 999px; background: var(--agent-brand); }
+.agent-kit-bar-note { margin: 8px 0 0; color: var(--agent-muted); font-size: .76rem; line-height: 1.45; }
+.agent-kit-money { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.agent-kit-money strong { display: block; margin-top: 3px; font-size: .95rem; }
+@media (max-width: 760px) {
+  .agent-kit-plot { grid-template-columns: 1fr; }
+  .agent-kit-link { flex-direction: column; align-items: flex-start; }
+}
+
+.agent-public-card-head > svg { flex: none; width: 20px; height: 20px; color: var(--agent-muted); }
+.agent-kit-plot-controls select { min-height: 34px; padding: 0 9px; border: 1px solid var(--agent-border); border-radius: 8px; background: #fff; color: var(--agent-ink); font-size: .74rem; }
+.agent-kit-plot-controls a { padding: 7px 12px; border: 1px solid var(--agent-border); border-radius: 8px; background: #fff; color: var(--agent-ink); font-size: .74rem; font-weight: 700; text-decoration: none; }
+.agent-public-row-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.agent-public-row-actions b { font-size: .72rem; text-transform: capitalize; color: var(--agent-muted); }

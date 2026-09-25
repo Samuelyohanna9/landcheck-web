@@ -24,6 +24,12 @@ export default function EstateSettingsPage() {
   const [publicDescription, setPublicDescription] = useState("");
   const [publicTagline, setPublicTagline] = useState("");
   const [publicPhone, setPublicPhone] = useState("");
+  const [publicWhatsapp, setPublicWhatsapp] = useState("");
+  const [meetLat, setMeetLat] = useState("");
+  const [meetLng, setMeetLng] = useState("");
+  const [meetLabel, setMeetLabel] = useState("");
+  const [meetNote, setMeetNote] = useState("");
+  const [meetLocating, setMeetLocating] = useState(false);
   const [publicLogoPath, setPublicLogoPath] = useState<string | null>(null);
   const [publicLogoFile, setPublicLogoFile] = useState<File | null>(null);
   const [publicShowPrices, setPublicShowPrices] = useState(true);
@@ -53,6 +59,12 @@ export default function EstateSettingsPage() {
         setPublicDescription(publicPage.public_description || "");
         setPublicTagline(publicPage.public_tagline || "");
         setPublicPhone(publicPage.public_contact_phone || "");
+        setPublicWhatsapp(publicPage.public_whatsapp_number || "");
+        const meeting = publicPage.public_meeting_point;
+        setMeetLat(meeting ? String(meeting.lat) : "");
+        setMeetLng(meeting ? String(meeting.lng) : "");
+        setMeetLabel(meeting?.label || "");
+        setMeetNote(meeting?.note || "");
         setPublicLogoPath(publicPage.public_logo_path || null);
         setPublicShowPrices(publicPage.public_show_prices !== false);
         setPaymentPlan((publicPage.payment_plan || []).map((item: { label?: string; percentage?: string | number }) => ({
@@ -107,8 +119,17 @@ export default function EstateSettingsPage() {
       toast.error("Payment plan percentages must add up to 100%.");
       return;
     }
+    const hasMeeting = meetLat.trim() !== "" || meetLng.trim() !== "";
+    const lat = Number(meetLat);
+    const lng = Number(meetLng);
+    if (hasMeeting && (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180)) {
+      toast.error("Enter the meeting point as valid latitude and longitude, or clear both boxes.");
+      return;
+    }
     try {
       const response = await api.patch(`/estates/${estateId}/public-settings`, {
+        public_whatsapp_number: publicWhatsapp.trim() || null,
+        public_meeting_point: hasMeeting ? { lat, lng, label: meetLabel.trim() || null, note: meetNote.trim() || null } : null,
         public_enabled: publicEnabled,
         public_description: publicDescription.trim() || null,
         public_tagline: publicTagline.trim() || null,
@@ -128,6 +149,16 @@ export default function EstateSettingsPage() {
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "The public Estate page could not be saved."));
     }
+  };
+
+  const useMyLocationForMeetingPoint = () => {
+    if (!navigator.geolocation) { toast.error("This device cannot share its location."); return; }
+    setMeetLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => { setMeetLat(position.coords.latitude.toFixed(6)); setMeetLng(position.coords.longitude.toFixed(6)); setMeetLocating(false); },
+      () => { toast.error("Your location could not be read. Allow location access, or type the coordinates."); setMeetLocating(false); },
+      { enableHighAccuracy: true, timeout: 20000 },
+    );
   };
 
   const updatePaymentPlan = (index: number, field: "label" | "percentage", value: string) => {
@@ -254,11 +285,31 @@ export default function EstateSettingsPage() {
             <label className="edash-field"><span>Contact phone</span><input value={publicPhone} onChange={(event) => setPublicPhone(event.target.value)} placeholder="Phone for enquiries" /></label>
           </div>
           <div className="edash-public-settings-grid" style={{ marginTop: 10 }}>
+            <label className="edash-field"><span>WhatsApp number</span><input value={publicWhatsapp} onChange={(event) => setPublicWhatsapp(event.target.value)} placeholder="Defaults to the contact phone" /></label>
+            <div className="edash-field"><span>Where buyers chat</span><strong style={{ color: "var(--edash-ink)", fontWeight: 600, fontSize: ".78rem" }}>Buyers get a "Chat on WhatsApp" button on every plot, with the plot and estate already typed in. Agents' own links use the agent's number.</strong></div>
+          </div>
+          <div className="edash-public-settings-grid" style={{ marginTop: 10 }}>
             <label className="edash-field"><span>Trust line</span><input value={publicTagline} onChange={(event) => setPublicTagline(event.target.value)} placeholder="Verified land | C of O documentation available" /></label>
             <label className="edash-field"><span>Company logo</span><input type="file" accept="image/png,image/jpeg" onChange={(event) => setPublicLogoFile(event.target.files?.[0] || null)} /></label>
           </div>
           {publicLogoPath && <p className="edash-field-note" style={{ margin: "8px 0" }}>Company logo uploaded and visible on the public page.</p>}
           <label className="edash-field" style={{ margin: "10px 0" }}><span>About this Estate</span><textarea rows={3} value={publicDescription} onChange={(event) => setPublicDescription(event.target.value)} placeholder="Tell buyers what makes this Estate worth considering" /></label>
+          <div className="edash-public-payment-plan" style={{ marginBottom: 14 }}>
+            <div className="edash-card-head" style={{ marginBottom: 5 }}><div><h4 className="edash-card-title" style={{ fontSize: "1rem" }}>Site inspection meeting point</h4><p className="edash-field-note">Where visitors meet you on inspection day. It appears on the public page and in booking emails with a directions link, and it replaces the paid inspection guide.</p></div></div>
+            <div className="edash-public-settings-grid">
+              <label className="edash-field"><span>Latitude</span><input value={meetLat} onChange={(event) => setMeetLat(event.target.value)} placeholder="e.g. 7.377600" inputMode="decimal" /></label>
+              <label className="edash-field"><span>Longitude</span><input value={meetLng} onChange={(event) => setMeetLng(event.target.value)} placeholder="e.g. 3.947000" inputMode="decimal" /></label>
+            </div>
+            <div className="edash-public-settings-grid" style={{ marginTop: 10 }}>
+              <label className="edash-field"><span>Landmark</span><input value={meetLabel} onChange={(event) => setMeetLabel(event.target.value)} placeholder="e.g. Estate gate beside Total filling station" maxLength={160} /></label>
+              <label className="edash-field"><span>Directions note</span><input value={meetNote} onChange={(event) => setMeetNote(event.target.value)} placeholder="e.g. Ask for the LandCheck inspection desk" maxLength={300} /></label>
+            </div>
+            <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button type="button" className="edash-btn-outline" disabled={meetLocating} onClick={useMyLocationForMeetingPoint}>{meetLocating ? "Locating..." : "Use my current location"}</button>
+              {(meetLat || meetLng) && <button type="button" className="edash-btn-outline" onClick={() => { setMeetLat(""); setMeetLng(""); setMeetLabel(""); setMeetNote(""); }}>Clear</button>}
+            </div>
+            <p className="edash-field-note" style={{ marginTop: 8 }}>Stand at the meeting point and tap "Use my current location" for the most accurate pin.</p>
+          </div>
           <label className="edash-toggle" style={{ marginBottom: 14 }}><input type="checkbox" checked={publicShowPrices} onChange={(event) => setPublicShowPrices(event.target.checked)} /> Show plot prices publicly</label>
           <div className="edash-public-payment-plan">
             <div className="edash-card-head" style={{ marginBottom: 5 }}><div><h4 className="edash-card-title" style={{ fontSize: "1rem" }}>Payment plan for buyers</h4><p className="edash-field-note">Optional. Show buyers how the agreed price can be paid in stages.</p></div><button type="button" className="edash-tool-btn" onClick={addPaymentPlanStage}>+ Add stage</button></div>

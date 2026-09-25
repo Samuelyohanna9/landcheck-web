@@ -3,6 +3,10 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { API_URL, api, extractApiErrorMessage } from "../api/client";
 import { MAPBOX_TOKEN, loadMapboxGl, loadMapboxGlCss } from "../utils/mapboxLoader";
 import { formatArea } from "../utils/unitFormat";
+import PublicPlotGuide, { type GuidePosition } from "../components/estates/public/PublicPlotGuide";
+import PublicInspectionSection from "../components/estates/public/PublicInspectionSection";
+import PublicProgressSection from "../components/estates/public/PublicProgressSection";
+import { copyText, whatsappHref } from "../utils/estateMarketing";
 import "../styles/estate-public.css";
 
 type PublicPlot = {
@@ -33,6 +37,11 @@ type PublicEstate = {
   plots: PublicPlot[];
   counts: Record<string, number>;
   development_forecast?: any | null;
+  whatsapp_number?: string | null;
+  meeting_point?: { lat: number; lng: number; label?: string | null; note?: string | null } | null;
+  agent?: { name: string; whatsapp_number?: string | null; phone?: string | null } | null;
+  source_code?: string | null;
+  share?: { estate: string; plot_template: string } | null;
 };
 
 const statusLabels: Record<string, string> = {
@@ -115,7 +124,7 @@ function developmentForecastFeatures(estate: PublicEstate) {
   return { type: "FeatureCollection", features: [...footprints, ...direction] };
 }
 
-function PublicEstateMap({ estate, selectedPlotId, onSelect, onReserve }: { estate: PublicEstate; selectedPlotId: number | null; onSelect: (plotId: number | null) => void; onReserve: (plotId: number) => void }) {
+function PublicEstateMap({ estate, selectedPlotId, onSelect, onReserve, guide }: { estate: PublicEstate; selectedPlotId: number | null; onSelect: (plotId: number | null) => void; onReserve: (plotId: number) => void; guide: GuidePosition | null }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const onSelectRef = useRef(onSelect);
@@ -143,6 +152,9 @@ function PublicEstateMap({ estate, selectedPlotId, onSelect, onReserve }: { esta
           map.addLayer({ id: "public-development-footprint-line", type: "line", source: "public-development-forecast", filter: ["==", ["get", "kind"], "footprint"], paint: { "line-color": "#f2c14e", "line-width": 1.2, "line-opacity": 0.7 } });
           map.addLayer({ id: "public-development-direction", type: "line", source: "public-development-forecast", filter: ["==", ["get", "kind"], "direction"], paint: { "line-color": "#7de0a6", "line-width": 4, "line-dasharray": [1.4, 1.2], "line-opacity": 0.95 } });
         }
+        map.addSource("public-estate-guide", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        map.addLayer({ id: "public-estate-guide-halo", type: "circle", source: "public-estate-guide", paint: { "circle-radius": 16, "circle-color": "#2a78d6", "circle-opacity": 0.22 } });
+        map.addLayer({ id: "public-estate-guide-dot", type: "circle", source: "public-estate-guide", paint: { "circle-radius": 7, "circle-color": "#2a78d6", "circle-stroke-color": "#ffffff", "circle-stroke-width": 3 } });
         map.on("click", "public-estate-plot-fill", (event: any) => {
           const id = Number(event.features?.[0]?.id);
           if (Number.isFinite(id)) onSelectRef.current(id);
@@ -174,6 +186,12 @@ function PublicEstateMap({ estate, selectedPlotId, onSelect, onReserve }: { esta
     if (forecastSource) forecastSource.setData(developmentForecastFeatures(estate) as any);
     if (mapRef.current?.getLayer("public-estate-plot-selected")) mapRef.current.setFilter("public-estate-plot-selected", ["==", ["id"], selectedPlotId ?? -1]);
   }, [estate, selectedPlotId]);
+
+  useEffect(() => {
+    const source = mapRef.current?.getSource("public-estate-guide");
+    if (!source) return;
+    source.setData(guide ? { type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [guide.lng, guide.lat] } }] } : { type: "FeatureCollection", features: [] });
+  }, [guide]);
 
   if (!MAPBOX_TOKEN) return <div className="estate-public-map-fallback">The live layout map is not available right now. Browse the plot register below to see the available land.</div>;
   return <div className="estate-public-map-shell"><div ref={containerRef} className="estate-public-map" aria-label={`Satellite map of ${estate.name}`} />{selectedPlot && <div className="estate-public-map-selection"><div><strong>Plot {selectedPlot.plot_number}</strong><span>{selectedPlot.address || (selectedPlot.area_sqm ? formatArea(selectedPlot.area_sqm) : "Area on request")}</span></div>{selectedPlot.status === "available" ? <button type="button" onClick={() => onReserve(selectedPlot.id)}>Reserve plot</button> : <span className="estate-public-selection-status" style={{ color: statusColors[selectedPlot.status] || statusColors.on_hold }}>{labelForStatus(selectedPlot.status)}</span>}</div>}</div>;
@@ -236,6 +254,10 @@ export default function PublicEstatePage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [guide, setGuide] = useState<GuidePosition | null>(null);
+  const [shareNote, setShareNote] = useState("");
+  const [inspectionSlots, setInspectionSlots] = useState(0);
+  const [progressCount, setProgressCount] = useState(0);
 
   useEffect(() => {
     if (!slug) return;
@@ -243,7 +265,8 @@ export default function PublicEstatePage() {
     api.get(`/estates/public/${slug}`, { params: source ? { source } : undefined }).then((response) => {
       const value = response.data as PublicEstate;
       setEstate(value);
-      setSelectedPlotId(null);
+      const wantedPlot = Number(searchParams.get("plot"));
+      setSelectedPlotId(wantedPlot && value.plots.some((item) => item.id === wantedPlot) ? wantedPlot : null);
     }).catch(async (err) => setError(await extractApiErrorMessage(err, "This Estate page is not available."))).finally(() => setLoading(false));
   }, [slug, source]);
 
@@ -257,23 +280,62 @@ export default function PublicEstatePage() {
   }, [estate, search, statusFilter]);
   const selectedPlot = estate?.plots.find((plot) => plot.id === selectedPlotId) || null;
   const companyName = estate?.organization_name || "Estate company";
+  const trackEvent = (eventType: "whatsapp_click" | "share_click" | "directions_click" | "guide_open", plotId?: number | null) => {
+    if (!slug) return;
+    api.post(`/estates/public/${slug}/events`, { event_type: eventType, plot_id: plotId ?? null, source: estate?.source_code || source || null }).catch(() => undefined);
+  };
+  const chatNumber = estate?.agent?.whatsapp_number || estate?.whatsapp_number || null;
+  const chatMessage = (plot?: PublicPlot | null) => {
+    if (!estate) return "";
+    const greeting = estate.agent?.name ? `Hello ${estate.agent.name}, ` : "Hello, ";
+    const about = plot
+      ? `I'm interested in Plot ${plot.plot_number}${plot.area_sqm ? ` (${formatArea(plot.area_sqm)})` : ""} at ${estate.name}${estate.show_prices && plot.price ? ` listed at ${money(plot.price)}` : ""}.`
+      : `I'd like to know more about ${estate.name}.`;
+    return `${greeting}${about} Ref: ${estate.source_code || "public page"}`;
+  };
+  const chatUrl = (plot?: PublicPlot | null) => whatsappHref(chatNumber, chatMessage(plot));
+  const shareLink = (plot?: PublicPlot | null) => (plot ? estate?.share?.plot_template.replace("{plot_id}", String(plot.id)) : estate?.share?.estate) || window.location.href;
+  const shareListing = async (plot?: PublicPlot | null) => {
+    if (!estate) return;
+    const url = shareLink(plot);
+    const title = plot ? `Plot ${plot.plot_number} at ${estate.name}` : estate.name;
+    trackEvent("share_click", plot?.id);
+    if (navigator.share) {
+      try { await navigator.share({ title, text: `${title} - view it on the live map`, url }); } catch { /* the visitor dismissed the share sheet */ }
+      return;
+    }
+    setShareNote((await copyText(url)) ? "Link copied - paste it into WhatsApp, Instagram or anywhere." : `Copy this link: ${url}`);
+    window.setTimeout(() => setShareNote(""), 4000);
+  };
   const reservePlot = (plotId: number) => { if (estate) navigate(`/estates/public/${estate.slug}/reserve/${plotId}${source ? `?source=${encodeURIComponent(source)}` : ""}`); };
 
   if (loading) return <main className="estate-public-app"><div className="estate-public-loading">Loading estate page...</div></main>;
   if (error || !estate) return <main className="estate-public-app"><div className="estate-public-message"><h1>Estate page unavailable</h1><p>{error || "This page is not available."}</p></div></main>;
 
   return <div className="estate-public-app">
-    <header className="estate-public-header"><a className="estate-public-company" href="#overview" aria-label={`${companyName} home`}>{estate.logo_url ? <img src={assetUrl(estate.logo_url)} alt={`${companyName} logo`} /> : <strong>{companyName}</strong>}</a><button type="button" className="estate-public-menu-button" aria-label={menuOpen ? "Close navigation" : "Open navigation"} aria-expanded={menuOpen} aria-controls="estate-public-navigation" onClick={() => setMenuOpen((open) => !open)}><span /><span /><span /></button><nav id="estate-public-navigation" className={`estate-public-navigation${menuOpen ? " is-open" : ""}`}><a href="#layout" onClick={() => setMenuOpen(false)}>Plots</a>{estate.development_forecast && <a href="#outlook" onClick={() => setMenuOpen(false)}>Outlook</a>}<a href="#about" onClick={() => setMenuOpen(false)}>About</a><a href="#contact" onClick={() => setMenuOpen(false)}>Contact</a>{(estate.contact_phone || estate.organization_email) && <div className="estate-public-menu-contact">{estate.contact_phone && <a href={`tel:${estate.contact_phone}`}>{estate.contact_phone}</a>}{estate.organization_email && <a href={`mailto:${estate.organization_email}`}>{estate.organization_email}</a>}</div>}</nav></header>
+    <header className="estate-public-header"><a className="estate-public-company" href="#overview" aria-label={`${companyName} home`}>{estate.logo_url ? <img src={assetUrl(estate.logo_url)} alt={`${companyName} logo`} /> : <strong>{companyName}</strong>}</a><button type="button" className="estate-public-menu-button" aria-label={menuOpen ? "Close navigation" : "Open navigation"} aria-expanded={menuOpen} aria-controls="estate-public-navigation" onClick={() => setMenuOpen((open) => !open)}><span /><span /><span /></button><nav id="estate-public-navigation" className={`estate-public-navigation${menuOpen ? " is-open" : ""}`}><a href="#layout" onClick={() => setMenuOpen(false)}>Plots</a>{inspectionSlots > 0 && <a href="#inspections" onClick={() => setMenuOpen(false)}>Inspections</a>}{progressCount > 0 && <a href="#progress" onClick={() => setMenuOpen(false)}>Site updates</a>}{estate.development_forecast && <a href="#outlook" onClick={() => setMenuOpen(false)}>Outlook</a>}<a href="#about" onClick={() => setMenuOpen(false)}>About</a><a href="#contact" onClick={() => setMenuOpen(false)}>Contact</a>{(estate.contact_phone || estate.organization_email) && <div className="estate-public-menu-contact">{estate.contact_phone && <a href={`tel:${estate.contact_phone}`}>{estate.contact_phone}</a>}{estate.organization_email && <a href={`mailto:${estate.organization_email}`}>{estate.organization_email}</a>}</div>}</nav></header>
     <main>
-      <section id="overview" className="estate-public-intro"><p className="estate-public-kicker">{companyName}</p><h1>{estate.name}</h1>{estate.tagline && <p className="estate-public-tagline">{estate.tagline}</p>}{estate.location && <p className="estate-public-location">{estate.location}</p>}{estate.description && <p className="estate-public-description">{estate.description}</p>}{paymentPlanItems(estate).length > 0 && <p className="estate-public-payment-plan-summary">Payment options: {paymentPlanItems(estate).map((item) => item.label + " " + item.percentage + "%").join(" / ")}</p>}<a className="estate-public-text-link estate-public-intro-link" href="#layout">Explore available plots</a></section>
+      <section id="overview" className="estate-public-intro"><p className="estate-public-kicker">{companyName}</p><h1>{estate.name}</h1>{estate.tagline && <p className="estate-public-tagline">{estate.tagline}</p>}{estate.location && <p className="estate-public-location">{estate.location}</p>}{estate.description && <p className="estate-public-description">{estate.description}</p>}{paymentPlanItems(estate).length > 0 && <p className="estate-public-payment-plan-summary">Payment options: {paymentPlanItems(estate).map((item) => item.label + " " + item.percentage + "%").join(" / ")}</p>}<a className="estate-public-text-link estate-public-intro-link" href="#layout">Explore available plots</a>
+        <div className="estate-public-hero-actions">
+          {chatUrl() && <a className="estate-public-wa" href={chatUrl() || "#"} target="_blank" rel="noreferrer" onClick={() => trackEvent("whatsapp_click")}>Chat on WhatsApp</a>}
+          {inspectionSlots > 0 && <a className="estate-public-ghost" href="#inspections">Book a site inspection</a>}
+          <button type="button" className="estate-public-ghost" onClick={() => void shareListing()}>Share this estate</button>
+        </div>
+        {shareNote && <p className="estate-public-share-note" role="status">{shareNote}</p>}
+        {estate.agent && <div className="estate-public-agent"><span className="estate-public-agent-avatar">{estate.agent.name.slice(0, 1).toUpperCase()}</span><div><strong>{estate.agent.name}</strong><small>Your agent for {estate.name}{estate.agent.phone ? ` \u00b7 ${estate.agent.phone}` : ""}</small></div></div>}
+      </section>
       <section className="estate-public-metrics" aria-label="Estate availability summary"><div><strong>{estate.plots.length}</strong><span>Total plots</span></div><div><strong>{estate.counts.available || 0}</strong><span>Available</span></div><div><strong>{estate.counts.reserved || 0}</strong><span>Reserved</span></div><div><strong>{estate.counts.allocated || 0}</strong><span>Allocated</span></div></section>
       <DevelopmentForecastPanel forecast={estate.development_forecast} />
-      <section id="layout" className="estate-public-workspace"><div className="estate-public-map-column"><div className="estate-public-section-head"><div><p className="estate-public-kicker">Estate layout</p><h2>Choose a plot on the map.</h2></div><span className="estate-public-map-note">Satellite view</span></div><PublicEstateMap estate={estate} selectedPlotId={selectedPlotId} onSelect={setSelectedPlotId} onReserve={reservePlot} /><div className="estate-public-legend">{["available", "reserved", "allocated", "on_hold"].map((status) => <span key={status}><i style={{ background: statusColors[status] }} />{labelForStatus(status)}</span>)}</div></div>
-        <aside className="estate-public-inventory" aria-label="Plot register"><div className="estate-public-section-head"><div><p className="estate-public-kicker">Plot register</p><h2>Find your plot.</h2></div><strong>{filteredPlots.length}</strong></div><div className="estate-public-filters"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search plot, block or address" aria-label="Search plot, block or address" /><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter plots by status"><option value="all">All plots</option><option value="available">Available</option><option value="reserved">Reserved</option><option value="allocated">Allocated</option></select></div><div className="estate-public-plot-list">{filteredPlots.length ? filteredPlots.map((plot) => <button key={plot.id} type="button" className={`estate-public-plot-row${plot.id === selectedPlotId ? " is-selected" : ""}`} onClick={() => setSelectedPlotId(plot.id)}><span><strong>Plot {plot.plot_number}</strong><small>{plot.address || `${plot.block ? `Block ${plot.block} | ` : ""}${plot.area_sqm ? formatArea(plot.area_sqm) : "Area on request"}`}</small>{estate.show_prices && <small className="estate-public-plot-price">{money(plot.price)}</small>}</span><span className="estate-public-status" style={{ color: statusColors[plot.status] || statusColors.on_hold }}>{labelForStatus(plot.status)}</span></button>) : <p className="estate-public-empty">No plots match your search.</p>}</div>{selectedPlot && <div className="estate-public-plot-detail"><div className="estate-public-detail-top"><div><p className="estate-public-kicker">Selected plot</p><h3>Plot {selectedPlot.plot_number}</h3></div><span className="estate-public-status-pill" style={{ background: `${statusColors[selectedPlot.status] || statusColors.on_hold}18`, color: statusColors[selectedPlot.status] || statusColors.on_hold }}>{labelForStatus(selectedPlot.status)}</span></div><dl><div><dt>Address</dt><dd>{selectedPlot.address || "Address on request"}</dd></div><div><dt>Area</dt><dd>{selectedPlot.area_sqm ? formatArea(selectedPlot.area_sqm) : "On request"}</dd></div>{estate.show_prices && <div><dt>Price</dt><dd>{money(selectedPlot.price)}</dd></div>}</dl>{selectedPlot.status === "available" ? <button type="button" className="estate-public-primary" onClick={() => reservePlot(selectedPlot.id)}>Reserve this plot</button> : <p className="estate-public-unavailable">This plot is not currently available for reservation.</p>}</div>}</aside>
+      <section id="layout" className="estate-public-workspace"><div className="estate-public-map-column"><div className="estate-public-section-head"><div><p className="estate-public-kicker">Estate layout</p><h2>Choose a plot on the map.</h2></div><span className="estate-public-map-note">Satellite view</span></div><PublicEstateMap estate={estate} selectedPlotId={selectedPlotId} onSelect={setSelectedPlotId} onReserve={reservePlot} guide={guide} /><div className="estate-public-legend">{["available", "reserved", "allocated", "on_hold"].map((status) => <span key={status}><i style={{ background: statusColors[status] }} />{labelForStatus(status)}</span>)}</div></div>
+        <aside className="estate-public-inventory" aria-label="Plot register"><div className="estate-public-section-head"><div><p className="estate-public-kicker">Plot register</p><h2>Find your plot.</h2></div><strong>{filteredPlots.length}</strong></div><div className="estate-public-filters"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search plot, block or address" aria-label="Search plot, block or address" /><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter plots by status"><option value="all">All plots</option><option value="available">Available</option><option value="reserved">Reserved</option><option value="allocated">Allocated</option></select></div><div className="estate-public-plot-list">{filteredPlots.length ? filteredPlots.map((plot) => <button key={plot.id} type="button" className={`estate-public-plot-row${plot.id === selectedPlotId ? " is-selected" : ""}`} onClick={() => setSelectedPlotId(plot.id)}><span><strong>Plot {plot.plot_number}</strong><small>{plot.address || `${plot.block ? `Block ${plot.block} | ` : ""}${plot.area_sqm ? formatArea(plot.area_sqm) : "Area on request"}`}</small>{estate.show_prices && <small className="estate-public-plot-price">{money(plot.price)}</small>}</span><span className="estate-public-status" style={{ color: statusColors[plot.status] || statusColors.on_hold }}>{labelForStatus(plot.status)}</span></button>) : <p className="estate-public-empty">No plots match your search.</p>}</div>{selectedPlot && <div className="estate-public-plot-detail"><div className="estate-public-detail-top"><div><p className="estate-public-kicker">Selected plot</p><h3>Plot {selectedPlot.plot_number}</h3></div><span className="estate-public-status-pill" style={{ background: `${statusColors[selectedPlot.status] || statusColors.on_hold}18`, color: statusColors[selectedPlot.status] || statusColors.on_hold }}>{labelForStatus(selectedPlot.status)}</span></div><dl><div><dt>Address</dt><dd>{selectedPlot.address || "Address on request"}</dd></div><div><dt>Area</dt><dd>{selectedPlot.area_sqm ? formatArea(selectedPlot.area_sqm) : "On request"}</dd></div>{estate.show_prices && <div><dt>Price</dt><dd>{money(selectedPlot.price)}</dd></div>}</dl>{selectedPlot.status === "available" ? <button type="button" className="estate-public-primary" onClick={() => reservePlot(selectedPlot.id)}>Reserve this plot</button> : <p className="estate-public-unavailable">This plot is not currently available for reservation.</p>}<div className="estate-public-detail-actions">{chatUrl(selectedPlot) && <a className="estate-public-wa" href={chatUrl(selectedPlot) || "#"} target="_blank" rel="noreferrer" onClick={() => trackEvent("whatsapp_click", selectedPlot.id)}>Chat about Plot {selectedPlot.plot_number}</a>}<button type="button" className="estate-public-ghost" onClick={() => void shareListing(selectedPlot)}>Share this plot</button></div></div>}</aside>
       </section>
+      {selectedPlot && <section className="estate-public-guide-wrap"><PublicPlotGuide key={selectedPlot.id} plotNumber={selectedPlot.plot_number} geometry={selectedPlot.geometry} meetingPoint={estate.meeting_point || null} onPosition={setGuide} onEvent={(type) => trackEvent(type, selectedPlot.id)} /></section>}
+      <PublicInspectionSection slug={estate.slug} source={estate.source_code || source} plotOptions={estate.plots.filter((plot) => plot.status === "available").map((plot) => ({ id: plot.id, plot_number: plot.plot_number }))} selectedPlotId={selectedPlot?.status === "available" ? selectedPlot.id : null} agentName={estate.agent?.name || null} onLoaded={setInspectionSlots} />
+      <PublicProgressSection slug={estate.slug} onLoaded={setProgressCount} />
       <section id="about" className="estate-public-information"><div><p className="estate-public-kicker">About the Estate</p><h2>Land presented by {companyName}.</h2></div><div><p>{estate.description || "Explore the published Estate layout and choose a plot that suits your plans."}</p>{estate.location && <p className="estate-public-information-line"><strong>Location</strong>{estate.location}</p>}</div></section>
       <section id="contact" className="estate-public-contact"><div><p className="estate-public-kicker">Enquiries</p><h2>Speak with the Estate team.</h2></div><div className="estate-public-contact-details">{estate.contact_phone && <a href={`tel:${estate.contact_phone}`}>{estate.contact_phone}</a>}{estate.organization_email && <a href={`mailto:${estate.organization_email}`}>{estate.organization_email}</a>}<p>Ask about availability, documentation and the reservation process.</p></div></section>
     </main>
     <footer className="estate-public-footer"><strong>{companyName}</strong><span>{estate.contact_phone ? `Enquiries: ${estate.contact_phone}` : "Private Estate sales and enquiries"}</span></footer>
+    {chatUrl(selectedPlot) && <a className="estate-public-fab" href={chatUrl(selectedPlot) || "#"} target="_blank" rel="noreferrer" aria-label="Chat on WhatsApp" onClick={() => trackEvent("whatsapp_click", selectedPlot?.id)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.2 14.2c-.2.6-1.2 1.2-1.7 1.2-.4.1-1 .1-1.6-.1a13 13 0 0 1-4.7-2.9 9 9 0 0 1-1.9-2.6c-.3-.9-.1-1.7.4-2.2.2-.2.4-.3.6-.3h.4c.1 0 .3 0 .4.3l.9 2.1c.1.2 0 .4-.1.5l-.5.7c-.1.2-.1.3 0 .5.5.9 1.6 1.9 2.7 2.4.2.1.4.1.5-.1l.7-.9c.2-.2.3-.2.5-.1l2 1c.2.1.4.2.4.4 0 .2 0 .8-.2 1.3Z" fill="currentColor"/></svg><span>Chat</span></a>}
   </div>;
 }
