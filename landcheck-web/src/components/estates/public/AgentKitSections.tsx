@@ -109,8 +109,8 @@ export default function AgentKitSections({ token }: { token: string }) {
             </div>
             <div className="agent-kit-stats"><span><b>{estate.available}</b> available</span><span><b>{estate.reserved}</b> reserved</span>{estate.min_price ? <span>from <b>{naira(estate.min_price)}</b></span> : null}</div>
             <div className="agent-kit-downloads">
-              <button type="button" disabled={busy === "flyer"} onClick={() => void run("flyer", () => downloadFile(estate.materials!.flyer, `${safeName}-flyer.pdf`), "The flyer could not be prepared.")}>Flyer (PDF)</button>
-              <button type="button" disabled={busy === "brochure"} onClick={() => void run("brochure", () => downloadFile(estate.materials!.brochure, `${safeName}-brochure.pdf`), "The brochure could not be prepared.")}>Brochure (PDF)</button>
+              <button type="button" disabled={busy === "flyer"} onClick={() => void run("flyer", () => downloadFile(estate.materials!.flyer, `${safeName}-${style}-flyer.pdf`, { style }), "The flyer could not be prepared.")}>Flyer (PDF)</button>
+              <button type="button" disabled={busy === "brochure"} onClick={() => void run("brochure", () => downloadFile(estate.materials!.brochure, `${safeName}-${style}-brochure.pdf`, { style }), "The brochure could not be prepared.")}>Brochure (PDF)</button>
               {formats.map((item) => <button key={item.key} type="button" disabled={busy === item.key} onClick={() => void run(item.key, () => downloadFile(estate.materials!.ad, `${safeName}-${style}-${item.key}.png`, { format: item.key, style }), "The image could not be prepared.")}>{item.key === "status" ? "WhatsApp Status" : item.key === "post" ? "Social post" : item.key === "poster" ? "Print poster" : "Wide banner"}</button>)}
             </div>
             <div className="agent-kit-style" role="group" aria-label="Design style">
