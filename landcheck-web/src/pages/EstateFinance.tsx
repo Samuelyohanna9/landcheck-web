@@ -73,6 +73,7 @@ async function download(path: string, name: string) {
 export default function EstateFinance({ mode }: { mode: "payments" | "documents" }) {
   const [sidebarEstateId, setSidebarEstateId] = useState("");
   const [sidebarEstateName, setSidebarEstateName] = useState("");
+  const [estatesState, setEstatesState] = useState<"loading" | "failed" | "empty" | "ready">("loading");
   const [payments, setPayments] = useState<Payment[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
@@ -149,12 +150,15 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
     } finally { setLoadBusy(false); }
   };
   useEffect(() => { void load(); }, [mode, page]);
-  useEffect(() => {
+  const loadSidebarEstate = () => {
+    setEstatesState("loading");
     api.get("/estates").then((response) => {
       const first = (response.data || [])[0];
-      if (first) { setSidebarEstateId(String(first.id)); setSidebarEstateName(first.name); }
-    }).catch(() => undefined);
-  }, []);
+      if (first) { setSidebarEstateId(String(first.id)); setSidebarEstateName(first.name); setEstatesState("ready"); }
+      else setEstatesState("empty");
+    }).catch(() => setEstatesState("failed"));
+  };
+  useEffect(() => { loadSidebarEstate(); }, []);
 
   const chooseCustomer = async (id: string) => {
     setCustomerId(id);
@@ -274,7 +278,20 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
     } finally { setUploadBusy(false); }
   };
 
-  if (!sidebarEstateId) return null;
+  if (!sidebarEstateId) {
+    return (
+      <div className="edash-onboard">
+        <div className="edash-onboard-body">
+          <div className="edash-onboard-head">
+            <h1>{estatesState === "loading" ? "Loading..." : estatesState === "empty" ? "No estates yet" : "Could not load this page"}</h1>
+            <p>{estatesState === "loading" ? "Getting your estates ready." : estatesState === "empty" ? "Add an estate first, then come back to payments and documents." : "The server did not respond. Check your connection and try again."}</p>
+          </div>
+          {estatesState === "failed" && <button type="button" className="edash-btn-primary" onClick={loadSidebarEstate}>Try again</button>}
+          {estatesState === "empty" && <a className="edash-btn-primary" href="/estates/workspace">Choose an estate</a>}
+        </div>
+      </div>
+    );
+  }
 
   if (mode === "documents") {
     return (

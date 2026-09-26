@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../api/client";
 import "../styles/estate-portal.css";
+import "../styles/estate-auth.css";
 
 export default function EstateForgotPassword() {
   const [email, setEmail] = useState("");
