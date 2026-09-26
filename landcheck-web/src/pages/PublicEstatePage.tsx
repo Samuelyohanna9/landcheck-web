@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { API_URL, api, extractApiErrorMessage } from "../api/client";
+import WhatsappOptin from "../components/estates/public/WhatsappOptin";
 import { MAPBOX_TOKEN, loadMapboxGl, loadMapboxGlCss } from "../utils/mapboxLoader";
 import { formatArea } from "../utils/unitFormat";
 import PublicPlotGuide, { type GuidePosition } from "../components/estates/public/PublicPlotGuide";
@@ -333,6 +334,7 @@ export default function PublicEstatePage() {
       <PublicInspectionSection slug={estate.slug} source={estate.source_code || source} plotOptions={estate.plots.filter((plot) => plot.status === "available").map((plot) => ({ id: plot.id, plot_number: plot.plot_number }))} selectedPlotId={selectedPlot?.status === "available" ? selectedPlot.id : null} agentName={estate.agent?.name || null} onLoaded={setInspectionSlots} />
       <PublicProgressSection slug={estate.slug} onLoaded={setProgressCount} />
       <section id="about" className="estate-public-information"><div><p className="estate-public-kicker">About the Estate</p><h2>Land presented by {companyName}.</h2></div><div><p>{estate.description || "Explore the published Estate layout and choose a plot that suits your plans."}</p>{estate.location && <p className="estate-public-information-line"><strong>Location</strong>{estate.location}</p>}</div></section>
+      {slug && <WhatsappOptin slug={slug} source={searchParams.get("source")} />}
       <section id="contact" className="estate-public-contact"><div><p className="estate-public-kicker">Enquiries</p><h2>Speak with the Estate team.</h2></div><div className="estate-public-contact-details">{estate.contact_phone && <a href={`tel:${estate.contact_phone}`}>{estate.contact_phone}</a>}{estate.organization_email && <a href={`mailto:${estate.organization_email}`}>{estate.organization_email}</a>}<p>Ask about availability, documentation and the reservation process.</p></div></section>
     </main>
     <footer className="estate-public-footer"><strong>{companyName}</strong><span>{estate.contact_phone ? `Enquiries: ${estate.contact_phone}` : "Private Estate sales and enquiries"}</span></footer>

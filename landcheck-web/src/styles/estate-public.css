@@ -350,3 +350,16 @@
   .estate-public-hero-actions > * { flex: 1 1 100%; }
   .estate-public-guide-live { align-items: flex-start; }
 }
+
+/* WhatsApp opt-in */
+.estate-public-optin { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; align-items: start; width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 36px 0; border-top: 1px solid rgba(16, 32, 51, 0.1); }
+.estate-public-optin h2 { margin: 6px 0 8px; }
+.estate-public-optin p { margin: 0; color: #4d5b6a; line-height: 1.55; }
+.estate-public-optin-form { display: flex; flex-direction: column; gap: 10px; }
+.estate-public-optin-form input[type="text"], .estate-public-optin-form input:not([type]), .estate-public-optin-form input[type="tel"] { min-height: 44px; padding: 0 14px; border: 1px solid #cfd8e2; border-radius: 8px; font: inherit; background: #fff; }
+.estate-public-optin-consent { display: flex; align-items: flex-start; gap: 10px; font-size: .84rem; color: #4d5b6a; line-height: 1.45; cursor: pointer; }
+.estate-public-optin-consent input { margin-top: 3px; width: 18px; height: 18px; accent-color: #1e8a42; flex: none; }
+.estate-public-optin-error { color: #b3261e !important; font-size: .84rem; }
+.estate-public-optin-done { padding: 14px 16px; border-radius: 8px; background: #e6f6ec; color: #0f6e44 !important; font-weight: 600; }
+.estate-public-optin .estate-public-primary:disabled { opacity: .55; cursor: not-allowed; }
+@media (max-width: 800px) { .estate-public-optin { grid-template-columns: 1fr; gap: 16px; } }

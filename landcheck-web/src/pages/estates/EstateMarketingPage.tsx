@@ -9,12 +9,14 @@ import MarketingInspectionsTab from "../../components/estates/marketing/Marketin
 import MarketingMaterialsTab from "../../components/estates/marketing/MarketingMaterialsTab";
 import MarketingOverviewTab from "../../components/estates/marketing/MarketingOverviewTab";
 import MarketingProgressTab from "../../components/estates/marketing/MarketingProgressTab";
+import MarketingSocialTab from "../../components/estates/marketing/MarketingSocialTab";
 import "../../styles/estate-marketing.css";
 
-type TabKey = "overview" | "materials" | "inspections" | "progress" | "agents";
+type TabKey = "overview" | "materials" | "social" | "inspections" | "progress" | "agents";
 const TABS: Array<{ key: TabKey; label: string; icon: EstateIconName }> = [
   { key: "overview", label: "Overview", icon: "chart-donut" },
   { key: "materials", label: "Materials & sharing", icon: "share" },
+  { key: "social", label: "Social posts", icon: "megaphone" },
   { key: "inspections", label: "Site inspections", icon: "calendar" },
   { key: "progress", label: "Site progress", icon: "camera" },
   { key: "agents", label: "Agents", icon: "customers" },
@@ -30,6 +32,7 @@ export default function EstateMarketingPage() {
   const organizationId = Number(session?.user.organization_id || 0);
   const canManage = role === "owner" || role === "manager";
   const canPost = canManage || role === "field_officer";
+  const canSocial = canManage || role === "marketer";
 
   const [estateName, setEstateName] = useState("");
   const [published, setPublished] = useState(false);
@@ -69,6 +72,7 @@ export default function EstateMarketingPage() {
       </div>
       {tab === "overview" && <MarketingOverviewTab estateId={estateId} onFollowUpCount={onFollowUpCount} />}
       {tab === "materials" && <MarketingMaterialsTab estateId={estateId} estateName={estateName} published={published} />}
+      {tab === "social" && <MarketingSocialTab estateId={estateId} estateName={estateName} canManage={canSocial} published={published} />}
       {tab === "inspections" && <MarketingInspectionsTab estateId={estateId} canManage={canManage} hasMeetingPoint={hasMeetingPoint} published={published} />}
       {tab === "progress" && <MarketingProgressTab estateId={estateId} canPost={canPost} />}
       {tab === "agents" && <MarketingAgentsTab estateId={estateId} organizationId={organizationId} canManage={canManage} published={published} />}
