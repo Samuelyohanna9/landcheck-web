@@ -1,5 +1,5 @@
 import { Component, Suspense, useEffect, useLayoutEffect, type ErrorInfo, type ReactElement, type ReactNode } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import CookieConsentManager from "./components/CookieConsentManager";
 import SeoRouteMeta from "./components/SeoRouteMeta";
 import SurveyLoadingAnimation from "./components/SurveyLoadingAnimation";
@@ -182,6 +182,10 @@ function SurveyProtectedRoute({ element }: { element: ReactElement }) {
 }
 
 function EstateProtectedRoute({ element }: { element: ReactElement }) {
+  // Estate ids are numeric. A stray link such as /estates/marketing would otherwise be read as an
+  // estate called "marketing" and fire a burst of failing API calls, so send it to the picker.
+  const { estateId } = useParams();
+  if (estateId !== undefined && !/^\d+$/.test(estateId)) return <Navigate to="/estates/workspace" replace />;
   return isEstateAuthed() ? element : <Navigate to="/estates/login" state={{ from: window.location.pathname }} replace />;
 }
 
