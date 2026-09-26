@@ -225,3 +225,8 @@
 .edash-sp-thumb { min-height: 120px; border-radius: 10px; background: #eef1f4; display: flex; align-items: center; justify-content: center; color: var(--edash-muted); font-size: .76rem; overflow: hidden; }
 .edash-sp-thumb img { display: block; width: 100%; height: auto; border-radius: 10px; }
 @media (max-width: 800px) { .edash-sp-editor-grid { grid-template-columns: 1fr; } .edash-sp-thumb { max-width: 220px; } .edash-sp-item-head { gap: 10px; } .edash-sp-item-time { width: 54px; } }
+
+/* ─── Plan upgrade prompt ─── */
+.edash .edash-upgrade-notice { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 14px 16px; border: 1px dashed var(--edash-border); border-radius: var(--edash-radius-md); background: var(--edash-surface); }
+.edash .edash-upgrade-notice strong { display: block; color: var(--edash-ink); font-size: .9rem; }
+.edash .edash-upgrade-notice p { margin: 3px 0 0; color: var(--edash-muted); font-size: .8rem; line-height: 1.45; max-width: 560px; }

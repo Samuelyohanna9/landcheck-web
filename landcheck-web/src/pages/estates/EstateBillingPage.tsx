@@ -15,6 +15,8 @@ type BillingStatus = {
   amount?: string;
   payment_method?: "card" | "bank_transfer";
   hazard_analysis?: boolean;
+  auto_posting?: boolean;
+  max_estates?: number | null;
   trial_ends_at?: string | null;
   current_period_end?: string | null;
   cancel_at_period_end?: boolean;
@@ -47,6 +49,7 @@ export default function EstateBillingPage() {
   const [charges, setCharges] = useState<Charge[]>([]);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [busyPlan, setBusyPlan] = useState<EstatePlanKey | null>(null);
 
   useEffect(() => {
     const result = new URLSearchParams(window.location.search).get("payment_result");
@@ -83,12 +86,13 @@ export default function EstateBillingPage() {
   const upgrade = async (planKey: EstatePlanKey) => {
     if (!organizationId) return;
     setBusy(true);
+    setBusyPlan(planKey);
     try {
       const response = await api.post<PlanChangeResponse>("/estates/billing/change-plan", { plan_key: planKey }, { params: { organization_id: organizationId } });
       if (response.data?.plan_change_status === "pending") {
         toast("Upgrade payment is pending. Your plan will update after the payment is confirmed.");
       } else if (Number(response.data?.plan_change_amount || 0) > 0) {
-        toast.success(`You're now on Plus. ${money(response.data.plan_change_amount)} was charged for the upgrade difference.`);
+        toast.success(`You're now on ${ESTATE_PLANS[planKey].label}. ${money(response.data.plan_change_amount)} was charged for the upgrade difference.`);
       } else {
         toast.success(`You're now on the ${ESTATE_PLANS[planKey].label} plan.`);
       }
@@ -98,6 +102,7 @@ export default function EstateBillingPage() {
       toast.error(await extractApiErrorMessage(err, "Plan could not be changed."));
     } finally {
       setBusy(false);
+      setBusyPlan(null);
     }
   };
 
@@ -153,8 +158,8 @@ export default function EstateBillingPage() {
                 {status.cancel_at_period_end && <div className="edash-overview-field"><span>Cancellation</span><strong>Ends at period end</strong></div>}
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {!status.hazard_analysis && status.status !== "none" && !showUpgrade && (
-                  <button type="button" className="edash-btn-primary" onClick={() => setShowUpgrade(true)}>Upgrade to Plus</button>
+                {status.plan_key !== "enterprise" && status.status !== "none" && !showUpgrade && (
+                  <button type="button" className="edash-btn-primary" onClick={() => setShowUpgrade(true)}>{status.plan_key === "pro" ? "Upgrade to Enterprise" : "Upgrade plan"}</button>
                 )}
                 {["trialing", "active"].includes(status.status) && !status.cancel_at_period_end && (
                   <button type="button" className="edash-btn-outline" disabled={busy} onClick={() => void cancel()}>Cancel subscription</button>
@@ -167,14 +172,12 @@ export default function EstateBillingPage() {
               </div>
               {showUpgrade && (
                 <div style={{ marginTop: 20 }}>
-                  {status.plan_key === "basic" && (
-                    <p className="edash-field-note" style={{ marginBottom: 12 }}>
-                      {status.status === "trialing"
-                        ? `No charge is made during your trial. Plus will be charged at ${money(String(ESTATE_PLANS.plus[status.billing_cycle === "yearly" ? "yearly" : "monthly"]))} when the trial converts.`
-                        : `Upgrading now charges the ${money(String(Math.max(0, ESTATE_PLANS.plus[status.billing_cycle === "yearly" ? "yearly" : "monthly"] - Number(status.amount || 0))))} difference. Your next renewal will use the full Plus price.`}
-                    </p>
-                  )}
-                  <EstatePricingCards onSelectPlan={(planKey) => void upgrade(planKey)} busyPlan={busy ? "plus" : null} ctaLabel={(planKey) => (planKey === status.plan_key ? "Current plan" : "Switch to this plan")} />
+                  <p className="edash-field-note" style={{ marginBottom: 12 }}>
+                    {status.status === "trialing"
+                      ? "No charge is made during your trial. The new plan is charged when the trial converts."
+                      : "Upgrading now charges only the price difference for this billing period. Your next renewal uses the full price of the new plan."}
+                  </p>
+                  <EstatePricingCards onSelectPlan={(planKey) => void upgrade(planKey)} busyPlan={busyPlan} currentPlan={status.plan_key} ctaLabel={(planKey) => (planKey === status.plan_key ? "Current plan" : "Switch to this plan")} />
                 </div>
               )}
             </>

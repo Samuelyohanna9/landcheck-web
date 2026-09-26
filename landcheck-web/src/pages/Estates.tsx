@@ -684,7 +684,16 @@ export default function Estates() {
   const createEstate = async () => {
     if (!newEstateOrg || !newEstateName.trim()) { toast.error("Choose an organization and enter an Estate name."); return; }
     try { const response=await api.post(`/estates/organizations/${newEstateOrg}`, { name:newEstateName.trim(), location_text:newEstateLocation.trim() || null, crs:newEstateCrs.trim() || "EPSG:4326", datum:newEstateDatum.trim() || null, project_reference:newEstateProjectReference.trim() || null, project_owner:newEstateProjectOwner.trim() || null, ownership_details:newEstateOwnershipDetails.trim() || null, boundary: null }); window.location.assign(`/estates/${response.data.id}/map`); }
-    catch (error) { toast.error(await extractApiErrorMessage(error, "Estate could not be created.")); }
+    catch (error: any) {
+      const detail = error?.response?.data?.detail;
+      if (error?.response?.status === 402 && detail?.code === "estate_limit_reached") {
+        if (window.confirm(`${detail.message}
+
+Open the plans page now?`)) window.location.assign("/estates/billing");
+        return;
+      }
+      toast.error(await extractApiErrorMessage(error, "Estate could not be created."));
+    }
   };
   const deleteEstate = async (force: boolean = false) => {
     if (!deleteEstateTarget) return;

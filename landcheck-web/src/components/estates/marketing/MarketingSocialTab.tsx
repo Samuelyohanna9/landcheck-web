@@ -5,10 +5,11 @@ import { api, extractApiErrorMessage } from "../../../api/client";
 import { AD_STYLES, asAdStyle, copyText, fetchBlobUrl, formatDateTime, type AdStyle } from "../../../utils/estateMarketing";
 import EstateIcon from "../EstateIcon";
 import MarketingAutoPlan from "./MarketingAutoPlan";
+import UpgradeNotice from "../UpgradeNotice";
 
 type Channel = { key: string; label: string; automatic: boolean; format: string };
 type Account = { id: number; provider: "facebook" | "instagram"; name: string; username?: string | null; status: string };
-type Overview = { meta_available: boolean; whatsapp_available: boolean; accounts: Account[]; channels: Channel[]; published: boolean };
+type Overview = { meta_available: boolean; whatsapp_available: boolean; accounts: Account[]; channels: Channel[]; published: boolean; auto_posting?: boolean };
 type Template = { key: string; label: string; hint: string; caption: string };
 type ChannelResult = { status: "ok" | "failed" | "pending"; error?: string; url?: string; manual?: boolean };
 type Post = { id: number; plan_id?: number | null; auto_caption?: boolean; strategy?: string | null; template_label?: string | null; caption: string; channels: string[]; status: string; scheduled_at?: string | null; published_at?: string | null; reminder_sent_at?: string | null; results: Record<string, ChannelResult>; image_style: string; created_at: string };
@@ -246,7 +247,9 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
 
   return (
     <div className="edash-mk-stack">
-      <MarketingAutoPlan estateId={estateId} channels={overview?.channels || []} accounts={overview?.accounts || []} metaAvailable={Boolean(overview?.meta_available)} campaigns={campaigns} canManage={canManage} onChanged={() => { void loadPosts(); }} />
+      {overview && overview.auto_posting === false
+        ? <UpgradeNotice title="Automatic posting is on the Pro plan" message="Pro and Enterprise write a week or a month of posts for you and publish them to Facebook and Instagram on schedule. You can still prepare posts here and share them yourself." cta="Upgrade to Pro" />
+        : <MarketingAutoPlan estateId={estateId} channels={overview?.channels || []} accounts={overview?.accounts || []} metaAvailable={Boolean(overview?.meta_available)} campaigns={campaigns} canManage={canManage} onChanged={() => { void loadPosts(); }} />}
       <div className="edash-card" ref={composerRef}><div className="edash-card-inner">
         <div className="edash-card-head">
           <h3 className="edash-card-title">{editingId !== null ? "Edit post" : "Create a post"}</h3>
@@ -279,11 +282,11 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
             <div className="edash-field"><span>Post to</span>
               <div className="edash-sp-channels">
                 {(overview?.channels || []).map((channel) => {
-                  const unavailable = channel.automatic && (!overview?.meta_available || !hasAccount(channel.key));
+                  const unavailable = channel.automatic && (overview?.auto_posting === false || !overview?.meta_available || !hasAccount(channel.key));
                   return (
                     <label key={channel.key} className={`edash-sp-channel${channels.includes(channel.key) ? " is-on" : ""}`}>
                       <input type="checkbox" checked={channels.includes(channel.key)} onChange={() => toggleChannel(channel.key)} />
-                      <span><strong>{channel.label}</strong><small>{channel.automatic ? (unavailable ? (overview?.meta_available ? "Connect an account below" : "Coming soon") : "Posts automatically") : "You post it - we prepare it and remind you"}</small></span>
+                      <span><strong>{channel.label}</strong><small>{channel.automatic ? (overview?.auto_posting === false ? "Pro plan" : unavailable ? (overview?.meta_available ? "Connect an account below" : "Coming soon") : "Posts automatically") : "You post it - we prepare it and remind you"}</small></span>
                     </label>
                   );
                 })}
@@ -368,9 +371,10 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
       <div className="edash-mk-grid-2">
         <div className="edash-card"><div className="edash-card-inner">
           <div className="edash-card-head"><h3 className="edash-card-title">Facebook &amp; Instagram</h3>
-            {canManage && <button type="button" className="edash-btn-primary" disabled={!overview?.meta_available || busy === "connect"} onClick={() => void connectMeta()}>{busy === "connect" ? "Opening Facebook..." : overview?.accounts.length ? "Connect more" : "Connect"}</button>}
+            {canManage && overview?.auto_posting !== false && <button type="button" className="edash-btn-primary" disabled={!overview?.meta_available || busy === "connect"} onClick={() => void connectMeta()}>{busy === "connect" ? "Opening Facebook..." : overview?.accounts.length ? "Connect more" : "Connect"}</button>}
           </div>
-          {!overview?.meta_available && <p className="edash-mk-hint">Automatic posting to Facebook and Instagram is being switched on (Meta approval is in progress). Until then, use Copy caption, Download image and Share to Status.</p>}
+          {overview?.auto_posting === false && <UpgradeNotice title="Post to Facebook and Instagram automatically" message="Connecting your Pages and posting straight from LandCheck is included in the Pro and Enterprise plans." cta="Upgrade to Pro" />}
+          {overview?.auto_posting !== false && !overview?.meta_available && <p className="edash-mk-hint">Automatic posting to Facebook and Instagram is being switched on (Meta approval is in progress). Until then, use Copy caption, Download image and Share to Status.</p>}
           {overview?.meta_available && overview.accounts.length === 0 && <p className="edash-mk-hint">Connect the Facebook Page (and the Instagram Business account linked to it) that you want to post to. You choose which Pages to share, and can disconnect any time.</p>}
           {[...facebookAccounts, ...instagramAccounts].map((account) => (
             <div key={account.id} className="edash-sp-account">

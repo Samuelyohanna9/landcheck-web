@@ -3,8 +3,10 @@ import { useState } from "react";
 // Mirrors app/services/estates/billing_plans.py exactly - if the price ever changes, update both
 // (the backend is the source of truth for what's actually charged; this is display copy only).
 export const ESTATE_PLANS = {
-  basic: { label: "Basic", monthly: 19500, yearly: 220000, hazardAnalysis: false },
-  plus: { label: "Plus", monthly: 24500, yearly: 285000, hazardAnalysis: true },
+  basic: { label: "Basic", monthly: 19500, yearly: 220000, hazardAnalysis: false, autoPosting: false, maxEstates: 1 },
+  plus: { label: "Plus", monthly: 24500, yearly: 285000, hazardAnalysis: true, autoPosting: false, maxEstates: 3 },
+  pro: { label: "Pro", monthly: 48500, yearly: 533500, hazardAnalysis: true, autoPosting: true, maxEstates: 6 },
+  enterprise: { label: "Enterprise", monthly: 145000, yearly: 1595000, hazardAnalysis: true, autoPosting: true, maxEstates: null },
 } as const;
 
 export type EstatePlanKey = keyof typeof ESTATE_PLANS;
@@ -12,8 +14,11 @@ export type EstateBillingCycle = "monthly" | "yearly";
 
 const naira = (value: number) => `₦${value.toLocaleString()}`;
 
+const PLAN_BADGE: Partial<Record<EstatePlanKey, string>> = { plus: "Adds hazard analysis", pro: "Most popular", enterprise: "Everything, unlimited" };
+
 const PLAN_FEATURES: Record<EstatePlanKey, string[]> = {
   basic: [
+    "1 estate",
     "Estate, plot and block management",
     "Automatic layout design",
     "Scanned plan georeferencing and AI-assisted digitising",
@@ -25,9 +30,23 @@ const PLAN_FEATURES: Record<EstatePlanKey, string[]> = {
     "Documents and audit timeline",
   ],
   plus: [
+    "Manage up to 3 estates",
     "Everything in Basic",
     "Flood and erosion hazard analysis",
     "Whole-layout hazard screening",
+  ],
+  pro: [
+    "Manage up to 6 estates",
+    "Everything in Plus",
+    "Automatic Facebook and Instagram posting",
+    "Auto-written posting plans, scheduled for you",
+    "Five premium flyer, poster and ad designs",
+  ],
+  enterprise: [
+    "Unlimited estates",
+    "Everything in Pro",
+    "Built for large developers and multi-estate portfolios",
+    "Priority onboarding and support",
   ],
 };
 
@@ -37,12 +56,14 @@ export default function EstatePricingCards({
   onSelectPlan,
   ctaLabel = () => "Start free trial",
   busyPlan,
+  currentPlan,
 }: {
   billingCycle?: EstateBillingCycle;
   onCycleChange?: (cycle: EstateBillingCycle) => void;
   onSelectPlan: (plan: EstatePlanKey, cycle: EstateBillingCycle) => void;
   ctaLabel?: (plan: EstatePlanKey) => string;
   busyPlan?: EstatePlanKey | null;
+  currentPlan?: EstatePlanKey | null;
 }) {
   const [internalCycle, setInternalCycle] = useState<EstateBillingCycle>("monthly");
   const billingCycle = controlledCycle ?? internalCycle;
@@ -59,8 +80,8 @@ export default function EstatePricingCards({
           const plan = ESTATE_PLANS[key];
           const price = billingCycle === "monthly" ? plan.monthly : plan.yearly;
           return (
-            <div key={key} className={`estate-pricing-card${key === "plus" ? " estate-pricing-card--featured" : ""}`}>
-              {key === "plus" && <span className="estate-pricing-badge">Includes hazard analysis</span>}
+            <div key={key} className={`estate-pricing-card${key === "pro" ? " estate-pricing-card--featured" : ""}`}>
+              {PLAN_BADGE[key] && <span className="estate-pricing-badge">{PLAN_BADGE[key]}</span>}
               <h3>{plan.label}</h3>
               <p className="estate-pricing-price">{naira(price)}<span>/{billingCycle === "monthly" ? "month" : "year"}</span></p>
               <p className="estate-pricing-trial">3-day free trial &middot; card or bank transfer &middot; cancel anytime</p>
@@ -69,9 +90,9 @@ export default function EstatePricingCards({
               </ul>
               <button
                 type="button"
-                className={`estate-button${key === "plus" ? "" : " estate-button--outline"}`}
+                className={`estate-button${key === "pro" ? "" : " estate-button--outline"}`}
                 style={{ width: "100%", justifyContent: "center" }}
-                disabled={busyPlan === key}
+                disabled={busyPlan === key || currentPlan === key}
                 onClick={() => onSelectPlan(key, billingCycle)}
               >
                 {busyPlan === key ? "Starting..." : ctaLabel(key)}
