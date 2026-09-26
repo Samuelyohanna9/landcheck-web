@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { extractApiErrorMessage } from "../api/client";
 import { registerEstate } from "../auth/estateAuth";
 import "../styles/estate-portal.css";
+import "../styles/estate-auth.css";
 
 function EyeIcon({ off }: { off: boolean }) {
   return (

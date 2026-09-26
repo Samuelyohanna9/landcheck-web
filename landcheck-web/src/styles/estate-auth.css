@@ -1,0 +1,70 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+/* Estates sign-in / register / password screens - same look as the Estate dashboard:
+   grey canvas, flat white panel, Inter type, green brand, 4px-radius controls. Loaded after
+   estate-portal.css, so these rules replace its serif "editorial" styling. */
+.estate-auth-page {
+  --auth-brand: #1a8f5a;
+  --auth-brand-dark: #0f6e44;
+  --auth-ink: #323338;
+  --auth-muted: #676879;
+  --auth-line: #d0d4e4;
+  background: #f6f7fb;
+  color: var(--auth-ink);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.estate-auth-brand-logo { background: var(--auth-brand-dark); border-radius: 8px; }
+.estate-auth-brand-tag { color: var(--auth-brand); font-family: inherit; font-weight: 800; letter-spacing: .12em; }
+
+.estate-auth-card {
+  padding: 22px 26px 18px;
+  border: 1px solid #e6e9ef;
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(50, 51, 56, .06), 0 10px 30px rgba(50, 51, 56, .07);
+}
+.estate-auth-card::before { display: none; }
+.estate-auth-card .estate-kicker,
+.estate-kicker { color: var(--auth-brand); font-family: inherit; font-weight: 700; letter-spacing: .1em; }
+.estate-auth-card h1, .estate-auth-card h2 { font-family: inherit; font-size: 1.5rem; font-weight: 500; letter-spacing: -.01em; color: var(--auth-ink); }
+.estate-auth-card > p:not(.estate-kicker) { color: var(--auth-muted); font-family: inherit; }
+.estate-auth-card label { color: var(--auth-ink); font: 400 .82rem "Inter", sans-serif; }
+.estate-auth-card label small { font-size: .74rem; }
+.estate-auth-card input {
+  min-height: 38px;
+  padding: 7px 12px;
+  border: 1px solid #c3c6d4;
+  border-radius: 4px;
+  background: #fff;
+  font: 400 .9rem "Inter", sans-serif;
+}
+.estate-auth-card input:hover { border-color: var(--auth-muted); }
+.estate-auth-card input:focus { border-color: var(--auth-brand); box-shadow: 0 0 0 1px var(--auth-brand); background: #fff; }
+.estate-password-toggle { border-radius: 4px; }
+
+.estate-auth-card .estate-button,
+.estate-auth-page .estate-button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--auth-brand);
+  background-image: none;
+  box-shadow: none;
+  color: #fff;
+  font: 500 .9rem "Inter", sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.estate-auth-card .estate-button:hover:not(:disabled) { background: var(--auth-brand-dark); }
+.estate-auth-card .estate-button:disabled { opacity: .55; }
+
+.estate-text-link, .estate-auth-switch a, .estate-auth-back { color: var(--auth-brand-dark); font-family: inherit; font-weight: 500; }
+.estate-auth-page .estate-text-link { font-size: .82rem; }
+.estate-auth-error { border-left: 0; border-radius: 4px; background: #fbeaea; color: #b3261e; font-family: inherit; }
+.estate-auth-trust, .estate-auth-switch { font-family: inherit !important; color: var(--auth-muted) !important; }
+.estate-auth-trust { color: #9699a6 !important; }
+
+.estate-register-intro h1 { font-family: inherit; font-weight: 500; letter-spacing: -.02em; line-height: 1.1; color: var(--auth-ink); font-size: clamp(1.8rem, 3vw, 2.4rem); }
+.estate-register-intro > p:not(.estate-kicker) { color: var(--auth-muted); font-family: inherit; }
+.estate-register-points { font-family: inherit; color: var(--auth-muted); }
+.estate-register-points b { background: #e3f2ea; color: var(--auth-brand-dark); border-radius: 4px; }

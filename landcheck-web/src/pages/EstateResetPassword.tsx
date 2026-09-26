@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../api/client";
 import "../styles/estate-portal.css";
+import "../styles/estate-auth.css";
 
 function EyeIcon({ off }: { off: boolean }) {
   return (
