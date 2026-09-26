@@ -4,13 +4,14 @@ import { useSearchParams } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../../../api/client";
 import { copyText, fetchBlobUrl, formatDateTime } from "../../../utils/estateMarketing";
 import EstateIcon from "../EstateIcon";
+import MarketingAutoPlan from "./MarketingAutoPlan";
 
 type Channel = { key: string; label: string; automatic: boolean; format: string };
 type Account = { id: number; provider: "facebook" | "instagram"; name: string; username?: string | null; status: string };
 type Overview = { meta_available: boolean; whatsapp_available: boolean; accounts: Account[]; channels: Channel[]; published: boolean };
 type Template = { key: string; label: string; hint: string; caption: string };
 type ChannelResult = { status: "ok" | "failed" | "pending"; error?: string; url?: string; manual?: boolean };
-type Post = { id: number; caption: string; channels: string[]; status: string; scheduled_at?: string | null; published_at?: string | null; reminder_sent_at?: string | null; results: Record<string, ChannelResult>; image_style: string; created_at: string };
+type Post = { id: number; plan_id?: number | null; auto_caption?: boolean; strategy?: string | null; template_label?: string | null; caption: string; channels: string[]; status: string; scheduled_at?: string | null; published_at?: string | null; reminder_sent_at?: string | null; results: Record<string, ChannelResult>; image_style: string; created_at: string };
 type Optins = {
   whatsapp_available: boolean; active: number; revoked: number;
   presets: Array<{ key: string; label: string; template_name: string; sample: string }>;
@@ -20,8 +21,8 @@ type Optins = {
 type Campaign = { id: number; name: string; channel: string };
 type PlotOption = { id: number; plot_number: string };
 
-const STATUS_LABEL: Record<string, string> = { draft: "Draft", scheduled: "Scheduled", publishing: "Posting...", published: "Posted", partial: "Partly posted", failed: "Failed", cancelled: "Cancelled" };
-const STATUS_TONE: Record<string, string> = { draft: "neutral", scheduled: "info", publishing: "info", published: "good", partial: "warn", failed: "danger", cancelled: "neutral" };
+const STATUS_LABEL: Record<string, string> = { draft: "Draft", scheduled: "Scheduled", publishing: "Posting...", published: "Posted", partial: "Partly posted", failed: "Failed", cancelled: "Cancelled", skipped: "Skipped" };
+const STATUS_TONE: Record<string, string> = { draft: "neutral", scheduled: "info", publishing: "info", published: "good", partial: "warn", failed: "danger", cancelled: "neutral", skipped: "neutral" };
 const EDITABLE = ["draft", "scheduled", "failed", "partial"];
 
 const toLocalInput = (iso?: string | null) => {
@@ -245,6 +246,7 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
 
   return (
     <div className="edash-mk-stack">
+      <MarketingAutoPlan estateId={estateId} channels={overview?.channels || []} accounts={overview?.accounts || []} metaAvailable={Boolean(overview?.meta_available)} campaigns={campaigns} canManage={canManage} onChanged={() => { void loadPosts(); }} />
       <div className="edash-card" ref={composerRef}><div className="edash-card-inner">
         <div className="edash-card-head">
           <h3 className="edash-card-title">{editingId !== null ? "Edit post" : "Create a post"}</h3>
@@ -334,6 +336,7 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
                 <div key={post.id} className={`edash-sp-post${highlight === post.id ? " is-highlight" : ""}`}>
                   <div className="edash-sp-post-head">
                     <span className={`edash-status-pill tone-${STATUS_TONE[post.status] || "neutral"}`}>{STATUS_LABEL[post.status] || post.status}</span>
+                    {post.plan_id && post.template_label && <span className="edash-sp-tag">{post.strategy ? `${post.strategy} · ` : ""}{post.template_label}</span>}
                     <small>{post.scheduled_at ? `${post.status === "scheduled" ? "Goes out" : "Scheduled for"} ${formatDateTime(post.scheduled_at)}` : `Created ${formatDateTime(post.created_at)}`}{post.reminder_sent_at ? " · reminder sent" : ""}</small>
                   </div>
                   <p className="edash-sp-post-caption">{post.caption.length > 220 ? `${post.caption.slice(0, 220)}...` : post.caption}</p>

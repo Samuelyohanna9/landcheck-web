@@ -178,3 +178,25 @@
 .edash .edash-sp-channel span { text-transform: none; letter-spacing: 0; font-size: inherit; font-weight: inherit; color: inherit; }
 .edash .edash-sp-channel small { text-transform: none; letter-spacing: 0; font-size: .72rem; font-weight: 400; color: var(--edash-muted); }
 .edash .edash-sp-channel strong { font-size: .86rem; font-weight: 600; color: var(--edash-ink); }
+
+/* ─── Automatic posting plan ─── */
+.edash-sp-plan-options { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 12px; }
+.edash-sp-check { display: flex; align-items: flex-start; gap: 10px; margin-top: 14px; cursor: pointer; }
+.edash-sp-check input { margin-top: 3px; width: 17px; height: 17px; accent-color: var(--edash-brand); flex: none; }
+.edash-sp-check span { display: flex; flex-direction: column; gap: 2px; }
+.edash-sp-check strong { font-size: .86rem; font-weight: 600; }
+.edash-sp-check small { color: var(--edash-muted); font-size: .76rem; line-height: 1.4; }
+.edash .edash-sp-channel.is-disabled { opacity: .55; cursor: not-allowed; }
+.edash-sp-preview-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--edash-border-soft); }
+.edash-sp-preview-row { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 14px; padding: 10px 12px; border: 1px solid var(--edash-border-soft); border-radius: 8px; background: #fff; }
+.edash-sp-preview-when { font-size: .8rem; color: var(--edash-ink); }
+.edash-sp-preview-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; align-items: flex-start; }
+.edash-sp-preview-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: .84rem; }
+.edash-sp-preview-head small { color: var(--edash-muted); }
+.edash-sp-plans { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--edash-border-soft); display: flex; flex-direction: column; gap: 10px; }
+.edash-sp-plans h4 { margin: 0; font-size: .95rem; font-weight: 600; }
+.edash-sp-plan { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--edash-border-soft); border-radius: 8px; }
+.edash-sp-plan-main { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; min-width: 0; }
+.edash-sp-plan-main small { color: var(--edash-muted); width: 100%; }
+.edash-sp-tag { padding: 2px 8px; border-radius: 4px; background: #eef1f4; color: var(--edash-muted); font-size: .72rem; }
+@media (max-width: 700px) { .edash-sp-preview-row { grid-template-columns: 1fr; gap: 6px; } }
