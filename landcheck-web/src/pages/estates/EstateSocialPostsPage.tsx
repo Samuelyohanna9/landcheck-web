@@ -5,7 +5,7 @@ import { api, extractApiErrorMessage } from "../../api/client";
 import { getEstateAuthSession } from "../../auth/estateAuth";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
-import { fetchBlobUrl, formatLagos, fromLagosInput, lagosDayKey, toLagosInput } from "../../utils/estateMarketing";
+import { AD_STYLES, fetchBlobUrl, formatLagos, fromLagosInput, lagosDayKey, toLagosInput } from "../../utils/estateMarketing";
 import "../../styles/estate-marketing.css";
 
 type Result = { status: "ok" | "failed" | "pending" | "skipped"; error?: string; url?: string };
@@ -187,7 +187,7 @@ export default function EstateSocialPostsPage() {
                         <div className="edash-mk-form-grid">
                           <label className="edash-field"><span>Goes out (Lagos time)</span><input type="datetime-local" value={draft.when} disabled={!editable || !canManage} onChange={(event) => setDraft({ ...draft, when: event.target.value })} /></label>
                           <label className="edash-field"><span>Design</span>
-                            <select value={draft.style} disabled={!editable || !canManage} onChange={(event) => setDraft({ ...draft, style: event.target.value })}><option value="promo">Bright promo</option><option value="luxury">Classic dark</option></select>
+                            <select value={draft.style} disabled={!editable || !canManage} onChange={(event) => setDraft({ ...draft, style: event.target.value })}>{AD_STYLES.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select>
                           </label>
                         </div>
                         <div className="edash-field"><span>Post to</span>

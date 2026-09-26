@@ -109,12 +109,18 @@ export type ShareLinks = {
 };
 
 export type AdFormat = "status" | "post" | "landscape" | "poster";
-export type AdStyle = "promo" | "luxury";
+export type AdStyle = "promo" | "luxury" | "heritage" | "bold" | "blueprint";
 
 export const AD_STYLES: Array<{ key: AdStyle; label: string; hint: string }> = [
   { key: "promo", label: "Bright promo", hint: "Poster style with a price ribbon" },
   { key: "luxury", label: "Classic dark", hint: "Dark, premium look" },
+  { key: "heritage", label: "Heritage", hint: "Ivory paper, serif type, framed satellite photo" },
+  { key: "bold", label: "Bold", hint: "Your logo colour, huge price, sticker badge" },
+  { key: "blueprint", label: "Blueprint", hint: "Navy survey drawing with coordinates and spec table" },
 ];
+
+export const adStyleLabel = (key: string) => AD_STYLES.find((item) => item.key === key)?.label || "Bright promo";
+export const asAdStyle = (key: string | null | undefined): AdStyle => (AD_STYLES.some((item) => item.key === key) ? (key as AdStyle) : "promo");
 
 const ALL_FORMATS: Array<{ key: AdFormat; label: string; hint: string; short: string }> = [
   { key: "status", label: "WhatsApp Status / Story", hint: "1080 x 1920", short: "Status" },
@@ -123,8 +129,8 @@ const ALL_FORMATS: Array<{ key: AdFormat; label: string; hint: string; short: st
   { key: "landscape", label: "Wide banner", hint: "1200 x 630", short: "Banner" },
 ];
 
-/** The print poster only exists in the promo style. */
-export const adFormatsFor = (style: AdStyle) => ALL_FORMATS.filter((format) => style === "promo" || format.key !== "poster");
+/** The print poster exists in every style except the classic dark one. */
+export const adFormatsFor = (style: AdStyle) => ALL_FORMATS.filter((format) => style !== "luxury" || format.key !== "poster");
 export const AD_FORMATS = ALL_FORMATS;
 
 /** Nigeria has no daylight saving: Lagos is always UTC+1. Post times are shown and edited in Lagos time. */

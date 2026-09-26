@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { Link, useSearchParams } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../../../api/client";
-import { copyText, fetchBlobUrl, formatDateTime } from "../../../utils/estateMarketing";
+import { AD_STYLES, asAdStyle, copyText, fetchBlobUrl, formatDateTime, type AdStyle } from "../../../utils/estateMarketing";
 import EstateIcon from "../EstateIcon";
 import MarketingAutoPlan from "./MarketingAutoPlan";
 
@@ -65,7 +65,7 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
   const [templateKey, setTemplateKey] = useState("new_plots");
   const [caption, setCaption] = useState("");
   const [channels, setChannels] = useState<string[]>(["whatsapp_status"]);
-  const [style, setStyle] = useState<"promo" | "luxury">("promo");
+  const [style, setStyle] = useState<AdStyle>("promo");
   const [plotId, setPlotId] = useState("");
   const [campaignId, setCampaignId] = useState("");
   const [when, setWhen] = useState<"draft" | "now" | "later">("draft");
@@ -199,7 +199,7 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
   };
 
   const editPost = (post: Post) => {
-    setEditingId(post.id); setCaption(post.caption); setChannels(post.channels); setStyle(post.image_style === "luxury" ? "luxury" : "promo");
+    setEditingId(post.id); setCaption(post.caption); setChannels(post.channels); setStyle(asAdStyle(post.image_style));
     setWhen(post.scheduled_at ? "later" : "draft"); setScheduledAt(toLocalInput(post.scheduled_at));
     composerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
@@ -291,8 +291,7 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
             </div>
             <div className="edash-field"><span>Design</span>
               <div className="edash-mk-segment" role="group" aria-label="Design">
-                <button type="button" className={style === "promo" ? "is-active" : ""} onClick={() => setStyle("promo")}>Bright promo</button>
-                <button type="button" className={style === "luxury" ? "is-active" : ""} onClick={() => setStyle("luxury")}>Classic dark</button>
+                {AD_STYLES.map((item) => <button key={item.key} type="button" title={item.hint} className={style === item.key ? "is-active" : ""} onClick={() => setStyle(item.key)}>{item.label}</button>)}
               </div>
             </div>
             <div className="edash-field"><span>When</span>

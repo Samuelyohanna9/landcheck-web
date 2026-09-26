@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { Link, useNavigate } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../../../api/client";
-import { formatDateTime } from "../../../utils/estateMarketing";
+import { AD_STYLES, adStyleLabel, formatDateTime } from "../../../utils/estateMarketing";
 
 type Channel = { key: string; label: string; automatic: boolean };
 type Account = { provider: "facebook" | "instagram"; status: string };
@@ -23,7 +23,7 @@ const FREQUENCIES = [
   { key: "w1", label: "Once a week", per_week: 1 },
 ] as const;
 const TONES = [{ key: "friendly", label: "Friendly" }, { key: "professional", label: "Professional" }, { key: "urgent", label: "Urgent" }];
-const DESIGNS = [{ key: "mixed", label: "Mixed" }, { key: "promo", label: "Bright promo" }, { key: "luxury", label: "Classic dark" }];
+const DESIGNS = [{ key: "mixed", label: "Mixed" }, ...AD_STYLES.map((item) => ({ key: item.key as string, label: item.label }))];
 const STRATEGY_TONE: Record<string, string> = { Announcement: "info", Choice: "info", Affordability: "good", Feature: "neutral", Trust: "good", Progress: "info", Location: "info", Scarcity: "warn", Proof: "good", Invitation: "info", Objections: "neutral", Education: "neutral", Conversation: "neutral" };
 
 const tomorrow = () => {
@@ -161,7 +161,7 @@ export default function MarketingAutoPlan({ estateId, channels, accounts, metaAv
             <div key={`${item.scheduled_at}-${index}`} className="edash-sp-preview-row">
               <div className="edash-sp-preview-when"><strong>{formatDateTime(item.scheduled_at)}</strong></div>
               <div className="edash-sp-preview-body">
-                <div className="edash-sp-preview-head"><span className={`edash-status-pill tone-${STRATEGY_TONE[item.strategy] || "neutral"}`}>{item.strategy}</span><span>{item.label}</span><small>{item.image_style === "luxury" ? "Classic dark" : "Bright promo"}</small></div>
+                <div className="edash-sp-preview-head"><span className={`edash-status-pill tone-${STRATEGY_TONE[item.strategy] || "neutral"}`}>{item.strategy}</span><span>{item.label}</span><small>{adStyleLabel(item.image_style)}</small></div>
                 <p className="edash-sp-post-caption">{open === index ? item.caption : `${item.caption.split("\n").slice(0, 3).join("\n").slice(0, 200)}${item.caption.length > 200 ? "..." : ""}`}</p>
                 <button type="button" className="edash-card-link" onClick={() => setOpen(open === index ? null : index)}>{open === index ? "Show less" : "Read the full post"}</button>
               </div>

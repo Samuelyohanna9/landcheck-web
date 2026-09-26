@@ -12,7 +12,7 @@
 
 .edash-mk-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
 .edash-mk-toolbar > div { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.edash-mk-segment { display: inline-flex; padding: 3px; border: 1px solid var(--edash-border); border-radius: 9px; background: var(--edash-surface); }
+.edash-mk-segment { display: inline-flex; flex-wrap: wrap; gap: 2px; max-width: 100%; padding: 3px; border: 1px solid var(--edash-border); border-radius: 9px; background: var(--edash-surface); }
 .edash-mk-segment button { padding: 5px 11px; border: 0; border-radius: 6px; background: transparent; color: var(--edash-muted); font-size: .74rem; font-weight: 700; cursor: pointer; }
 .edash-mk-segment button.is-active { background: var(--edash-brand); color: #fff; }
 
