@@ -1633,7 +1633,7 @@ export default function Estates() {
     const river = make();
     const floodplain = make();
     const rainfall = make();
-    for (const item of assessments || []) {
+    for (const item of (assessments || []).some((entry: any) => !entry.plot_id) ? (assessments || []).filter((entry: any) => !entry.plot_id) : (assessments || [])) {
       const result = item.hazards?.flood?.result;
       const summary = result?.summary;
       if (!summary) continue;
