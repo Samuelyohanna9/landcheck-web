@@ -54,7 +54,7 @@ export default function EstateBillingPage() {
   useEffect(() => {
     const result = new URLSearchParams(window.location.search).get("payment_result");
     if (!result) return;
-    if (result === "success") toast.success("Payment received. Your subscription is active again.");
+    if (result === "success") toast.success("Payment received. Your subscription and plan are up to date.");
     else if (result === "pending") toast("Payment authorization is still pending. We will update billing when it completes.");
     else toast.error("Payment was not completed. You can try again from Billing & plan.");
     window.history.replaceState({}, document.title, window.location.pathname);
@@ -89,6 +89,12 @@ export default function EstateBillingPage() {
     setBusyPlan(planKey);
     try {
       const response = await api.post<PlanChangeResponse>("/estates/billing/change-plan", { plan_key: planKey }, { params: { organization_id: organizationId } });
+      const checkoutUrl = String((response.data as { checkout_url?: string })?.checkout_url || "");
+      if (checkoutUrl) {
+        toast(`Opening secure payment for the ${money(response.data.plan_change_amount)} upgrade...`);
+        window.location.assign(checkoutUrl);
+        return;
+      }
       if (response.data?.plan_change_status === "pending") {
         toast("Upgrade payment is pending. Your plan will update after the payment is confirmed.");
       } else if (Number(response.data?.plan_change_amount || 0) > 0) {
