@@ -1,0 +1,108 @@
+/* LandCheck Work sign-in - same look as the Work dashboard: soft green canvas, white panel,
+   green brand, compact controls, everything inside one viewport. Loaded after green-work-login.css. */
+.work-login-page {
+  --wl-text: #0d2f21;
+  --wl-sub: #365846;
+  --wl-line: rgba(28, 73, 45, 0.16);
+  --wl-green: #1e8a42;
+  --wl-green-dark: #1a6e37;
+  height: 100dvh;
+  min-height: 0;
+  padding: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--wl-text);
+  background:
+    radial-gradient(120% 90% at 12% 0%, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 52%),
+    radial-gradient(90% 70% at 92% 10%, rgba(59, 152, 90, 0.2) 0%, rgba(59, 152, 90, 0) 58%),
+    linear-gradient(168deg, #e8f5eb 0%, #d4eeda 40%, #c0e4c8 70%, #a8d8b2 100%);
+}
+.work-login-page .work-login-backdrop { display: none; }
+
+.work-login-page .work-login-shell { width: min(380px, 100%); gap: 10px; }
+.work-login-page .work-login-brand { gap: 8px; }
+.work-login-page .work-login-brand img { width: 26px; height: 26px; border-radius: 7px; }
+.work-login-page .work-login-brand span { font-size: 0.8rem; letter-spacing: 0.1em; color: var(--wl-green-dark); }
+
+.work-login-page .work-login-card {
+  padding: 18px 22px 14px;
+  border: 1px solid rgba(28, 73, 45, 0.12);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 10px 22px rgba(15, 61, 31, 0.13);
+  text-align: left;
+}
+.work-login-page .work-login-card-kicker { color: var(--wl-green); font-size: 0.62rem; letter-spacing: 0.1em; }
+.work-login-page .work-login-card h1 { margin: 4px 0 0; font-size: 1.45rem; font-weight: 700; letter-spacing: -0.01em; color: var(--wl-text); }
+.work-login-page .work-login-card-sub { margin: 2px 0 0; font-size: 0.82rem; color: var(--wl-sub); }
+
+.work-login-page .work-login-form { gap: 8px; margin-top: 12px; }
+.work-login-page .work-login-form > label:not(.work-login-checkbox) { font-size: 0.78rem; font-weight: 600; color: var(--wl-text); letter-spacing: 0; text-transform: none; }
+.work-login-page .work-login-form input[type="text"],
+.work-login-page .work-login-form input[type="password"] {
+  min-height: 38px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--wl-line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--wl-text);
+  font-size: 0.9rem;
+}
+.work-login-page .work-login-form input::placeholder { color: #7a9285; }
+.work-login-page .work-login-form input:hover { border-color: rgba(28, 73, 45, 0.35); }
+.work-login-page .work-login-form input:focus,
+.work-login-page .work-login-form input:focus-visible { border-color: var(--wl-green); box-shadow: 0 0 0 3px rgba(42, 168, 82, 0.18); outline: 0; background: #fff; }
+.work-login-page .work-login-form input:-webkit-autofill,
+.work-login-page .work-login-form input:-webkit-autofill:hover,
+.work-login-page .work-login-form input:-webkit-autofill:focus { -webkit-text-fill-color: var(--wl-text); box-shadow: 0 0 0 40px #fff inset; }
+.work-login-page .work-login-password-eye { color: var(--wl-sub); }
+.work-login-page .work-login-password-eye:hover,
+.work-login-page .work-login-password-eye:focus-visible { color: var(--wl-text); background: rgba(28, 73, 45, 0.08); }
+
+.work-login-page .work-login-row { margin-top: 0; }
+.work-login-page .work-login-form label.work-login-checkbox { font-size: 0.8rem; font-weight: 500; color: var(--wl-sub); }
+.work-login-page .work-login-forgot { font-size: 0.8rem; font-weight: 600; color: var(--wl-green-dark); }
+.work-login-page .work-login-error { padding: 7px 10px; border-radius: 8px; font-size: 0.78rem; background: #fef2f2; color: #b91c1c; border: 1px solid rgba(185, 28, 28, 0.2); }
+
+.work-login-page .work-login-submit {
+  min-height: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--wl-green);
+  background-image: none;
+  box-shadow: none;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.work-login-page .work-login-submit:hover:not(:disabled) { background: var(--wl-green-dark); }
+
+.work-login-page .work-login-divider { margin: 8px 0 0; font-size: 0.72rem; color: var(--wl-sub); }
+.work-login-page .work-login-divider span { color: var(--wl-sub); }
+.work-login-page .work-login-divider::before,
+.work-login-page .work-login-divider::after { background: var(--wl-line); }
+.work-login-page .work-login-outline-btn {
+  min-height: 36px;
+  height: 36px;
+  margin-top: 8px;
+  border: 1px solid var(--wl-line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--wl-green-dark);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.work-login-page .work-login-outline-btn:hover { background: #f0faf2; border-color: rgba(28, 73, 45, 0.35); }
+.work-login-page .work-login-explore { display: inline-block; margin-top: 8px; font-size: 0.8rem; font-weight: 600; color: var(--wl-green-dark); }
+.work-login-page .work-login-footer { margin: 0; font-size: 0.72rem; color: var(--wl-sub); }
+.work-login-page .work-login-loading { margin-top: 4px; }
+
+@media (max-height: 640px) {
+  .work-login-page .work-login-card-sub, .work-login-page .work-login-footer { display: none; }
+  .work-login-page .work-login-form { gap: 6px; margin-top: 8px; }
+}
+.work-login-page a.work-login-outline-btn { display: flex; align-items: center; justify-content: center; text-decoration: none; }
+.work-login-page .work-login-brand span strong { color: var(--wl-text); font-weight: 800; }
+.work-login-page .work-login-brand span small { color: var(--wl-green); font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; font-size: 0.7rem; }
+.work-login-page .work-login-brand img { border-color: rgba(28, 73, 45, 0.2); }
