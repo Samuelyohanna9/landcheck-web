@@ -235,6 +235,7 @@ export default function EstateShell({
   // The company logo is configured once in Estate settings and reused throughout the workspace.
   // Keep the account avatar for the signed-in person; the adjacent mark identifies the company.
   useEffect(() => {
+    if (!estateId || estateId === "0") return;
     let mounted = true;
     api.get(`/estates/${estateId}/public-settings`)
       .then((response) => {
@@ -301,7 +302,7 @@ export default function EstateShell({
             <Link
               key={item.key}
               className={`edash-nav-item${item.key === activeKey ? " active" : ""}`}
-              to={item.path(estateId)}
+              to={estateId || item.key === "payments" || item.key === "commissions" ? item.path(estateId) : "/estates/workspace"}
               onClick={() => { setSidebarOpen(false); if (item.key === "notifications") markDeliverySeen(); }}
             >
               <span className="edash-nav-icon"><EstateIcon name={item.icon} /></span>
