@@ -286,3 +286,38 @@
   .estate-auth-card { padding: 24px; }
   .estate-auth-card h1, .estate-auth-card h2 { font-size: 2rem; }
 }
+
+/* ─── Compact sign-in / register screens: everything visible in one viewport, no vertical scroll ─── */
+.estate-auth-page { min-height: 100dvh; }
+.estate-auth-shell { gap: 12px; min-height: 100dvh; width: min(100% - 32px, 400px); padding: 12px 0; }
+.estate-auth-shell--register { grid-template-columns: minmax(200px, 1fr) minmax(340px, 400px); gap: clamp(24px, 5vw, 64px); width: min(100% - 32px, 900px); }
+.estate-auth-brand { gap: 3px; }
+.estate-auth-brand-logo { padding: 6px 12px; border-radius: 8px; }
+.estate-auth-brand-logo img { height: 20px; }
+.estate-auth-brand-tag { font-size: .6rem; }
+.estate-auth-card { padding: 18px 24px 16px; }
+.estate-auth-card .estate-kicker { margin: 0; font-size: .6rem; }
+.estate-auth-card h1, .estate-auth-card h2 { margin: 4px 0 2px; font-size: 1.7rem; letter-spacing: -.03em; }
+.estate-auth-card > p:not(.estate-kicker) { margin: 0; font-size: .82rem; line-height: 1.4; }
+.estate-auth-card form { gap: 9px; margin-top: 12px; }
+.estate-auth-card label { gap: 4px; font-size: .68rem; }
+.estate-auth-card input { padding: 8px 10px; font-size: .92rem; }
+.estate-password-toggle { width: 30px; height: 30px; }
+.estate-password-toggle svg { width: 17px; height: 17px; }
+.estate-auth-card .estate-button { min-height: 38px; }
+.estate-auth-error { padding: 7px 10px; font-size: .72rem; }
+.estate-auth-trust { margin: 8px 0 0; font-size: .64rem; }
+.estate-auth-switch { margin: 8px 0 0 !important; font-size: .72rem !important; }
+.estate-auth-back { font-size: .68rem; }
+.estate-register-intro h1 { margin: 8px 0; font-size: clamp(2rem, 3.6vw, 3rem); }
+.estate-register-intro > p:not(.estate-kicker) { font-size: .88rem; line-height: 1.5; }
+.estate-register-points { gap: 8px; margin-top: 16px; }
+@media (max-height: 640px) {
+  .estate-auth-card > p:not(.estate-kicker), .estate-auth-trust { display: none; }
+  .estate-auth-card form { gap: 7px; margin-top: 8px; }
+}
+@media (max-width: 850px) {
+  .estate-auth-shell--register { grid-template-columns: 1fr; width: min(100% - 32px, 420px); }
+  .estate-auth-shell--register .estate-register-intro { display: none; }
+}
+.estate-auth-shell--register .estate-auth-brand { margin-bottom: 10px; }
