@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../../../api/client";
 import { copyText, fetchBlobUrl, formatDateTime } from "../../../utils/estateMarketing";
 import EstateIcon from "../EstateIcon";
@@ -326,7 +326,7 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
       </div></div>
 
       <div className="edash-card"><div className="edash-card-inner">
-        <div className="edash-card-head"><h3 className="edash-card-title">Your posts</h3></div>
+        <div className="edash-card-head"><h3 className="edash-card-title">Recent posts</h3><Link className="edash-btn-primary" to={`/estates/${estateId}/marketing/posts`}>See and edit all posts</Link></div>
         {posts.length === 0 ? <p className="edash-mk-empty">Nothing yet. Create your first post above.</p> : (
           <div className="edash-sp-posts">
             {posts.map((post) => {

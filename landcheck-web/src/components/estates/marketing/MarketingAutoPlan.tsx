@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import { Link, useNavigate } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../../../api/client";
 import { formatDateTime } from "../../../utils/estateMarketing";
 
@@ -32,6 +33,7 @@ const tomorrow = () => {
 };
 
 export default function MarketingAutoPlan({ estateId, channels, accounts, metaAvailable, campaigns, canManage, onChanged }: { estateId: string; channels: Channel[]; accounts: Account[]; metaAvailable: boolean; campaigns: Campaign[]; canManage: boolean; onChanged: () => void }) {
+  const navigate = useNavigate();
   const [frequency, setFrequency] = useState<(typeof FREQUENCIES)[number]["key"]>("d1");
   const [days, setDays] = useState(7);
   const [start, setStart] = useState(tomorrow());
@@ -80,11 +82,11 @@ export default function MarketingAutoPlan({ estateId, channels, accounts, metaAv
   const create = async (approve: boolean) => {
     setBusy(approve ? "create" : "draft");
     try {
-      const response = await api.post<{ created_posts: number }>(`/estates/${estateId}/marketing/social/plans`, body(approve));
+      const response = await api.post<{ id: number; created_posts: number }>(`/estates/${estateId}/marketing/social/plans`, body(approve));
       toast.success(approve ? `${response.data.created_posts} posts scheduled. They will go out automatically.` : `${response.data.created_posts} draft posts created. Review them, then approve.`, { duration: 6000 });
       setPreview(null);
-      await loadPlans();
       onChanged();
+      navigate(`/estates/${estateId}/marketing/posts?plan=${response.data.id}&scope=${approve ? "upcoming" : "drafts"}`);
     } catch (error) { toast.error(await extractApiErrorMessage(error, "The plan could not be created.")); } finally { setBusy(null); }
   };
   const act = async (plan: Plan, payload: { action?: string; auto_renew?: boolean }) => {
@@ -183,6 +185,7 @@ export default function MarketingAutoPlan({ estateId, channels, accounts, metaAv
                 </div>
                 {canManage && (
                   <div className="edash-sp-post-actions">
+                    <Link className="edash-btn-outline" to={`/estates/${estateId}/marketing/posts?plan=${plan.id}&scope=all`}>See all posts</Link>
                     {!!plan.counts.draft && <button type="button" className="edash-btn-primary" disabled={busy === `plan-${plan.id}`} onClick={() => void act(plan, { action: "approve" })}>Approve drafts</button>}
                     <button type="button" className="edash-btn-outline" disabled={busy === `plan-${plan.id}`} onClick={() => void act(plan, { auto_renew: !plan.auto_renew })}>{plan.auto_renew ? "Keeps going: on" : "Keeps going: off"}</button>
                     {plan.status === "active" ? <button type="button" className="edash-btn-outline" disabled={busy === `plan-${plan.id}`} onClick={() => void act(plan, { action: "pause" })}>Pause</button> : <button type="button" className="edash-btn-outline" disabled={busy === `plan-${plan.id}`} onClick={() => void act(plan, { action: "resume" })}>Resume</button>}

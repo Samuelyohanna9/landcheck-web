@@ -126,3 +126,22 @@ const ALL_FORMATS: Array<{ key: AdFormat; label: string; hint: string; short: st
 /** The print poster only exists in the promo style. */
 export const adFormatsFor = (style: AdStyle) => ALL_FORMATS.filter((format) => style === "promo" || format.key !== "poster");
 export const AD_FORMATS = ALL_FORMATS;
+
+/** Nigeria has no daylight saving: Lagos is always UTC+1. Post times are shown and edited in Lagos time. */
+export const LAGOS_TZ = "Africa/Lagos";
+export function formatLagos(value?: string | null, options: Intl.DateTimeFormatOptions = { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }): string {
+  if (!value) return "-";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString("en-NG", { timeZone: LAGOS_TZ, ...options });
+}
+export function lagosDayKey(value: string): string {
+  return new Date(value).toLocaleDateString("en-CA", { timeZone: LAGOS_TZ });
+}
+export function toLagosInput(value?: string | null): string {
+  if (!value) return "";
+  const date = new Date(new Date(value).getTime() + 3600 * 1000);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 16);
+}
+export function fromLagosInput(value: string): string {
+  return `${value}:00+01:00`;
+}
