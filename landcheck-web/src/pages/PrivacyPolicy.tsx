@@ -26,6 +26,15 @@ const policySections = [
     ],
   },
   {
+    title: "Social media accounts and WhatsApp updates (LandCheck Estates)",
+    points: [
+      "An estate company may connect its own Facebook Page and Instagram Business account so LandCheck Estates can publish marketing posts that the company creates, on the schedule the company chooses. We ask Facebook only for the permissions needed to list the Pages the person chooses to share and to publish posts to them.",
+      "We store the connected account's name, its identifier and an access token. The token is encrypted, is never shown in the product, and is used only to publish the company's own posts. We do not read personal profiles, friends, messages or private content.",
+      "A company can disconnect an account at any time from its Marketing settings, which deletes the stored token. Anyone can also remove LandCheck from their Facebook settings, or ask us to delete their connection data, using the instructions at /data-deletion.",
+      "Buyers can choose to receive WhatsApp updates about an estate by ticking an unticked consent box on the public Estate page. We keep their name, phone number, the wording they agreed to and the time. They receive only pre-approved message templates from the estate company, can reply STOP at any time to stop all messages, and the company can remove them on request.",
+    ],
+  },
+  {
     title: "Public Estate websites and reservations",
     points: [
       "An estate company chooses what to publish. A public Estate website may show its name, logo, introduction, location, contact details, payment-plan information, and approved plot information.",
