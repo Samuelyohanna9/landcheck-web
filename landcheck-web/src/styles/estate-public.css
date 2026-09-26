@@ -380,3 +380,10 @@
 .estate-public-evidence-reach { margin: 12px 0 0; padding: 10px 12px; border-radius: 8px; background: #eaf6ee; color: var(--estate-public-brand-dark); font-size: .84rem; font-weight: 700; }
 .estate-public-forecast-projections--details { padding: 0; border: 0; background: transparent; margin-top: 10px; }
 @media (max-width: 720px) { .estate-public-evidence-cards { grid-template-columns: 1fr; } }
+
+.estate-public-curve { display: block; width: 100%; height: auto; overflow: visible; }
+.estate-public-curve-grid { stroke: #dbe7e3; stroke-width: 1; stroke-dasharray: 2 5; }
+.estate-public-curve-axis { fill: #7a8a86; font-size: 11px; font-weight: 600; }
+.estate-public-curve-now { stroke: #9db8b2; stroke-width: 1; stroke-dasharray: 3 4; }
+.estate-public-curve-value { fill: #0b5f8a; font-size: 13px; font-weight: 800; }
+.estate-public-curve-value--future { fill: #b96f00; }

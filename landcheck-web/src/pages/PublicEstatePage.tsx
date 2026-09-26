@@ -221,6 +221,67 @@ function directionName(direction: string | null | undefined) {
 
 const hectares = (value: number) => (value >= 100 ? Math.round(value).toLocaleString() : value.toFixed(1));
 
+/** Smooth curve through points (Catmull-Rom converted to cubic Beziers). */
+function smoothPath(points: Array<[number, number]>) {
+  if (points.length < 2) return "";
+  let d = `M${points[0][0].toFixed(1)},${points[0][1].toFixed(1)}`;
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const p0 = points[i - 1] || points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] || p2;
+    const c1: [number, number] = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+    const c2: [number, number] = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    d += ` C${c1[0].toFixed(1)},${c1[1].toFixed(1)} ${c2[0].toFixed(1)},${c2[1].toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+  }
+  return d;
+}
+
+function GrowthCurve({ history, projections, radiusKm }: { history: Array<{ year: number; built_up_area_ha: number }>; projections: any[]; radiusKm: number }) {
+  const W = 680, H = 250, L = 56, R = 26, T = 28, B = 34;
+  const last = history[history.length - 1];
+  const future = projections.map((row) => ({ year: Number(row.target_year), low: Number(row.conservative_area_ha), mid: Number(row.observed_trend_area_ha), high: Number(row.accelerated_area_ha) })).filter((row) => Number.isFinite(row.year));
+  const minYear = history[0].year;
+  const maxYear = future.length ? future[future.length - 1].year : last.year;
+  const values = [...history.map((item) => item.built_up_area_ha), ...future.flatMap((row) => [row.low, row.high])];
+  let lo = Math.min(...values);
+  let hi = Math.max(...values);
+  const pad = Math.max((hi - lo) * 0.12, hi * 0.01, 1);
+  lo -= pad; hi += pad;
+  const x = (year: number) => L + ((year - minYear) / Math.max(1, maxYear - minYear)) * (W - L - R);
+  const y = (value: number) => T + (1 - (value - lo) / (hi - lo)) * (H - T - B);
+  const past: Array<[number, number]> = history.map((item) => [x(item.year), y(item.built_up_area_ha)]);
+  const mid: Array<[number, number]> = [[x(last.year), y(last.built_up_area_ha)], ...future.map((row) => [x(row.year), y(row.mid)] as [number, number])];
+  const upper: Array<[number, number]> = [[x(last.year), y(last.built_up_area_ha)], ...future.map((row) => [x(row.year), y(row.high)] as [number, number])];
+  const lower: Array<[number, number]> = [[x(last.year), y(last.built_up_area_ha)], ...future.map((row) => [x(row.year), y(row.low)] as [number, number])];
+  const baseY = H - B;
+  const pastLine = smoothPath(past);
+  const band = future.length ? `${smoothPath(upper)} L${lower[lower.length - 1][0].toFixed(1)},${lower[lower.length - 1][1].toFixed(1)} ${smoothPath([...lower].reverse()).replace(/^M[^C]+/, "")} Z` : "";
+  const ticks = [0, 1, 2, 3].map((n) => lo + ((hi - lo) * n) / 3);
+  const yearTicks = Array.from(new Set([history[0].year, last.year, ...future.map((row) => row.year)]));
+  const endPoint = past[past.length - 1];
+  const farPoint = future.length ? mid[mid.length - 1] : null;
+  return <svg className="estate-public-curve" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Built-up land within ${radiusKm} km, ${minYear} to ${maxYear}`}>
+    <defs>
+      <linearGradient id="epc-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#0e7c86" stopOpacity=".34" /><stop offset="100%" stopColor="#0e7c86" stopOpacity="0" /></linearGradient>
+      <linearGradient id="epc-line" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#2a9d8f" /><stop offset="100%" stopColor="#0b5f8a" /></linearGradient>
+      <linearGradient id="epc-band" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#f4a72c" stopOpacity=".38" /><stop offset="100%" stopColor="#f4a72c" stopOpacity=".12" /></linearGradient>
+    </defs>
+    {ticks.map((tick) => <g key={tick}><line x1={L} x2={W - R} y1={y(tick)} y2={y(tick)} className="estate-public-curve-grid" /><text x={L - 8} y={y(tick) + 4} textAnchor="end" className="estate-public-curve-axis">{hectares(tick)}</text></g>)}
+    {yearTicks.map((year) => <text key={year} x={x(year)} y={H - 10} textAnchor="middle" className="estate-public-curve-axis">{year}</text>)}
+    <text x={L - 8} y={14} textAnchor="end" className="estate-public-curve-axis">ha</text>
+    {band && <path d={band} fill="url(#epc-band)" />}
+    <path d={`${pastLine} L${endPoint[0]},${baseY} L${past[0][0]},${baseY} Z`} fill="url(#epc-fill)" />
+    {future.length > 0 && <path d={smoothPath(mid)} fill="none" stroke="#e08a00" strokeWidth="2.5" strokeDasharray="7 6" strokeLinecap="round" />}
+    <path d={pastLine} fill="none" stroke="url(#epc-line)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+    <line x1={endPoint[0]} x2={endPoint[0]} y1={T} y2={baseY} className="estate-public-curve-now" />
+    <circle cx={past[0][0]} cy={past[0][1]} r="4.5" fill="#fff" stroke="#2a9d8f" strokeWidth="2.5" />
+    <circle cx={endPoint[0]} cy={endPoint[1]} r="6" fill="#0b5f8a" stroke="#fff" strokeWidth="2.5" />
+    <text x={endPoint[0] - 10} y={endPoint[1] - 14} textAnchor="end" className="estate-public-curve-value">{hectares(last.built_up_area_ha)} ha</text>
+    {farPoint && <><circle cx={farPoint[0]} cy={farPoint[1]} r="5" fill="#fff" stroke="#e08a00" strokeWidth="2.5" /><text x={farPoint[0]} y={farPoint[1] - 12} textAnchor="end" className="estate-public-curve-value estate-public-curve-value--future">{hectares(future[future.length - 1].mid)} ha by {future[future.length - 1].year}</text></>}
+  </svg>;
+}
+
 /** The satellite evidence behind the outlook: real measured history, then clearly-labelled scenarios. */
 function GrowthEvidence({ forecast }: { forecast: any }) {
   const history: Array<{ year: number; built_up_area_ha: number }> = forecast.historical_built_up || [];
@@ -231,7 +292,6 @@ function GrowthEvidence({ forecast }: { forecast: any }) {
   if (!first || !last || history.length < 2) return null;
   const change = last.built_up_area_ha - first.built_up_area_ha;
   const percent = first.built_up_area_ha > 0 ? (change / first.built_up_area_ha) * 100 : null;
-  const peak = Math.max(...history.map((item) => item.built_up_area_ha), 1);
   const reach = forecast.reach_estimate;
   const growing = change > 0;
   return <div className="estate-public-evidence">
@@ -242,15 +302,8 @@ function GrowthEvidence({ forecast }: { forecast: any }) {
           ? <>Built-up land within {radiusKm} km of this estate grew from <strong>{hectares(first.built_up_area_ha)} ha</strong> in {first.year} to <strong>{hectares(last.built_up_area_ha)} ha</strong> in {last.year}{percent != null && percent > 0 ? <> — <strong>+{Math.round(percent)}%</strong></> : null}.</>
           : <>Measured every year from {first.year} to {last.year}, the built-up area within {radiusKm} km of this estate is <strong>{hectares(last.built_up_area_ha)} ha</strong>, with no clear expansion in this record.</>}
       </p>
-      <div className="estate-public-evidence-bars" role="img" aria-label={`Built-up land within ${radiusKm} km of the estate, ${first.year} to ${last.year}`}>
-        {history.map((item) => (
-          <div key={item.year} className="estate-public-evidence-bar">
-            <span style={{ height: `${Math.max(6, (item.built_up_area_ha / peak) * 100)}%` }} title={`${item.year}: ${hectares(item.built_up_area_ha)} ha`} />
-            <small>{String(item.year).slice(2)}</small>
-          </div>
-        ))}
-      </div>
-      <small className="estate-public-evidence-note">Hectares of buildings, roads and other built surfaces detected from satellite each year ({first.year}-{last.year}).</small>
+      <GrowthCurve history={history} projections={projections} radiusKm={radiusKm} />
+      <small className="estate-public-evidence-note">Solid line: hectares of buildings, roads and other built surfaces measured from satellite each year ({first.year}-{last.year}). Dashed line and shaded band: the projected range if the trend continues.</small>
     </div>
     {projections.length > 0 && <div className="estate-public-evidence-block">
       <h3>Where it is heading</h3>
