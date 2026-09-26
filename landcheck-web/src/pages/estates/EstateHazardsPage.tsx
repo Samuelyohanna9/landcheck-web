@@ -46,7 +46,7 @@ function floodSignalSummary(assessments: any[]) {
   const river = make();
   const floodplain = make();
   const rainfall = make();
-  for (const item of assessments || []) {
+  for (const item of (assessments || []).some((entry: any) => !entry.plot_id) ? (assessments || []).filter((entry: any) => !entry.plot_id) : (assessments || [])) {
     const result = item.hazards?.flood?.result;
     const summary = result?.summary;
     if (!summary) continue;
@@ -91,7 +91,7 @@ export default function EstateHazardsPage() {
   // for status/progress instead of expecting the POST itself to return the finished result.
   const pollHazardJob = useCallback(async (jobId: string): Promise<HazardJobStatus> => {
     const startedAt = Date.now();
-    const timeoutMs = 5 * 60 * 1000;
+    const timeoutMs = 10 * 60 * 1000;
     const pollIntervalMs = 1200;
     while (Date.now() - startedAt < timeoutMs) {
       await new Promise((resolve) => window.setTimeout(resolve, pollIntervalMs));
@@ -112,7 +112,7 @@ export default function EstateHazardsPage() {
       const created = await api.post<HazardJobStatus>(`/estates/${estateId}/hazards/assess-all`);
       const job = await pollHazardJob(created.data.id);
       setDashboard(job.result);
-      toast.success("Hazard analysis complete for the whole layout.");
+      toast.success("Hazard analysis complete for the Estate boundary.");
     } catch (error) {
       if (isUpgradeRequiredError(error)) setUpgradeRequired(true);
       else toast.error(await extractApiErrorMessage(error, "Hazard analysis could not be run."));
@@ -146,13 +146,13 @@ export default function EstateHazardsPage() {
       <div className="edash-card" style={{ marginBottom: 16 }}>
         <div className="edash-card-inner">
           <div className="edash-card-head">
-            <h3 className="edash-card-title">Whole-layout hazard analysis</h3>
+            <h3 className="edash-card-title">Estate hazard analysis</h3>
           </div>
           <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>
-            Runs flood and erosion screening for every approved plot in this Estate in one pass, instead of one plot at a time. Results below - and the Risk Overview on the Dashboard - update as soon as it finishes.
+            Runs flood and erosion screening once for the Estate boundary. Results below - and the Risk Overview on the Dashboard - update as soon as it finishes. For a single plot, run screening from its drawer on Map & Plots.
           </p>
           <button type="button" className="edash-btn-primary" disabled={runBusy} onClick={() => void runEstateHazardAnalysis()}>
-            {runBusy ? <><Spinner size={13} /> {jobProgress?.stage || "Analyzing layout..."}</> : "Run hazard analysis for entire layout"}
+            {runBusy ? <><Spinner size={13} /> {jobProgress?.stage || "Analyzing Estate..."}</> : "Run hazard analysis for the Estate boundary"}
           </button>
         </div>
       </div>
@@ -189,7 +189,7 @@ export default function EstateHazardsPage() {
               <p className="edash-field-note" style={{ marginBottom: 16 }}>
                 Scores are 0-100 site-relative risk indicators, not calibrated probabilities of an actual flood - each signal is independent and shouldn't be summed or averaged together. River reflects a direct modelled river-flood hit (JRC/Copernicus GloFAS). Floodplain reflects elevation relative to the surrounding drainage network - a screening-level proxy used mainly where there's no direct river-model coverage. Rainfall is experimental: in testing it could not reliably tell a documented flood zone from a well-drained one, so it's shown for transparency only, never as confirmed risk evidence. Open a plot's Hazard tab for the full method and confidence notes.
               </p>
-              <div className="edash-card-head"><h3 className="edash-card-title">Per-plot results</h3></div>
+              <div className="edash-card-head"><h3 className="edash-card-title">Results</h3></div>
               {(dashboard.assessments || []).length ? (
                 <table className="edash-mini-table">
                   <thead><tr><th>Plot</th><th>River</th><th>Floodplain</th><th>Rainfall (exp.)</th><th>Erosion</th></tr></thead>
@@ -216,7 +216,7 @@ export default function EstateHazardsPage() {
                     })}
                   </tbody>
                 </table>
-              ) : <p className="edash-tab-empty">No per-plot screening recorded yet.</p>}
+              ) : <p className="edash-tab-empty">No screening recorded yet.</p>}
             </>
           ) : (
             <p className="edash-tab-empty">No hazard screening recorded yet. Run flood and erosion screening from a plot's drawer on the Map &amp; Plots page.</p>
