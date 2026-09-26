@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { isWorkAuthed, loginWork } from "../auth/workAuth";
 import GreenLoadingAnimation from "../components/GreenLoadingAnimation";
 import "../styles/green-work-login.css";
+import "../styles/green-work-login-dashboard.css";
 
 const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
 const REMEMBERED_USERNAME_KEY = "work-login-remembered-username";
