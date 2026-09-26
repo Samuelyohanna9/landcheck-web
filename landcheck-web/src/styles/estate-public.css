@@ -363,3 +363,20 @@
 .estate-public-optin-done { padding: 14px 16px; border-radius: 8px; background: #e6f6ec; color: #0f6e44 !important; font-weight: 600; }
 .estate-public-optin .estate-public-primary:disabled { opacity: .55; cursor: not-allowed; }
 @media (max-width: 800px) { .estate-public-optin { grid-template-columns: 1fr; gap: 16px; } }
+
+/* Growth evidence */
+.estate-public-evidence { display: grid; gap: 14px; margin-top: 18px; }
+.estate-public-evidence-block { padding: 18px; border: 1px solid #cfe5d5; border-radius: 12px; background: rgba(255,255,255,.74); }
+.estate-public-evidence-block h3 { margin: 0 0 8px; color: var(--estate-public-ink); font-size: .9rem; }
+.estate-public-evidence-lead { margin: 0 0 14px; color: var(--estate-public-ink); font-size: .95rem; line-height: 1.5; }
+.estate-public-evidence-lead strong { color: var(--estate-public-brand-dark); }
+.estate-public-evidence-bars { display: flex; align-items: flex-end; gap: 6px; height: 96px; padding: 0 2px; }
+.estate-public-evidence-bar { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; gap: 4px; }
+.estate-public-evidence-bar span { display: block; width: 100%; max-width: 44px; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, #2ea36c, #1a7a4f); }
+.estate-public-evidence-bar small { color: var(--estate-public-muted); font-size: .64rem; }
+.estate-public-evidence-note { display: block; margin-top: 10px; color: var(--estate-public-muted); font-size: .72rem; line-height: 1.4; }
+.estate-public-evidence-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.estate-public-forecast-projection em { font-style: normal; font-weight: 600; color: var(--estate-public-muted); }
+.estate-public-evidence-reach { margin: 12px 0 0; padding: 10px 12px; border-radius: 8px; background: #eaf6ee; color: var(--estate-public-brand-dark); font-size: .84rem; font-weight: 700; }
+.estate-public-forecast-projections--details { padding: 0; border: 0; background: transparent; margin-top: 10px; }
+@media (max-width: 720px) { .estate-public-evidence-cards { grid-template-columns: 1fr; } }

@@ -219,10 +219,58 @@ function directionName(direction: string | null | undefined) {
   return names[String(direction || "")] || direction || "Not available";
 }
 
-function connectionOutlook(years: number) {
-  if (years <= 3) return "More development nearby";
-  if (years <= 5) return "Stronger growth nearby";
-  return "A more developed area";
+const hectares = (value: number) => (value >= 100 ? Math.round(value).toLocaleString() : value.toFixed(1));
+
+/** The satellite evidence behind the outlook: real measured history, then clearly-labelled scenarios. */
+function GrowthEvidence({ forecast }: { forecast: any }) {
+  const history: Array<{ year: number; built_up_area_ha: number }> = forecast.historical_built_up || [];
+  const projections: any[] = forecast.projections || [];
+  const radiusKm = Math.round(Number(forecast.analysis?.radius_m || 5000) / 1000);
+  const first = history[0];
+  const last = history[history.length - 1];
+  if (!first || !last || history.length < 2) return null;
+  const change = last.built_up_area_ha - first.built_up_area_ha;
+  const percent = first.built_up_area_ha > 0 ? (change / first.built_up_area_ha) * 100 : null;
+  const peak = Math.max(...history.map((item) => item.built_up_area_ha), 1);
+  const reach = forecast.reach_estimate;
+  const growing = change > 0;
+  return <div className="estate-public-evidence">
+    <div className="estate-public-evidence-block">
+      <h3>What the satellite record shows</h3>
+      <p className="estate-public-evidence-lead">
+        {growing
+          ? <>Built-up land within {radiusKm} km of this estate grew from <strong>{hectares(first.built_up_area_ha)} ha</strong> in {first.year} to <strong>{hectares(last.built_up_area_ha)} ha</strong> in {last.year}{percent != null && percent > 0 ? <> — <strong>+{Math.round(percent)}%</strong></> : null}.</>
+          : <>Measured every year from {first.year} to {last.year}, the built-up area within {radiusKm} km of this estate is <strong>{hectares(last.built_up_area_ha)} ha</strong>, with no clear expansion in this record.</>}
+      </p>
+      <div className="estate-public-evidence-bars" role="img" aria-label={`Built-up land within ${radiusKm} km of the estate, ${first.year} to ${last.year}`}>
+        {history.map((item) => (
+          <div key={item.year} className="estate-public-evidence-bar">
+            <span style={{ height: `${Math.max(6, (item.built_up_area_ha / peak) * 100)}%` }} title={`${item.year}: ${hectares(item.built_up_area_ha)} ha`} />
+            <small>{String(item.year).slice(2)}</small>
+          </div>
+        ))}
+      </div>
+      <small className="estate-public-evidence-note">Hectares of buildings, roads and other built surfaces detected from satellite each year ({first.year}-{last.year}).</small>
+    </div>
+    {projections.length > 0 && <div className="estate-public-evidence-block">
+      <h3>Where it is heading</h3>
+      <div className="estate-public-evidence-cards">
+        {projections.map((row) => {
+          const low = Number(row.conservative_area_ha);
+          const high = Number(row.accelerated_area_ha);
+          const addLow = Math.max(0, low - last.built_up_area_ha);
+          const addHigh = Math.max(0, high - last.built_up_area_ha);
+          return <div className="estate-public-forecast-projection" key={row.horizon_years}>
+            <strong>By {row.target_year} <em>({row.horizon_years} years)</em></strong>
+            <span>{hectares(low)}-{hectares(high)} ha built up</span>
+            <small>{addHigh > 0 ? `About ${hectares(addLow)}-${hectares(addHigh)} ha more than today's ${hectares(last.built_up_area_ha)} ha` : `Little change from today's ${hectares(last.built_up_area_ha)} ha`}</small>
+          </div>;
+        })}
+      </div>
+      {reach?.available && <p className="estate-public-evidence-reach">{reach.headline}</p>}
+      <small className="estate-public-evidence-note">Scenarios from the {first.year}-{last.year} trend (55%-145% of the observed pace). A screening estimate, not a guarantee or a price forecast.</small>
+    </div>}
+  </div>;
 }
 
 function DevelopmentForecastPanel({ forecast }: { forecast: any }) {
@@ -237,7 +285,8 @@ function DevelopmentForecastPanel({ forecast }: { forecast: any }) {
       <div className="estate-public-forecast-map"><div className="estate-public-forecast-compass"><span className="estate-public-forecast-arrow" style={{ transform: `rotate(${bearing}deg)` }} /><span className="estate-public-forecast-estate-dot" /><span className="estate-public-forecast-label estate-public-forecast-label--estate">Estate</span><span className="estate-public-forecast-label estate-public-forecast-label--growth">{directionName(growth.direction)}</span></div><small>This shows where nearby development has been moving. Open the satellite map below for more detail.</small></div>
       <div className="estate-public-forecast-facts"><div><strong>{potential.label}</strong><span>Land value potential</span></div><div><strong>{growth.annual_percent_rate == null ? "Not available" : `${growth.annual_percent_rate}% / year`}</strong><span>Area growth, not price growth</span></div><div><strong>{directionName(growth.direction)}</strong><span>Where development is moving</span></div><div><strong>{growth.frontier_distance_m == null ? "Not available" : growth.frontier_distance_m <= 100 ? "Development is nearby" : `${Math.round(growth.frontier_distance_m)} m away`}</strong><span>How close development is</span></div></div>
     </div>
-    <div className="estate-public-forecast-projections"><h3>Possible future growth</h3><div>{projections.map((row: any) => <div className="estate-public-forecast-projection" key={row.horizon_years}><strong>{row.horizon_years} years</strong><span>{connectionOutlook(row.horizon_years)}</span><small>Based on past growth in this area</small></div>)}</div><details className="estate-public-forecast-details"><summary>View analysis details</summary><div>{projections.map((row: any) => <p key={row.horizon_years}><strong>{row.horizon_years} years:</strong> projected surrounding built-up area of {row.conservative_area_ha}–{row.accelerated_area_ha} ha; observed trend {row.observed_trend_area_ha} ha.</p>)}</div></details></div>
+    <GrowthEvidence forecast={forecast} />
+    <div className="estate-public-forecast-projections estate-public-forecast-projections--details"><details className="estate-public-forecast-details"><summary>View analysis details</summary><div>{projections.map((row: any) => <p key={row.horizon_years}><strong>{row.horizon_years} years:</strong> projected surrounding built-up area of {row.conservative_area_ha}–{row.accelerated_area_ha} ha; observed trend {row.observed_trend_area_ha} ha.</p>)}</div></details></div>
     <div className="estate-public-forecast-support"><h3>What supports the outlook</h3><ul>{(forecast.factors?.supporting || []).map((item: string) => <li key={item}>{item}</li>)}</ul></div>
     <p className="estate-public-forecast-disclaimer">{forecast.public_disclaimer}</p><p className="estate-public-forecast-method">Method: {forecast.analysis?.method || "Historical built-up land-cover change around the Estate."} Source: annual Esri 10 m land-cover classification, combined with LandCheck flood and erosion screening.</p>
   </section>;
