@@ -14,7 +14,7 @@ type Template = { key: string; label: string; hint: string; caption: string };
 type ChannelResult = { status: "ok" | "failed" | "pending"; error?: string; url?: string; manual?: boolean };
 type Post = { id: number; plan_id?: number | null; auto_caption?: boolean; strategy?: string | null; template_label?: string | null; caption: string; channels: string[]; status: string; scheduled_at?: string | null; published_at?: string | null; reminder_sent_at?: string | null; results: Record<string, ChannelResult>; image_style: string; created_at: string };
 type Optins = {
-  whatsapp_available: boolean; active: number; revoked: number;
+  whatsapp_available: boolean; active: number; revoked: number; template_images?: boolean;
   presets: Array<{ key: string; label: string; template_name: string; sample: string }>;
   batches: Array<{ batch: string; created_at: string; sent: number; failed: number; queued: number; skipped: number }>;
   items: Array<{ id: number; name?: string | null; phone: string; status: string; consented_at: string; source?: string | null }>;
@@ -76,6 +76,7 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
   const [busy, setBusy] = useState<string | null>(null);
   const [broadcastPreset, setBroadcastPreset] = useState("new_plots");
   const [broadcastDetail, setBroadcastDetail] = useState("");
+  const [broadcastStyle, setBroadcastStyle] = useState<AdStyle>("promo");
   const composerRef = useRef<HTMLDivElement | null>(null);
   const highlight = Number(searchParams.get("post") || 0);
 
@@ -230,7 +231,7 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
     if (!window.confirm(`Send this WhatsApp update to ${optins?.active ?? 0} people who opted in?`)) return;
     setBusy("broadcast");
     try {
-      const response = await api.post<{ queued: number }>(`/estates/${estateId}/marketing/social/whatsapp/broadcast`, { preset: broadcastPreset, detail: broadcastDetail.trim() || null });
+      const response = await api.post<{ queued: number }>(`/estates/${estateId}/marketing/social/whatsapp/broadcast`, { preset: broadcastPreset, detail: broadcastDetail.trim() || null, image_style: broadcastStyle });
       toast.success(`Queued for ${response.data.queued} people. They are sent within a few minutes.`);
       setBroadcastDetail("");
       await loadOptins();
@@ -397,6 +398,13 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
                     <select value={broadcastPreset} onChange={(event) => setBroadcastPreset(event.target.value)}>{(optins?.presets || []).map((preset) => <option key={preset.key} value={preset.key}>{preset.label}</option>)}</select>
                   </label>
                   <label className="edash-field is-wide"><span>Detail (optional)</span><input value={broadcastDetail} maxLength={200} onChange={(event) => setBroadcastDetail(event.target.value)} placeholder="e.g. from ₦2.5M, 50% deposit" /></label>
+                  {optins?.template_images && (
+                    <label className="edash-field is-wide"><span>Design</span>
+                      <div className="edash-mk-segment" role="group" aria-label="Design style">
+                        {AD_STYLES.map((item) => <button key={item.key} type="button" title={item.hint} className={broadcastStyle === item.key ? "is-active" : ""} onClick={() => setBroadcastStyle(item.key)}>{item.label}</button>)}
+                      </div>
+                    </label>
+                  )}
                   <div className="is-full" style={{ display: "flex", justifyContent: "flex-end" }}>
                     <button type="button" className="edash-btn-primary" disabled={busy === "broadcast" || !(optins?.active)} onClick={() => void sendBroadcast()}>{busy === "broadcast" ? "Queuing..." : "Send update"}</button>
                   </div>
