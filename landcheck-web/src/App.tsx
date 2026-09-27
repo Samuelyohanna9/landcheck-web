@@ -51,6 +51,7 @@ const EstateForgotPassword = lazyWithChunkRecovery(() => import("./pages/EstateF
 const EstateResetPassword = lazyWithChunkRecovery(() => import("./pages/EstateResetPassword"));
 const EstateChoosePlan = lazyWithChunkRecovery(() => import("./pages/EstateChoosePlan"));
 const EstateBillingPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateBillingPage"));
+const EstateLegalPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateLegalPage"));
 const PublicPlotView = lazyWithChunkRecovery(() => import("./pages/PublicPlotView"));
 const PublicEstatePage = lazyWithChunkRecovery(() => import("./pages/PublicEstatePage"));
 const PublicEstateReservationPage = lazyWithChunkRecovery(() => import("./pages/PublicEstateReservationPage"));
@@ -321,6 +322,7 @@ export default function App() {
               <Route path="/estates/reset-password" element={<EstateResetPassword />} />
               <Route path="/estates/choose-plan" element={<EstateProtectedRoute element={<EstateChoosePlan />} />} />
               <Route path="/estates/billing" element={<EstateProtectedRoute element={<EstateBillingPage />} />} />
+              <Route path="/estates/legal" element={<EstateProtectedRoute element={<EstateLegalPage />} />} />
               <Route path="/estates/plot/:token" element={<PublicPlotView />} />
               <Route path="/estates/buyer/:token" element={<BuyerPortalPage />} />
               <Route path="/estates/agent-portal/:token" element={<AgentPortalAccessPage />} />

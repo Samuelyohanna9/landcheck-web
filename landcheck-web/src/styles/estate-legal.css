@@ -1,0 +1,19 @@
+/* ─── Legal & compliance (Data Processing Agreement) ─── */
+.edash-legal-status { padding: 4px 2px; }
+.edash-legal-status strong { display: block; margin-bottom: 4px; font-size: .95rem; color: var(--edash-ink); }
+.edash-legal-status.is-accepted strong { color: var(--edash-brand-dark); }
+.edash-legal-status p { margin: 0; color: var(--edash-muted); font-size: .85rem; }
+
+.edash-legal-doc { max-width: 720px; }
+.edash-legal-note { margin: 0 0 18px; padding: 10px 12px; border-radius: var(--edash-radius-sm); background: var(--edash-surface); color: var(--edash-muted); font-size: .78rem; }
+.edash-legal-doc h2 { margin: 0 0 10px; font-size: 1.15rem; }
+.edash-legal-doc h3 { margin: 22px 0 8px; font-size: .92rem; color: var(--edash-ink); }
+.edash-legal-doc p { margin: 0 0 8px; color: var(--edash-ink); font-size: .86rem; line-height: 1.6; }
+.edash-legal-doc ul { margin: 0 0 8px; padding-left: 20px; display: grid; gap: 6px; }
+.edash-legal-doc li { color: var(--edash-ink); font-size: .86rem; line-height: 1.55; }
+
+.edash-legal-accept { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; cursor: pointer; }
+.edash-legal-accept input { margin-top: 3px; accent-color: var(--edash-brand); }
+.edash-legal-accept span { color: var(--edash-ink); font-size: .88rem; font-weight: 600; }
+
+.edash-legal-back { margin: 16px 0 0; }

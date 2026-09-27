@@ -1377,6 +1377,8 @@
   line-height: 1.4;
 }
 
+.estate-admin-detail-grid strong.estate-admin-dpa-missing { color: #f59e0b; }
+
 .estate-admin-estates {
   padding: 1rem;
   border-top: 1px solid rgba(255, 255, 255, 0.08);

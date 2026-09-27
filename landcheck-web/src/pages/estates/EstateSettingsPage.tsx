@@ -242,6 +242,15 @@ export default function EstateSettingsPage() {
       <div className="edash-card" style={{ marginBottom: 16 }}>
         <div className="edash-card-inner">
           <div className="edash-card-head">
+            <h3 className="edash-card-title">Legal &amp; compliance</h3>
+            <Link className="edash-card-link" to="/estates/legal">Review the Data Processing Agreement</Link>
+          </div>
+          <p className="edash-status-row-desc">The agreement covering how LandCheck handles your customers' and staff's personal data. Company owners can review and accept it.</p>
+        </div>
+      </div>
+      <div className="edash-card" style={{ marginBottom: 16 }}>
+        <div className="edash-card-inner">
+          <div className="edash-card-head">
             <div><h3 className="edash-card-title">Development outlook</h3><p className="edash-status-row-desc" style={{ marginTop: 4 }}>Use LandCheck flood, erosion and annual land-cover evidence to create a transparent growth scenario for buyers.</p></div>
             {forecastUpgrade ? <span className="edash-status-pill tone-neutral">Plus plan</span> : <button type="button" className="edash-btn-primary" disabled={forecastBusy} onClick={() => void runDevelopmentForecast()}>{forecastBusy ? "Analysing..." : developmentForecast ? "Run again" : "Run forecast"}</button>}
           </div>

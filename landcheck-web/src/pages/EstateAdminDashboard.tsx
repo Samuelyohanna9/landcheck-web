@@ -56,6 +56,8 @@ type EstateAdminOrganization = {
   latest_estate_location: string | null;
   last_estate_activity_at: string | null;
   estates: EstateAdminEstate[];
+  dpa_accepted_at: string | null;
+  dpa_accepted_by: string | null;
 };
 
 type EstateAdminOverview = {
@@ -77,6 +79,7 @@ type EstateAdminOverview = {
     past_due_subscriptions: number;
     online_users: number;
     online_organizations: number;
+    dpa_accepted_organizations: number;
   };
   organizations: EstateAdminOrganization[];
 };
@@ -266,6 +269,7 @@ export default function EstateAdminDashboard() {
               <div className="stat-card warning"><div className="stat-content"><span className="stat-value">{formatCount(totals?.estates)}</span><span className="stat-label">Estates created</span></div></div>
               <div className="stat-card primary"><div className="stat-content"><span className="stat-value">{formatCount(totals?.plots)}</span><span className="stat-label">Plots registered</span></div></div>
               <div className="stat-card warning"><div className="stat-content"><span className="stat-value">{formatCount(totals?.open_reservations)}</span><span className="stat-label">Open enquiries</span></div></div>
+              <div className="stat-card info"><div className="stat-content"><span className="stat-value">{formatCount(totals?.dpa_accepted_organizations)}</span><span className="stat-label">Accepted the DPA</span></div></div>
             </div>
           </section>
 
@@ -328,6 +332,7 @@ export default function EstateAdminDashboard() {
                                   <div><span>Live activity</span><strong>{onlineNow ? `${formatCount(organization.online_user_count)} online now` : "No one online"}</strong><small>{organization.last_user_activity_at ? `Last active ${formatDateTime(organization.last_user_activity_at)}` : "No user session yet"}</small></div>
                                   <div><span>Billing</span><strong>{organization.subscription_status === "trialing" ? "Trial ends" : "Next billing"}</strong><small>{formatDate(organization.subscription_status === "trialing" ? organization.trial_ends_at : organization.next_charge_at || organization.current_period_end)}</small></div>
                                   <div><span>Company status</span><strong>{formatLabel(organization.organization_status)}</strong><small>Joined {formatDate(organization.created_at)}</small></div>
+                                  <div><span>Data Processing Agreement</span><strong className={organization.dpa_accepted_at ? "" : "estate-admin-dpa-missing"}>{organization.dpa_accepted_at ? "Accepted" : "Not accepted"}</strong><small>{organization.dpa_accepted_at ? `${formatDateTime(organization.dpa_accepted_at)}${organization.dpa_accepted_by ? ` by ${organization.dpa_accepted_by}` : ""}` : "No record yet"}</small></div>
                                 </div>
                                 <div className="estate-admin-estates">
                                   <div className="estate-admin-estates-head">
