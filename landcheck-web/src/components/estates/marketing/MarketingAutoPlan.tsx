@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { Link, useNavigate } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../../../api/client";
 import { AD_STYLES, adStyleLabel, formatDateTime } from "../../../utils/estateMarketing";
+import InfoTip from "../InfoTip";
 
 type Channel = { key: string; label: string; automatic: boolean };
 type Account = { provider: "facebook" | "instagram"; status: string };
@@ -141,6 +142,21 @@ export default function MarketingAutoPlan({ estateId, channels, accounts, metaAv
         <div className="edash-field"><span>Posting times (Lagos)</span>
           <div className="edash-sp-when">
             <label><input type="radio" name="ap-times" checked={!customTimes} onChange={() => { setCustomTimes(false); invalidate(); }} /> Best times</label>
+            <InfoTip label="What are the best times?">
+              <p className="edash-infotip-title">Default posting times (Lagos time)</p>
+              <table className="edash-infotip-table">
+                <tbody>
+                  <tr><th>1 a day</th><td>6:30 pm</td></tr>
+                  <tr><th>2 a day</th><td>9:00 am and 7:00 pm</td></tr>
+                  <tr><th>3 a day</th><td>8:30 am, 1:00 pm and 7:30 pm</td></tr>
+                  <tr><th>1 a week</th><td>Wednesday, 6:30 pm</td></tr>
+                  <tr><th>2 a week</th><td>Tuesday and Friday, 6:30 pm</td></tr>
+                  <tr><th>3 a week</th><td>Monday, Wednesday and Friday, 6:30 pm</td></tr>
+                  <tr><th>Weekdays (5 a week)</th><td>Monday to Friday, 6:30 pm</td></tr>
+                </tbody>
+              </table>
+              <p className="edash-infotip-note">Used whenever "Best times" is selected. Choose "Choose" to set your own.</p>
+            </InfoTip>
             <label><input type="radio" name="ap-times" checked={customTimes} onChange={() => { setCustomTimes(true); invalidate(); }} /> Choose</label>
             {customTimes && Array.from({ length: timeCount }).map((_unused, index) => <input key={index} type="time" value={times[index] || "09:00"} onChange={(event) => { setTimes((current) => current.map((value, position) => (position === index ? event.target.value : value))); invalidate(); }} />)}
           </div>

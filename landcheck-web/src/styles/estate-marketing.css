@@ -240,3 +240,17 @@
 .edash-sp-alllink-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .edash-sp-alllink-row > div { min-width: 0; }
 @media (max-width: 640px) { .edash-sp-alllink-row { flex-direction: column; align-items: stretch; } .edash-sp-alllink-row .edash-btn-primary { justify-content: center; } }
+
+/* ─── InfoTip: a small "i" symbol that reveals a popover on click ─── */
+.edash-infotip { position: relative; display: inline-flex; }
+.edash-infotip-btn { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 999px; background: var(--edash-surface); color: var(--edash-muted); cursor: pointer; }
+.edash-infotip-btn svg { width: 14px; height: 14px; }
+.edash-infotip-btn:hover { background: var(--edash-brand-tint); color: var(--edash-brand-dark); }
+.edash-infotip-pop { position: absolute; z-index: 30; top: calc(100% + 8px); left: 0; width: 300px; max-width: min(300px, calc(100vw - 40px)); padding: 12px 14px; border: 1px solid var(--edash-border); border-radius: var(--edash-radius-md); background: #fff; box-shadow: var(--edash-shadow-card); }
+.edash-infotip-title { margin: 0 0 8px; color: var(--edash-ink); font-size: .78rem; font-weight: 700; }
+.edash-infotip-table { width: 100%; border-collapse: collapse; }
+.edash-infotip-table th, .edash-infotip-table td { padding: 4px 0; text-align: left; font-size: .76rem; line-height: 1.4; vertical-align: top; }
+.edash-infotip-table th { padding-right: 10px; color: var(--edash-muted); font-weight: 600; white-space: nowrap; }
+.edash-infotip-table td { color: var(--edash-ink); font-weight: 600; }
+.edash-infotip-note { margin: 8px 0 0; color: var(--edash-faint); font-size: .68rem; line-height: 1.4; }
+@media (max-width: 480px) { .edash-infotip-pop { left: auto; right: 0; } }
