@@ -1,0 +1,114 @@
+.nf-page {
+  min-height: 100vh;
+  background: radial-gradient(circle at top left, rgba(26, 143, 90, .12), transparent 45%), #f6f8f7;
+  color: #16241d;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.nf-main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 140px 24px 80px;
+  text-align: center;
+}
+
+.nf-eyebrow {
+  margin: 0 0 10px;
+  color: #1a8f5a;
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.nf-main h1 {
+  margin: 0 0 14px;
+  font-size: clamp(1.7rem, 4vw, 2.3rem);
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+
+.nf-lead {
+  margin: 0 0 30px;
+  color: #4b5b53;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.nf-lead code {
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: #e9f3ee;
+  color: #0f6e44;
+  font-size: .88rem;
+  word-break: break-all;
+}
+
+.nf-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 44px;
+}
+
+.nf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 22px;
+  border: 1px solid #d7e0da;
+  border-radius: 8px;
+  background: #fff;
+  color: #16241d;
+  font-size: .9rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform .15s ease, background .15s ease;
+}
+
+.nf-btn:hover { transform: translateY(-1px); }
+
+.nf-btn--primary {
+  border-color: #0f6e44;
+  background: #1a8f5a;
+  color: #fff;
+}
+
+.nf-btn--primary:hover { background: #0f6e44; }
+
+.nf-links {
+  padding-top: 28px;
+  border-top: 1px solid #e2e8e4;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nf-links > span {
+  color: #6b7a72;
+  font-size: .82rem;
+  font-weight: 600;
+}
+
+.nf-links nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 18px;
+}
+
+.nf-links nav a {
+  color: #0f6e44;
+  font-size: .86rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.nf-links nav a:hover { text-decoration: underline; }
+
+@media (max-width: 480px) {
+  .nf-main { padding: 120px 20px 60px; }
+}

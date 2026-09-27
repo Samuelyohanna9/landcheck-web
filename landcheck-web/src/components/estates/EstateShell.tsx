@@ -65,11 +65,16 @@ export default function EstateShell({
   recentActivity = [],
   skipBillingGate = false,
   onEstateNameChange,
+  pageTitle,
   children,
 }: {
   estateId: string;
   estateName?: string;
   activeKey: EstateNavKey;
+  /** Overrides the nav label in the browser tab title, for a page whose activeKey is shared with
+   * others (Billing and Legal both highlight "Settings" in the sidebar) but needs its own tab
+   * title, e.g. "Billing & plan" rather than the generic "Settings". */
+  pageTitle?: string;
   search?: string;
   onSearchChange?: (value: string) => void;
   searchPlaceholder?: string;
@@ -97,6 +102,16 @@ export default function EstateShell({
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notifPosition = useFloatingPopoverPosition(notifButtonRef, notifPopoverRef, notifOpen);
   const canRenameEstate = ["owner", "manager"].includes(String(estateSession?.user.role_key || "").toLowerCase());
+
+  useEffect(() => {
+    // Every authenticated Estates screen renders through this shell, so this is the one place that
+    // can give each of them a distinct browser-tab title instead of the generic fallback
+    // SeoRouteMeta uses for pages it doesn't know about - useful the moment someone has more than
+    // one Estate tab open.
+    const label = pageTitle || activeItem?.label || "Estates";
+    const name = displayEstateName && displayEstateName !== "Estate" ? displayEstateName : "";
+    document.title = name ? `${label} · ${name} — LandCheck Estates` : `${label} — LandCheck Estates`;
+  }, [pageTitle, activeItem?.label, displayEstateName]);
 
   const deliverySeenStorageKey = `edash_delivery_seen_${estateId}_${estateSession?.user.id || "user"}`;
   const reservationNoticeStorageKey = `edash_reservation_notice_${estateId}_${estateSession?.user.id || "user"}`;

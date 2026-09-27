@@ -39,6 +39,7 @@ const NewsPage = lazyWithChunkRecovery(() => import("./pages/NewsPage"));
 const NewsArticlePage = lazyWithChunkRecovery(() => import("./pages/NewsArticlePage"));
 const PrivacyPolicy = lazyWithChunkRecovery(() => import("./pages/PrivacyPolicy"));
 const EstateDpaPreview = lazyWithChunkRecovery(() => import("./pages/EstateDpaPreview"));
+const NotFound = lazyWithChunkRecovery(() => import("./pages/NotFound"));
 const DonorImpactPage = lazyWithChunkRecovery(() => import("./pages/DonorImpactPage"));
 const AppClaimRedirect = lazyWithChunkRecovery(() => import("./pages/AppClaimRedirect"));
 const SurveyAuthVerify = lazyWithChunkRecovery(() => import("./pages/SurveyAuthVerify"));
@@ -122,14 +123,18 @@ class ChunkLoadBoundary extends Component<ChunkLoadBoundaryProps, ChunkLoadBound
           }}
         >
           <div style={{ fontSize: "0.78rem", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: "#24804a", marginBottom: "0.8rem" }}>
-            LandCheck Update
+            LandCheck
           </div>
           <h1 style={{ margin: "0 0 0.6rem", fontSize: "1.8rem", lineHeight: 1.1, color: "#133525" }}>
-            This page needs a fresh reload.
+            Something went wrong loading this page.
           </h1>
           <p style={{ margin: "0 0 1rem", color: "#51695b", lineHeight: 1.6 }}>
-            A new version of LandCheck was deployed while this browser still had an older page shell open.
-            Reload once to fetch the latest files.
+            {/* This boundary catches a stale-chunk failure that survived lazyWithChunkRecovery.ts's
+                own silent one-shot recovery (rare - usually a second failure in a row), and any
+                other rendering error in the app. Both are handled the same way here, since a reload
+                is a reasonable first step either way, but the copy no longer asserts a specific
+                cause we don't actually know. */}
+            This can happen after a new version is released, or from a temporary glitch. Reloading usually fixes it.
           </p>
           <button
             type="button"
@@ -149,7 +154,10 @@ class ChunkLoadBoundary extends Component<ChunkLoadBoundaryProps, ChunkLoadBound
             Reload LandCheck
           </button>
           <p style={{ margin: "0.85rem 0 0", color: "#7b9084", fontSize: "0.84rem", lineHeight: 1.5 }}>
-            If it still fails after reload, clear the site cache or redeploy the latest build assets.
+            Still stuck after reloading?{" "}
+            <a href="/" style={{ color: "#1d7e46", fontWeight: 700 }}>Go to the homepage</a>
+            {" "}or email{" "}
+            <a href="mailto:support@landcheck.online" style={{ color: "#1d7e46", fontWeight: 700 }}>support@landcheck.online</a>.
           </p>
           {this.state.message ? (
             <pre
@@ -363,6 +371,7 @@ export default function App() {
               <Route path="/feedback" element={<Feedback />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/estate-admin" element={<EstateAdminDashboard />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
         </ChunkLoadBoundary>

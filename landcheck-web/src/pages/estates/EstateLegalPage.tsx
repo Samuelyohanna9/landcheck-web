@@ -69,7 +69,7 @@ export default function EstateLegalPage() {
   if (!organizationId) return null;
 
   return (
-    <EstateShell estateId={sidebarEstateId} estateName={sidebarEstateName} activeKey="settings" skipBillingGate>
+    <EstateShell estateId={sidebarEstateId} estateName={sidebarEstateName} activeKey="settings" pageTitle="Legal & compliance" skipBillingGate>
       <div className="edash-page-head">
         <div>
           <span className="edash-section-kicker">Settings</span>

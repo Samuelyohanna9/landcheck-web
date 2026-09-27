@@ -295,6 +295,17 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
     ogImage: DEFAULT_OG_IMAGE,
   },
 
+  "/estates/data-processing-agreement": {
+    title: "Data Processing Agreement | LandCheck Estates",
+    description:
+      "The Data Processing Agreement between LandCheck and each Estate company, covering how customer, agent and staff personal data is handled on the platform.",
+    keywords: "LandCheck data processing agreement, NDPA compliance Nigeria, estate software data protection",
+    canonicalPath: "/estates/data-processing-agreement",
+    robots: "index,follow",
+    ogType: "website",
+    ogImage: DEFAULT_OG_IMAGE,
+  },
+
   "/flood": {
     title: "Flood Risk & Land Hazard Analysis Nigeria | Free Report | LandCheck",
     description:
@@ -571,12 +582,16 @@ const resolveSeoConfig = (pathname: string): SeoConfig => {
     };
   }
 
+  // Everything else: an authenticated app page this map doesn't need to know about (it sets its
+  // own document.title, e.g. EstateShell), or a genuine 404. Either way it must never carry a
+  // canonical pointing at the homepage - self-canonical + noindex correctly removes the canonical
+  // tag below, instead of every one of these unrelated pages claiming to canonicalize to "/".
   return {
     title: "LandCheck Nigeria | Geospatial Intelligence Platform",
     description:
       "LandCheck — Nigeria's platform for survey plans, flood risk analysis, and tree monitoring.",
     keywords: "LandCheck Nigeria, geospatial Nigeria",
-    canonicalPath: "/",
+    canonicalPath: normalizedPath,
     robots: "noindex,nofollow,noarchive",
     ogType: "website",
     ogImage: DEFAULT_OG_IMAGE,

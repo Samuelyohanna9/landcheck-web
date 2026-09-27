@@ -143,7 +143,7 @@ export default function EstateBillingPage() {
   if (!organizationId) return null;
 
   return (
-    <EstateShell estateId={sidebarEstateId} estateName={sidebarEstateName} activeKey="settings" skipBillingGate>
+    <EstateShell estateId={sidebarEstateId} estateName={sidebarEstateName} activeKey="settings" pageTitle="Billing & plan" skipBillingGate>
       <div className="edash-card" style={{ marginBottom: 16 }}>
         <div className="edash-card-inner">
           <div className="edash-card-head"><h3 className="edash-card-title">Billing &amp; plan</h3></div>
