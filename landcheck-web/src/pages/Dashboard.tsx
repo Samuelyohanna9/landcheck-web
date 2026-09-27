@@ -493,6 +493,13 @@ export default function Dashboard() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [page, setPage] = useState(1);
   const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    // SeoRouteMeta gives every route under /dashboard the same generic "LandCheck Workspace"
+    // title (it's noindexed, so that map doesn't cover it) - this is the one page in that family,
+    // so it gets a real title the same way EstateShell does for the Estates dashboard.
+    document.title = "My Work — LandCheck Survey";
+  }, []);
   const [supportOpen, setSupportOpen] = useState(false);
   const [deletingGeorefId, setDeletingGeorefId] = useState<string | null>(null);
   const [plotTags, setPlotTags] = useState<Record<number, string>>({});
