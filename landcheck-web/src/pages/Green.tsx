@@ -1523,6 +1523,20 @@ export default function Green() {
   }, [users, projectCustodians]);
   const activeWorkflowProfile = useMemo(() => normalizeWorkflowProfile(activeProject?.workflow_profile), [activeProject?.workflow_profile]);
   const workflowLabels = useMemo(() => getWorkflowLabels(activeWorkflowProfile), [activeWorkflowProfile]);
+  useEffect(() => {
+    // /green is one route with several internal sections (SeoRouteMeta gives it a single generic
+    // noindexed "LandCheck Workspace" title) - this keeps the browser tab honest about which
+    // section is open, using the same workflow-specific wording already shown on screen.
+    const sectionLabel: Record<Section, string> = {
+      tasks: workflowLabels.activityTitle,
+      map: workflowLabels.actionTitle,
+      records: workflowLabels.recordsTitle,
+      review: "Review Fixes",
+      profile: "Profile",
+      wallet: workflowLabels.walletTitle,
+    };
+    document.title = activeSection ? `${sectionLabel[activeSection]} — ${workflowLabels.appTitle}` : `${workflowLabels.appTitle} — ${workflowLabels.dashboardSubtitle}`;
+  }, [activeSection, workflowLabels]);
   const greetingLabel = useMemo(() => getGreetingLabel(), []);
   const greetingIconKind = useMemo(() => getGreetingIconKind(), []);
   const selectedProjectIsSponsorEnabled = useMemo(

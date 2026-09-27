@@ -1114,6 +1114,37 @@ type WorkForm =
   | "share_impact"
   ;
 
+// A plain, org-type-neutral label per screen, for the browser tab title only - the on-screen menu
+// tailors these per workflow (agric/relief/CSR wording), which would be a lot of duplicated
+// branching to reproduce here for a title nobody reads as carefully as the screen itself.
+const WORK_FORM_TITLE: Record<WorkForm, string> = {
+  super_admin: "Super Admin",
+  project_focus: "Project",
+  create_project: "Create Project",
+  add_user: "Add User",
+  users: "Users",
+  map_view: "Map",
+  remote_monitoring: "Remote Monitoring",
+  assign_work: "Assign Work",
+  assign_task: "Assign Task",
+  review_queue: "Review Queue",
+  overview: "Overview",
+  live_table: "Live Table",
+  verra_reports: "Verra Reports",
+  custodian_hub: "Registry",
+  farmer_live: "Live Table",
+  field_capture_assign: "Field Capture",
+  support_visit_assign: "Support Visits",
+  existing_tree_intake: "Records",
+  sponsors: "Sponsors",
+  sponsorship_orders: "Payments",
+  sponsor_payouts: "Payouts",
+  merchants: "Merchants",
+  sponsor_feedback: "Feedback & Nominations",
+  logs: "System Logs & Reports",
+  share_impact: "Share Impact",
+};
+
 const AGRIC_HIDDEN_PROJECT_FORMS: WorkForm[] = [
   "overview",
   "live_table",
@@ -4108,6 +4139,12 @@ export default function GreenWork() {
     return storedForm;
   });
   const activeFormHiddenInAgric = activeForm ? isHiddenInFieldProject(activeForm) : false;
+  useEffect(() => {
+    // /green-work is one route with two dozen internal screens (SeoRouteMeta gives the whole
+    // thing a single generic noindexed "LandCheck Workspace" title) - this keeps the browser tab
+    // honest about which one is open.
+    document.title = activeForm ? `${WORK_FORM_TITLE[activeForm]} — LandCheck Work` : "LandCheck Work";
+  }, [activeForm]);
   const [remoteMonitoringReport, setRemoteMonitoringReport] = useState<RemoteMonitoringReport | null>(null);
   const [remoteMonitoringLoading, setRemoteMonitoringLoading] = useState(false);
   const [remoteMonitoringProgressStep, setRemoteMonitoringProgressStep] = useState(0);

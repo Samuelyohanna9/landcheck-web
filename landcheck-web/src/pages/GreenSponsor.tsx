@@ -49,6 +49,14 @@ import "../styles/green-sponsor.css";
 // ─── Tab & form types ─────────────────────────────────────────────────────────
 type SponsorTabKey = "projects" | "trees" | "leaderboard" | "grove" | "profile";
 
+const SPONSOR_TAB_TITLE: Record<SponsorTabKey, string> = {
+  projects: "Projects",
+  trees: "My Trees",
+  leaderboard: "Leaderboard",
+  grove: "Grove",
+  profile: "Profile",
+};
+
 type ProfileFormState = {
   entity_category: string;
   leaderboard_visibility: string;
@@ -752,6 +760,11 @@ export default function GreenSponsor() {
     const s = window.sessionStorage.getItem(TAB_STORAGE_KEY);
     return (["projects","trees","leaderboard","grove","profile"] as SponsorTabKey[]).includes(s as SponsorTabKey) ? (s as SponsorTabKey) : "projects";
   });
+  useEffect(() => {
+    // Same generic-title gap as Green.tsx and GreenWork.tsx - /green renders this component
+    // instead for a sponsor session, with its own separate set of tabs.
+    document.title = `${SPONSOR_TAB_TITLE[activeTab]} — LandCheck Green`;
+  }, [activeTab]);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [selectedTreeDetail, setSelectedTreeDetail] = useState<SponsorTreeDetail | null>(null);
   const [profileForm, setProfileForm] = useState<ProfileFormState>({
