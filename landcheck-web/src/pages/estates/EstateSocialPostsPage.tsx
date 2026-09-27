@@ -136,6 +136,7 @@ export default function EstateSocialPostsPage() {
     <EstateShell estateId={estateId} estateName={estateName} activeKey="marketing">
       <div className="edash-page-head">
         <div>
+          <button type="button" className="edash-sp-back" onClick={() => navigate(`/estates/${estateId}/marketing?tab=social`)}><EstateIcon name="chevron-left" /> Back to Marketing</button>
           <span className="edash-section-kicker">Marketing</span>
           <h1>Scheduled &amp; posted</h1>
           <p>Every post for this estate, day by day. Open any post to change its wording, time, channels or design, send it now, or cancel it. Times are Lagos time.</p>
