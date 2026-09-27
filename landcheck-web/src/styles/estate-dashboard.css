@@ -70,6 +70,8 @@
 .edash * { box-sizing: border-box; }
 .edash button { font-family: inherit; }
 .edash a { text-decoration: none; color: inherit; }
+.edash a.edash-btn-primary { color: #fff; }
+.edash a.edash-btn-outline { color: var(--edash-ink); }
 
 /* ─── Sidebar ─── */
 .edash-sidebar {

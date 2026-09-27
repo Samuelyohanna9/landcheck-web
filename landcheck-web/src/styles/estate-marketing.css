@@ -235,3 +235,8 @@
 .edash .edash-sp-back { display: inline-flex; align-items: center; gap: 5px; margin-bottom: 10px; padding: 0; border: 0; background: transparent; color: var(--edash-muted); font-size: .8rem; font-weight: 600; cursor: pointer; }
 .edash .edash-sp-back:hover { color: var(--edash-brand-dark); }
 .edash .edash-sp-back svg { width: 15px; height: 15px; }
+
+/* ─── All posts link-out card (list itself lives on the dedicated Scheduled & posted page) ─── */
+.edash-sp-alllink-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.edash-sp-alllink-row > div { min-width: 0; }
+@media (max-width: 640px) { .edash-sp-alllink-row { flex-direction: column; align-items: stretch; } .edash-sp-alllink-row .edash-btn-primary { justify-content: center; } }

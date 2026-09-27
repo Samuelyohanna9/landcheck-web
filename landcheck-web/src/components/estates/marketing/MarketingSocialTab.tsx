@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { Link, useSearchParams } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../../../api/client";
-import { AD_STYLES, asAdStyle, copyText, fetchBlobUrl, formatDateTime, type AdStyle } from "../../../utils/estateMarketing";
+import { AD_STYLES, copyText, fetchBlobUrl, formatDateTime, type AdStyle } from "../../../utils/estateMarketing";
 import EstateIcon from "../EstateIcon";
 import MarketingAutoPlan from "./MarketingAutoPlan";
 import UpgradeNotice from "../UpgradeNotice";
@@ -11,8 +11,6 @@ type Channel = { key: string; label: string; automatic: boolean; format: string 
 type Account = { id: number; provider: "facebook" | "instagram"; name: string; username?: string | null; status: string };
 type Overview = { meta_available: boolean; whatsapp_available: boolean; accounts: Account[]; channels: Channel[]; published: boolean; auto_posting?: boolean };
 type Template = { key: string; label: string; hint: string; caption: string };
-type ChannelResult = { status: "ok" | "failed" | "pending"; error?: string; url?: string; manual?: boolean };
-type Post = { id: number; plan_id?: number | null; auto_caption?: boolean; strategy?: string | null; template_label?: string | null; caption: string; channels: string[]; status: string; scheduled_at?: string | null; published_at?: string | null; reminder_sent_at?: string | null; results: Record<string, ChannelResult>; image_style: string; created_at: string };
 type Optins = {
   whatsapp_available: boolean; active: number; revoked: number; template_images?: boolean;
   presets: Array<{ key: string; label: string; template_name: string; sample: string }>;
@@ -22,17 +20,6 @@ type Optins = {
 type Campaign = { id: number; name: string; channel: string };
 type PlotOption = { id: number; plot_number: string };
 
-const STATUS_LABEL: Record<string, string> = { draft: "Draft", scheduled: "Scheduled", publishing: "Posting...", published: "Posted", partial: "Partly posted", failed: "Failed", cancelled: "Cancelled", skipped: "Skipped" };
-const STATUS_TONE: Record<string, string> = { draft: "neutral", scheduled: "info", publishing: "info", published: "good", partial: "warn", failed: "danger", cancelled: "neutral", skipped: "neutral" };
-const EDITABLE = ["draft", "scheduled", "failed", "partial"];
-
-const toLocalInput = (iso?: string | null) => {
-  if (!iso) return "";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-};
 
 function PreviewImage({ estateId, params, alt }: { estateId: string; params: Record<string, unknown>; alt: string }) {
   const [url, setUrl] = useState<string | null>(null);
@@ -58,7 +45,6 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
   const [searchParams, setSearchParams] = useSearchParams();
   const [overview, setOverview] = useState<Overview | null>(null);
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
   const [optins, setOptins] = useState<Optins | null>(null);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [plots, setPlots] = useState<PlotOption[]>([]);
@@ -78,25 +64,21 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
   const [broadcastDetail, setBroadcastDetail] = useState("");
   const [broadcastStyle, setBroadcastStyle] = useState<AdStyle>("promo");
   const composerRef = useRef<HTMLDivElement | null>(null);
-  const highlight = Number(searchParams.get("post") || 0);
 
   const imageParams = useMemo(() => ({ channel: previewShape === "status" ? "whatsapp_status" : "facebook", style, plot_id: plotId || undefined, campaign_id: campaignId || undefined }), [previewShape, style, plotId, campaignId]);
 
   const loadOverview = useCallback(async () => {
     try { setOverview((await api.get<Overview>(`/estates/${estateId}/marketing/social/overview`)).data); } catch { setOverview(null); }
   }, [estateId]);
-  const loadPosts = useCallback(async () => {
-    try { setPosts((await api.get<{ items: Post[] }>(`/estates/${estateId}/marketing/social/posts`)).data.items || []); } catch { setPosts([]); }
-  }, [estateId]);
   const loadOptins = useCallback(async () => {
     try { setOptins((await api.get<Optins>(`/estates/${estateId}/marketing/social/optins`)).data); } catch { setOptins(null); }
   }, [estateId]);
 
   useEffect(() => {
-    void loadOverview(); void loadPosts(); void loadOptins();
+    void loadOverview(); void loadOptins();
     api.get<Campaign[]>(`/estates/${estateId}/qr-campaigns`).then((response) => setCampaigns(response.data || [])).catch(() => setCampaigns([]));
     api.get(`/estates/${estateId}/marketing/share-links`).then((response) => setPlots((response.data?.plots || []).map((plot: PlotOption) => ({ id: plot.id, plot_number: plot.plot_number })))).catch(() => setPlots([]));
-  }, [estateId, loadOverview, loadPosts, loadOptins]);
+  }, [estateId, loadOverview, loadOptins]);
 
   // Templates depend on the chosen plot and tracked link (they carry that link).
   useEffect(() => {
@@ -196,23 +178,7 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
         toast.success(when === "now" ? "Posted." : when === "later" ? "Scheduled." : "Saved as a draft.");
       }
       resetComposer();
-      await loadPosts();
-    } catch (error) { toast.error(await extractApiErrorMessage(error, "The post could not be saved.")); await loadPosts(); } finally { setBusy(null); }
-  };
-
-  const editPost = (post: Post) => {
-    setEditingId(post.id); setCaption(post.caption); setChannels(post.channels); setStyle(asAdStyle(post.image_style));
-    setWhen(post.scheduled_at ? "later" : "draft"); setScheduledAt(toLocalInput(post.scheduled_at));
-    composerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-  const postAction = async (post: Post, action: "publish" | "cancel" | { markPosted: string }) => {
-    setBusy(`post-${post.id}`);
-    try {
-      if (action === "publish") await api.post(`/estates/marketing/social/posts/${post.id}/publish`);
-      else if (action === "cancel") await api.patch(`/estates/marketing/social/posts/${post.id}`, { cancel: true });
-      else await api.post(`/estates/marketing/social/posts/${post.id}/mark-posted`, { channel: action.markPosted });
-      await loadPosts();
-    } catch (error) { toast.error(await extractApiErrorMessage(error, "That did not work.")); await loadPosts(); } finally { setBusy(null); }
+    } catch (error) { toast.error(await extractApiErrorMessage(error, "The post could not be saved.")); } finally { setBusy(null); }
   };
 
   const connectMeta = async () => {
@@ -250,7 +216,7 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
     <div className="edash-mk-stack">
       {overview && overview.auto_posting === false
         ? <UpgradeNotice title="Automatic posting is on the Pro plan" message="Pro and Enterprise write a week or a month of posts for you and publish them to Facebook and Instagram on schedule. You can still prepare posts here and share them yourself." cta="Upgrade to Pro" />
-        : <MarketingAutoPlan estateId={estateId} channels={overview?.channels || []} accounts={overview?.accounts || []} metaAvailable={Boolean(overview?.meta_available)} campaigns={campaigns} canManage={canManage} onChanged={() => { void loadPosts(); }} />}
+        : <MarketingAutoPlan estateId={estateId} channels={overview?.channels || []} accounts={overview?.accounts || []} metaAvailable={Boolean(overview?.meta_available)} campaigns={campaigns} canManage={canManage} onChanged={() => {}} />}
       <div className="edash-card" ref={composerRef}><div className="edash-card-inner">
         <div className="edash-card-head">
           <h3 className="edash-card-title">{editingId !== null ? "Edit post" : "Create a post"}</h3>
@@ -328,45 +294,14 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
         </div>
       </div></div>
 
-      <div className="edash-card"><div className="edash-card-inner">
-        <div className="edash-card-head"><h3 className="edash-card-title">Recent posts</h3><Link className="edash-btn-primary" to={`/estates/${estateId}/marketing/posts`}>See and edit all posts</Link></div>
-        {posts.length === 0 ? <p className="edash-mk-empty">Nothing yet. Create your first post above.</p> : (
-          <div className="edash-sp-posts">
-            {posts.map((post) => {
-              const manual = post.channels.filter((key) => !overview?.channels.find((item) => item.key === key)?.automatic);
-              const label = (key: string) => overview?.channels.find((item) => item.key === key)?.label || key;
-              return (
-                <div key={post.id} className={`edash-sp-post${highlight === post.id ? " is-highlight" : ""}`}>
-                  <div className="edash-sp-post-head">
-                    <span className={`edash-status-pill tone-${STATUS_TONE[post.status] || "neutral"}`}>{STATUS_LABEL[post.status] || post.status}</span>
-                    {post.plan_id && post.template_label && <span className="edash-sp-tag">{post.strategy ? `${post.strategy} · ` : ""}{post.template_label}</span>}
-                    <small>{post.scheduled_at ? `${post.status === "scheduled" ? "Goes out" : "Scheduled for"} ${formatDateTime(post.scheduled_at)}` : `Created ${formatDateTime(post.created_at)}`}{post.reminder_sent_at ? " · reminder sent" : ""}</small>
-                  </div>
-                  <p className="edash-sp-post-caption">{post.caption.length > 220 ? `${post.caption.slice(0, 220)}...` : post.caption}</p>
-                  <div className="edash-sp-post-channels">
-                    {post.channels.map((key) => {
-                      const result = post.results?.[key];
-                      const state = result?.status || (post.status === "draft" || post.status === "scheduled" ? "waiting" : "waiting");
-                      return (
-                        <span key={key} className={`edash-sp-result is-${state}`} title={result?.error || ""}>
-                          {label(key)} · {state === "ok" ? "posted" : state === "failed" ? "failed" : state === "pending" ? "post it yourself" : "waiting"}
-                          {result?.url ? <a href={result.url} target="_blank" rel="noreferrer"> view</a> : null}
-                        </span>
-                      );
-                    })}
-                  </div>
-                  {Object.values(post.results || {}).some((result) => result.status === "failed") && <p className="edash-mk-hint" style={{ color: "var(--edash-danger)" }}>{Object.values(post.results).find((result) => result.status === "failed")?.error}</p>}
-                  <div className="edash-sp-post-actions">
-                    {EDITABLE.includes(post.status) && canManage && <button type="button" className="edash-btn-outline" onClick={() => editPost(post)}>Edit</button>}
-                    {EDITABLE.includes(post.status) && canManage && post.channels.some((key) => overview?.channels.find((item) => item.key === key)?.automatic) && <button type="button" className="edash-btn-primary" disabled={busy === `post-${post.id}`} onClick={() => void postAction(post, "publish")}>{post.status === "failed" || post.status === "partial" ? "Retry" : "Post now"}</button>}
-                    {canManage && manual.filter((key) => post.results?.[key]?.status !== "ok").map((key) => <button key={key} type="button" className="edash-btn-outline" disabled={busy === `post-${post.id}`} onClick={() => void postAction(post, { markPosted: key })}>Mark {label(key)} as posted</button>)}
-                    {["draft", "scheduled"].includes(post.status) && canManage && <button type="button" className="edash-btn-outline" onClick={() => void postAction(post, "cancel")}>Cancel</button>}
-                  </div>
-                </div>
-              );
-            })}
+      <div className="edash-card edash-sp-alllink"><div className="edash-card-inner">
+        <div className="edash-sp-alllink-row">
+          <div>
+            <h3 className="edash-card-title">All scheduled &amp; posted</h3>
+            <p className="edash-mk-hint" style={{ margin: "4px 0 0" }}>Every post you create here, day by day - open one to change its wording, time, channels or design, send it now, or cancel it.</p>
           </div>
-        )}
+          <Link className="edash-btn-primary" to={`/estates/${estateId}/marketing/posts`}>See and edit all posts</Link>
+        </div>
       </div></div>
 
       <div className="edash-mk-grid-2">
