@@ -89,7 +89,7 @@ export const loginEstate = async (email: string, password: string) => {
   return session;
 };
 
-export const registerEstate = async (params: { organization_name: string; organization_slug?: string; full_name: string; email: string; password: string }) => {
+export const registerEstate = async (params: { organization_name: string; organization_slug?: string; full_name: string; email: string; password: string; accept_dpa: boolean }) => {
   const response = await api.post<EstateAuthResponse>("/estates/auth/register", {
     ...params,
     organization_name: params.organization_name.trim(),

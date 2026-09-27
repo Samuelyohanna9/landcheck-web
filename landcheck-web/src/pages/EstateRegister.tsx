@@ -23,15 +23,17 @@ export default function EstateRegister() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [acceptDpa, setAcceptDpa] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (!acceptDpa) { setError("Accept the Data Processing Agreement to create your workspace."); return; }
     setError("");
     setBusy(true);
     try {
-      await registerEstate({ organization_name: company, organization_slug: slug, full_name: fullName, email, password });
+      await registerEstate({ organization_name: company, organization_slug: slug, full_name: fullName, email, password, accept_dpa: acceptDpa });
       navigate("/estates/choose-plan", { replace: true });
     } catch (err) {
       setError(await extractApiErrorMessage(err, "Registration failed. Please review the details and try again."));
@@ -99,8 +101,12 @@ export default function EstateRegister() {
                 </button>
               </div>
             </label>
+            <label className="estate-auth-checkbox">
+              <input type="checkbox" checked={acceptDpa} onChange={(event) => setAcceptDpa(event.target.checked)} required />
+              <span>I accept the <Link to="/estates/data-processing-agreement" target="_blank" rel="noreferrer">Data Processing Agreement</Link> on behalf of my company.</span>
+            </label>
             {error && <div className="estate-auth-error" role="alert">{error}</div>}
-            <button className="estate-button" type="submit" disabled={busy}>{busy ? "Creating workspace..." : "Create Estate workspace"}</button>
+            <button className="estate-button" type="submit" disabled={busy || !acceptDpa}>{busy ? "Creating workspace..." : "Create Estate workspace"}</button>
           </form>
           <p className="estate-auth-trust">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="1.5" stroke="currentColor" strokeWidth="1.6" /><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="currentColor" strokeWidth="1.6" /></svg>

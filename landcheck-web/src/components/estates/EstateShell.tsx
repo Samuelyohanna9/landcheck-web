@@ -10,6 +10,7 @@ import { prefetchMapboxCore } from "../../utils/mapboxLoader";
 import { useFloatingPopoverPosition } from "../../utils/useFloatingPopoverPosition";
 import "../../styles/estate-dashboard.css";
 import "../../styles/estate-monday.css";
+import "../../styles/estate-legal.css";
 
 export type EstateNavKey =
   | "dashboard" | "map" | "plots" | "customers" | "payments" | "commissions" | "marketing" | "survey" | "staking"
@@ -106,6 +107,12 @@ export default function EstateShell({
   const [newReservationCount, setNewReservationCount] = useState(0);
   const [newReservationLatestId, setNewReservationLatestId] = useState<number | null>(null);
   const [showReservationNotice, setShowReservationNotice] = useState(false);
+  const [dpaOpen, setDpaOpen] = useState(false);
+  const [dpaChecked, setDpaChecked] = useState(false);
+  const [dpaBusy, setDpaBusy] = useState(false);
+  const organizationId = estateSession?.user.organization_id;
+  const canAcceptDpa = String(estateSession?.user.role_key || "").toLowerCase() === "owner";
+  const dpaPromptStorageKey = `edash_dpa_prompt_seen_${organizationId || "org"}_${estateSession?.user.id || "user"}`;
 
   const latestDeliveryTimestamp = deliveryRows.reduce<string | null>(
     (latest, row) => (!latest || row.created_at > latest ? row.created_at : latest),
@@ -131,6 +138,41 @@ export default function EstateShell({
   const openPublicReservations = () => {
     dismissReservationNotice();
     navigate(`/estates/${estateId}#public-reservations`);
+  };
+
+  useEffect(() => {
+    // A one-time-per-login nudge for companies that registered before this agreement existed -
+    // only the owner can accept it (same permission as billing), and never on the dedicated Legal
+    // page itself, which already shows the same prompt inline.
+    if (!organizationId || !canAcceptDpa || window.location.pathname.startsWith("/estates/legal")) return;
+    let seen = false;
+    try { seen = window.sessionStorage.getItem(dpaPromptStorageKey) === "1"; } catch { /* ask again this time */ }
+    if (seen) return;
+    let mounted = true;
+    api.get("/estates/legal/dpa", { params: { organization_id: organizationId } })
+      .then((response) => {
+        if (!mounted) return;
+        if (!response.data?.accepted) {
+          try { window.sessionStorage.setItem(dpaPromptStorageKey, "1"); } catch { /* still show it this time */ }
+          setDpaOpen(true);
+        }
+      })
+      .catch(() => undefined);
+    return () => { mounted = false; };
+  }, [organizationId, canAcceptDpa, dpaPromptStorageKey]);
+
+  const acceptDpaPrompt = async () => {
+    if (!organizationId) return;
+    setDpaBusy(true);
+    try {
+      await api.post("/estates/legal/dpa/accept", {}, { params: { organization_id: organizationId } });
+      toast.success("Recorded. Thank you.");
+      setDpaOpen(false);
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "The agreement could not be recorded."));
+    } finally {
+      setDpaBusy(false);
+    }
   };
 
   useEffect(() => {
@@ -422,6 +464,21 @@ export default function EstateShell({
         )}
         <div className={`edash-body${activeKey === "map" ? " edash-body--fill" : ""}`}>{children}</div>
       </div>
+      {dpaOpen && (
+        <EstateModal title="Data Processing Agreement" subtitle="How LandCheck handles your customers', agents' and staff's personal data." onClose={() => setDpaOpen(false)}>
+          <p className="edash-status-row-desc" style={{ marginBottom: 14 }}>
+            This covers what LandCheck stores on your company's behalf, why, and who it shares it with (Cloudflare, Flutterwave, Meta, Google Earth Engine, Mapbox). <Link to="/estates/data-processing-agreement" target="_blank" rel="noreferrer">Read the full agreement</Link>.
+          </p>
+          <label className="edash-legal-accept">
+            <input type="checkbox" checked={dpaChecked} onChange={(event) => setDpaChecked(event.target.checked)} disabled={dpaBusy} />
+            <span>I have read this agreement and accept it on behalf of my company.</span>
+          </label>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <button type="button" className="edash-btn-outline" disabled={dpaBusy} onClick={() => setDpaOpen(false)}>Not now</button>
+            <button type="button" className="edash-btn-primary" disabled={!dpaChecked || dpaBusy} onClick={() => void acceptDpaPrompt()}>{dpaBusy ? "Recording..." : "I agree"}</button>
+          </div>
+        </EstateModal>
+      )}
       {renameOpen && (
         <EstateModal title="Rename estate" subtitle="Update the name shown across your Estate workspace and reports." onClose={() => setRenameOpen(false)}>
           <label className="edash-field" style={{ marginBottom: 14 }}>

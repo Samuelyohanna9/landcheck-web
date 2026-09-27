@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import EstateIcon from "../../components/estates/EstateIcon";
 import EstateShell from "../../components/estates/EstateShell";
 import { api, extractApiErrorMessage } from "../../api/client";
+import "../../styles/estate-marketing.css";
 
 type DeliveryStatus = "all" | "sent" | "failed" | "skipped";
 type NotificationRow = {

@@ -38,6 +38,7 @@ const CareersPage = lazyWithChunkRecovery(() => import("./pages/CareersPage"));
 const NewsPage = lazyWithChunkRecovery(() => import("./pages/NewsPage"));
 const NewsArticlePage = lazyWithChunkRecovery(() => import("./pages/NewsArticlePage"));
 const PrivacyPolicy = lazyWithChunkRecovery(() => import("./pages/PrivacyPolicy"));
+const EstateDpaPreview = lazyWithChunkRecovery(() => import("./pages/EstateDpaPreview"));
 const DonorImpactPage = lazyWithChunkRecovery(() => import("./pages/DonorImpactPage"));
 const AppClaimRedirect = lazyWithChunkRecovery(() => import("./pages/AppClaimRedirect"));
 const SurveyAuthVerify = lazyWithChunkRecovery(() => import("./pages/SurveyAuthVerify"));
@@ -303,6 +304,7 @@ export default function App() {
               <Route path="/survey-plan" element={<SurveyPlan />} />
               <Route path="/hazard-analysis" element={<HazardAnalysis />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/estates/data-processing-agreement" element={<EstateDpaPreview />} />
               <Route path="/data-deletion" element={<DataDeletion />} />
               <Route path="/green/login" element={<GreenLogin />} />
               <Route path="/green/login/:authRoute" element={<GreenLogin />} />

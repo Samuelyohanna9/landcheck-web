@@ -60,6 +60,11 @@
 
 .estate-text-link, .estate-auth-switch a, .estate-auth-back { color: var(--auth-brand-dark); font-family: inherit; font-weight: 500; }
 .estate-auth-page .estate-text-link { font-size: .82rem; }
+.estate-auth-checkbox { display: flex; align-items: flex-start; gap: 8px; margin: 4px 0 14px; cursor: pointer; }
+.estate-auth-checkbox input { margin-top: 3px; accent-color: var(--auth-brand); flex-shrink: 0; }
+.estate-auth-checkbox span { color: var(--auth-muted); font-size: .82rem; line-height: 1.45; }
+.estate-auth-checkbox a { color: var(--auth-brand-dark); font-weight: 600; text-decoration: underline; }
+
 .estate-auth-error { border-left: 0; border-radius: 4px; background: #fbeaea; color: #b3261e; font-family: inherit; }
 .estate-auth-trust, .estate-auth-switch { font-family: inherit !important; color: var(--auth-muted) !important; }
 .estate-auth-trust { color: #9699a6 !important; }
