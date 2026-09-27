@@ -166,10 +166,14 @@ function PublicEstateMap({ estate, selectedPlotId, onSelect, onReserve, guide }:
         });
         map.on("mouseenter", "public-estate-plot-fill", () => { map.getCanvas().style.cursor = "pointer"; });
         map.on("mouseleave", "public-estate-plot-fill", () => { map.getCanvas().style.cursor = ""; });
-        const points = [...coordinatesOf(estate.boundary?.coordinates), ...estate.plots.flatMap((plot) => coordinatesOf(plot.geometry?.coordinates)), ...coordinatesOf(estate.development_forecast?.direction_line?.geometry?.coordinates)];
+        // Zoom to the estate itself (boundary + plots). The growth line and built-up outlines are context
+        // that extends kilometres away, so they only decide the view when there is nothing else to show.
+        const own = [...coordinatesOf(estate.boundary?.coordinates), ...estate.plots.flatMap((plot) => coordinatesOf(plot.geometry?.coordinates))];
+        const points = own.length ? own : coordinatesOf(estate.development_forecast?.direction_line?.geometry?.coordinates);
         if (points.length) {
           const bounds = points.reduce((current, point) => current.extend(point), new mapboxgl.LngLatBounds(points[0], points[0]));
-          map.fitBounds(bounds, { padding: 50, maxZoom: 17, duration: 0 });
+          map.resize();
+          map.fitBounds(bounds, { padding: { top: 60, bottom: 60, left: 50, right: 50 }, maxZoom: 18.5, duration: 0 });
         }
       });
     }).catch(() => undefined);
