@@ -29,15 +29,13 @@ const publicSiteScreens = [
 ];
 
 const publicSiteBullets = [
-  "Live plot pricing and availability, always current",
-  "Reserve a plot or chat on WhatsApp in one tap",
-  "Area growth outlook, backed by satellite data",
+  "Live pricing and availability",
+  "Reserve a plot in one tap",
 ];
 
 const socialPostingBullets = [
-  "A fresh caption every time, written from your live plot data",
-  "Posts to Facebook and Instagram on the schedule you set",
-  "Nothing goes out when there are no plots available",
+  "Fresh captions from your live plot data",
+  "Posted to Facebook and Instagram, on schedule",
 ];
 
 export default function EstateLanding() {
@@ -136,14 +134,11 @@ export default function EstateLanding() {
       </section>
 
       <section className="estate-content-section estate-feature-section" id="public-site">
-        <div className="estate-feature-row">
+        <div className="estate-feature-row estate-feature-row--phone">
           <div className="estate-feature-text">
             <p className="estate-kicker">Public estate website</p>
             <h2>A branded website for every estate.</h2>
-            <p className="estate-feature-copy">
-              Buyers browse live plot pricing, reserve a plot and see the area's growth outlook on a page that
-              looks like yours - not a spreadsheet link or a WhatsApp broadcast.
-            </p>
+            <p className="estate-feature-copy">A page that's yours - not a spreadsheet link or a WhatsApp broadcast.</p>
             <ul className="estate-feature-bullets">
               {publicSiteBullets.map((item) => <li key={item}>{item}</li>)}
             </ul>
@@ -165,14 +160,11 @@ export default function EstateLanding() {
           </div>
         </div>
 
-        <div className="estate-feature-row estate-feature-row--reverse">
+        <div className="estate-feature-row estate-feature-row--social">
           <div className="estate-feature-text">
             <p className="estate-kicker">Automatic marketing</p>
             <h2>Social posts that write themselves.</h2>
-            <p className="estate-feature-copy">
-              Choose how often to post and LandCheck writes a fresh caption each time - plots available, prices,
-              a featured plot, progress, the area outlook - and publishes it for you.
-            </p>
+            <p className="estate-feature-copy">Set how often to post - LandCheck writes and publishes the rest.</p>
             <ul className="estate-feature-bullets">
               {socialPostingBullets.map((item) => <li key={item}>{item}</li>)}
             </ul>

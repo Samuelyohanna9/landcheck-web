@@ -115,27 +115,32 @@
 /* Public Estate website + automatic marketing feature rows: phone mockup with an auto-cycling
    screenshot carousel, and a browser-frame screenshot for the desktop marketing tool. */
 .estate-feature-section { padding-top: 0; }
-.estate-feature-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 460px); gap: clamp(40px, 6vw, 96px); align-items: center; }
-.estate-feature-row + .estate-feature-row { margin-top: clamp(72px, 10vw, 128px); }
-.estate-feature-row--reverse { grid-template-columns: minmax(0, 460px) minmax(0, 1fr); }
-.estate-feature-row--reverse .estate-feature-text { order: 2; }
-.estate-feature-row--reverse .estate-feature-visual { order: 1; }
-.estate-feature-text h2 { margin: 10px 0 16px; font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif; font-size: clamp(1.7rem, 3vw, 2.3rem); font-weight: 500; letter-spacing: -.03em; line-height: 1.2; text-wrap: balance; }
-.estate-feature-copy { margin: 0 0 22px; color: var(--estate-slate); font-size: .98rem; line-height: 1.66; max-width: 46ch; }
-.estate-feature-bullets { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
-.estate-feature-bullets li { position: relative; padding-left: 26px; color: var(--estate-ink); font-size: .92rem; line-height: 1.5; }
-.estate-feature-bullets li::before { content: ""; position: absolute; left: 0; top: 6px; width: 14px; height: 14px; border-radius: 50%; background: var(--estate-gold); opacity: .22; }
-.estate-feature-bullets li::after { content: ""; position: absolute; left: 4px; top: 10px; width: 6px; height: 6px; border-radius: 50%; background: var(--estate-gold); }
+/* Fixed (not 1fr) column widths on both sides, and the row itself shrunk to fit-content and
+   centered - a 1fr text column stretched to the section's full width while the actual copy sat
+   only ~40ch wide, leaving a huge dead gap before the image. This keeps text and image as one
+   compact, deliberately arranged pair instead of pinned to opposite edges. */
+.estate-feature-row { display: grid; align-items: center; gap: clamp(32px, 5vw, 56px); width: fit-content; max-width: 100%; margin: 0 auto; }
+.estate-feature-row + .estate-feature-row { margin-top: clamp(64px, 9vw, 108px); }
+.estate-feature-row--phone { grid-template-columns: minmax(0, 380px) minmax(0, 280px); }
+.estate-feature-row--social { grid-template-columns: minmax(0, 300px) minmax(0, 400px); }
+.estate-feature-row--social .estate-feature-text { order: 2; }
+.estate-feature-row--social .estate-feature-visual { order: 1; }
+.estate-feature-text h2 { margin: 8px 0 10px; font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif; font-size: clamp(1.6rem, 2.6vw, 2.1rem); font-weight: 500; letter-spacing: -.03em; line-height: 1.2; text-wrap: balance; }
+.estate-feature-copy { margin: 0 0 18px; color: var(--estate-slate); font-size: .96rem; line-height: 1.55; }
+.estate-feature-bullets { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.estate-feature-bullets li { position: relative; padding-left: 24px; color: var(--estate-ink); font-size: .9rem; line-height: 1.5; }
+.estate-feature-bullets li::before { content: ""; position: absolute; left: 0; top: 5px; width: 13px; height: 13px; border-radius: 50%; background: var(--estate-gold); opacity: .22; }
+.estate-feature-bullets li::after { content: ""; position: absolute; left: 4px; top: 9px; width: 5px; height: 5px; border-radius: 50%; background: var(--estate-gold); }
 .estate-feature-visual { display: flex; justify-content: center; }
 
-.estate-phone-frame { position: relative; width: 240px; background: var(--estate-ink); border-radius: 34px; padding: 12px 9px; box-shadow: 0 30px 60px rgba(16, 36, 58, .22); }
+.estate-phone-frame { position: relative; width: 250px; background: var(--estate-ink); border-radius: 34px; padding: 12px 9px; box-shadow: 0 30px 60px rgba(16, 36, 58, .22); }
 /* Matches the cropped screenshots' own ratio (they're the phone screen content only, chrome
    already removed) rather than a literal device spec, so "contain" needs no letterboxing. */
 .estate-phone-screen { position: relative; aspect-ratio: 9 / 16; border-radius: 24px; overflow: hidden; background: #f5f3eb; }
 .estate-phone-screen img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; object-position: top center; opacity: 0; transition: opacity .6s ease; }
 .estate-phone-screen img.is-active { opacity: 1; }
 
-.estate-browser-frame { margin: 0; width: 100%; max-width: 460px; border: 1px solid var(--estate-line); border-radius: 10px; overflow: hidden; background: #fff; box-shadow: 0 24px 50px rgba(16, 36, 58, .12); }
+.estate-browser-frame { margin: 0; width: 100%; max-width: 400px; border: 1px solid var(--estate-line); border-radius: 10px; overflow: hidden; background: #fff; box-shadow: 0 24px 50px rgba(16, 36, 58, .12); }
 .estate-browser-chrome { display: flex; align-items: center; gap: 6px; padding: 10px 14px; background: #eef0ea; border-bottom: 1px solid var(--estate-line); }
 .estate-browser-chrome span { width: 9px; height: 9px; border-radius: 50%; background: var(--estate-line); }
 .estate-browser-frame img { display: block; width: 100%; height: auto; }
@@ -268,11 +273,11 @@
 .estate-auth-shell--register .estate-register-intro { grid-column: 1; grid-row: 1; }
 
 @media (max-width: 850px) {
-  .estate-feature-row, .estate-feature-row--reverse { grid-template-columns: 1fr; gap: 36px; }
-  .estate-feature-row--reverse .estate-feature-text { order: 1; }
-  .estate-feature-row--reverse .estate-feature-visual { order: 2; }
+  .estate-feature-row { grid-template-columns: 1fr; gap: 28px; width: 100%; }
+  .estate-feature-row--social .estate-feature-text { order: 1; }
+  .estate-feature-row--social .estate-feature-visual { order: 2; }
   .estate-feature-text { text-align: center; }
-  .estate-feature-copy { margin-left: auto; margin-right: auto; }
+  .estate-feature-copy { margin-left: auto; margin-right: auto; max-width: 42ch; }
   .estate-feature-bullets { text-align: left; width: fit-content; margin: 0 auto; }
   .estate-portal-nav { justify-content: space-between; }
   .estate-nav-hamburger { display: flex; order: 2; margin-right: 0; }
