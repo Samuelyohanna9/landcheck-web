@@ -308,12 +308,7 @@
   display: block;
   width: 62.5%;
   height: 57.5%;
-  /* The plan photo is portrait (taller than wide); the laptop's screen slot is wide and short.
-     `contain` fit the whole photo in and left grey letterboxing down both sides - looked like a
-     thumbnail dropped onto the mockup rather than a screen showing it. `cover` fills the slot
-     edge to edge, cropping to the plan's boundary diagram (the most recognisable part) instead of
-     the surrounding title block and coordinate table. */
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
   background: #dfe2e1;
 }
