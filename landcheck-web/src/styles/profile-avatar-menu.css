@@ -440,10 +440,11 @@
   min-height: 40px;
   margin-top: 12px;
   padding: 0 10px;
-  background: rgba(244, 63, 94, 0.08);
-  border: 1px solid rgba(244, 63, 94, 0.22);
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.22);
   border-radius: 9px;
-  color: #fb7185;
+  /* Was #fb7185, a pale pastel pink - too washed out to read as a destructive action. */
+  color: #dc2626;
   font-family: var(--survey-font-body);
   font-size: 0.76rem;
   font-weight: 750;
@@ -451,9 +452,9 @@
 }
 
 .profile-avatar-signout-btn:hover {
-  background: rgba(244, 63, 94, 0.14);
-  border-color: rgba(244, 63, 94, 0.42);
-  color: #fda4af;
+  background: rgba(220, 38, 38, 0.16);
+  border-color: rgba(220, 38, 38, 0.45);
+  color: #b91c1c;
 }
 
 :root[data-workspace-theme="light"] .profile-avatar-popover {
