@@ -31,11 +31,7 @@ const publicSiteScreens = [
 const publicSiteBullets = [
   "Live pricing and availability",
   "Reserve a plot in one tap",
-];
-
-const socialPostingBullets = [
-  "Fresh captions from your live plot data",
-  "Posted to Facebook and Instagram, on schedule",
+  "Growth outlook buyers can trust",
 ];
 
 export default function EstateLanding() {
@@ -127,6 +123,10 @@ export default function EstateLanding() {
             <img src="/estate-dashboard-layout-designer.jpg" alt="LandCheck Estates automatic layout design tool" loading="lazy" />
             <figcaption>Automatic layout design</figcaption>
           </figure>
+          <figure className="estate-screenshot">
+            <img src="/social post.jpg" alt="LandCheck Estates automatic social posting plan for Facebook and Instagram" loading="lazy" />
+            <figcaption>Automatic social media posting</figcaption>
+          </figure>
         </div>
         <div className="estate-connected-grid">
           {connectedCapabilities.map((item) => <span key={item}>{item}</span>)}
@@ -157,25 +157,6 @@ export default function EstateLanding() {
                 ))}
               </div>
             </div>
-          </div>
-        </div>
-
-        <div className="estate-feature-row estate-feature-row--social">
-          <div className="estate-feature-text">
-            <p className="estate-kicker">Automatic marketing</p>
-            <h2>Social posts that write themselves.</h2>
-            <p className="estate-feature-copy">Set how often to post - LandCheck writes and publishes the rest.</p>
-            <ul className="estate-feature-bullets">
-              {socialPostingBullets.map((item) => <li key={item}>{item}</li>)}
-            </ul>
-          </div>
-          <div className="estate-feature-visual">
-            <figure className="estate-browser-frame">
-              <div className="estate-browser-chrome">
-                <span /><span /><span />
-              </div>
-              <img src="/social post.jpg" alt="LandCheck Estates automatic social posting plan for Facebook and Instagram" loading="lazy" />
-            </figure>
           </div>
         </div>
       </section>
