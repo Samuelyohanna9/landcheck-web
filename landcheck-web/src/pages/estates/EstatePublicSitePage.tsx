@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { api, extractApiErrorMessage } from "../../api/client";
+import { API_URL, api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 
 /** Everything about the buyer-facing public Estate site - branding, contact details, the site
@@ -27,6 +27,10 @@ export default function EstatePublicSitePage() {
   const [meetLocating, setMeetLocating] = useState(false);
   const [publicLogoPath, setPublicLogoPath] = useState<string | null>(null);
   const [publicLogoFile, setPublicLogoFile] = useState<File | null>(null);
+  const [publicCoverPath, setPublicCoverPath] = useState<string | null>(null);
+  const [publicCoverFile, setPublicCoverFile] = useState<File | null>(null);
+  const [publicCoverPreview, setPublicCoverPreview] = useState<string | null>(null);
+  const [coverBusy, setCoverBusy] = useState(false);
   const [publicShowPrices, setPublicShowPrices] = useState(true);
   const [paymentPlan, setPaymentPlan] = useState<Array<{ id: string; label: string; percentage: string }>>([]);
   const [publicCanPublish, setPublicCanPublish] = useState(false);
@@ -60,6 +64,7 @@ export default function EstatePublicSitePage() {
       setMeetLabel(meeting?.label || "");
       setMeetNote(meeting?.note || "");
       setPublicLogoPath(publicPage.public_logo_path || null);
+      setPublicCoverPath(publicPage.public_cover_path || null);
       setPublicShowPrices(publicPage.public_show_prices !== false);
       setPaymentPlan((publicPage.payment_plan || []).map((item: { label?: string; percentage?: string | number }) => ({
         id: `payment-stage-${paymentPlanStageIdRef.current++}`,
@@ -104,6 +109,14 @@ export default function EstatePublicSitePage() {
         setPublicLogoPath(logoResponse.data.logo_path || null);
         setPublicLogoFile(null);
       }
+      if (publicCoverFile) {
+        const formData = new FormData();
+        formData.append("file", publicCoverFile);
+        const coverResponse = await api.post(`/estates/${estateId}/public-cover`, formData);
+        setPublicCoverPath(coverResponse.data.cover_path || null);
+        setPublicCoverFile(null);
+        setPublicCoverPreview(null);
+      }
       toast.success(publicEnabled ? "Public Estate page published." : "Public Estate page saved.");
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "The public Estate page could not be saved."));
@@ -145,6 +158,29 @@ export default function EstatePublicSitePage() {
       toast.success(publicVisible ? "Development outlook added to the public page." : "Development outlook hidden from the public page.");
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "Forecast visibility could not be updated."));
+    }
+  };
+
+  const chooseCoverFile = (file: File | null) => {
+    setPublicCoverFile(file);
+    setPublicCoverPreview((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return file ? URL.createObjectURL(file) : null;
+    });
+  };
+
+  const useDefaultCover = async () => {
+    if (!window.confirm("Switch the public page back to the default cover photo?")) return;
+    setCoverBusy(true);
+    try {
+      await api.delete(`/estates/${estateId}/public-cover`);
+      setPublicCoverPath(null);
+      chooseCoverFile(null);
+      toast.success("Back to the default cover photo.");
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "Could not switch back to the default cover photo."));
+    } finally {
+      setCoverBusy(false);
     }
   };
 
@@ -201,6 +237,19 @@ export default function EstatePublicSitePage() {
               <label className="edash-field"><span>Company logo</span><input type="file" accept="image/png,image/jpeg" onChange={(event) => setPublicLogoFile(event.target.files?.[0] || null)} /></label>
             </div>
             {publicLogoPath && <p className="edash-field-note" style={{ margin: "8px 0" }}>Company logo uploaded and visible on the public page.</p>}
+            <div className="edash-public-payment-plan" style={{ margin: "10px 0" }}>
+              <div className="edash-card-head" style={{ marginBottom: 5 }}><div><h4 className="edash-card-title" style={{ fontSize: "1rem" }}>Cover photo</h4><p className="edash-field-note">The large background photo at the top of the public page. Leave it as the default, or upload your own - a wide, landscape photo works best (at least 1600px wide).</p></div></div>
+              <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+                <div className="edash-public-cover-preview" style={{ backgroundImage: `url("${publicCoverPreview || (publicCoverPath ? `${API_URL}${publicCoverPath}` : "/realestate_public.jpg")}")` }}>
+                  {!publicCoverPath && !publicCoverPreview && <span>Default photo</span>}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <input type="file" accept="image/png,image/jpeg" onChange={(event) => chooseCoverFile(event.target.files?.[0] || null)} />
+                  {(publicCoverPath || publicCoverFile) && <button type="button" className="edash-btn-outline" disabled={coverBusy} onClick={() => void (publicCoverFile ? chooseCoverFile(null) : useDefaultCover())}>{publicCoverFile ? "Cancel" : coverBusy ? "Switching..." : "Use default photo instead"}</button>}
+                </div>
+              </div>
+              {publicCoverFile && <p className="edash-field-note" style={{ marginTop: 8 }}>Saved when you click "Save and publish page" below.</p>}
+            </div>
             <label className="edash-field" style={{ margin: "10px 0" }}><span>About this Estate</span><textarea rows={3} value={publicDescription} onChange={(event) => setPublicDescription(event.target.value)} placeholder="Tell buyers what makes this Estate worth considering" /></label>
             <div className="edash-public-payment-plan" style={{ marginBottom: 14 }}>
               <div className="edash-card-head" style={{ marginBottom: 5 }}><div><h4 className="edash-card-title" style={{ fontSize: "1rem" }}>Site inspection meeting point</h4><p className="edash-field-note">Where visitors meet you on inspection day. It appears on the public page and in booking emails with a directions link, and it replaces the paid inspection guide.</p></div></div>

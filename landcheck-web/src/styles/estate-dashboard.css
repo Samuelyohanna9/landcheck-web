@@ -1511,6 +1511,8 @@
 .edash-public-payment-plan-row input { min-height: 34px; min-width: 0; padding: 6px 9px; border: 1px solid var(--edash-border); border-radius: 7px; background: #fff; color: var(--edash-ink); font: inherit; font-size: .78rem; }
 .edash-public-payment-plan-row button { border: 0; background: transparent; color: var(--edash-muted); font-size: .72rem; }
 .edash-public-payment-plan-row button:hover { color: var(--edash-danger); }
+.edash-public-cover-preview { flex-shrink: 0; width: 168px; height: 94px; border-radius: 10px; border: 1px solid var(--edash-border); background-color: var(--edash-surface); background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; }
+.edash-public-cover-preview span { color: var(--edash-faint); font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; background: rgba(255,255,255,.85); padding: 3px 8px; border-radius: 999px; }
 .edash-public-lead-convert { min-height: 30px; padding: 5px 9px; font-size: .68rem; white-space: nowrap; }
 .edash-public-lead-converted { color: var(--edash-good); font-size: .68rem; }
 .edash-inline-price, .edash-inline-price-editor { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; }
