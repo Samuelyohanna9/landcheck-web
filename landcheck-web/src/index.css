@@ -258,7 +258,8 @@ img {
   height: 18px;
 }
 
-/* Estate route loading uses the same Green mark with a quieter, smaller footprint. */
+/* Estates, LandCheck Work, and Survey route loading all use the same Green mark, with a
+   quieter, smaller footprint than the public Green app's own loading screen. */
 .estate-loading-animation {
   gap: 0.35rem;
 }

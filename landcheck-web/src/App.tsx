@@ -2,7 +2,6 @@ import { Component, Suspense, useEffect, useLayoutEffect, type ErrorInfo, type R
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import CookieConsentManager from "./components/CookieConsentManager";
 import SeoRouteMeta from "./components/SeoRouteMeta";
-import SurveyLoadingAnimation from "./components/SurveyLoadingAnimation";
 import HazardLoadingAnimation from "./components/HazardLoadingAnimation";
 import GreenLoadingAnimation from "./components/GreenLoadingAnimation";
 import { getGreenAuthSession, isGreenAuthed, isSponsorGreenSession } from "./auth/greenAuth";
@@ -264,8 +263,10 @@ function RouteScrollManager() {
 
 // Suspense's fallback for every lazy route below - shown any time a route's own JS chunk is
 // still downloading (first visit to a page, or a slow connection re-fetching after a deploy).
-// Public product landings intentionally stay free of the in-app loading animation. The branded
-// fallback remains available for the actual Survey, Hazard, and Green workspaces.
+// Public product landings intentionally stay free of the in-app loading animation. Estates,
+// LandCheck Work, and Survey all share the same quiet, compact mark (the one that used to be
+// Estates-only) rather than each having its own look - only the public Green field app and the
+// Hazard/Flood tool keep their own larger, more illustrated fallback.
 function RouteLoadingFallback() {
   const { pathname } = useLocation();
   const path = pathname.toLowerCase().replace(/\/+$/, "") || "/";
@@ -273,14 +274,16 @@ function RouteLoadingFallback() {
   if (["/survey", "/survey/guides", "/flood", "/green-partners"].includes(path)) return null;
 
   const isEstateRoute = path.startsWith("/estates") || path.startsWith("/estate-admin");
-  let Animation: typeof SurveyLoadingAnimation | null = null;
-  if (path.startsWith("/survey")) {
-    Animation = SurveyLoadingAnimation;
+  const isGreenWorkRoute = path.startsWith("/green-work");
+  const isSurveyRoute = path.startsWith("/survey") || path.startsWith("/dashboard");
+  const useCompactMark = isEstateRoute || isGreenWorkRoute || isSurveyRoute;
+
+  let Animation: typeof GreenLoadingAnimation | null = null;
+  if (useCompactMark) {
+    Animation = GreenLoadingAnimation;
   } else if (path.startsWith("/hazard-analysis") || path.startsWith("/flood")) {
     Animation = HazardLoadingAnimation;
   } else if (path.startsWith("/green")) {
-    Animation = GreenLoadingAnimation;
-  } else if (isEstateRoute) {
     Animation = GreenLoadingAnimation;
   }
 
@@ -288,7 +291,7 @@ function RouteLoadingFallback() {
 
   return (
     <div className="route-loading-fallback">
-      <Animation size={isEstateRoute ? "small" : "large"} className={isEstateRoute ? "estate-loading-animation" : undefined} />
+      <Animation size={useCompactMark ? "small" : "large"} className={useCompactMark ? "estate-loading-animation" : undefined} />
     </div>
   );
 }
