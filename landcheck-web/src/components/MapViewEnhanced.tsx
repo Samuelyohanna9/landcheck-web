@@ -428,8 +428,8 @@ function MapViewEnhanced({
           type: "fill",
           source: "plot-polygon",
           paint: {
-            "fill-color": "#21c77a",
-            "fill-opacity": 0.22,
+            "fill-color": "#ef4444",
+            "fill-opacity": 0.14,
           },
         });
 
@@ -438,8 +438,8 @@ function MapViewEnhanced({
           type: "line",
           source: "plot-polygon",
           paint: {
-            "line-color": "#21c77a",
-            "line-width": 3,
+            "line-color": "#ef4444",
+            "line-width": 1.6,
           },
         });
 
@@ -455,7 +455,7 @@ function MapViewEnhanced({
           type: "line",
           source: "plot-line-preview",
           layout: { "line-cap": "round", "line-join": "round" },
-          paint: { "line-color": "#21c77a", "line-width": 4 },
+          paint: { "line-color": "#ef4444", "line-width": 1.6 },
         });
 
         // Measure tool - a plain line + point source, populated only while mapTool === "measure"
@@ -817,7 +817,13 @@ function MapViewEnhanced({
     validCoords.forEach((coord, index) => {
       const el = document.createElement("div");
       el.className = "map-marker";
-      el.innerHTML = `<span>${coord.station || String.fromCharCode(65 + index)}</span>`;
+      const dot = document.createElement("span");
+      dot.className = "map-marker-dot";
+      const label = document.createElement("span");
+      label.className = "map-marker-label";
+      label.textContent = coord.station || String.fromCharCode(65 + index);
+      el.appendChild(dot);
+      el.appendChild(label);
       if (viewModeRef.current === "spot_heights") {
         el.style.display = "none";
       }

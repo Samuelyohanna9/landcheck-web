@@ -23,33 +23,46 @@
   min-height: 320px;
 }
 
-/* Custom Map Marker */
+/* Custom Map Marker - a small fixed dot plus a station-name label beside it, rather than the
+   name crammed inside the circle (a real beacon id like "PBAF5899" never fit a 36px dot and
+   either overflowed it or forced the marker itself to be oversized just to hold text). */
 .map-marker {
-  width: 36px;
-  height: 36px;
-  background: linear-gradient(135deg, #21c77a 0%, #178a56 100%);
-  border: 3px solid white;
-  border-radius: 50%;
+  width: 12px;
+  height: 12px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4), 0 0 0 2px rgba(33, 199, 122, 0.3);
+  position: relative;
   cursor: pointer;
   transition: transform 0.2s ease;
   z-index: 10;
 }
 
 .map-marker:hover {
-  transform: scale(1.15);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 0 4px rgba(33, 199, 122, 0.4);
+  transform: scale(1.25);
 }
 
-.map-marker span {
+.map-marker-dot {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #21c77a 0%, #178a56 100%);
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), 0 0 0 1.5px rgba(33, 199, 122, 0.35);
+}
+
+.map-marker-label {
+  position: absolute;
+  left: calc(100% + 5px);
+  top: 50%;
+  transform: translateY(-50%);
   color: white;
-  font-size: 0.875rem;
+  font-size: 0.72rem;
   font-weight: 800;
   line-height: 1;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55), 0 1px 4px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
 }
 
 /* Map Placeholder */
