@@ -14,7 +14,7 @@ import "../../styles/estate-legal.css";
 
 export type EstateNavKey =
   | "dashboard" | "map" | "plots" | "customers" | "payments" | "commissions" | "marketing" | "survey" | "staking"
-  | "documents" | "development" | "hazard" | "reports" | "audit" | "settings" | "notifications";
+  | "documents" | "development" | "hazard" | "reports" | "audit" | "public_site" | "settings" | "notifications";
 
 export const estateNavItems: Array<{ key: EstateNavKey; label: string; icon: EstateIconName; path: (estateId: string) => string }> = [
   { key: "dashboard", label: "Dashboard", icon: "dashboard", path: (id) => `/estates/${id}` },
@@ -31,6 +31,7 @@ export const estateNavItems: Array<{ key: EstateNavKey; label: string; icon: Est
   { key: "hazard", label: "Hazard Analysis", icon: "hazard", path: (id) => `/estates/${id}/hazards` },
   { key: "reports", label: "Reports", icon: "reports", path: (id) => `/estates/${id}/reports` },
   { key: "audit", label: "Audit Timeline", icon: "audit", path: (id) => `/estates/${id}/timeline` },
+  { key: "public_site", label: "Public website", icon: "globe", path: (id) => `/estates/${id}/public-site` },
   { key: "settings", label: "Settings", icon: "settings", path: (id) => `/estates/${id}/settings` },
   { key: "notifications", label: "Message Delivery", icon: "mail", path: (id) => `/estates/${id}/notifications` },
 ];

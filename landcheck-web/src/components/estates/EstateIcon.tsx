@@ -58,7 +58,8 @@ export type EstateIconName =
   | "camera"
   | "calendar"
   | "whatsapp"
-  | "navigation";
+  | "navigation"
+  | "globe";
 
 export default function EstateIcon({ name, className = "" }: { name: EstateIconName; className?: string }) {
   switch (name) {
@@ -178,6 +179,8 @@ export default function EstateIcon({ name, className = "" }: { name: EstateIconN
       return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.2 19.8 5.4 16A8 8 0 1 1 8.2 18.7Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /><path d="M9.2 8.9c.2 2.6 2.6 5.1 5.4 5.9.7-.1 1.4-.8 1.4-1.4l-1.8-.9-.9.7c-1.1-.4-2.1-1.4-2.5-2.5l.7-.9-.9-1.8c-.6 0-1.2.6-1.4.9Z" fill="currentColor" /></svg>;
     case "navigation":
       return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m4 11.5 15.5-7-7 15.5-2-6.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /></svg>;
+    case "globe":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.5" /><path d="M3.5 12h17M12 3.5c2.4 2.3 3.7 5.3 3.7 8.5s-1.3 6.2-3.7 8.5c-2.4-2.3-3.7-5.3-3.7-8.5S9.6 5.8 12 3.5Z" stroke="currentColor" strokeWidth="1.4" /></svg>;
     default:
       return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.6" /></svg>;
   }
