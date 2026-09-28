@@ -1143,10 +1143,13 @@
   margin: 0 auto;
   padding: 44px 24px 28px;
   display: grid;
-  grid-template-columns: 1.6fr 1fr 1fr 1fr;
+  /* minmax(0, 1fr), not bare 1fr: a plain 1fr track won't shrink below its content's min-content
+     width, so on a narrow phone the "Sponsor"/"Company" link columns forced this whole grid - and
+     the page - about 26px wider than the viewport instead of just wrapping their text. */
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
   gap: 28px;
 }
-.gps-footer-col { display: flex; flex-direction: column; gap: 10px; }
+.gps-footer-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .gps-footer-col strong { color: #ffffff; font-size: 0.82rem; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 2px; }
 .gps-footer-col a, .gps-footer-col button {
   background: none;
@@ -1156,6 +1159,8 @@
   color: rgba(255,255,255,0.72);
   font-size: 0.86rem;
   width: fit-content;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 .gps-footer-col a:hover, .gps-footer-col button:hover { color: #ffffff; text-decoration: underline; }
 .gps-footer-brand-name {
@@ -1179,7 +1184,7 @@
 
 @media (max-width: 720px) {
   .gps-footer-inner {
-    grid-template-columns: repeat(3, 1fr) !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     gap: 20px 10px !important;
   }
   .gps-footer-brand {
