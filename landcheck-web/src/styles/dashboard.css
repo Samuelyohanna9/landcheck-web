@@ -2562,14 +2562,6 @@
   color: #9a6500;
 }
 
-:root[data-workspace-theme="light"] .workspace-container .dashboard-logo-land {
-  color: #0f172a;
-}
-
-:root[data-workspace-theme="light"] .workspace-container .dashboard-logo-check {
-  color: #059669;
-}
-
 :root[data-workspace-theme="light"] .workspace-container .workspace-search input::placeholder {
   color: #64748b;
 }
@@ -2621,50 +2613,32 @@
   gap: 8px;
 }
 
+/* Same boxed badge as Survey's .survey-top-bar-brand-logo: the full logo.svg's "Land" text is
+   near-white (#F1F5F9), meant to sit on a dark backdrop, not a plain white dashboard header - the
+   dark badge is what makes it legible, in both themes. */
 .workspace-container .dashboard-logo-mark {
-  display: block;
-  width: 31px;
-  height: 31px;
-  flex: 0 0 31px;
-  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border-radius: 9px;
+  background: #0f6e44;
 }
 
 .workspace-container .dashboard-logo-mark img {
   display: block;
-  width: 201px;
-  max-width: none;
-  height: 54px;
-  transform: translate(-9px, -9px);
-}
-
-.workspace-container .dashboard-logo-wordmark {
-  color: #f1f5f9;
-  font-family: var(--survey-font-body);
-  font-size: 0.95rem;
-  font-weight: 750;
-  letter-spacing: -0.02em;
-  white-space: nowrap;
-}
-
-.workspace-container .dashboard-logo-check {
-  color: #22c55e;
+  width: auto;
+  height: 24px;
 }
 
 @media (max-width: 768px) {
   .workspace-container .dashboard-logo-mark {
-    width: 29px;
-    height: 29px;
-    flex-basis: 29px;
+    padding: 5px 8px;
+    border-radius: 8px;
   }
 
   .workspace-container .dashboard-logo-mark img {
-    width: 188px;
-    height: 50px;
-    transform: translate(-8px, -8px);
-  }
-
-  .workspace-container .dashboard-logo-wordmark {
-    font-size: 0.88rem;
+    height: 20px;
   }
 }
 
@@ -3130,16 +3104,6 @@
     min-width: 0;
     max-width: 100%;
   }
-
-  .workspace-container .dashboard-logo-mark {
-    flex: 0 0 30px;
-  }
-
-  .workspace-container .dashboard-logo-wordmark {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
 }
 
 @media (max-width: 380px) {
@@ -3152,9 +3116,5 @@
     width: 36px;
     height: 36px;
     flex-basis: 36px;
-  }
-
-  .workspace-container .dashboard-logo-wordmark {
-    font-size: 0.86rem;
   }
 }

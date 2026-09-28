@@ -783,8 +783,10 @@ export default function Dashboard() {
             </svg>
           </button>
           <button className="dashboard-logo-btn" onClick={() => navigate("/")} aria-label="Go to LandCheck home">
+            {/* Same boxed badge treatment as the Survey workspace's own top bar (.survey-top-bar-brand-logo) -
+                the full logo.svg (icon + wordmark) on its dark badge, instead of a separately cropped icon
+                plus hand-styled "Land"/"Check" text trying to recreate it. */}
             <span className="dashboard-logo-mark" aria-hidden="true"><img src="/logo.svg" alt="" /></span>
-            <span className="dashboard-logo-wordmark" aria-hidden="true"><span className="dashboard-logo-land">Land</span> <span className="dashboard-logo-check">Check</span></span>
           </button>
           <h1>{greetingForNow()}, {displayName}</h1>
         </div>
