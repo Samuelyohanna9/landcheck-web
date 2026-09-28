@@ -222,7 +222,7 @@
 .draft-banner-btn--primary {
   background: linear-gradient(135deg, var(--survey-copper-400) 0%, var(--survey-copper-600) 100%);
   border-color: var(--survey-copper-500);
-  color: #1c1104;
+  color: #ffffff;
   box-shadow: 0 12px 24px rgba(193, 122, 63, 0.22);
 }
 

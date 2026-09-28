@@ -11,7 +11,7 @@
   border-radius: 999px;
   border: 1px solid var(--survey-copper-500);
   background: linear-gradient(135deg, var(--survey-copper-400) 0%, var(--survey-copper-600) 100%);
-  color: #1c1104;
+  color: #ffffff;
   font-family: var(--survey-font-body);
   font-size: 0.85rem;
   font-weight: 700;
@@ -54,7 +54,7 @@
   height: 42px;
   border-radius: 999px;
   background: linear-gradient(135deg, var(--survey-copper-400) 0%, var(--survey-copper-600) 100%);
-  color: #1c1104;
+  color: #ffffff;
   font-family: var(--survey-font-body);
   font-size: 0.9rem;
   font-weight: 700;
@@ -150,7 +150,7 @@
   height: 44px;
   flex: 0 0 44px;
   background: #10b981;
-  color: #052116;
+  color: #ffffff;
   font-weight: 800;
 }
 

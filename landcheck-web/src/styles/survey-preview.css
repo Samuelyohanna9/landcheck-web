@@ -994,7 +994,7 @@
 
 .toggle-btn.active {
   background: linear-gradient(135deg, var(--survey-copper-400) 0%, var(--survey-copper-600) 100%);
-  color: #1c1104;
+  color: #ffffff;
 }
 
 /* Three tabs layout */
