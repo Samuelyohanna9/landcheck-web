@@ -78,7 +78,9 @@
   background: linear-gradient(135deg, var(--survey-copper-400) 0%, var(--survey-copper-600) 100%);
   border: none;
   border-radius: 8px;
-  color: #1c1104;
+  /* White, not the old #1c1104 near-black - a leftover from when this token was a literal
+     copper/brown, now it's green (see survey-tokens.css) so dark text read as low-contrast. */
+  color: #ffffff;
   font-family: var(--survey-font-body);
   font-size: 0.875rem;
   font-weight: 700;
@@ -1071,7 +1073,7 @@
 .workspace-container .new-plot-btn {
   min-height: 42px;
   background: #10b981;
-  color: #041a11;
+  color: #ffffff;
   font-family: var(--survey-font-body);
   font-weight: 750;
   box-shadow: 0 4px 14px rgba(16, 185, 129, 0.16);

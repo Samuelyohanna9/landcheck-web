@@ -5532,7 +5532,9 @@ select.field-error {
 .btn-primary {
   background: linear-gradient(135deg, var(--survey-copper-400) 0%, var(--survey-copper-600) 100%);
   border: none;
-  color: #062516;
+  /* No color override here - the earlier .btn-primary rule already sets white, which is what
+     this button should keep. This rule used to set #062516 (dark green), silently winning the
+     cascade and making text low-contrast against the same gradient. */
   box-shadow: 0 18px 34px var(--survey-copper-glow-strong);
 }
 

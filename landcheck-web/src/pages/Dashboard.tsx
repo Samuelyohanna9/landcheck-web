@@ -620,7 +620,7 @@ export default function Dashboard() {
     setPage(1);
   }, [searchQuery, statusFilter, categoryFilter]);
 
-  const displayName = (session?.user?.full_name || "").trim() || "Surveyor";
+  const displayName = ((session?.user?.full_name || "").trim().split(/\s+/)[0]) || "Surveyor";
 
   const handleSignOut = () => {
     clearSurveyAuthSession();
