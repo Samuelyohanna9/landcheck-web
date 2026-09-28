@@ -303,11 +303,18 @@
 
 .spl-hero-screen img {
   position: absolute;
-  top: 9%;
-  left: 21.9%;
+  /* The photo's screen isn't perfectly axis-aligned - it's tilted about 0.75deg clockwise (a real
+     camera has a slight roll/perspective even in an otherwise front-on shot). An unrotated
+     rectangle sitting inside it lines up along the bottom but visibly pokes past the bezel at the
+     top-left and top-right corners. Measured the screen's actual four corners directly from the
+     source pixels (public/survey-laptop-hand.png, 1536x1024) and solved for the rotated rectangle
+     that best matches them, rather than eyeballing it. */
+  top: 9.6%;
+  left: 22.5%;
   display: block;
-  width: 62.5%;
-  height: 57.5%;
+  width: 61.3%;
+  height: 56.3%;
+  transform: rotate(0.75deg);
   object-fit: contain;
   object-position: center;
   background: #dfe2e1;
