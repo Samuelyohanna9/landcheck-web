@@ -31,9 +31,13 @@
   height: 12px;
   display: flex;
   align-items: center;
-  position: relative;
+  /* No "position" here - mapbox-gl already sets its own .mapboxgl-marker class to
+     position: absolute and positions each marker with an inline transform: translate(x,y).
+     Overriding it to "relative" (as this used to) keeps the element in normal document flow,
+     so mapbox's translate ends up added on top of wherever the element already flowed to -
+     each marker after the first drifted further down the page than the last, compounding
+     with every additional marker instead of landing on its actual coordinate. */
   cursor: pointer;
-  transition: transform 0.2s ease;
   z-index: 10;
 }
 
