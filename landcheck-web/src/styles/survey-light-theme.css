@@ -866,6 +866,19 @@
   color: #0f172a;
 }
 
+/* Boundary/Spot Heights map-view toggle bar - unstyled in light theme before this, so it kept
+   its dark-theme rgba(11,20,32,0.6) navy background, reading as a dirty grey slab on the light
+   parchment surface. */
+:root[data-workspace-theme="light"] .survey-container .map-view-toggle {
+  background: #eef2f1;
+  border-bottom-color: #dbe4ea;
+}
+
+:root[data-workspace-theme="light"] .survey-container .map-view-toggle-btn:hover {
+  background: rgba(15, 23, 42, 0.06);
+  color: #0f172a;
+}
+
 :root[data-workspace-theme="light"] .survey-container .zoom-btn.reset {
   border-left-color: #dbe4ea;
 }
