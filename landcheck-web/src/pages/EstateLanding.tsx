@@ -22,10 +22,38 @@ const connectedCapabilities = [
 
 const solutionAreas = ["Development", "Sales", "Finance", "Survey"];
 
+const publicSiteScreens = [
+  { src: "/estate-public-site-1.jpg", alt: "Public Estate page showing the area growth outlook for a buyer" },
+  { src: "/estate-public-site-2.jpg", alt: "Public Estate page showing the satellite plot map for a buyer to choose from" },
+  { src: "/estate-public-site-3.jpg", alt: "Public Estate page showing a plot's price and a Reserve this plot button" },
+];
+
+const publicSiteBullets = [
+  "Live plot pricing and availability, always current",
+  "Reserve a plot or chat on WhatsApp in one tap",
+  "Area growth outlook, backed by satellite data",
+];
+
+const socialPostingBullets = [
+  "A fresh caption every time, written from your live plot data",
+  "Posts to Facebook and Instagram on the schedule you set",
+  "Nothing goes out when there are no plots available",
+];
+
 export default function EstateLanding() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = () => setMenuOpen(false);
+  const [activeScreen, setActiveScreen] = useState(0);
+
+  // Cycles the phone mockup's screenshots automatically - a static image doesn't show that the
+  // public Estate page is several real pages (outlook, map, plot register), not one screenshot.
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setActiveScreen((current) => (current + 1) % publicSiteScreens.length);
+    }, 3200);
+    return () => window.clearInterval(id);
+  }, []);
 
   // Picking a plan from the landing page (not yet signed in) sends a new visitor to register
   // first - registration itself hands off to /estates/choose-plan once the account exists.
@@ -104,6 +132,59 @@ export default function EstateLanding() {
         </div>
         <div className="estate-connected-grid">
           {connectedCapabilities.map((item) => <span key={item}>{item}</span>)}
+        </div>
+      </section>
+
+      <section className="estate-content-section estate-feature-section" id="public-site">
+        <div className="estate-feature-row">
+          <div className="estate-feature-text">
+            <p className="estate-kicker">Public estate website</p>
+            <h2>A branded website for every estate.</h2>
+            <p className="estate-feature-copy">
+              Buyers browse live plot pricing, reserve a plot and see the area's growth outlook on a page that
+              looks like yours - not a spreadsheet link or a WhatsApp broadcast.
+            </p>
+            <ul className="estate-feature-bullets">
+              {publicSiteBullets.map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          </div>
+          <div className="estate-feature-visual">
+            <div className="estate-phone-frame">
+              <div className="estate-phone-screen">
+                {publicSiteScreens.map((screen, index) => (
+                  <img
+                    key={screen.src}
+                    src={screen.src}
+                    alt={screen.alt}
+                    loading={index === 0 ? "eager" : "lazy"}
+                    className={index === activeScreen ? "is-active" : ""}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="estate-feature-row estate-feature-row--reverse">
+          <div className="estate-feature-text">
+            <p className="estate-kicker">Automatic marketing</p>
+            <h2>Social posts that write themselves.</h2>
+            <p className="estate-feature-copy">
+              Choose how often to post and LandCheck writes a fresh caption each time - plots available, prices,
+              a featured plot, progress, the area outlook - and publishes it for you.
+            </p>
+            <ul className="estate-feature-bullets">
+              {socialPostingBullets.map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          </div>
+          <div className="estate-feature-visual">
+            <figure className="estate-browser-frame">
+              <div className="estate-browser-chrome">
+                <span /><span /><span />
+              </div>
+              <img src="/social post.jpg" alt="LandCheck Estates automatic social posting plan for Facebook and Instagram" loading="lazy" />
+            </figure>
+          </div>
         </div>
       </section>
 
