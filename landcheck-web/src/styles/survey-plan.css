@@ -7835,40 +7835,13 @@ button.geo-h-step:focus-visible {
   }
 }
 
-/* Preview plans need document scrolling when the available viewport is narrow or short. The
-   fixed-height desktop shell otherwise clips the lower half of the rendered plan. Georeference
-   keeps its dedicated map workspace behavior and is intentionally excluded. */
-@media (max-width: 1280px), (max-height: 900px) {
-  .survey-container.is-preview-step:not(.is-georeference-flow) {
-    height: auto;
-    min-height: 100dvh;
-    overflow-x: hidden;
-    overflow-y: auto;
-  }
-
-  .survey-container.is-preview-step:not(.is-georeference-flow) .survey-content {
-    flex: 0 0 auto;
-    min-height: 0;
-    overflow: visible;
-    padding-bottom: 9rem;
-  }
-
-  .survey-container.is-preview-step:not(.is-georeference-flow) .preview-panel {
-    height: auto;
-    min-height: 0;
-    overflow: visible;
-  }
-
-  .survey-container.is-preview-step:not(.is-georeference-flow) .preview-panel .panel-left {
-    max-height: none;
-    overflow: visible;
-  }
-
-  .survey-container.is-preview-step:not(.is-georeference-flow) .preview-panel .panel-right {
-    height: 640px;
-    min-height: 640px;
-  }
-}
+/* Previously this made the whole page scroll on a narrow or short viewport (the fixed-height
+   desktop shell was clipping the lower half of the rendered plan), which took the preview/map
+   out of view while scrolling the form and left the sidebar without its own scrollbar. Estates,
+   Survey, and LandCheck Work now agree that the sidebar should scroll on its own instead: the
+   unconditional rules above already give `.panel-left` its own overflow-y:auto and `.panel-right`
+   a stable, non-scrolling height at every viewport size, so nothing needs to change here anymore.
+   Georeference keeps its dedicated map workspace behavior regardless, as before. */
 
 /* Keep the detected-feature summary compact in the preview sidebar. The three chips are useful
    context, so keep them together instead of letting the last chip drop below the others. */
@@ -8144,10 +8117,6 @@ button.geo-h-step:focus-visible {
 
   .mode-card {
     padding: 0.8rem;
-  }
-
-  .survey-container.is-preview-step:not(.is-georeference-flow) .survey-content {
-    padding-bottom: calc(8.75rem + env(safe-area-inset-bottom));
   }
 
   .survey-container .action-bar {
