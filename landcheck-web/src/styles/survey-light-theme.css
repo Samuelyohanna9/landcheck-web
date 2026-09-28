@@ -243,10 +243,14 @@
 
 :root[data-workspace-theme="light"] .survey-container .mode-card h3,
 :root[data-workspace-theme="light"] .survey-container .mode-card p,
-:root[data-workspace-theme="light"] .survey-container .mode-card-pill,
-:root[data-workspace-theme="light"] .survey-container .mode-card-cta {
+:root[data-workspace-theme="light"] .survey-container .mode-card-pill {
   color: #334155;
 }
+
+/* .mode-card-cta is the white-text-on-green "Open route" pill, not body copy - it must
+   keep the white it gets from survey-plan.css in both themes, so it's deliberately left
+   out of the dark-slate grouping above (that grouping used to include it, which repainted
+   the button text dark slate-grey on the green gradient in light theme). */
 
 :root[data-workspace-theme="light"] .survey-container .mode-card h3 {
   color: #101827;

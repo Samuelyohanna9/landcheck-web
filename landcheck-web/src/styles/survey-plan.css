@@ -472,7 +472,10 @@
   min-width: 132px;
   padding: 0.46rem 0.9rem;
   border-radius: 999px;
-  background: linear-gradient(135deg, #1f2f8a 0%, #0f766e 100%);
+  /* Same green as .btn-primary and the rest of the workspace's solid buttons, not the leftover
+     navy-to-teal gradient this card used to have - that gradient plus the (also dark) text colour
+     the section further down sets for this same class made "Open route" nearly unreadable. */
+  background: linear-gradient(135deg, var(--survey-copper-400) 0%, var(--survey-copper-600) 100%);
   color: #ffffff;
   font-size: 0.74rem;
   font-weight: 800;
@@ -5434,7 +5437,6 @@ select.field-error {
 
 .mode-card-cta {
   margin-top: 0.05rem;
-  color: #1d7a4d;
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.03em;
