@@ -2436,6 +2436,21 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
                           <span className="edash-status-pill tone-neutral">{soilResult.water_table?.tendency && soilResult.water_table.tendency !== "unavailable" ? soilResult.water_table.tendency : "Not screened"}</span>
                         </div>
                       </div>
+                      {Array.isArray(soilResult.soil_profile) && soilResult.soil_profile.length > 0 && (
+                        <table className="edash-mini-table" style={{ margin: "10px 0" }}>
+                          <thead><tr><th>Depth</th><th>Texture</th><th>Sand</th><th>Clay</th></tr></thead>
+                          <tbody>
+                            {soilResult.soil_profile.map((layer: any) => (
+                              <tr key={layer.depth_cm}>
+                                <td data-label="Depth">{layer.depth_cm} cm</td>
+                                <td data-label="Texture">{layer.texture}</td>
+                                <td data-label="Sand">{layer.sand_pct}%</td>
+                                <td data-label="Clay">{layer.clay_pct}%</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
                       <p className="edash-field-note" style={{ margin: "10px 0 0" }}><strong>{soilResult.scope_note}</strong></p>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
                         <button type="button" className="edash-btn-primary" disabled={soilBusy} onClick={() => void loadSoil()}>{soilBusy ? "Analyzing..." : "Run soil analysis"}</button>

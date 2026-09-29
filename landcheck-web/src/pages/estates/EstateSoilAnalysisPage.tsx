@@ -178,6 +178,27 @@ export default function EstateSoilAnalysisPage() {
               {soilResult.water_table?.note && (
                 <p className="edash-field-note" style={{ marginBottom: 6 }}>{soilResult.water_table.note}</p>
               )}
+              {Array.isArray(soilResult.soil_profile) && soilResult.soil_profile.length > 0 && (
+                <>
+                  <div className="edash-card-head" style={{ marginTop: 4 }}><h3 className="edash-card-title" style={{ fontSize: "0.95rem" }}>Indicative soil profile (0&ndash;2m)</h3></div>
+                  <table className="edash-mini-table" style={{ marginBottom: 10 }}>
+                    <thead><tr><th>Depth</th><th>Texture</th><th>Sand</th><th>Clay</th></tr></thead>
+                    <tbody>
+                      {soilResult.soil_profile.map((layer: any) => (
+                        <tr key={layer.depth_cm}>
+                          <td data-label="Depth">{layer.depth_cm} cm</td>
+                          <td data-label="Texture">{layer.texture}</td>
+                          <td data-label="Sand">{layer.sand_pct}%</td>
+                          <td data-label="Clay">{layer.clay_pct}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p className="edash-field-note" style={{ marginBottom: 10 }}>
+                    A modelled texture reading at each depth (SoilGrids, ~250m resolution) - not a borehole log. It does not identify bedrock depth or distinct geological strata.
+                  </p>
+                </>
+              )}
               <p className="edash-field-note" style={{ marginBottom: 16 }}>
                 <strong>{soilResult.scope_note}</strong>
               </p>
