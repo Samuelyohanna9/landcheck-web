@@ -170,13 +170,24 @@ export default function EstateSoilAnalysisPage() {
                   <span className="edash-status-pill tone-neutral">{waterTableText(soilResult.water_table)}</span>
                 </div>
               </div>
+              <div className="edash-plain-meaning">
+                {soilResult.risk_class_plain_meaning && (
+                  <div className="edash-plain-meaning-row"><b>Drainage:</b> {soilResult.risk_class_plain_meaning}</div>
+                )}
+                {soilResult.presumptive_bearing_capacity?.plain_meaning && (
+                  <div className="edash-plain-meaning-row"><b>Bearing capacity:</b> {soilResult.presumptive_bearing_capacity.plain_meaning}</div>
+                )}
+                {soilResult.water_table?.plain_meaning && (
+                  <div className="edash-plain-meaning-row"><b>Water table:</b> {soilResult.water_table.plain_meaning}</div>
+                )}
+              </div>
               {soilResult.presumptive_bearing_capacity?.soil_description && (
                 <p className="edash-field-note" style={{ marginBottom: 6 }}>
-                  Soil description: {soilResult.presumptive_bearing_capacity.soil_description}. {soilResult.presumptive_bearing_capacity.note}
+                  Technical: soil description is {soilResult.presumptive_bearing_capacity.soil_description}. {soilResult.presumptive_bearing_capacity.note}
                 </p>
               )}
               {soilResult.water_table?.note && (
-                <p className="edash-field-note" style={{ marginBottom: 6 }}>{soilResult.water_table.note}</p>
+                <p className="edash-field-note" style={{ marginBottom: 6 }}>Technical: {soilResult.water_table.note}</p>
               )}
               {Array.isArray(soilResult.soil_profile) && soilResult.soil_profile.length > 0 && (
                 <>
@@ -194,8 +205,11 @@ export default function EstateSoilAnalysisPage() {
                       ))}
                     </tbody>
                   </table>
+                  {soilResult.profile_plain_meaning && (
+                    <div className="edash-plain-meaning"><div className="edash-plain-meaning-row">{soilResult.profile_plain_meaning}</div></div>
+                  )}
                   <p className="edash-field-note" style={{ marginBottom: 10 }}>
-                    A modelled texture reading at each depth (SoilGrids, ~250m resolution) - not a borehole log. It does not identify bedrock depth or distinct geological strata.
+                    Technical: a modelled texture reading at each depth (SoilGrids, ~250m resolution) - not a borehole log. It does not identify bedrock depth or distinct geological strata.
                   </p>
                 </>
               )}

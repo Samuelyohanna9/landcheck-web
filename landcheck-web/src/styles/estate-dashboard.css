@@ -1990,6 +1990,12 @@
 .edash-field input:disabled,
 .edash-field select:disabled { background: var(--edash-neutral-tint); color: var(--edash-faint); cursor: not-allowed; }
 .edash-field-note { margin: 0; color: var(--edash-faint); font-size: 0.76rem; line-height: 1.4; }
+/* A "what this means for you" callout - plain-language explanations sit next to (not instead of)
+   the technical reading above them, e.g. on Soil Analysis, so a non-technical reader never has to
+   guess what a kPa range or a risk-tier badge implies for their own decision. */
+.edash-plain-meaning { display: grid; gap: 8px; margin: 0 0 12px; padding: 12px 14px; background: var(--edash-neutral-tint); border-radius: 10px; }
+.edash-plain-meaning-row { font-size: 0.84rem; line-height: 1.5; color: var(--edash-ink); }
+.edash-plain-meaning-row b { font-weight: 700; }
 /* Same look as .edash-field span, but standalone - for a label placed as a SIBLING of a custom
    control (like CoordinateSystemSelect) rather than wrapping it. .edash-field span matches any
    span at any depth, which previously bled into a wrapped custom control's own internal spans
