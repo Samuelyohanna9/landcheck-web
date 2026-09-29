@@ -2410,9 +2410,9 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
               {drawerTab === "soil" && soilUpgradeRequired && (
                 <div className="edash-tab-panel" style={{ textAlign: "center", padding: "30px 10px" }}>
                   <span className="edash-risk-icon" style={{ margin: "0 auto 12px", width: 40, height: 40 }}><EstateIcon name="layers" /></span>
-                  <p className="edash-status-row-title" style={{ marginBottom: 6 }}>Soil analysis is a Plus plan feature</p>
-                  <p className="edash-status-row-desc" style={{ marginBottom: 14 }}>Indicative drainage, bearing-capacity and water-table screening for this plot is available on the Plus plan.</p>
-                  <Link className="edash-btn-primary" style={{ display: "inline-flex" }} to="/estates/billing">Upgrade to Plus</Link>
+                  <p className="edash-status-row-title" style={{ marginBottom: 6 }}>Soil analysis is a Pro plan feature</p>
+                  <p className="edash-status-row-desc" style={{ marginBottom: 14 }}>Indicative drainage, bearing-capacity and water-table screening for this plot is available on the Pro and Enterprise plans.</p>
+                  <Link className="edash-btn-primary" style={{ display: "inline-flex" }} to="/estates/billing">Upgrade to Pro</Link>
                 </div>
               )}
               {drawerTab === "soil" && !soilUpgradeRequired && (

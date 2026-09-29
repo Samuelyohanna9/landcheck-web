@@ -17,6 +17,7 @@ const includedGroups = [
       "Field-ready coordinates",
       "Professional survey plans",
       "Hazard analysis - flood and erosion screening",
+      "Soil analysis - indicative bearing capacity, water table and drainage",
     ],
   },
   {

@@ -118,11 +118,11 @@ export default function EstateSoilAnalysisPage() {
         <div className="edash-card">
           <div className="edash-card-inner" style={{ textAlign: "center", padding: "48px 24px" }}>
             <span className="edash-risk-icon" style={{ margin: "0 auto 14px", width: 44, height: 44 }}><EstateIcon name="layers" /></span>
-            <h3 className="edash-card-title" style={{ fontSize: "1.1rem", marginBottom: 8 }}>Soil analysis is a Plus plan feature</h3>
+            <h3 className="edash-card-title" style={{ fontSize: "1.1rem", marginBottom: 8 }}>Soil analysis is a Pro plan feature</h3>
             <p className="edash-status-row-desc" style={{ maxWidth: 440, margin: "0 auto 18px" }}>
-              Indicative drainage, bearing-capacity and water-table screening is available on the Plus plan.
+              Indicative drainage, bearing-capacity and water-table screening is available on the Pro and Enterprise plans.
             </p>
-            <Link className="edash-btn-primary" style={{ display: "inline-flex" }} to="/estates/billing">Upgrade to Plus</Link>
+            <Link className="edash-btn-primary" style={{ display: "inline-flex" }} to="/estates/billing">Upgrade to Pro</Link>
           </div>
         </div>
       </EstateShell>
