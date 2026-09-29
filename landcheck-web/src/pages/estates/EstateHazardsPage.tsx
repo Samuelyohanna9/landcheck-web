@@ -149,7 +149,7 @@ export default function EstateHazardsPage() {
             <h3 className="edash-card-title">Estate hazard analysis</h3>
           </div>
           <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>
-            Runs flood and erosion screening once for the Estate boundary. Results below - and the Risk Overview on the Dashboard - update as soon as it finishes. For a single plot, run screening from its drawer on Map & Plots.
+            Runs flood, erosion and ground &amp; drainage screening once for the Estate boundary. Results below - and the Risk Overview on the Dashboard - update as soon as it finishes. For a single plot, run screening from its drawer on Map & Plots.
           </p>
           <button type="button" className="edash-btn-primary" disabled={runBusy} onClick={() => void runEstateHazardAnalysis()}>
             {runBusy ? <><Spinner size={13} /> {jobProgress?.stage || "Analyzing Estate..."}</> : "Run hazard analysis for the Estate boundary"}
@@ -171,14 +171,16 @@ export default function EstateHazardsPage() {
                     { key: "rainfall", label: "Rainfall (experimental)", value: rainfall, experimental: true },
                   ];
                   if (dashboard.summary?.erosion) rows.push({ key: "erosion", label: "Erosion", value: { ...dashboard.summary.erosion, percents: [] } });
+                  if (dashboard.summary?.ground) rows.push({ key: "ground", label: "Ground & Drainage", value: { ...dashboard.summary.ground, percents: [] } });
                   return rows.map(({ key, label, value, experimental }) => {
                     const classes = Object.keys(value.classes || {});
                     const worst = classes.find((entry) => riskTone(entry) === "danger") || classes.find((entry) => riskTone(entry) === "warn") || classes[0];
                     const maxPct = value.percents.length ? Math.max(...value.percents) : null;
                     const display = maxPct !== null ? `Up to ${maxPct}%` : (worst ? worst.replaceAll("_", " ") : (value.assessed ? "No data" : "Unscreened"));
+                    const iconName = key === "erosion" ? "erosion" : key === "ground" ? "layers" : "flood";
                     return (
                       <div key={key} className="edash-risk-item">
-                        <span className="edash-risk-icon"><EstateIcon name={key === "erosion" ? "erosion" : "flood"} /></span>
+                        <span className="edash-risk-icon"><EstateIcon name={iconName} /></span>
                         <span>{label} &middot; {value.assessed} assessed</span>
                         <span className={`edash-status-pill tone-${experimental ? "neutral" : (worst ? riskTone(worst) : "neutral")}`}>{display}</span>
                       </div>
@@ -187,12 +189,12 @@ export default function EstateHazardsPage() {
                 })()}
               </div>
               <p className="edash-field-note" style={{ marginBottom: 16 }}>
-                Scores are 0-100 site-relative risk indicators, not calibrated probabilities of an actual flood - each signal is independent and shouldn't be summed or averaged together. River reflects a direct modelled river-flood hit (JRC/Copernicus GloFAS). Floodplain reflects elevation relative to the surrounding drainage network - a screening-level proxy used mainly where there's no direct river-model coverage. Rainfall is experimental: in testing it could not reliably tell a documented flood zone from a well-drained one, so it's shown for transparency only, never as confirmed risk evidence. Open a plot's Hazard tab for the full method and confidence notes.
+                Scores are 0-100 site-relative risk indicators, not calibrated probabilities of an actual flood - each signal is independent and shouldn't be summed or averaged together. River reflects a direct modelled river-flood hit (JRC/Copernicus GloFAS). Floodplain reflects elevation relative to the surrounding drainage network - a screening-level proxy used mainly where there's no direct river-model coverage. Rainfall is experimental: in testing it could not reliably tell a documented flood zone from a well-drained one, so it's shown for transparency only, never as confirmed risk evidence. Ground &amp; Drainage screens soil texture and drainage-network proximity for waterlogging risk - it is <strong>not a soil test</strong> and does not measure load-bearing capacity, water table depth, or subsurface soil layers; for any foundation decision, commission a licensed geotechnical investigation. Open a plot's Hazard tab for the full method and confidence notes.
               </p>
               <div className="edash-card-head"><h3 className="edash-card-title">Results</h3></div>
               {(dashboard.assessments || []).length ? (
                 <table className="edash-mini-table">
-                  <thead><tr><th>Plot</th><th>River</th><th>Floodplain</th><th>Rainfall (exp.)</th><th>Erosion</th></tr></thead>
+                  <thead><tr><th>Plot</th><th>River</th><th>Floodplain</th><th>Rainfall (exp.)</th><th>Erosion</th><th>Ground &amp; Drainage</th></tr></thead>
                   <tbody>
                     {dashboard.assessments.map((item: any) => {
                       const floodResult = item.hazards?.flood?.result;
@@ -211,6 +213,7 @@ export default function EstateHazardsPage() {
                           <td data-label="Floodplain"><span className={`edash-status-pill tone-${riskTone(floodplainClass)}`}>{floodplainPct !== null ? `${floodplainPct}%` : (floodplainClass || "unavailable")}</span></td>
                           <td data-label="Rainfall (exp.)"><span className="edash-status-pill tone-neutral">{rainfallPct !== null ? `${rainfallPct}%` : "unavailable"}</span></td>
                           <td data-label="Erosion"><span className={`edash-status-pill tone-${riskTone(item.hazards?.erosion?.risk_class)}`}>{item.hazards?.erosion?.risk_class || "unavailable"}</span></td>
+                          <td data-label="Ground & Drainage"><span className={`edash-status-pill tone-${riskTone(item.hazards?.ground?.risk_class)}`}>{item.hazards?.ground?.risk_class || "unavailable"}</span></td>
                         </tr>
                       );
                     })}
