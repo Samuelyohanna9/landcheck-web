@@ -516,6 +516,10 @@ export default function Estates() {
   const [hazards, setHazards] = useState<any>(null);
   const [hazardDashboard, setHazardDashboard] = useState<any>(null);
   const [hazardUpgradeRequired, setHazardUpgradeRequired] = useState(false);
+  const [soilResult, setSoilResult] = useState<any>(null);
+  const [soilUpgradeRequired, setSoilUpgradeRequired] = useState(false);
+  const [soilBusy, setSoilBusy] = useState(false);
+  const [geotechBusy, setGeotechBusy] = useState(false);
   const [layerType, setLayerType] = useState("road");
   const [layerName, setLayerName] = useState("");
   const [layerCoordinates, setLayerCoordinates] = useState("");
@@ -606,7 +610,7 @@ export default function Estates() {
   const [mapStyleMode, setMapStyleMode] = useState<"map" | "satellite">("satellite");
   const [blockFilterId, setBlockFilterId] = useState("all");
   const [layersVisible, setLayersVisible] = useState(true);
-  const [drawerTab, setDrawerTab] = useState<"overview" | "customer" | "survey" | "staking" | "documents" | "hazards" | "timeline">("overview");
+  const [drawerTab, setDrawerTab] = useState<"overview" | "customer" | "survey" | "staking" | "documents" | "hazards" | "soil" | "timeline">("overview");
   const [editingDevelopment, setEditingDevelopment] = useState(false);
   const [plotContextMenu, setPlotContextMenu] = useState<{ x: number; y: number; plotId: number } | null>(null);
   const [activeTool, setActiveTool] = useState<"add-plot" | "layout" | "blocks" | "layers" | "export-layout" | null>(null);
@@ -969,14 +973,24 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
       else toast.error(await extractApiErrorMessage(error, "Hazard screening could not be loaded."));
     }
   };
-  // The honest follow-through on Ground & Drainage's scope note: that screening is satellite-based
-  // and can't answer load-bearing capacity, water table depth, or subsurface layer questions, so
-  // this raises a real lead LandCheck's team can use to connect the customer with a licensed
-  // geotechnical investigation - it doesn't book one directly.
-  const requestGeotechSurvey = async () => {
+  const loadSoil = async () => {
     if (!selectedPlot) return;
-    try { await api.post(`/estates/plots/${selectedPlot.id}/hazards/geotech-request`); toast.success("Request sent - LandCheck will follow up to arrange a geotechnical survey."); }
+    setSoilBusy(true);
+    try { const response = await api.post(`/estates/plots/${selectedPlot.id}/soil-analysis/assess`); setSoilResult(response.data.soil); toast.success("Soil analysis completed."); }
+    catch (error) {
+      if (isUpgradeRequiredError(error)) setSoilUpgradeRequired(true);
+      else toast.error(await extractApiErrorMessage(error, "Soil analysis could not be loaded."));
+    } finally { setSoilBusy(false); }
+  };
+  // The honest follow-through on Soil Analysis's scope note: it can't determine soil density or
+  // subsurface layers, so this raises a real lead LandCheck's team can use to connect the customer
+  // with a licensed geotechnical investigation - it doesn't book one directly.
+  const requestPlotGeotechSurvey = async () => {
+    if (!selectedPlot) return;
+    setGeotechBusy(true);
+    try { await api.post(`/estates/plots/${selectedPlot.id}/soil-analysis/geotech-request`); toast.success("Request sent - LandCheck will follow up to arrange a geotechnical survey."); }
     catch (error) { toast.error(await extractApiErrorMessage(error, "Request could not be sent.")); }
+    finally { setGeotechBusy(false); }
   };
   const createLayer = async () => {
     if (!estateId) return;
@@ -1953,8 +1967,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     const rainfallAvailable = floodRainfallSection ? floodRainfallSection.data_available !== false : false;
     const hazardRainfallPct = rainfallAvailable ? percentOf(floodRainfallSection?.risk_score) : null;
     const hazardErosion = hazards?.erosion?.risk_class || plotHazardEntry?.hazards?.erosion?.risk_class;
-    const hazardGround = hazards?.ground?.risk_class || plotHazardEntry?.hazards?.ground?.risk_class;
-    const hazardOverall = [hazardRiver, hazardFloodplain, hazardErosion, hazardGround].filter((value) => value && value !== "No Data");
+    const hazardOverall = [hazardRiver, hazardFloodplain, hazardErosion].filter((value) => value && value !== "No Data");
     const hazardOverallLabel = hazardOverall.length ? (hazardOverall.every((value) => riskTone(value) === "good") ? "Low Risk" : hazardOverall.some((value) => riskTone(value) === "danger") ? "High Risk" : "Moderate Risk") : "Not screened";
 
     return (
@@ -1984,7 +1997,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
               <div className="edash-drawer-tabs">
                 {([
                   ["overview", "Overview"], ["customer", "Customer"], ["survey", "Survey"], ["staking", "Staking"],
-                  ["documents", "Documents"], ["hazards", "Hazards"], ["timeline", "Timeline"],
+                  ["documents", "Documents"], ["hazards", "Hazards"], ["soil", "Soil"], ["timeline", "Timeline"],
                 ] as Array<[typeof drawerTab, string]>).map(([key, label]) => (
                   <button key={key} type="button" className={`edash-drawer-tab${drawerTab === key ? " active" : ""}`} onClick={() => openTab(key)}>{label}</button>
                 ))}
@@ -2386,19 +2399,57 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
                       <span>Erosion Risk</span>
                       <span className={`edash-status-pill tone-${hazardErosion ? riskTone(hazardErosion) : "neutral"}`}>{hazardErosion ? hazardErosion.replaceAll("_", " ") : "Not screened"}</span>
                     </div>
-                    <div className="edash-risk-item">
-                      <span className="edash-risk-icon"><EstateIcon name="layers" /></span>
-                      <span>Ground &amp; Drainage</span>
-                      <span className={`edash-status-pill tone-${hazardGround ? riskTone(hazardGround) : "neutral"}`}>{hazardGround ? hazardGround.replaceAll("_", " ") : "Not screened"}</span>
-                    </div>
                   </div>
                   <p className="edash-field-note" style={{ margin: "10px 0 0" }}>
-                    Scores are 0-100 site-relative risk indicators, not calibrated probabilities of an actual flood - each signal is independent and shouldn't be summed or averaged. River reflects a direct modelled river-flood hit (JRC/Copernicus GloFAS). Floodplain reflects this plot's elevation relative to the surrounding drainage network - a screening-level proxy used mainly where there's no direct river-model coverage. Rainfall is experimental: in testing it could not reliably tell a documented flood zone from a well-drained one, so it's shown for transparency only, never as confirmed risk evidence. Ground &amp; Drainage screens soil texture and drainage-network proximity for waterlogging risk - it is <strong>not a soil test</strong> and does not measure load-bearing capacity, water table depth, or subsurface soil layers; for any foundation decision, commission a licensed geotechnical investigation.
+                    Scores are 0-100 site-relative risk indicators, not calibrated probabilities of an actual flood - each signal is independent and shouldn't be summed or averaged. River reflects a direct modelled river-flood hit (JRC/Copernicus GloFAS). Floodplain reflects this plot's elevation relative to the surrounding drainage network - a screening-level proxy used mainly where there's no direct river-model coverage. Rainfall is experimental: in testing it could not reliably tell a documented flood zone from a well-drained one, so it's shown for transparency only, never as confirmed risk evidence.
                   </p>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-                    <button type="button" className="edash-btn-primary" onClick={() => void loadHazards()}>Run hazard screening</button>
-                    <button type="button" className="edash-btn-outline" onClick={() => void requestGeotechSurvey()}>Request a geotechnical survey</button>
-                  </div>
+                  <button type="button" className="edash-btn-primary" style={{ marginTop: 12 }} onClick={() => void loadHazards()}>Run flood + erosion screening</button>
+                </div>
+              )}
+
+              {drawerTab === "soil" && soilUpgradeRequired && (
+                <div className="edash-tab-panel" style={{ textAlign: "center", padding: "30px 10px" }}>
+                  <span className="edash-risk-icon" style={{ margin: "0 auto 12px", width: 40, height: 40 }}><EstateIcon name="layers" /></span>
+                  <p className="edash-status-row-title" style={{ marginBottom: 6 }}>Soil analysis is a Plus plan feature</p>
+                  <p className="edash-status-row-desc" style={{ marginBottom: 14 }}>Indicative drainage, bearing-capacity and water-table screening for this plot is available on the Plus plan.</p>
+                  <Link className="edash-btn-primary" style={{ display: "inline-flex" }} to="/estates/billing">Upgrade to Plus</Link>
+                </div>
+              )}
+              {drawerTab === "soil" && !soilUpgradeRequired && (
+                <div className="edash-tab-panel">
+                  {soilResult ? (
+                    <>
+                      <div className="edash-risk-list">
+                        <div className="edash-risk-item">
+                          <span className="edash-risk-icon"><EstateIcon name="layers" /></span>
+                          <span>Drainage / waterlogging</span>
+                          <span className={`edash-status-pill tone-${soilResult.risk_class ? riskTone(soilResult.risk_class) : "neutral"}`}>{soilResult.risk_class ? soilResult.risk_class.replaceAll("_", " ") : "Not screened"}</span>
+                        </div>
+                        <div className="edash-risk-item">
+                          <span className="edash-risk-icon"><EstateIcon name="layers" /></span>
+                          <span>Presumptive bearing capacity</span>
+                          <span className="edash-status-pill tone-neutral">{soilResult.presumptive_bearing_capacity ? `${soilResult.presumptive_bearing_capacity.min_kpa}–${soilResult.presumptive_bearing_capacity.max_kpa} kPa` : "Not screened"}</span>
+                        </div>
+                        <div className="edash-risk-item">
+                          <span className="edash-risk-icon"><EstateIcon name="layers" /></span>
+                          <span>Water table tendency</span>
+                          <span className="edash-status-pill tone-neutral">{soilResult.water_table?.tendency && soilResult.water_table.tendency !== "unavailable" ? soilResult.water_table.tendency : "Not screened"}</span>
+                        </div>
+                      </div>
+                      <p className="edash-field-note" style={{ margin: "10px 0 0" }}><strong>{soilResult.scope_note}</strong></p>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+                        <button type="button" className="edash-btn-primary" disabled={soilBusy} onClick={() => void loadSoil()}>{soilBusy ? "Analyzing..." : "Run soil analysis"}</button>
+                        <button type="button" className="edash-btn-outline" disabled={geotechBusy} onClick={() => void requestPlotGeotechSurvey()}>{geotechBusy ? "Sending..." : "Request a geotechnical survey"}</button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>
+                        Indicative drainage, bearing-capacity and water-table readings for this plot, from satellite soil texture and terrain data - not a soil test.
+                      </p>
+                      <button type="button" className="edash-btn-primary" disabled={soilBusy} onClick={() => void loadSoil()}>{soilBusy ? "Analyzing..." : "Run soil analysis"}</button>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -2517,16 +2568,14 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
                     { key: "rainfall", label: "Rainfall (exp.)", value: rainfall, experimental: true },
                   ];
                   if (hazardDashboard.summary?.erosion) rows.push({ key: "erosion", label: "Erosion", value: { ...hazardDashboard.summary.erosion, percents: [] } });
-                  if (hazardDashboard.summary?.ground) rows.push({ key: "ground", label: "Ground & Drainage", value: { ...hazardDashboard.summary.ground, percents: [] } });
                   return rows.map(({ key, label, value, experimental }) => {
                     const classes = Object.keys(value.classes || {});
                     const worst = classes.find((entry) => riskTone(entry) === "danger") || classes.find((entry) => riskTone(entry) === "warn") || classes[0];
                     const maxPct = value.percents.length ? Math.max(...value.percents) : null;
                     const display = maxPct !== null ? `Up to ${maxPct}%` : (worst ? worst.replaceAll("_", " ") : (value.assessed ? "No data" : "Unscreened"));
-                    const iconName = key === "erosion" ? "erosion" : key === "ground" ? "layers" : "flood";
                     return (
                       <div key={key} className="edash-risk-item">
-                        <span className="edash-risk-icon"><EstateIcon name={iconName} /></span>
+                        <span className="edash-risk-icon"><EstateIcon name={key === "erosion" ? "erosion" : "flood"} /></span>
                         <span>{label}</span>
                         <span className={`edash-status-pill tone-${experimental ? "neutral" : (worst ? riskTone(worst) : "neutral")}`}>{display}</span>
                       </div>
@@ -2539,7 +2588,6 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
                   <div className="edash-risk-item"><span className="edash-risk-icon"><EstateIcon name="flood" /></span><span>Floodplain</span><span className="edash-status-pill tone-neutral">Not screened</span></div>
                   <div className="edash-risk-item"><span className="edash-risk-icon"><EstateIcon name="flood" /></span><span>Rainfall (exp.)</span><span className="edash-status-pill tone-neutral">Not screened</span></div>
                   <div className="edash-risk-item"><span className="edash-risk-icon"><EstateIcon name="erosion" /></span><span>Erosion Risk</span><span className="edash-status-pill tone-neutral">Not screened</span></div>
-                  <div className="edash-risk-item"><span className="edash-risk-icon"><EstateIcon name="layers" /></span><span>Ground &amp; Drainage</span><span className="edash-status-pill tone-neutral">Not screened</span></div>
                 </>
               )}
               <div className="edash-risk-item">
