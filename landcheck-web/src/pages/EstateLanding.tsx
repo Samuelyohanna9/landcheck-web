@@ -128,6 +128,10 @@ export default function EstateLanding() {
             <figcaption>Automatic social media posting</figcaption>
           </figure>
         </div>
+      </section>
+
+      <section className="estate-content-section" id="features">
+        <h2 className="estate-centered-heading">Everything included.</h2>
         <div className="estate-connected-grid">
           {connectedCapabilities.map((item) => <span key={item}>{item}</span>)}
         </div>
