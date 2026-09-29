@@ -7,17 +7,28 @@ import "../styles/public-landing.css";
 
 const DEMO_MAILTO = "mailto:admin@landcheck.online?subject=LandCheck%20Estates%20demo%20request";
 
-const connectedCapabilities = [
-  "Automatic layout design",
-  "Georeference and digitise",
-  "Customer-facing Estate website",
-  "Live satellite map of approved plots",
-  "Online plot reservations",
-  "Reservation alerts for your team",
-  "Customers and allocations",
-  "Payments and commissions",
-  "Professional survey plans",
-  "Field-ready coordinates",
+const includedGroups = [
+  {
+    title: "Plan and build",
+    items: [
+      "Automatic layout design",
+      "Georeference and digitise",
+      "Live satellite map of approved plots",
+      "Field-ready coordinates",
+      "Professional survey plans",
+      "Hazard analysis - flood and erosion screening",
+    ],
+  },
+  {
+    title: "Sell and manage",
+    items: [
+      "Customer-facing Estate website",
+      "Online plot reservations",
+      "Reservation alerts for your team",
+      "Customers and allocations",
+      "Payments and commissions",
+    ],
+  },
 ];
 
 const solutionAreas = ["Development", "Sales", "Finance", "Survey"];
@@ -132,8 +143,15 @@ export default function EstateLanding() {
 
       <section className="estate-content-section" id="features">
         <h2 className="estate-centered-heading">Everything included.</h2>
-        <div className="estate-connected-grid">
-          {connectedCapabilities.map((item) => <span key={item}>{item}</span>)}
+        <div className="estate-included-grid">
+          {includedGroups.map((group) => (
+            <div className="estate-included-card" key={group.title}>
+              <h3>{group.title}</h3>
+              <ul>
+                {group.items.map((item) => <li key={item}>{item}</li>)}
+              </ul>
+            </div>
+          ))}
         </div>
       </section>
 
