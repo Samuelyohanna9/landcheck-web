@@ -148,6 +148,14 @@
   color: var(--edash-brand-dark);
 }
 
+.edash-nav-item.is-locked {
+  color: #a3acbb;
+  cursor: not-allowed;
+}
+
+.edash-nav-item.is-locked:hover { background: transparent; color: #a3acbb; }
+.edash-nav-item.is-locked .edash-nav-icon { opacity: 0.6; }
+
 .edash-nav-label { min-width: 0; flex: 1; }
 .edash-nav-badge {
   display: inline-flex;
@@ -1987,6 +1995,44 @@
 .edash-field select:focus,
 .edash-field textarea:focus { outline: none; border-color: var(--edash-brand); box-shadow: 0 0 0 3px var(--edash-brand-tint); }
 .edash-field textarea { min-height: 84px; resize: vertical; font-family: ui-monospace, monospace; font-size: 0.78rem; }
+
+.edash-role-list { display: flex; flex-direction: column; gap: 8px; }
+.edash-role-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--edash-border);
+  border-radius: var(--edash-radius-sm);
+}
+
+.edash-permission-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 2px 2px 2px 0;
+}
+.edash-permission-group-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--edash-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 0 0 6px;
+}
+.edash-permission-group-items { display: flex; flex-direction: column; gap: 6px; }
+.edash-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 0.84rem;
+  color: var(--edash-ink);
+  cursor: pointer;
+}
+.edash-checkbox-row input { width: 16px; height: 16px; accent-color: var(--edash-brand); }
 .edash-field input:disabled,
 .edash-field select:disabled { background: var(--edash-neutral-tint); color: var(--edash-faint); cursor: not-allowed; }
 .edash-field-note { margin: 0; color: var(--edash-faint); font-size: 0.76rem; line-height: 1.4; }

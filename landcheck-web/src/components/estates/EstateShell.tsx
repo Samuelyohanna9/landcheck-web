@@ -14,7 +14,8 @@ import "../../styles/estate-legal.css";
 
 export type EstateNavKey =
   | "dashboard" | "map" | "plots" | "customers" | "payments" | "commissions" | "marketing" | "survey" | "staking"
-  | "documents" | "development" | "hazard" | "soil" | "reports" | "audit" | "public_site" | "settings" | "notifications";
+  | "documents" | "development" | "hazard" | "soil" | "reports" | "audit" | "public_site" | "settings" | "notifications"
+  | "access";
 
 export const estateNavItems: Array<{ key: EstateNavKey; label: string; icon: EstateIconName; path: (estateId: string) => string }> = [
   { key: "dashboard", label: "Dashboard", icon: "dashboard", path: (id) => `/estates/${id}` },
@@ -33,9 +34,42 @@ export const estateNavItems: Array<{ key: EstateNavKey; label: string; icon: Est
   { key: "reports", label: "Reports", icon: "reports", path: (id) => `/estates/${id}/reports` },
   { key: "audit", label: "Audit Timeline", icon: "audit", path: (id) => `/estates/${id}/timeline` },
   { key: "public_site", label: "Public website", icon: "globe", path: (id) => `/estates/${id}/public-site` },
+  { key: "access", label: "Team & Access", icon: "shield", path: (id) => `/estates/${id}/access` },
   { key: "settings", label: "Settings", icon: "settings", path: (id) => `/estates/${id}/settings` },
   { key: "notifications", label: "Message Delivery", icon: "mail", path: (id) => `/estates/${id}/notifications` },
 ];
+
+// The permission a nav item is actually gated by server-side (see
+// app/services/estates/permissions.py PERMISSION_CATALOG) - null means every active member can
+// see it regardless of role. Hazard and Soil Analysis both run through plot.read/plot.manage on
+// the backend (they're plot-scoped analyses, not their own resource), so they share that key here
+// too - keep this in sync with require_estate_access(..., permission=...) call sites if either
+// side changes.
+const NAV_PERMISSION: Partial<Record<EstateNavKey, string>> = {
+  map: "plot.read",
+  plots: "plot.read",
+  customers: "customer.read",
+  payments: "payment.read",
+  commissions: "allocation.read",
+  marketing: "marketing.manage",
+  survey: "survey.read",
+  staking: "staking.read",
+  documents: "document.read",
+  development: "infrastructure.read",
+  hazard: "plot.read",
+  soil: "plot.read",
+  reports: "report.read",
+  audit: "audit.read",
+  public_site: "estate.manage",
+  access: "estate.manage",
+  settings: "estate.manage",
+  notifications: "estate.manage",
+};
+
+export function hasEstatePermission(permissions: string[] | null | undefined, key: string): boolean {
+  if (!permissions || !permissions.length) return false;
+  return permissions.includes("*") || permissions.includes(key);
+}
 
 function relativeTime(value: string) {
   const then = new Date(value).getTime();
@@ -357,18 +391,32 @@ export default function EstateShell({
             <span className="edash-nav-icon"><EstateIcon name="grid" /></span>
             <span className="edash-nav-label">Switch estate</span>
           </Link>
-          {estateNavItems.map((item) => (
-            <Link
-              key={item.key}
-              className={`edash-nav-item${item.key === activeKey ? " active" : ""}`}
-              to={estateId || item.key === "payments" || item.key === "commissions" ? item.path(estateId) : "/estates/workspace"}
-              onClick={() => { setSidebarOpen(false); if (item.key === "notifications") markDeliverySeen(); }}
-            >
-              <span className="edash-nav-icon"><EstateIcon name={item.icon} /></span>
-              <span className="edash-nav-label">{item.label}</span>
-              {item.key === "notifications" && unreadDeliveryCount > 0 && <span className="edash-nav-badge">{unreadDeliveryCount > 99 ? "99+" : unreadDeliveryCount}</span>}
-            </Link>
-          ))}
+          {estateNavItems.map((item) => {
+            const requiredPermission = NAV_PERMISSION[item.key];
+            const locked = Boolean(requiredPermission) && !hasEstatePermission(estateSession?.user.permissions, requiredPermission!);
+            return (
+              <Link
+                key={item.key}
+                className={`edash-nav-item${item.key === activeKey ? " active" : ""}${locked ? " is-locked" : ""}`}
+                to={estateId || item.key === "payments" || item.key === "commissions" ? item.path(estateId) : "/estates/workspace"}
+                aria-disabled={locked}
+                title={locked ? "Contact your admin for access to this feature" : undefined}
+                onClick={(event) => {
+                  if (locked) {
+                    event.preventDefault();
+                    toast("Contact your admin for access to this feature.", { icon: "🔒" });
+                    return;
+                  }
+                  setSidebarOpen(false);
+                  if (item.key === "notifications") markDeliverySeen();
+                }}
+              >
+                <span className="edash-nav-icon"><EstateIcon name={locked ? "lock" : item.icon} /></span>
+                <span className="edash-nav-label">{item.label}</span>
+                {item.key === "notifications" && unreadDeliveryCount > 0 && <span className="edash-nav-badge">{unreadDeliveryCount > 99 ? "99+" : unreadDeliveryCount}</span>}
+              </Link>
+            );
+          })}
         </nav>
         <button type="button" className="edash-sidebar-footer" onClick={() => setShowHelp(true)}>
           <span className="edash-nav-icon"><EstateIcon name="help" /></span>

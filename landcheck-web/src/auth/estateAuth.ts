@@ -8,6 +8,8 @@ export type EstateAuthUser = {
   full_name: string;
   email: string;
   role_key?: string | null;
+  permissions?: string[];
+  must_change_password?: boolean;
   organization_id: number;
   organization_name?: string | null;
   organization_slug?: string | null;
@@ -87,6 +89,17 @@ export const loginEstate = async (email: string, password: string) => {
   const session = normalizeSession(response.data || {});
   setEstateAuthSession(session);
   return session;
+};
+
+export const changeEstatePassword = async (currentPassword: string, newPassword: string) => {
+  const session = getEstateAuthSession();
+  if (!session) throw new Error("Sign in again to change your password.");
+  await api.post(
+    "/estates/auth/change-password",
+    { current_password: currentPassword, new_password: newPassword },
+    { headers: { Authorization: `Bearer ${session.access_token}` } },
+  );
+  setEstateAuthSession({ ...session, user: { ...session.user, must_change_password: false } });
 };
 
 export const registerEstate = async (params: { organization_name: string; organization_slug?: string; full_name: string; email: string; password: string; accept_dpa: boolean }) => {

@@ -7,7 +7,7 @@ import GreenLoadingAnimation from "./components/GreenLoadingAnimation";
 import { getGreenAuthSession, isGreenAuthed, isSponsorGreenSession } from "./auth/greenAuth";
 import { isWorkAuthed } from "./auth/workAuth";
 import { isSurveyAuthed } from "./auth/surveyAuth";
-import { isEstateAuthed } from "./auth/estateAuth";
+import { getEstateAuthSession, isEstateAuthed } from "./auth/estateAuth";
 import { CookieConsentProvider } from "./privacy/cookieConsent";
 import { lazyWithChunkRecovery, CHUNK_RECOVERY_STORAGE_KEY } from "./utils/lazyWithChunkRecovery";
 
@@ -50,6 +50,7 @@ const EstateLogin = lazyWithChunkRecovery(() => import("./pages/EstateLogin"));
 const EstateRegister = lazyWithChunkRecovery(() => import("./pages/EstateRegister"));
 const EstateForgotPassword = lazyWithChunkRecovery(() => import("./pages/EstateForgotPassword"));
 const EstateResetPassword = lazyWithChunkRecovery(() => import("./pages/EstateResetPassword"));
+const EstateSetNewPassword = lazyWithChunkRecovery(() => import("./pages/EstateSetNewPassword"));
 const EstateChoosePlan = lazyWithChunkRecovery(() => import("./pages/EstateChoosePlan"));
 const EstateBillingPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateBillingPage"));
 const EstateLegalPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateLegalPage"));
@@ -67,6 +68,7 @@ const EstateSoilAnalysisPage = lazyWithChunkRecovery(() => import("./pages/estat
 const EstateReportsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateReportsPage"));
 const EstateAuditPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateAuditPage"));
 const EstateSettingsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateSettingsPage"));
+const EstateStaffAccessPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateStaffAccessPage"));
 const EstatePublicSitePage = lazyWithChunkRecovery(() => import("./pages/estates/EstatePublicSitePage"));
 const AgentPortalAccessPage = lazyWithChunkRecovery(() => import("./pages/estates/AgentPortalAccessPage"));
 const BuyerPortalPage = lazyWithChunkRecovery(() => import("./pages/BuyerPortalPage"));
@@ -199,7 +201,12 @@ function EstateProtectedRoute({ element }: { element: ReactElement }) {
   // estate called "marketing" and fire a burst of failing API calls, so send it to the picker.
   const { estateId } = useParams();
   if (estateId !== undefined && !/^\d+$/.test(estateId)) return <Navigate to="/estates/workspace" replace />;
-  return isEstateAuthed() ? element : <Navigate to="/estates/login" state={{ from: window.location.pathname }} replace />;
+  if (!isEstateAuthed()) return <Navigate to="/estates/login" state={{ from: window.location.pathname }} replace />;
+  // A staff account invited via "Add Access" is still on its emailed temp password - block every
+  // other Estates screen until they set their own, the same forced-first-login pattern most
+  // dashboards use for invited accounts.
+  if (getEstateAuthSession()?.user.must_change_password) return <Navigate to="/estates/set-new-password" replace />;
+  return element;
 }
 
 function EstateEntryRoute() {
@@ -335,6 +342,7 @@ export default function App() {
               <Route path="/estates/register" element={<EstateRegister />} />
               <Route path="/estates/forgot-password" element={<EstateForgotPassword />} />
               <Route path="/estates/reset-password" element={<EstateResetPassword />} />
+              <Route path="/estates/set-new-password" element={<EstateSetNewPassword />} />
               <Route path="/estates/choose-plan" element={<EstateProtectedRoute element={<EstateChoosePlan />} />} />
               <Route path="/estates/billing" element={<EstateProtectedRoute element={<EstateBillingPage />} />} />
               <Route path="/estates/legal" element={<EstateProtectedRoute element={<EstateLegalPage />} />} />
@@ -357,6 +365,7 @@ export default function App() {
               <Route path="/estates/:estateId/reports" element={<EstateProtectedRoute element={<EstateReportsPage />} />} />
               <Route path="/estates/:estateId/timeline" element={<EstateProtectedRoute element={<EstateAuditPage />} />} />
               <Route path="/estates/:estateId/public-site" element={<EstateProtectedRoute element={<EstatePublicSitePage />} />} />
+              <Route path="/estates/:estateId/access" element={<EstateProtectedRoute element={<EstateStaffAccessPage />} />} />
               <Route path="/estates/:estateId/settings" element={<EstateProtectedRoute element={<EstateSettingsPage />} />} />
               <Route path="/estates/:estateId/notifications" element={<EstateProtectedRoute element={<EstateNotificationLogPage />} />} />
               <Route path="/estates/:estateId/marketing" element={<EstateProtectedRoute element={<EstateMarketingPage />} />} />
