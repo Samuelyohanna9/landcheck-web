@@ -237,8 +237,9 @@ const resolveDownloadFilename = (contentDisposition: string | undefined, fallbac
   return String(basicMatch?.[1] || "").trim() || fallback;
 };
 
-const triggerBlobDownload = (blobData: BlobPart, contentType: string | undefined, filename: string) => {
-  const blob = new Blob([blobData], { type: contentType || "application/octet-stream" });
+const triggerBlobDownload = (blobData: BlobPart, contentType: unknown, filename: string) => {
+  const resolvedType = typeof contentType === "string" && contentType ? contentType : "application/octet-stream";
+  const blob = new Blob([blobData], { type: resolvedType });
   const downloadUrl = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = downloadUrl;

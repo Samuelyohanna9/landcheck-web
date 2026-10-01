@@ -830,7 +830,8 @@ export default function HazardAnalysis() {
       const job = await pollHazardJob(created.data.id);
       if (!job.download_url) throw new Error("Report finished but no file was returned.");
       const fileRes = await api.get(job.download_url, { responseType: "blob" });
-      const blob = new Blob([fileRes.data], { type: fileRes.headers["content-type"] || "application/pdf" });
+      const pdfContentType = fileRes.headers["content-type"];
+      const blob = new Blob([fileRes.data], { type: typeof pdfContentType === "string" && pdfContentType ? pdfContentType : "application/pdf" });
       const pdfFileNames: Record<HazardType, string> = {
         flood: "flood_risk_report.pdf",
         erosion: "erosion_risk_report.pdf",
@@ -855,7 +856,8 @@ export default function HazardAnalysis() {
       const job = await pollHazardJob(created.data.id);
       if (!job.download_url) throw new Error("Export finished but no file was returned.");
       const fileRes = await api.get(job.download_url, { responseType: "blob" });
-      const blob = new Blob([fileRes.data], { type: fileRes.headers["content-type"] || "application/zip" });
+      const zipContentType = fileRes.headers["content-type"];
+      const blob = new Blob([fileRes.data], { type: typeof zipContentType === "string" && zipContentType ? zipContentType : "application/zip" });
       const fileName =
         hazardType === "flood"
           ? engine === "rainfall"
