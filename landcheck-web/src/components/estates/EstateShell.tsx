@@ -5,7 +5,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { API_URL, api, extractApiErrorMessage } from "../../api/client";
 import EstateIcon, { type EstateIconName } from "./EstateIcon";
 import EstateModal from "./EstateModal";
-import { clearEstateAuthSession, getEstateAuthSession } from "../../auth/estateAuth";
+import { clearEstateAuthSession, getEstateAuthSession, setEstateAuthSession } from "../../auth/estateAuth";
 import { prefetchMapboxCore } from "../../utils/mapboxLoader";
 import { useFloatingPopoverPosition } from "../../utils/useFloatingPopoverPosition";
 import "../../styles/estate-dashboard.css";
@@ -131,13 +131,37 @@ export default function EstateShell({
   const [renameValue, setRenameValue] = useState(estateName || "");
   const [displayEstateName, setDisplayEstateName] = useState(estateName || "Estate");
   const [companyLogoPath, setCompanyLogoPath] = useState<string | null>(null);
-  const estateSession = getEstateAuthSession();
+  const [estateSession, setEstateSession] = useState(getEstateAuthSession());
   const activeItem = estateNavItems.find((item) => item.key === activeKey);
   const notifButtonRef = useRef<HTMLButtonElement>(null);
   const notifPopoverRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notifPosition = useFloatingPopoverPosition(notifButtonRef, notifPopoverRef, notifOpen);
   const canRenameEstate = ["owner", "manager"].includes(String(estateSession?.user.role_key || "").toLowerCase());
+
+  // An organization owner can edit a staff member's access at any time while that staff member is
+  // actively using the dashboard - the granted/revoked features must take effect for them right
+  // away, not only the next time they happen to log in. The session's permissions were only ever
+  // set once, at login, so silently re-fetch the current ones and refresh local storage - no toast,
+  // no email, nothing the staff member has to acknowledge, it just quietly takes hold.
+  useEffect(() => {
+    let mounted = true;
+    const syncPermissions = () => {
+      const current = getEstateAuthSession();
+      if (!current) return;
+      api.get("/estates/auth/me", { headers: { Authorization: `Bearer ${current.access_token}` } })
+        .then((response) => {
+          if (!mounted || !response.data?.authed || !response.data.user) return;
+          const refreshed = { ...current, user: { ...current.user, ...response.data.user } };
+          setEstateAuthSession(refreshed);
+          setEstateSession(refreshed);
+        })
+        .catch(() => undefined);
+    };
+    syncPermissions();
+    const interval = window.setInterval(syncPermissions, 60000);
+    return () => { mounted = false; window.clearInterval(interval); };
+  }, []);
 
   useEffect(() => {
     // Every authenticated Estates screen renders through this shell, so this is the one place that
