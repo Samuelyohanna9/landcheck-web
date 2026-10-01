@@ -13,6 +13,7 @@ import {
   WGS84_NIGERIA_METERS,
 } from "../utils/coordinateConverter";
 import { checkPolygonClosure } from "../utils/surveyGeometry";
+import { importWithChunkRecovery } from "../utils/lazyWithChunkRecovery";
 
 const AI_QUOTA_EXHAUSTED_KEY = "plan-reader-quota-exhausted-date";
 
@@ -331,7 +332,7 @@ function CoordinateInput({
     if (fileName.endsWith(".csv") || fileName.endsWith(".txt")) {
       setUploadParsing(true);
       try {
-        const { default: Papa } = await import("papaparse");
+        const { default: Papa } = await importWithChunkRecovery(() => import("papaparse"), "papaparse");
         const text = await file.text();
         // Try each real-world delimiter explicitly and keep whichever actually splits the file
         // into multiple, row-length-consistent columns - some GNSS/total-station export tools
@@ -376,7 +377,7 @@ function CoordinateInput({
     } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
       setUploadParsing(true);
       try {
-        const XLSX = await import("xlsx");
+        const XLSX = await importWithChunkRecovery(() => import("xlsx"), "xlsx");
         const reader = new FileReader();
         reader.onload = (loadEvent) => {
           try {
