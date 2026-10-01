@@ -1,7 +1,7 @@
-var SHELL_CACHE_NAME = "landcheck-shell-v15";
-var STATIC_CACHE_NAME = "landcheck-static-v15";
+var SHELL_CACHE_NAME = "landcheck-shell-v16";
+var STATIC_CACHE_NAME = "landcheck-static-v16";
 var IMAGE_CACHE_NAME = "landcheck-images-v3";
-var MAP_CACHE_NAME = "landcheck-map-v7";
+var MAP_CACHE_NAME = "landcheck-map-v8";
 var SYNC_TAG = "green-sync-queue";
 
 var PRECACHE_URLS = [
@@ -109,7 +109,7 @@ self.addEventListener("message", function (event) {
                   .then(function (resp) {
                     if (resp && resp.ok) {
                       completed += 1;
-                      return cache.put(url, resp);
+                      return cacheResponseSafely(cache, url, resp);
                     }
                     return null;
                   })
@@ -149,7 +149,7 @@ self.addEventListener("message", function (event) {
               return fetch(url)
                 .then(function (resp) {
                   if (resp && resp.ok && !isHtmlResponse(resp)) {
-                    return cache.put(url, resp);
+                    return cacheResponseSafely(cache, url, resp);
                   }
                   return null;
                 })
@@ -187,7 +187,10 @@ self.addEventListener("message", function (event) {
               if (!resp || !resp.ok) {
                 throw new Error("Failed to cache PMTiles archive");
               }
-              return cache.put(pmtilesUrl, resp.clone()).then(function () {
+              return cacheResponseSafely(cache, pmtilesUrl, resp).then(function (cached) {
+                if (!cached) {
+                  throw new Error("PMTiles response was not cacheable");
+                }
                 if (event.source) {
                   event.source.postMessage({
                     type: "PRECACHE_PMTILES_DONE",
@@ -216,6 +219,23 @@ self.addEventListener("message", function (event) {
 function isHtmlResponse(resp) {
   if (!resp) return false;
   return String(resp.headers.get("Content-Type") || "").toLowerCase().includes("text/html");
+}
+
+function cacheResponseSafely(cache, request, response) {
+  // Range responses are valid network responses but Cache.put rejects status 206.
+  if (!response || response.status < 200 || response.status >= 300 || response.status === 206) {
+    return Promise.resolve(false);
+  }
+  return Promise.resolve()
+    .then(function () {
+      return cache.put(request, response.clone());
+    })
+    .then(function () {
+      return true;
+    })
+    .catch(function () {
+      return false;
+    });
 }
 
 function isMapboxRequest(url) {
@@ -336,7 +356,7 @@ function networkFirst(request, cacheName, options) {
     return fetch(request)
       .then(function (response) {
         if (response && response.ok && (!options || !options.skipCache || !options.skipCache(response))) {
-          cache.put(request, response.clone());
+          cacheResponseSafely(cache, request, response);
         }
         return response;
       })
@@ -358,7 +378,7 @@ function staleWhileRevalidate(request, cacheName) {
       var networkFetch = fetch(request)
         .then(function (response) {
           if (response && response.ok && !isHtmlResponse(response)) {
-            cache.put(request, response.clone());
+            cacheResponseSafely(cache, request, response);
             return response;
           }
           return null;
@@ -405,7 +425,7 @@ self.addEventListener("fetch", function (event) {
           return fetch(request)
             .then(function (response) {
               if (response && response.ok && !request.headers.get("Range")) {
-                event.waitUntil(mapCache.put(url.href, response.clone()));
+                event.waitUntil(cacheResponseSafely(mapCache, url.href, response));
               }
               return response;
             })
