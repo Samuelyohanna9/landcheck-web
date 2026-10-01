@@ -156,7 +156,9 @@
 }
 
 .work-login-form input[type="text"],
-.work-login-form input[type="password"] {
+.work-login-form input[type="password"],
+.work-login-form input[type="email"],
+.work-login-form input[type="tel"] {
   width: 100%;
   min-height: 46px;
   padding: 10px 14px;
@@ -407,7 +409,9 @@
   }
 
   .work-login-form input[type="text"],
-  .work-login-form input[type="password"] {
+  .work-login-form input[type="password"],
+  .work-login-form input[type="email"],
+  .work-login-form input[type="tel"] {
     font-size: 16px;
   }
 }
@@ -490,7 +494,9 @@
 }
 
 .work-login-form input[type="text"],
-.work-login-form input[type="password"] {
+.work-login-form input[type="password"],
+.work-login-form input[type="email"],
+.work-login-form input[type="tel"] {
   min-height: 44px;
   border: 1px solid rgba(71, 85, 105, 0.82);
   border-radius: 9px;

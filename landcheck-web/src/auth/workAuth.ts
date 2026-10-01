@@ -197,3 +197,44 @@ export const loginWork = async (params: { username: string; password: string; or
   setWorkAuthed(session);
   return session;
 };
+
+export const registerWork = async (params: {
+  organization_name: string;
+  full_name: string;
+  email: string;
+  password: string;
+  phone?: string;
+}) => {
+  const organization_name = params.organization_name.trim();
+  const full_name = params.full_name.trim();
+  const email = params.email.trim();
+  if (!organization_name || !full_name || !email || !params.password) {
+    throw new Error("Organization name, your name, email and password are required.");
+  }
+  const res = await api.post<WorkLoginResponse>("/green/work-auth/register", {
+    organization_name,
+    full_name,
+    email,
+    password: params.password,
+    phone: params.phone?.trim() || undefined,
+  });
+  const payload = res.data || {};
+  const accessToken = String(payload?.access_token || "").trim();
+  if (!accessToken || !payload.user) {
+    throw new Error("Registration did not return a valid session.");
+  }
+  const session: WorkAuthSession = {
+    authed: true,
+    auth_mode: payload?.auth_mode === "partner_user" ? "partner_user" : "env_admin",
+    logged_in_at: new Date().toISOString(),
+    access_token: accessToken,
+    session_uid: String(payload?.session_uid || "").trim() || null,
+    expires_at: String(payload?.expires_at || "").trim() || null,
+    idle_timeout_at: String(payload?.idle_timeout_at || "").trim() || null,
+    mfa_enabled: Boolean(payload?.mfa_enabled),
+    mfa_verified: Boolean(payload?.mfa_verified),
+    user: payload.user,
+  };
+  setWorkAuthed(session);
+  return session;
+};

@@ -3453,6 +3453,15 @@ export default function GreenWork() {
     isPartnerWorkSession && Number.isFinite(Number(workAuthSession?.user?.organization_id))
       ? Number(workAuthSession?.user?.organization_id)
       : null;
+  // Matches the backend's own check (POST /green/users): an org's own partner session can only
+  // add staff to its own organization, and only when their role is the org's "admin" role - every
+  // other partner role gets a 403 if they somehow reach the form, so keep the menu item itself
+  // hidden for them too rather than offering a button that will just fail.
+  const canAddUsers =
+    canAccessSuperAdmin ||
+    !isPartnerWorkSession ||
+    normalizeName(workAuthSession?.user?.role_key) === "admin" ||
+    normalizeName(workAuthSession?.user?.role) === "admin";
   const storedProjectIdRaw = typeof window !== "undefined" ? localStorage.getItem("landcheck_work_active_project_id") || "" : "";
   const storedProjectId = Number(storedProjectIdRaw || "0");
   const storedFormRaw = typeof window !== "undefined" ? localStorage.getItem("landcheck_work_active_form") || "" : "";
@@ -3597,7 +3606,7 @@ export default function GreenWork() {
   const [newOrderMultiAssignDueMode, setNewOrderMultiAssignDueMode] = useState<"uniform" | "custom">("uniform");
   const [newOrderMultiAssignOverrides, setNewOrderMultiAssignOverrides] = useState<Record<string, WorkOrderMultiAssignOverride>>({});
   const [assigningWorkOrder, setAssigningWorkOrder] = useState(false);
-  const [newUser, setNewUser] = useState({ full_name: "", role: "field_officer" });
+  const [newUser, setNewUser] = useState({ full_name: "", email: "", role: "field_officer", organization_id: "" });
   const [newProject, setNewProject] = useState({
     name: "",
     location_text: "",
@@ -8150,10 +8159,34 @@ export default function GreenWork() {
       toast.error("Full name required");
       return;
     }
-    await api.post("/green/users", newUser);
-    setNewUser({ full_name: "", role: "field_officer" });
-    await loadUsers();
-    toast.success("User added");
+    if (!newUser.email.trim()) {
+      toast.error("Email is required to send the new user their login details");
+      return;
+    }
+    const orgId = isPartnerWorkSession ? workScopedOrganizationId : Number(newUser.organization_id) || null;
+    if (!isPartnerWorkSession && !orgId) {
+      toast.error("Select an organization");
+      return;
+    }
+    try {
+      const response = await api.post("/green/users", {
+        full_name: newUser.full_name.trim(),
+        email: newUser.email.trim(),
+        role: newUser.role,
+        organization_id: orgId,
+        allow_work: true,
+        send_credentials_email: true,
+      });
+      setNewUser({ full_name: "", email: "", role: "field_officer", organization_id: "" });
+      await loadUsers();
+      if (response.data?.credentials_email_sent) {
+        toast.success(`User added. Login details sent to ${newUser.email.trim()}.`);
+      } else {
+        toast.success("User added, but the login email could not be sent - share their details manually.");
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to add user");
+    }
   };
 
   const getModelDueForTreeActivity = (
@@ -12356,7 +12389,7 @@ export default function GreenWork() {
               {renderMenuItemIcon("users")}
               Users
             </button>
-            {!csrPartnerDashboardMode && (
+            {!csrPartnerDashboardMode && canAddUsers && (
               <button
                 className={`green-work-menu-item ${activeForm === "add_user" ? "active" : ""}`}
                 type="button"
@@ -15075,11 +15108,30 @@ export default function GreenWork() {
           {activeForm === "add_user" && (
             <div className="green-work-card">
               <h3>Add User</h3>
+              <p className="green-work-note" style={{ marginTop: 0 }}>
+                They'll receive their login username and a temporary password by email.
+              </p>
               <input
                 placeholder="Full name"
                 value={newUser.full_name}
                 onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
               />
+              <input
+                type="email"
+                placeholder="Email"
+                value={newUser.email}
+                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+              />
+              {!isPartnerWorkSession && (
+                <select value={newUser.organization_id} onChange={(e) => setNewUser({ ...newUser, organization_id: e.target.value })}>
+                  <option value="">Select organization</option>
+                  {organizations.map((org) => (
+                    <option key={`add-user-org-${org.id}`} value={org.id}>
+                      {org.name}
+                    </option>
+                  ))}
+                </select>
+              )}
               <select value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}>
                 <option value="admin">Admin</option>
                 <option value="field_officer">Field Officer</option>

@@ -12,7 +12,7 @@ const REMEMBERED_USERNAME_KEY = "work-login-remembered-username";
 // Land-parcel/cadastral backdrop - LandCheck's own product vocabulary (plot boundaries, a
 // watercourse, surveyed point markers) rather than generic stock texture. One large scene that
 // scales to fill the viewport ("xMidYMid slice"), not a small repeating tile.
-function WorkLoginBackdropArt() {
+export function WorkLoginBackdropArt() {
   const parcels = [
     "M -40,120 L 220,60 L 310,190 L 140,280 L -60,240 Z",
     "M 220,60 L 470,10 L 560,150 L 310,190 Z",
@@ -72,7 +72,7 @@ function WorkLoginBackdropArt() {
   );
 }
 
-function EyeIcon({ open }: { open: boolean }) {
+export function EyeIcon({ open }: { open: boolean }) {
   return open ? (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z" />
@@ -224,11 +224,8 @@ export default function GreenWorkLogin() {
             <span>New to LandCheck?</span>
           </div>
 
-          <a
-            className="work-login-outline-btn"
-            href="mailto:admin@landcheck.online?subject=LandCheck%20Work%20Access"
-          >
-            Request organisation access
+          <a className="work-login-outline-btn" href="/green-work/register">
+            Register your organisation
           </a>
 
           <a className="work-login-explore" href="/green-partners">

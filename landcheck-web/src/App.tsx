@@ -25,6 +25,7 @@ const GreenMerchantDashboard = lazyWithChunkRecovery(() => import("./pages/Green
 const GreenMerchantLogin = lazyWithChunkRecovery(() => import("./pages/GreenMerchantLogin"));
 const GreenWork = lazyWithChunkRecovery(() => import("./pages/GreenWork"));
 const GreenWorkLogin = lazyWithChunkRecovery(() => import("./pages/GreenWorkLogin"));
+const GreenWorkRegister = lazyWithChunkRecovery(() => import("./pages/GreenWorkRegister"));
 const DataDeletion = lazyWithChunkRecovery(() => import("./pages/DataDeletion"));
 const EstateSocialPostsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateSocialPostsPage"));
 const GreenPartnersLanding = lazyWithChunkRecovery(() => import("./pages/GreenPartnersLanding"));
@@ -332,6 +333,7 @@ export default function App() {
               <Route path="/green-merchant/login" element={<GreenMerchantLogin />} />
               <Route path="/green-merchant" element={<MerchantProtectedRoute element={<GreenMerchantDashboard />} />} />
               <Route path="/green-work/login" element={<GreenWorkLogin />} />
+              <Route path="/green-work/register" element={<GreenWorkRegister />} />
               <Route path="/green-work" element={<WorkProtectedRoute element={<GreenWork />} />} />
               <Route path="/survey" element={<SurveyPlanLanding />} />
               <Route path="/survey/guides" element={<SurveyGuides />} />
