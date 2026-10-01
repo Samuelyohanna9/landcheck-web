@@ -29,6 +29,15 @@ type EstateAuthResponse = {
   session_uid?: string | null;
   expires_at?: string | null;
   user?: EstateAuthUser;
+  verification_required?: boolean;
+  email?: string;
+  message?: string;
+};
+
+export type EstateRegistrationResult = EstateAuthSession | {
+  verification_required: true;
+  email: string;
+  message: string;
 };
 
 const isExpired = (value: string | null | undefined) => {
@@ -38,14 +47,13 @@ const isExpired = (value: string | null | undefined) => {
 };
 
 const normalizeSession = (payload: EstateAuthResponse): EstateAuthSession => {
-  const accessToken = String(payload.access_token || "").trim();
-  if (!accessToken || !payload.user || !payload.session_uid || !payload.expires_at) {
+  if (!payload.user || !payload.session_uid || !payload.expires_at) {
     throw new Error("Estate sign-in did not return a valid session.");
   }
   return {
     authed: true,
     logged_in_at: new Date().toISOString(),
-    access_token: accessToken,
+    access_token: "",
     session_uid: payload.session_uid,
     expires_at: payload.expires_at,
     user: payload.user,
@@ -54,17 +62,18 @@ const normalizeSession = (payload: EstateAuthResponse): EstateAuthSession => {
 
 export const getEstateAuthSession = (): EstateAuthSession | null => {
   if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(ESTATE_AUTH_STORAGE_KEY);
+  window.localStorage.removeItem(ESTATE_AUTH_STORAGE_KEY);
+  const raw = window.sessionStorage.getItem(ESTATE_AUTH_STORAGE_KEY);
   if (!raw) return null;
   try {
     const session = JSON.parse(raw) as EstateAuthSession;
-    if (!session?.authed || !session.access_token || !session.user || isExpired(session.expires_at)) {
-      window.localStorage.removeItem(ESTATE_AUTH_STORAGE_KEY);
+    if (!session?.authed || !session.user || isExpired(session.expires_at)) {
+      window.sessionStorage.removeItem(ESTATE_AUTH_STORAGE_KEY);
       return null;
     }
     return session;
   } catch {
-    window.localStorage.removeItem(ESTATE_AUTH_STORAGE_KEY);
+    window.sessionStorage.removeItem(ESTATE_AUTH_STORAGE_KEY);
     return null;
   }
 };
@@ -72,16 +81,17 @@ export const getEstateAuthSession = (): EstateAuthSession | null => {
 export const isEstateAuthed = () => Boolean(getEstateAuthSession());
 
 export const setEstateAuthSession = (session: EstateAuthSession) => {
-  if (typeof window !== "undefined") window.localStorage.setItem(ESTATE_AUTH_STORAGE_KEY, JSON.stringify(session));
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(ESTATE_AUTH_STORAGE_KEY);
+    window.sessionStorage.setItem(ESTATE_AUTH_STORAGE_KEY, JSON.stringify({ ...session, access_token: "" }));
+  }
 };
 
 export const clearEstateAuthSession = () => {
   if (typeof window === "undefined") return;
-  const session = getEstateAuthSession();
   window.localStorage.removeItem(ESTATE_AUTH_STORAGE_KEY);
-  if (session?.access_token) {
-    void api.post("/estates/auth/logout", {}, { headers: { Authorization: `Bearer ${session.access_token}` } }).catch(() => undefined);
-  }
+  window.sessionStorage.removeItem(ESTATE_AUTH_STORAGE_KEY);
+  void api.post("/estates/auth/logout", {}).catch(() => undefined);
 };
 
 export const loginEstate = async (email: string, password: string) => {
@@ -97,12 +107,11 @@ export const changeEstatePassword = async (currentPassword: string, newPassword:
   await api.post(
     "/estates/auth/change-password",
     { current_password: currentPassword, new_password: newPassword },
-    { headers: { Authorization: `Bearer ${session.access_token}` } },
   );
   setEstateAuthSession({ ...session, user: { ...session.user, must_change_password: false } });
 };
 
-export const registerEstate = async (params: { organization_name: string; organization_slug?: string; full_name: string; email: string; password: string; accept_dpa: boolean }) => {
+export const registerEstate = async (params: { organization_name: string; organization_slug?: string; full_name: string; email: string; password: string; accept_dpa: boolean }): Promise<EstateRegistrationResult> => {
   const response = await api.post<EstateAuthResponse>("/estates/auth/register", {
     ...params,
     organization_name: params.organization_name.trim(),
@@ -110,6 +119,13 @@ export const registerEstate = async (params: { organization_name: string; organi
     full_name: params.full_name.trim(),
     email: params.email.trim(),
   });
+  if (response.data?.verification_required) {
+    return {
+      verification_required: true,
+      email: response.data.email || params.email,
+      message: response.data.message || "Check your email to verify your address before signing in.",
+    };
+  }
   const session = normalizeSession(response.data || {});
   setEstateAuthSession(session);
   return session;

@@ -42,14 +42,13 @@ const isSessionExpired = (session: Partial<SurveyAuthSession> | null | undefined
 };
 
 const normalizeSurveySession = (payload: SurveySessionResponse): SurveyAuthSession => {
-  const accessToken = String(payload?.access_token || "").trim();
-  if (!accessToken || !payload.user) {
+  if (!payload.user) {
     throw new Error("Sign-in did not return a valid session.");
   }
   return {
     authed: true,
     logged_in_at: new Date().toISOString(),
-    access_token: accessToken,
+    access_token: "",
     session_uid: String(payload?.session_uid || "").trim() || null,
     expires_at: String(payload?.expires_at || "").trim() || null,
     user: payload.user,
@@ -58,19 +57,20 @@ const normalizeSurveySession = (payload: SurveySessionResponse): SurveyAuthSessi
 
 export const getSurveyAuthSession = (): SurveyAuthSession | null => {
   if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(SURVEY_AUTH_STORAGE_KEY);
+  window.localStorage.removeItem(SURVEY_AUTH_STORAGE_KEY);
+  const raw = window.sessionStorage.getItem(SURVEY_AUTH_STORAGE_KEY);
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as SurveyAuthSession;
-    if (parsed?.authed && parsed.user && parsed.access_token) {
+    if (parsed?.authed && parsed.user) {
       if (isSessionExpired(parsed)) {
-        window.localStorage.removeItem(SURVEY_AUTH_STORAGE_KEY);
+        window.sessionStorage.removeItem(SURVEY_AUTH_STORAGE_KEY);
         return null;
       }
       return parsed;
     }
   } catch {
-    window.localStorage.removeItem(SURVEY_AUTH_STORAGE_KEY);
+    window.sessionStorage.removeItem(SURVEY_AUTH_STORAGE_KEY);
     return null;
   }
   return null;
@@ -80,19 +80,15 @@ export const isSurveyAuthed = () => Boolean(getSurveyAuthSession());
 
 export const setSurveyAuthSession = (session: SurveyAuthSession) => {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(SURVEY_AUTH_STORAGE_KEY, JSON.stringify(session));
+  window.localStorage.removeItem(SURVEY_AUTH_STORAGE_KEY);
+  window.sessionStorage.setItem(SURVEY_AUTH_STORAGE_KEY, JSON.stringify({ ...session, access_token: "" }));
 };
 
 export const clearSurveyAuthSession = () => {
   if (typeof window === "undefined") return;
-  const existing = getSurveyAuthSession();
-  const accessToken = existing?.access_token;
   window.localStorage.removeItem(SURVEY_AUTH_STORAGE_KEY);
-  if (accessToken) {
-    void api
-      .post("/survey/auth/logout", {}, { headers: { Authorization: `Bearer ${accessToken}` } })
-      .catch(() => undefined);
-  }
+  window.sessionStorage.removeItem(SURVEY_AUTH_STORAGE_KEY);
+  void api.post("/survey/auth/logout", {}).catch(() => undefined);
 };
 
 export const requestSurveyMagicLink = async (email: string) => {

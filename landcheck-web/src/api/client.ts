@@ -33,6 +33,7 @@ export const API_URL = (shouldOverrideLocalConfiguredApi ? defaultApiUrl : confi
 export const api = axios.create({
   baseURL: API_URL,
   timeout: 30000,
+  withCredentials: true,
 });
 
 // Mutation callers keep this key while retrying the same logical action. The API uses it to
@@ -61,7 +62,10 @@ type StoredSession = {
 
 const readStoredSession = (key: string): StoredSession | null => {
   if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(key);
+  // Browser auth is carried by an HttpOnly cookie. Remove legacy bearer tokens that older
+  // releases may have left in localStorage; never read them back into JavaScript.
+  window.localStorage.removeItem(key);
+  const raw = window.sessionStorage.getItem(key);
   if (!raw) return null;
   try {
     return JSON.parse(raw) as StoredSession;
@@ -113,9 +117,7 @@ const attachLandCheckHeaders = (config: InternalAxiosRequestConfig) => {
   config.headers = headers;
   headers.set("X-LC-Client", resolveWebClientLabel(pathname, greenSession));
   headers.set("X-LC-App-Route", pathname || "/");
-  if (activeSession?.access_token) {
-    headers.set("Authorization", `Bearer ${String(activeSession.access_token)}`);
-  }
+  headers.delete("Authorization");
   if (activeSession?.auth_mode) headers.set("X-LC-Auth-Mode", String(activeSession.auth_mode));
   if (activeSession?.appMode) headers.set("X-LC-Session-App-Mode", String(activeSession.appMode));
   if (activeSession?.user?.role_key || activeSession?.user?.role) {

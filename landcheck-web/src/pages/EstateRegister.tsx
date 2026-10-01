@@ -26,6 +26,7 @@ export default function EstateRegister() {
   const [acceptDpa, setAcceptDpa] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -33,7 +34,11 @@ export default function EstateRegister() {
     setError("");
     setBusy(true);
     try {
-      await registerEstate({ organization_name: company, organization_slug: slug, full_name: fullName, email, password, accept_dpa: acceptDpa });
+      const result = await registerEstate({ organization_name: company, organization_slug: slug, full_name: fullName, email, password, accept_dpa: acceptDpa });
+      if ("verification_required" in result) {
+        setVerificationSent(true);
+        return;
+      }
       navigate("/estates/choose-plan", { replace: true });
     } catch (err) {
       setError(await extractApiErrorMessage(err, "Registration failed. Please review the details and try again."));
@@ -62,6 +67,11 @@ export default function EstateRegister() {
         <div className="estate-auth-card">
           <p className="estate-kicker">Company registration</p>
           <h2>Create your workspace</h2>
+          {verificationSent && (
+            <div className="estate-auth-success" role="status">
+              We sent a verification link to <strong>{email}</strong>. Open it, then sign in to continue.
+            </div>
+          )}
           <form onSubmit={submit}>
             <label>
               Company / developer name

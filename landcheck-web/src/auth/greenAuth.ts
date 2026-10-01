@@ -89,16 +89,12 @@ const isSessionExpired = (session: Partial<GreenAuthSession> | null | undefined)
 
 const normalizeGreenSession = (payload: LoginResponse, appMode: GreenAppMode): GreenAuthSession => {
   const authMode = normalizeAuthMode(payload?.auth_mode);
-  const accessToken = String(payload?.access_token || "").trim();
-  if (!accessToken) {
-    throw new Error("Authenticated session token was not returned by the server.");
-  }
   return {
     authed: true,
     appMode: normalizeAppMode(appMode, authMode),
     auth_mode: authMode,
     logged_in_at: new Date().toISOString(),
-    access_token: accessToken,
+    access_token: "",
     session_uid: String(payload?.session_uid || "").trim() || null,
     expires_at: String(payload?.expires_at || "").trim() || null,
     idle_timeout_at: String(payload?.idle_timeout_at || "").trim() || null,
@@ -119,23 +115,14 @@ const normalizeGreenSession = (payload: LoginResponse, appMode: GreenAppMode): G
   };
 };
 
-const revokeStoredGreenSession = (session: Partial<GreenAuthSession> | null | undefined) => {
-  const accessToken = String(session?.access_token || "").trim();
-  if (!accessToken) return;
-  void api.post(
-    "/green/auth/logout",
-    {},
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    },
-  ).catch(() => undefined);
+const revokeStoredGreenSession = () => {
+  void api.post("/green/auth/logout", {}).catch(() => undefined);
 };
 
 export const getGreenAuthSession = (): GreenAuthSession | null => {
   if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(GREEN_AUTH_STORAGE_KEY);
+  window.localStorage.removeItem(GREEN_AUTH_STORAGE_KEY);
+  const raw = window.sessionStorage.getItem(GREEN_AUTH_STORAGE_KEY);
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
@@ -145,10 +132,10 @@ export const getGreenAuthSession = (): GreenAuthSession | null => {
         ...(parsed as GreenAuthSession),
         auth_mode: authMode,
         appMode: normalizeAppMode(parsed?.appMode, authMode),
-        access_token: String(parsed?.access_token || "").trim(),
+        access_token: "",
       };
-      if (!session.access_token || isSessionExpired(session)) {
-        window.localStorage.removeItem(GREEN_AUTH_STORAGE_KEY);
+      if (isSessionExpired(session)) {
+        window.sessionStorage.removeItem(GREEN_AUTH_STORAGE_KEY);
         return null;
       }
       if (
@@ -156,13 +143,13 @@ export const getGreenAuthSession = (): GreenAuthSession | null => {
         (session.user?.organization_is_active === false ||
           String(session.user?.organization_status || "").trim().toLowerCase() === "suspended")
       ) {
-        window.localStorage.removeItem(GREEN_AUTH_STORAGE_KEY);
+        window.sessionStorage.removeItem(GREEN_AUTH_STORAGE_KEY);
         return null;
       }
       return session;
     }
   } catch {
-    window.localStorage.removeItem(GREEN_AUTH_STORAGE_KEY);
+    window.sessionStorage.removeItem(GREEN_AUTH_STORAGE_KEY);
     return null;
   }
   return null;
@@ -174,14 +161,15 @@ export const isSponsorGreenSession = (session = getGreenAuthSession()) =>
 
 export const setGreenAuthed = (session: GreenAuthSession) => {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(GREEN_AUTH_STORAGE_KEY, JSON.stringify(session));
+  window.localStorage.removeItem(GREEN_AUTH_STORAGE_KEY);
+  window.sessionStorage.setItem(GREEN_AUTH_STORAGE_KEY, JSON.stringify({ ...session, access_token: "" }));
 };
 
 export const clearGreenAuthed = () => {
   if (typeof window === "undefined") return;
-  const existing = getGreenAuthSession();
-  revokeStoredGreenSession(existing);
+  revokeStoredGreenSession();
   window.localStorage.removeItem(GREEN_AUTH_STORAGE_KEY);
+  window.sessionStorage.removeItem(GREEN_AUTH_STORAGE_KEY);
 };
 
 export const loginGreen = async (params: { username: string; password: string; organization_id?: number | null }) => {

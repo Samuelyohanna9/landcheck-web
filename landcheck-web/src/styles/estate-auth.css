@@ -66,6 +66,7 @@
 .estate-auth-checkbox a { color: var(--auth-brand-dark); font-weight: 600; text-decoration: underline; }
 
 .estate-auth-error { border-left: 0; border-radius: 4px; background: #fbeaea; color: #b3261e; font-family: inherit; }
+.estate-auth-success { margin: 0 0 18px; padding: 12px 14px; border: 1px solid #b8e2c7; border-radius: 8px; background: #effaf2; color: #176b3a; font-family: inherit; line-height: 1.5; }
 .estate-auth-trust, .estate-auth-switch { font-family: inherit !important; color: var(--auth-muted) !important; }
 .estate-auth-trust { color: #9699a6 !important; }
 

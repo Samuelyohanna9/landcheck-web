@@ -19,6 +19,7 @@ export default function GreenWorkRegister() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
 
   useEffect(() => {
     if (isWorkAuthed()) navigate("/green-work", { replace: true });
@@ -29,7 +30,11 @@ export default function GreenWorkRegister() {
     setLoading(true);
     setError("");
     try {
-      await registerWork({ organization_name: organizationName, full_name: fullName, email, password, phone });
+      const result = await registerWork({ organization_name: organizationName, full_name: fullName, email, password, phone });
+      if ("verification_required" in result) {
+        setVerificationSent(true);
+        return;
+      }
       navigate("/green-work", { replace: true });
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: unknown } }; message?: unknown };
@@ -61,6 +66,7 @@ export default function GreenWorkRegister() {
           <span className="work-login-card-kicker">Secure organisation portal</span>
           <h1>Register your organisation</h1>
           <p className="work-login-card-sub">Create your organisation's workspace - you'll be its first admin and can add staff afterward.</p>
+          {verificationSent && <p className="work-login-card-sub" role="status">We sent a verification link to <strong>{email}</strong>. Open it, then sign in to continue.</p>}
 
           <form className="work-login-form" onSubmit={onSubmit} aria-busy={loading}>
             <label htmlFor="work-register-org">Organisation name</label>
