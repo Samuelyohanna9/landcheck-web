@@ -277,7 +277,7 @@ export default function GreenPartnersLanding() {
             </p>
             <div className="gp-new-hero-actions">
               <a className="gp-btn gp-btn--primary" href="/green-work/login">
-                Launch Your CSR Project
+                Manage your Green Programme
               </a>
               <a className="gp-btn gp-btn--secondary" href="/sponsor">
                 Sponsor a Tree

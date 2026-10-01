@@ -1,0 +1,227 @@
+/* LandCheck Work only: an adapted Atryx Matcha palette for a clean professional workspace. */
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap");
+
+.workspace-container {
+  --survey-font-display: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --survey-font-body: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --workspace-radius: 14px;
+}
+
+:root[data-workspace-theme="light"] .workspace-container {
+  --workspace-bg: #f0f0e0;
+  --workspace-surface: rgba(255, 255, 255, 0.94);
+  --workspace-raised: #ffffff;
+  --workspace-hover: #eef2e5;
+  --workspace-border: #dce3ce;
+  --workspace-border-strong: #b7c29e;
+  --workspace-ink: #3e481d;
+  --workspace-muted: #707e46;
+  --workspace-emerald: #4d9900;
+  --workspace-emerald-hover: #3d7a00;
+  --workspace-amber: #8c6b30;
+  --survey-ink-900: #f0f0e0;
+  --survey-ink-800: #ffffff;
+  --survey-ink-700: #f8f9f1;
+  --survey-ink-border: #dce3ce;
+  --survey-ink-border-strong: #b7c29e;
+  --survey-copper-300: #707e46;
+  --survey-copper-400: #4d9900;
+  --survey-copper-500: #3d7a00;
+  --survey-copper-600: #3e481d;
+  --survey-copper-glow: rgba(77, 153, 0, 0.13);
+  --survey-copper-glow-strong: rgba(77, 153, 0, 0.22);
+  --survey-forest-400: #5ab898;
+  --survey-forest-500: #2e6b4a;
+  --survey-forest-600: #245546;
+  --survey-forest-glow: rgba(46, 107, 74, 0.13);
+  --survey-text-primary: #3e481d;
+  --survey-text-secondary: #707e46;
+  --survey-text-muted: #7b8660;
+  --survey-grid-line: rgba(62, 72, 29, 0.055);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(192, 203, 169, 0.32), transparent 28rem),
+    linear-gradient(145deg, #f5f6ea 0%, #eef0e2 100%);
+  color: #3e481d;
+}
+
+:root[data-workspace-theme="dark"] .workspace-container {
+  --workspace-bg: #12140e;
+  --workspace-surface: rgba(26, 28, 20, 0.94);
+  --workspace-raised: #1e2016;
+  --workspace-hover: #282c1c;
+  --workspace-border: rgba(192, 203, 169, 0.18);
+  --workspace-border-strong: #5a6440;
+  --workspace-ink: #f0f0e0;
+  --workspace-muted: #c0cba9;
+  --workspace-emerald: #6dbf2a;
+  --workspace-emerald-hover: #80d43a;
+  --workspace-amber: #d4b870;
+  --survey-ink-900: #12140e;
+  --survey-ink-800: #1a1c14;
+  --survey-ink-700: #25291a;
+  --survey-ink-border: rgba(192, 203, 169, 0.18);
+  --survey-ink-border-strong: #5a6440;
+  --survey-copper-300: #c0cba9;
+  --survey-copper-400: #6dbf2a;
+  --survey-copper-500: #5a9e25;
+  --survey-copper-600: #3e481d;
+  --survey-copper-glow: rgba(109, 191, 42, 0.18);
+  --survey-copper-glow-strong: rgba(109, 191, 42, 0.3);
+  --survey-forest-400: #7bc49e;
+  --survey-forest-500: #5ab898;
+  --survey-forest-600: #2e6b5a;
+  --survey-forest-glow: rgba(90, 184, 152, 0.16);
+  --survey-text-primary: #f0f0e0;
+  --survey-text-secondary: #c0cba9;
+  --survey-text-muted: #94a468;
+  --survey-grid-line: rgba(192, 203, 169, 0.06);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(112, 126, 70, 0.22), transparent 28rem),
+    linear-gradient(145deg, #12140e 0%, #1a1c14 100%);
+  color: #f0f0e0;
+}
+
+/* Shared component refinements. Keep them scoped so Survey Plan and the other products retain
+   their own visual systems. */
+.workspace-container .dashboard-header {
+  background: color-mix(in srgb, var(--workspace-raised) 92%, transparent);
+  border-bottom-color: var(--workspace-border);
+  box-shadow: 0 1px 0 rgba(62, 72, 29, 0.04), 0 10px 28px rgba(62, 72, 29, 0.05);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.workspace-container .header-left h1,
+.workspace-container .plots-section-head h2,
+.workspace-container .workspace-project-title,
+.workspace-container .workspace-project-action {
+  color: var(--workspace-ink);
+}
+
+.workspace-container .work-category-tabs,
+.workspace-container .workspace-toolbar,
+.workspace-container .workspace-project-row,
+.workspace-container .workspace-status-filter,
+.workspace-container .empty-state {
+  background: var(--workspace-surface);
+  border-color: var(--workspace-border);
+  box-shadow: 0 2px 8px rgba(62, 72, 29, 0.05), 0 14px 30px rgba(62, 72, 29, 0.04);
+}
+
+.workspace-container .work-category-tab,
+.workspace-container .workspace-status-filter-btn,
+.workspace-container .workspace-project-meta,
+.workspace-container .workspace-select-all-row {
+  color: var(--workspace-muted);
+}
+
+.workspace-container .work-category-tab:hover,
+.workspace-container .workspace-status-filter-btn:hover,
+.workspace-container .workspace-project-row:hover {
+  background: var(--workspace-hover);
+}
+
+.workspace-container .work-category-tab.is-active,
+.workspace-container .workspace-status-filter-btn.is-active {
+  background: #e2edcf;
+  color: #3d7a00;
+}
+
+.workspace-container .workspace-search input,
+.workspace-container .workspace-project-action,
+.workspace-container .workspace-theme-toggle,
+.workspace-container .support-btn,
+.workspace-container .workspace-mobile-notifications {
+  background: var(--workspace-raised);
+  border-color: var(--workspace-border);
+  color: var(--workspace-muted);
+}
+
+.workspace-container .workspace-search input:focus,
+.workspace-container .workspace-project-action:hover,
+.workspace-container .workspace-theme-toggle:hover,
+.workspace-container .support-btn:hover,
+.workspace-container .workspace-mobile-notifications:hover {
+  border-color: var(--workspace-emerald);
+  background: var(--workspace-hover);
+  color: var(--workspace-emerald-hover);
+}
+
+.workspace-container .new-plot-btn,
+.workspace-container .dashboard-fab,
+.workspace-container .empty-state button,
+.workspace-container .support-modal-submit {
+  background: linear-gradient(135deg, #5a9e25 0%, #3e481d 100%);
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(62, 72, 29, 0.18);
+}
+
+.workspace-container .dashboard-logo-mark {
+  background: #3e481d;
+}
+
+.workspace-container .workspace-project-row:hover {
+  border-color: #b7c29e;
+  box-shadow: 0 10px 24px rgba(62, 72, 29, 0.11);
+}
+
+.workspace-container .workspace-select-toggle,
+.workspace-container .workspace-project-tag {
+  background: #edf3e3;
+  border-color: #c0cba9;
+  color: #3d7a00;
+}
+
+.workspace-container .workspace-status-completed {
+  background: #e0f0d0;
+  color: #3d7a00;
+}
+
+.workspace-container .workspace-status-draft {
+  background: #f3ead4;
+  color: #8c6b30;
+}
+
+.workspace-container .work-badge-survey,
+.workspace-container .work-badge-subdivision {
+  background: #e0f0d0;
+  border-color: #c0dca3;
+  color: #3d7a00;
+}
+
+.workspace-container .work-badge-georeference {
+  background: #e3edf3;
+  border-color: #b9d2de;
+  color: #2e6060;
+}
+
+.workspace-container .work-badge-hazard {
+  background: #f3ead4;
+  border-color: #dfc98e;
+  color: #8c6b30;
+}
+
+.workspace-container .workspace-project-options-trigger:hover,
+.workspace-container .workspace-project-options-trigger[aria-expanded="true"] {
+  background: #edf3e3;
+  color: #3d7a00;
+}
+
+.workspace-container .workspace-pagination button {
+  background: var(--workspace-raised);
+  border-color: var(--workspace-border);
+  color: var(--workspace-ink);
+}
+
+.workspace-container .workspace-pagination button:hover:not(:disabled),
+.workspace-container .workspace-pagination button:focus-visible {
+  background: #edf3e3;
+  border-color: var(--workspace-emerald);
+  color: var(--workspace-emerald-hover);
+}
+
+@media (max-width: 768px) {
+  .workspace-container .dashboard-header {
+    box-shadow: 0 1px 0 rgba(62, 72, 29, 0.05), 0 6px 18px rgba(62, 72, 29, 0.05);
+  }
+}

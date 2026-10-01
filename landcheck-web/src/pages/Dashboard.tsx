@@ -15,6 +15,7 @@ import {
 } from "../utils/workspaceTheme";
 import "../styles/survey-tokens.css";
 import "../styles/dashboard.css";
+import "../styles/workspace-matcha.css";
 import { prefetchSurveyPlanPreviewStep, prefetchSurveyPlanRoute } from "../utils/surveyPlanPrefetch";
 
 type WorkflowCategory = "survey_plan" | "subdivision" | "georeference" | "hazard_analysis";

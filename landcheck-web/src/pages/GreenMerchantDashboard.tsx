@@ -90,6 +90,7 @@ export default function GreenMerchantDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
+  const [downloadingReport, setDownloadingReport] = useState(false);
   const mapViewport = useInViewport<HTMLDivElement>({ rootMargin: "320px 0px" });
 
   useEffect(() => {
@@ -116,6 +117,30 @@ export default function GreenMerchantDashboard() {
   const handleLogout = () => {
     clearGreenAuthed();
     navigate("/green/login", { replace: true });
+  };
+
+  const downloadReport = async () => {
+    setDownloadingReport(true);
+    setError(null);
+    try {
+      const res = await api.get(`/green/merchant-auth/report.pdf`, {
+        params: { merchant_id: merchantId },
+        responseType: "blob",
+      });
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = `merchant_report_${merchantId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1200);
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || "Failed to download your report");
+    } finally {
+      setDownloadingReport(false);
+    }
   };
 
   if (!merchantId) {
@@ -222,15 +247,10 @@ export default function GreenMerchantDashboard() {
                       <div className="gm-card-subtitle">A downloadable PDF summary of every tree sponsored through your integration &mdash; species, planting date, and status.</div>
                     </div>
                   </div>
-                  <a
-                    href={`${api.defaults.baseURL || ""}/green/merchant-auth/report.pdf?merchant_id=${merchantId}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="gm-report-btn"
-                  >
+                  <button type="button" className="gm-report-btn" onClick={downloadReport} disabled={downloadingReport}>
                     <GreenGlyph name="download" />
-                    Download Report
-                  </a>
+                    {downloadingReport ? "Preparing..." : "Download Report"}
+                  </button>
                 </div>
               </section>
 

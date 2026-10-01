@@ -38,7 +38,9 @@
 .work-login-page .work-login-form { gap: 8px; margin-top: 12px; }
 .work-login-page .work-login-form > label:not(.work-login-checkbox) { font-size: 0.78rem; font-weight: 600; color: var(--wl-text); letter-spacing: 0; text-transform: none; }
 .work-login-page .work-login-form input[type="text"],
-.work-login-page .work-login-form input[type="password"] {
+.work-login-page .work-login-form input[type="password"],
+.work-login-page .work-login-form input[type="email"],
+.work-login-page .work-login-form input[type="tel"] {
   min-height: 38px;
   height: 38px;
   padding: 0 12px;
