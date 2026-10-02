@@ -1290,3 +1290,119 @@
     font-size: 0.74rem;
   }
 }
+
+/* Keep the coordinate workflow inside the fixed-width Survey sidebar. The sidebar can be
+   narrow on laptop screens and at browser zoom levels, so no child is allowed to establish a
+   wider intrinsic size than its parent. */
+.survey-container.has-workflow .coord-input-container {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.survey-container.has-workflow .coord-input-container > *,
+.survey-container.has-workflow .coord-system-field,
+.survey-container.has-workflow .coord-preview,
+.survey-container.has-workflow .coord-preview-table-wrap,
+.survey-container.has-workflow .coord-preview-actions {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.survey-container.has-workflow .coord-system-selector {
+  display: block;
+  width: 100%;
+}
+
+.survey-container.has-workflow .coord-system-label {
+  display: block;
+  margin-bottom: 0.42rem;
+}
+
+.survey-container.has-workflow .coord-system-selected-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 0.45rem;
+  row-gap: 0.12rem;
+}
+
+.survey-container.has-workflow .coord-system-selected-line strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.survey-container.has-workflow .coord-system-selected-line span {
+  grid-column: 1;
+}
+
+.survey-container.has-workflow .coord-system-details-toggle {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  margin-left: 0;
+  white-space: nowrap;
+}
+
+.survey-container.has-workflow .coord-preview-table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.survey-container.has-workflow .coord-preview-table th,
+.survey-container.has-workflow .coord-preview-table td {
+  min-width: 0;
+  padding-inline: 0.22rem;
+  overflow-wrap: anywhere;
+}
+
+.survey-container.has-workflow .coord-preview-table th:nth-child(1),
+.survey-container.has-workflow .coord-preview-table td:nth-child(1) {
+  width: 13%;
+}
+
+.survey-container.has-workflow .coord-preview-table th:nth-child(2),
+.survey-container.has-workflow .coord-preview-table td:nth-child(2),
+.survey-container.has-workflow .coord-preview-table th:nth-child(3),
+.survey-container.has-workflow .coord-preview-table td:nth-child(3) {
+  width: 27%;
+}
+
+.survey-container.has-workflow .coord-preview-table th:nth-child(4),
+.survey-container.has-workflow .coord-preview-table td:nth-child(4) {
+  width: 18%;
+}
+
+.survey-container.has-workflow .coord-preview-table th:nth-child(5),
+.survey-container.has-workflow .coord-preview-table td:nth-child(5),
+.survey-container.has-workflow .coord-preview-table th:nth-child(6),
+.survey-container.has-workflow .coord-preview-table td:nth-child(6) {
+  width: 7.5%;
+  padding-inline: 0;
+  text-align: center;
+}
+
+.survey-container.has-workflow .coord-preview-table td:nth-child(2),
+.survey-container.has-workflow .coord-preview-table td:nth-child(3) {
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
+.survey-container.has-workflow .coord-preview-row-btn {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+}
+
+.survey-container.has-workflow .coord-preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.survey-container.has-workflow .coord-preview-actions .coord-method-action-btn {
+  min-width: 0;
+  white-space: normal;
+  line-height: 1.2;
+}
