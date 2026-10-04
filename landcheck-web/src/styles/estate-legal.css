@@ -1,3 +1,15 @@
+/* The LandCheck wordmark (/logo.svg) bakes in a light "Land" for display on a dark
+   surface - the dashboard sidebar gives it its own dark chip to sit on (see
+   estate-dashboard.css) so it doesn't wash out; this page's header/footer brand marks
+   need the same chip, since they sit directly on the white page background. */
+.privacy-policy-page.estate-portal .privacy-policy-brand img,
+.privacy-policy-page.estate-portal .privacy-policy-footer-brand img {
+  background: #0f6e44;
+  border-radius: 8px;
+  padding: 7px 10px;
+  box-sizing: content-box;
+}
+
 /* ─── Legal & compliance (Data Processing Agreement) ─── */
 .edash-legal-status { padding: 4px 2px; }
 .edash-legal-status strong { display: block; margin-bottom: 4px; font-size: .95rem; color: var(--edash-ink); }
