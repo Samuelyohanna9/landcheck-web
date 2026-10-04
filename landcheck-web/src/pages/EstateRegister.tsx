@@ -67,11 +67,6 @@ export default function EstateRegister() {
         <div className="estate-auth-card">
           <p className="estate-kicker">Company registration</p>
           <h2>Create your workspace</h2>
-          {verificationSent && (
-            <div className="estate-auth-success" role="status">
-              We sent a verification link to <strong>{email}</strong>. Open it, then sign in to continue.
-            </div>
-          )}
           <form onSubmit={submit}>
             <label>
               Company / developer name
@@ -125,6 +120,23 @@ export default function EstateRegister() {
           <p className="estate-auth-switch">Already registered? <Link to="/estates/login">Sign in</Link></p>
         </div>
       </div>
+      {verificationSent && (
+        <div className="estate-verify-overlay" role="status">
+          <div className="estate-verify-overlay-card">
+            <span className="estate-verify-overlay-icon">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.6" />
+                <path d="M3.5 6.5 12 13l8.5-6.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+            <p className="estate-kicker">Company registration</p>
+            <h2>Check your email</h2>
+            <p>We sent a verification link to <strong>{email}</strong>. Open it, then sign in to continue.</p>
+            <p className="estate-verify-overlay-hint">Can't find it? Check your spam or junk folder — it can take a minute or two to arrive.</p>
+            <Link to="/estates/login" className="estate-button">Go to sign in</Link>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

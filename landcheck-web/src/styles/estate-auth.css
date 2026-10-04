@@ -74,3 +74,71 @@
 .estate-register-intro > p:not(.estate-kicker) { color: var(--auth-muted); font-family: inherit; }
 .estate-register-points { font-family: inherit; color: var(--auth-muted); }
 .estate-register-points b { background: #e3f2ea; color: var(--auth-brand-dark); border-radius: 4px; }
+
+/* Shown over the registration page once the account is created and a verification email has
+   been sent - blurs/dims the form behind it rather than leaving it visible and editable, since
+   there's nothing left for the visitor to do on this page until they open that email. */
+.estate-verify-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(50, 51, 56, .4);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: estate-verify-overlay-fade-in .18s ease;
+}
+.estate-verify-overlay-card {
+  width: min(100%, 420px);
+  padding: 32px 30px 28px;
+  border: 1px solid #e6e9ef;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(50, 51, 56, .22);
+  text-align: center;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.estate-verify-overlay-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: #e3f2ea;
+  color: var(--auth-brand-dark, #0f6e44);
+}
+.estate-verify-overlay-icon svg { width: 24px; height: 24px; }
+.estate-verify-overlay-card h2 { margin: 2px 0 10px; font-size: 1.3rem; font-weight: 600; letter-spacing: -.01em; color: var(--auth-ink); }
+.estate-verify-overlay-card p { margin: 0 0 10px; color: var(--auth-muted); line-height: 1.55; font-size: .92rem; }
+.estate-verify-overlay-card p strong { color: var(--auth-ink); }
+.estate-verify-overlay-hint { font-size: .8rem !important; }
+.estate-verify-overlay-card .estate-button { display: inline-flex; align-items: center; justify-content: center; width: 100%; margin-top: 12px; text-decoration: none; }
+
+@keyframes estate-verify-overlay-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .estate-verify-overlay { animation: none; }
+}
+
+/* The standalone page a verification email link lands on (see EstateEmailVerified.tsx). */
+.estate-verified-card { text-align: center; }
+.estate-verified-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 10px;
+  border-radius: 50%;
+  background: #e3f2ea;
+  color: var(--auth-brand-dark);
+}
+.estate-verified-icon svg { width: 26px; height: 26px; }
+.estate-verified-card .estate-button { width: 100%; margin-top: 14px; }

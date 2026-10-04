@@ -32,6 +32,7 @@ type EstateAuthResponse = {
   verification_required?: boolean;
   email?: string;
   message?: string;
+  needs_plan?: boolean;
 };
 
 export type EstateRegistrationResult = EstateAuthSession | {
@@ -98,7 +99,10 @@ export const loginEstate = async (email: string, password: string) => {
   const response = await api.post<EstateAuthResponse>("/estates/auth/login", { email: email.trim(), password });
   const session = normalizeSession(response.data || {});
   setEstateAuthSession(session);
-  return session;
+  // needs_plan reflects whether the organization has an active subscription at this exact login
+  // moment - resolved server-side once, rather than left to the dashboard's own billing-gate
+  // effect firing after the dashboard has already rendered.
+  return { ...session, needs_plan: Boolean(response.data?.needs_plan) };
 };
 
 export const changeEstatePassword = async (currentPassword: string, newPassword: string) => {

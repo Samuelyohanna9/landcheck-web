@@ -51,6 +51,7 @@ const EstateLogin = lazyWithChunkRecovery(() => import("./pages/EstateLogin"));
 const EstateRegister = lazyWithChunkRecovery(() => import("./pages/EstateRegister"));
 const EstateForgotPassword = lazyWithChunkRecovery(() => import("./pages/EstateForgotPassword"));
 const EstateResetPassword = lazyWithChunkRecovery(() => import("./pages/EstateResetPassword"));
+const EstateEmailVerified = lazyWithChunkRecovery(() => import("./pages/EstateEmailVerified"));
 const EstateSetNewPassword = lazyWithChunkRecovery(() => import("./pages/EstateSetNewPassword"));
 const EstateChoosePlan = lazyWithChunkRecovery(() => import("./pages/EstateChoosePlan"));
 const EstateBillingPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateBillingPage"));
@@ -344,6 +345,7 @@ export default function App() {
               <Route path="/estates/register" element={<EstateRegister />} />
               <Route path="/estates/forgot-password" element={<EstateForgotPassword />} />
               <Route path="/estates/reset-password" element={<EstateResetPassword />} />
+              <Route path="/estates/email-verified" element={<EstateEmailVerified />} />
               <Route path="/estates/set-new-password" element={<EstateSetNewPassword />} />
               <Route path="/estates/choose-plan" element={<EstateProtectedRoute element={<EstateChoosePlan />} />} />
               <Route path="/estates/billing" element={<EstateProtectedRoute element={<EstateBillingPage />} />} />

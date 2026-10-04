@@ -696,6 +696,14 @@ export default function Estates() {
 Open the plans page now?`)) window.location.assign("/estates/billing");
         return;
       }
+      if (error?.response?.status === 402 && detail?.code === "subscription_required") {
+        // Shouldn't normally be reachable - EstateLogin and EstateShell both redirect to
+        // choose-plan before a no-subscription account can get this far - but if an existing
+        // trial expires while someone is already on the dashboard, send them to fix it directly
+        // instead of a bare error toast with no path forward.
+        window.location.assign("/estates/choose-plan");
+        return;
+      }
       toast.error(await extractApiErrorMessage(error, "Estate could not be created."));
     }
   };

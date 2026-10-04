@@ -30,8 +30,8 @@ export default function EstateLogin() {
     setError("");
     setBusy(true);
     try {
-      await loginEstate(email, password);
-      navigate(from, { replace: true });
+      const session = await loginEstate(email, password);
+      navigate(session.needs_plan ? "/estates/choose-plan" : from, { replace: true });
     } catch (err) {
       setError(await extractApiErrorMessage(err, "Sign-in failed. Check your email and password."));
     } finally {
