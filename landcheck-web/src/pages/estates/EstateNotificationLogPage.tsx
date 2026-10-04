@@ -35,8 +35,9 @@ const eventLabels: Record<string, string> = {
   social_post: "Marketing post",
   whatsapp_update: "WhatsApp update",
 };
-const channelLabels: Record<string, string> = { email: "Email", facebook: "Facebook Page", instagram: "Instagram post", instagram_story: "Instagram story", whatsapp_status: "WhatsApp Status", other: "Other", whatsapp: "WhatsApp" };
-type Group = "all" | "email" | "social" | "whatsapp";
+const channelLabels: Record<string, string> = { email: "Email", sms: "SMS", facebook: "Facebook Page", instagram: "Instagram post", instagram_story: "Instagram story", whatsapp_status: "WhatsApp Status", other: "Other", whatsapp: "WhatsApp" };
+const deliveryStatusLabels: Record<string, string> = { DELIVERED: "Delivered", "Message Sent": "Sent to network", "Message Failed": "Failed at network", "DND Active on Phone Number": "Blocked - recipient on DND" };
+type Group = "all" | "email" | "sms" | "social" | "whatsapp";
 
 function eventLabel(value: string) {
   return eventLabels[value] || value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -82,13 +83,13 @@ export default function EstateNotificationLogPage() {
         <div>
           <span className="edash-section-kicker">Communications</span>
           <h1>Message delivery</h1>
-          <p>A record of everything sent from this estate: customer emails, Facebook and Instagram posts, and WhatsApp updates - sent, failed or skipped.</p>
+          <p>A record of everything sent from this estate: customer emails and SMS, Facebook and Instagram posts, and WhatsApp updates - sent, failed or skipped.</p>
         </div>
         <button type="button" className="edash-btn-outline" disabled={busy} onClick={() => void load()}><EstateIcon name="activity" /> Refresh</button>
       </div>
 
       <div className="edash-mk-segment" role="group" aria-label="Message type" style={{ marginBottom: 12 }}>
-        {([["all", "Everything"], ["email", `Customer emails${groups.email !== undefined ? ` (${groups.email})` : ""}`], ["social", `Social posts${groups.social !== undefined ? ` (${groups.social})` : ""}`], ["whatsapp", `WhatsApp updates${groups.whatsapp !== undefined ? ` (${groups.whatsapp})` : ""}`]] as Array<[Group, string]>).map(([key, label]) => <button key={key} type="button" className={group === key ? "is-active" : ""} onClick={() => setGroup(key)}>{label}</button>)}
+        {([["all", "Everything"], ["email", `Customer emails${groups.email !== undefined ? ` (${groups.email})` : ""}`], ["sms", `SMS${groups.sms !== undefined ? ` (${groups.sms})` : ""}`], ["social", `Social posts${groups.social !== undefined ? ` (${groups.social})` : ""}`], ["whatsapp", `WhatsApp updates${groups.whatsapp !== undefined ? ` (${groups.whatsapp})` : ""}`]] as Array<[Group, string]>).map(([key, label]) => <button key={key} type="button" className={group === key ? "is-active" : ""} onClick={() => setGroup(key)}>{label}</button>)}
       </div>
       <div className="edash-notification-log-summary">
         <button type="button" className={filter === "all" ? "is-active" : ""} onClick={() => setFilter("all")}><span>All messages</span><strong>{total}</strong></button>
@@ -117,6 +118,11 @@ export default function EstateNotificationLogPage() {
                     <small>{row.subject || "Customer notification"} · {new Date(row.created_at).toLocaleString()}</small>
                     {row.details?.url ? <small><a href={String(row.details.url)} target="_blank" rel="noreferrer">View the post</a></small> : null}
                     {row.details?.post_id ? <small><Link to={`/estates/${estateId}/marketing/posts?post=${row.details.post_id}`}>Open in Social posts</Link></small> : null}
+                    {row.channel === "sms" && row.details?.delivery_status && (
+                      <small className={row.details.delivery_status === "DELIVERED" ? "edash-notification-log-delivered" : row.details.delivery_status === "Message Failed" ? "edash-notification-log-error" : undefined}>
+                        {deliveryStatusLabels[row.details.delivery_status] || row.details.delivery_status}
+                      </small>
+                    )}
                     {row.error_message && <small className="edash-notification-log-error">Delivery error: {row.error_message}</small>}
                     {row.details?.due_at && <small>Scheduled due date: {new Date(row.details.due_at).toLocaleDateString()}</small>}
                   </div>
@@ -124,7 +130,7 @@ export default function EstateNotificationLogPage() {
               ))}
             </div>
           ) : (
-            <div className="edash-ops-empty"><EstateIcon name="mail" /><strong>No messages in this view</strong><span>Customer emails, social posts and WhatsApp updates will appear here after they are attempted.</span></div>
+            <div className="edash-ops-empty"><EstateIcon name="mail" /><strong>No messages in this view</strong><span>Customer emails, SMS, social posts and WhatsApp updates will appear here after they are attempted.</span></div>
           )}
         </div>
       </div>

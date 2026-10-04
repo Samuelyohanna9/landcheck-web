@@ -2682,6 +2682,7 @@
 .edash-notification-log-main p, .edash-notification-log-main small { margin: 0; color: var(--edash-muted); font-size: 0.68rem; line-height: 1.35; }
 .edash-notification-log-main small { color: var(--edash-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .edash-notification-log-error { color: var(--edash-danger) !important; white-space: normal !important; }
+.edash-notification-log-delivered { color: var(--edash-good) !important; font-weight: 600; }
 
 @media (max-width: 1080px) {
   .edash-ops-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
