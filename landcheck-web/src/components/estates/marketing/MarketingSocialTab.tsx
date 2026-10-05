@@ -55,6 +55,11 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
   const [channels, setChannels] = useState<string[]>(["whatsapp_status"]);
   const [style, setStyle] = useState<AdStyle>("promo");
   const [includeMedia, setIncludeMedia] = useState(true);
+  const [customFile, setCustomFile] = useState<File | null>(null);
+  const [customCaption, setCustomCaption] = useState("");
+  const [customChannels, setCustomChannels] = useState<string[]>(["facebook"]);
+  const [customPosting, setCustomPosting] = useState(false);
+  const customFileInputRef = useRef<HTMLInputElement | null>(null);
   const [plotId, setPlotId] = useState("");
   const [campaignId, setCampaignId] = useState("");
   const [when, setWhen] = useState<"draft" | "now" | "later">("draft");
@@ -218,6 +223,26 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
       setBusy(null);
     }
   };
+  const toggleCustomChannel = (key: string) => setCustomChannels((current) => (current.includes(key) ? current.filter((entry) => entry !== key) : [...current, key]));
+  const postCustomPhoto = async () => {
+    if (!customFile || !customChannels.length) return;
+    setCustomPosting(true);
+    try {
+      const form = new FormData();
+      form.append("file", customFile);
+      form.append("caption", customCaption.trim());
+      form.append("channels", customChannels.join(","));
+      await api.post(`/estates/${estateId}/marketing/social/custom-post`, form);
+      toast.success("Posted.");
+      setCustomFile(null);
+      setCustomCaption("");
+      if (customFileInputRef.current) customFileInputRef.current.value = "";
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "The photo could not be posted."));
+    } finally {
+      setCustomPosting(false);
+    }
+  };
   const sendBroadcast = async () => {
     if (!window.confirm(`Send this WhatsApp update to ${optins?.active ?? 0} people who opted in?`)) return;
     setBusy("broadcast");
@@ -329,6 +354,33 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
             ) : (
               <div className="edash-mk-preview edash-sp-preview"><span>Text-only post - no image is generated or sent.</span></div>
             )}
+          </div>
+        </div>
+      </div></div>
+
+      <div className="edash-card"><div className="edash-card-inner">
+        <div className="edash-card-head"><h3 className="edash-card-title">Post your own photo</h3></div>
+        <p className="edash-mk-hint">Post a real site photo, handover photo or anything else of your own - instead of the auto-generated flyer. Posts immediately, straight to the channels you pick.</p>
+        <input ref={customFileInputRef} type="file" hidden accept="image/*" onChange={(event) => setCustomFile(event.target.files?.[0] || null)} />
+        <div className="edash-mk-form-grid" style={{ marginTop: 10 }}>
+          <div className="is-full">
+            {customFile ? (
+              <div className="edash-wa-attachment-chip"><span>{customFile.name}</span><button type="button" onClick={() => { setCustomFile(null); if (customFileInputRef.current) customFileInputRef.current.value = ""; }} aria-label="Remove photo">×</button></div>
+            ) : (
+              <button type="button" className="edash-btn-outline" onClick={() => customFileInputRef.current?.click()}><EstateIcon name="upload" />Choose a photo</button>
+            )}
+          </div>
+          <label className="edash-field is-wide"><span>Caption</span><textarea rows={3} value={customCaption} maxLength={2200} onChange={(event) => setCustomCaption(event.target.value)} style={{ fontFamily: "inherit" }} /></label>
+          <div className="is-full edash-sp-channels" style={{ maxWidth: 420 }}>
+            {["facebook", "instagram"].map((key) => (
+              <label key={key} className={`edash-sp-channel${customChannels.includes(key) ? " is-on" : ""}`}>
+                <input type="checkbox" checked={customChannels.includes(key)} onChange={() => toggleCustomChannel(key)} />
+                <span><strong>{key === "facebook" ? "Facebook Page" : "Instagram post"}</strong></span>
+              </label>
+            ))}
+          </div>
+          <div className="is-full" style={{ display: "flex", justifyContent: "flex-end" }}>
+            <button type="button" className="edash-btn-primary" disabled={customPosting || !customFile || !customChannels.length} onClick={() => void postCustomPhoto()}>{customPosting ? "Posting..." : "Post now"}</button>
           </div>
         </div>
       </div></div>
