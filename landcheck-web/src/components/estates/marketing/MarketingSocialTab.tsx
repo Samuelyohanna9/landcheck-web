@@ -206,6 +206,18 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
     try { await api.post(`/estates/marketing/social/accounts/${account.id}/set-default`); await loadOverview(); toast.success(`${account.name} is now where auto-posting sends ${account.provider === "facebook" ? "Facebook" : "Instagram"} posts.`); }
     catch (error) { toast.error(await extractApiErrorMessage(error, "Could not set as default.")); }
   };
+  const checkAccount = async (account: Account) => {
+    setBusy(`check-${account.id}`);
+    try {
+      const response = await api.post<{ healthy: boolean }>(`/estates/marketing/social/accounts/${account.id}/check`);
+      await loadOverview();
+      toast[response.data.healthy ? "success" : "error"](response.data.healthy ? `${account.name} is still connected.` : `${account.name}'s connection has expired - reconnect it.`);
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "Could not check this connection."));
+    } finally {
+      setBusy(null);
+    }
+  };
   const sendBroadcast = async () => {
     if (!window.confirm(`Send this WhatsApp update to ${optins?.active ?? 0} people who opted in?`)) return;
     setBusy("broadcast");
@@ -352,6 +364,7 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
                   ? <span className="edash-status-pill tone-good">Default</span>
                   : (canManage && account.status === "active" && <button type="button" className="edash-btn-outline" onClick={() => void setDefaultAccount(account)}>Set as default</button>))}
                 <span className={`edash-status-pill tone-${account.status === "active" ? "good" : "warn"}`}>{account.status === "active" ? "Connected" : "Reconnect needed"}</span>
+                {canManage && <button type="button" className="edash-btn-outline" disabled={busy === `check-${account.id}`} onClick={() => void checkAccount(account)}>{busy === `check-${account.id}` ? "Checking..." : "Check connection"}</button>}
                 {canManage && <button type="button" className="edash-btn-outline" onClick={() => void disconnect(account)}>Disconnect</button>}
               </div>
             );
