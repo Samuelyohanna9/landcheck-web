@@ -28,6 +28,7 @@ const includedGroups = [
       "Reservation alerts for your team",
       "Customers and allocations",
       "Payments and commissions",
+      "SMS and email updates for customers",
     ],
   },
 ];

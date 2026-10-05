@@ -3,10 +3,10 @@ import { useState } from "react";
 // Mirrors app/services/estates/billing_plans.py exactly - if the price ever changes, update both
 // (the backend is the source of truth for what's actually charged; this is display copy only).
 export const ESTATE_PLANS = {
-  basic: { label: "Basic", monthly: 19500, yearly: 220000, hazardAnalysis: false, autoPosting: false, soilAnalysis: false, maxEstates: 1 },
-  plus: { label: "Plus", monthly: 24500, yearly: 285000, hazardAnalysis: true, autoPosting: false, soilAnalysis: false, maxEstates: 3 },
-  pro: { label: "Pro", monthly: 48500, yearly: 533500, hazardAnalysis: true, autoPosting: true, soilAnalysis: true, maxEstates: 6 },
-  enterprise: { label: "Enterprise", monthly: 145000, yearly: 1595000, hazardAnalysis: true, autoPosting: true, soilAnalysis: true, maxEstates: null },
+  basic: { label: "Basic", monthly: 19500, yearly: 220000, hazardAnalysis: false, autoPosting: false, soilAnalysis: false, smsNotifications: false, maxEstates: 1 },
+  plus: { label: "Plus", monthly: 24500, yearly: 285000, hazardAnalysis: true, autoPosting: false, soilAnalysis: false, smsNotifications: false, maxEstates: 3 },
+  pro: { label: "Pro", monthly: 48500, yearly: 533500, hazardAnalysis: true, autoPosting: true, soilAnalysis: true, smsNotifications: true, maxEstates: 6 },
+  enterprise: { label: "Enterprise", monthly: 145000, yearly: 1595000, hazardAnalysis: true, autoPosting: true, soilAnalysis: true, smsNotifications: true, maxEstates: null },
 } as const;
 
 export type EstatePlanKey = keyof typeof ESTATE_PLANS;
@@ -42,6 +42,7 @@ const PLAN_FEATURES: Record<EstatePlanKey, string[]> = {
     "Auto-written posting plans, scheduled for you",
     "Five premium flyer, poster and ad designs",
     "Soil analysis - indicative bearing capacity, water table and drainage",
+    "SMS notifications to customers - payment reminders, allocation and milestone updates",
   ],
   enterprise: [
     "Unlimited estates",
