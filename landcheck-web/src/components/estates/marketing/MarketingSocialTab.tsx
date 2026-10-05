@@ -8,7 +8,7 @@ import MarketingAutoPlan from "./MarketingAutoPlan";
 import UpgradeNotice from "../UpgradeNotice";
 
 type Channel = { key: string; label: string; automatic: boolean; format: string };
-type Account = { id: number; provider: "facebook" | "instagram"; name: string; username?: string | null; status: string };
+type Account = { id: number; provider: "facebook" | "instagram"; name: string; username?: string | null; status: string; is_default?: boolean };
 type Overview = { meta_available: boolean; whatsapp_available: boolean; accounts: Account[]; channels: Channel[]; published: boolean; auto_posting?: boolean };
 type Template = { key: string; label: string; hint: string; caption: string };
 type Optins = {
@@ -23,22 +23,22 @@ type PlotOption = { id: number; plot_number: string };
 
 function PreviewImage({ estateId, params, alt }: { estateId: string; params: Record<string, unknown>; alt: string }) {
   const [url, setUrl] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failedReason, setFailedReason] = useState<string | null>(null);
   const key = JSON.stringify(params);
   useEffect(() => {
     let cancelled = false;
     let created: string | null = null;
     setUrl(null);
-    setFailed(false);
+    setFailedReason(null);
     fetchBlobUrl(`/estates/${estateId}/marketing/social/image.png`, params).then((value) => {
       if (cancelled) { URL.revokeObjectURL(value); return; }
       created = value;
       setUrl(value);
-    }).catch(() => { if (!cancelled) setFailed(true); });
+    }).catch(async (error) => { if (!cancelled) setFailedReason(await extractApiErrorMessage(error, "Preview unavailable.")); });
     return () => { cancelled = true; if (created) URL.revokeObjectURL(created); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [estateId, key]);
-  return <div className="edash-mk-preview edash-sp-preview">{url ? <img src={url} alt={alt} /> : failed ? <span>Preview unavailable</span> : <span>Preparing preview...</span>}</div>;
+  return <div className="edash-mk-preview edash-sp-preview">{url ? <img src={url} alt={alt} /> : failedReason ? <span>{failedReason}</span> : <span>Preparing preview...</span>}</div>;
 }
 
 export default function MarketingSocialTab({ estateId, estateName, canManage, published }: { estateId: string; estateName: string; canManage: boolean; published: boolean }) {
@@ -193,6 +193,10 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
     try { await api.delete(`/estates/marketing/social/accounts/${account.id}`); await loadOverview(); toast.success("Disconnected."); }
     catch (error) { toast.error(await extractApiErrorMessage(error, "Could not disconnect.")); }
   };
+  const setDefaultAccount = async (account: Account) => {
+    try { await api.post(`/estates/marketing/social/accounts/${account.id}/set-default`); await loadOverview(); toast.success(`${account.name} is now where auto-posting sends ${account.provider === "facebook" ? "Facebook" : "Instagram"} posts.`); }
+    catch (error) { toast.error(await extractApiErrorMessage(error, "Could not set as default.")); }
+  };
   const sendBroadcast = async () => {
     if (!window.confirm(`Send this WhatsApp update to ${optins?.active ?? 0} people who opted in?`)) return;
     setBusy("broadcast");
@@ -312,14 +316,23 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
           {overview?.auto_posting === false && <UpgradeNotice title="Post to Facebook and Instagram automatically" message="Connecting your Pages and posting straight from LandCheck is included in the Pro and Enterprise plans." cta="Upgrade to Pro" />}
           {overview?.auto_posting !== false && !overview?.meta_available && <p className="edash-mk-hint">Automatic posting to Facebook and Instagram is being switched on (Meta approval is in progress). Until then, use Copy caption, Download image and Share to Status.</p>}
           {overview?.meta_available && overview.accounts.length === 0 && <p className="edash-mk-hint">Connect the Facebook Page (and the Instagram Business account linked to it) that you want to post to. You choose which Pages to share, and can disconnect any time.</p>}
-          {[...facebookAccounts, ...instagramAccounts].map((account) => (
-            <div key={account.id} className="edash-sp-account">
-              <span className="edash-sp-account-icon"><EstateIcon name={account.provider === "facebook" ? "share" : "camera"} /></span>
-              <div><strong>{account.name}</strong><small>{account.provider === "facebook" ? "Facebook Page" : `Instagram${account.username ? ` @${account.username}` : ""}`}</small></div>
-              <span className={`edash-status-pill tone-${account.status === "active" ? "good" : "warn"}`}>{account.status === "active" ? "Connected" : "Reconnect needed"}</span>
-              {canManage && <button type="button" className="edash-btn-outline" onClick={() => void disconnect(account)}>Disconnect</button>}
-            </div>
-          ))}
+          {(facebookAccounts.length > 1 || instagramAccounts.length > 1) && (
+            <p className="edash-mk-hint">You've connected more than one {facebookAccounts.length > 1 ? "Facebook Page" : "Instagram account"} - auto-posting only sends to the one marked Default below.</p>
+          )}
+          {[...facebookAccounts, ...instagramAccounts].map((account) => {
+            const siblingCount = (account.provider === "facebook" ? facebookAccounts : instagramAccounts).length;
+            return (
+              <div key={account.id} className="edash-sp-account">
+                <span className="edash-sp-account-icon"><EstateIcon name={account.provider === "facebook" ? "share" : "camera"} /></span>
+                <div><strong>{account.name}</strong><small>{account.provider === "facebook" ? "Facebook Page" : `Instagram${account.username ? ` @${account.username}` : ""}`}</small></div>
+                {siblingCount > 1 && (account.is_default
+                  ? <span className="edash-status-pill tone-good">Default</span>
+                  : (canManage && account.status === "active" && <button type="button" className="edash-btn-outline" onClick={() => void setDefaultAccount(account)}>Set as default</button>))}
+                <span className={`edash-status-pill tone-${account.status === "active" ? "good" : "warn"}`}>{account.status === "active" ? "Connected" : "Reconnect needed"}</span>
+                {canManage && <button type="button" className="edash-btn-outline" onClick={() => void disconnect(account)}>Disconnect</button>}
+              </div>
+            );
+          })}
         </div></div>
 
         <div className="edash-card"><div className="edash-card-inner">
