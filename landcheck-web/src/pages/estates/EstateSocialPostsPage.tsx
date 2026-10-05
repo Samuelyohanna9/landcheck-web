@@ -260,12 +260,6 @@ export default function EstateSocialPostsPage() {
                                           ))}
                                         </details>
                                       )}
-                                      {(key === "facebook" || key === "instagram") && (
-                                        <div className="edash-sp-comment-box">
-                                          <textarea rows={2} maxLength={2200} placeholder="Write a comment on this post..." value={commentDraft[`${post.id}-${key}-post`] || ""} onChange={(event) => setCommentDraft((current) => ({ ...current, [`${post.id}-${key}-post`]: event.target.value }))} />
-                                          <button type="button" className="edash-btn-outline" disabled={busy === `comment-${post.id}-${key}-post` || !(commentDraft[`${post.id}-${key}-post`] || "").trim()} onClick={() => void postComment(post, key, (commentDraft[`${post.id}-${key}-post`] || "").trim())}>Post comment</button>
-                                        </div>
-                                      )}
                                       {(result.stats.reaction_list || []).length > 0 && (
                                         <details className="edash-sp-details-list">
                                           <summary>Reactions ({result.stats.reaction_list?.length})</summary>
@@ -276,6 +270,12 @@ export default function EstateSocialPostsPage() {
                                       )}
                                     </div>
                                   )}
+                            {(key === "facebook" || key === "instagram") && result.status === "ok" && canManage && (
+                                  <div className="edash-sp-comment-box">
+                                    <textarea rows={2} maxLength={2200} placeholder="Write a comment on this post..." value={commentDraft[`${post.id}-${key}-post`] || ""} onChange={(event) => setCommentDraft((current) => ({ ...current, [`${post.id}-${key}-post`]: event.target.value }))} />
+                                    <button type="button" className="edash-btn-outline" disabled={busy === `comment-${post.id}-${key}-post` || !(commentDraft[`${post.id}-${key}-post`] || "").trim()} onClick={() => void postComment(post, key, (commentDraft[`${post.id}-${key}-post`] || "").trim())}>Post comment</button>
+                                  </div>
+                                )}
                                   {automatic && result.status === "ok" && canManage && (
                                     <span className="edash-sp-result-actions">
                                       <button type="button" className="edash-sp-link-btn" disabled={busy === `stats-${post.id}-${key}`} onClick={() => void refreshStats(post, key)}>{busy === `stats-${post.id}-${key}` ? "Loading..." : result.stats ? "Refresh stats" : "Load stats"}</button>
