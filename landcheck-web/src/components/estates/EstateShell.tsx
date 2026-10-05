@@ -181,6 +181,7 @@ export default function EstateShell({
   const [deliverySeenTimestamp, setDeliverySeenTimestamp] = useState<string | null>(() => {
     try { return window.localStorage.getItem(deliverySeenStorageKey); } catch { return null; }
   });
+  const [whatsappUnreadCount, setWhatsappUnreadCount] = useState(0);
   const [newReservationCount, setNewReservationCount] = useState(0);
   const [newReservationLatestId, setNewReservationLatestId] = useState<number | null>(null);
   const [showReservationNotice, setShowReservationNotice] = useState(false);
@@ -273,6 +274,13 @@ export default function EstateShell({
         setDeliveryRows(items.map((item: DeliverySignal) => ({ id: Number(item.id), created_at: String(item.created_at || "") })).filter((item: DeliverySignal) => item.created_at));
       })
       .catch(() => { if (mounted) setDeliveryRows([]); });
+    api.get(`/estates/${estateId}/marketing/social/whatsapp/conversations`)
+      .then((response) => {
+        if (!mounted) return;
+        const items = Array.isArray(response.data?.items) ? response.data.items : [];
+        setWhatsappUnreadCount(items.reduce((total: number, item: { unread_count?: number }) => total + Number(item.unread_count || 0), 0));
+      })
+      .catch(() => { if (mounted) setWhatsappUnreadCount(0); });
     api.get(`/estates/${estateId}/reservation-requests`, { params: { status: "new", page: 1, page_size: 1 } })
       .then((response) => {
         if (!mounted) return;
@@ -286,7 +294,7 @@ export default function EstateShell({
       })
       .catch(() => { if (mounted) { setNewReservationCount(0); setNewReservationLatestId(null); } });
     return () => { mounted = false; };
-  }, [estateId, reservationNoticeStorageKey]);
+  }, [estateId, reservationNoticeStorageKey, activeKey]);
 
   useEffect(() => {
     if (activeKey === "notifications") markDeliverySeen();
@@ -440,6 +448,7 @@ export default function EstateShell({
                 <span className="edash-nav-icon"><EstateIcon name={locked ? "lock" : item.icon} /></span>
                 <span className="edash-nav-label">{item.label}</span>
                 {item.key === "notifications" && unreadDeliveryCount > 0 && <span className="edash-nav-badge">{unreadDeliveryCount > 99 ? "99+" : unreadDeliveryCount}</span>}
+                {item.key === "whatsapp" && whatsappUnreadCount > 0 && <span className="edash-nav-badge">{whatsappUnreadCount > 99 ? "99+" : whatsappUnreadCount}</span>}
               </Link>
             );
           })}

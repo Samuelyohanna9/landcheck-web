@@ -28,6 +28,18 @@ type Message = {
   read_by_staff_at?: string | null;
 };
 
+function MessageTicks({ status }: { status: string }) {
+  if (status === "failed") return null;
+  const double = status === "delivered" || status === "read";
+  const color = status === "read" ? "#53bdeb" : "currentColor";
+  return (
+    <svg className="edash-wa-tick" width={double ? "17" : "12"} height="11" viewBox={double ? "0 0 17 11" : "0 0 12 11"} fill="none" aria-hidden="true">
+      <path d="M1 5.5 4 8.5 9.5 1.5" stroke={color} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      {double && <path d="M6 5.5 9 8.5 14.5 1.5" stroke={color} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />}
+    </svg>
+  );
+}
+
 function MessageMedia({ message }: { message: Message }) {
   if (!message.has_media || !message.media_url) return null;
   const src = `${API_URL}${message.media_url}`;
@@ -150,7 +162,10 @@ export default function EstateWhatsappInboxPage() {
                     <div key={message.id} className={`edash-wa-bubble is-${message.direction}`}>
                       {message.body && <p>{message.body}</p>}
                       <MessageMedia message={message} />
-                      <small>{formatLagos(message.created_at, { hour: "numeric", minute: "2-digit" })}{message.status === "failed" ? " · failed to send" : ""}</small>
+                      <small className="edash-wa-bubble-meta">
+                        {formatLagos(message.created_at, { hour: "numeric", minute: "2-digit" })}{message.status === "failed" ? " · failed to send" : ""}
+                        {message.direction === "out" && <MessageTicks status={message.status} />}
+                      </small>
                     </div>
                   ))}
                   <div ref={threadEndRef} />

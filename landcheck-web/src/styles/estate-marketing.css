@@ -286,6 +286,8 @@
 .edash-wa-bubble.is-out { align-self: flex-end; background: var(--edash-brand-tint); }
 .edash-wa-bubble p { margin: 0 0 4px; font-size: .84rem; color: var(--edash-ink); white-space: pre-wrap; }
 .edash-wa-bubble small { font-size: .66rem; color: var(--edash-muted); }
+.edash-wa-bubble-meta { display: inline-flex; align-items: center; gap: 4px; }
+.edash-wa-tick { flex-shrink: 0; color: var(--edash-muted); }
 .edash-wa-media-image { display: block; max-width: 220px; border-radius: 8px; margin-bottom: 6px; }
 .edash-wa-media-file { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: .8rem; font-weight: 700; color: var(--edash-brand-dark); }
 .edash-wa-reply { display: flex; gap: 8px; align-items: flex-end; padding: 12px 16px; border-top: 1px solid var(--edash-border-soft); }
