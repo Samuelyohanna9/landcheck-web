@@ -8,7 +8,7 @@ import EstateIcon from "../../components/estates/EstateIcon";
 import { AD_STYLES, fetchBlobUrl, formatLagos, fromLagosInput, lagosDayKey, toLagosInput } from "../../utils/estateMarketing";
 import "../../styles/estate-marketing.css";
 
-type Engagement = { name: string; message?: string; created_time?: string; likes?: number };
+type Engagement = { id?: string; name: string; message?: string; created_time?: string; likes?: number };
 type Stats = { likes: number; comments: number; shares?: number; comment_list?: Engagement[]; reaction_list?: { name: string; type: string }[]; unavailable?: string | null };
 type Result = { status: "ok" | "failed" | "pending" | "skipped" | "deleted"; error?: string; url?: string; stats?: Stats; stats_fetched_at?: string; deleted_at?: string };
 type Post = {
@@ -77,6 +77,8 @@ export default function EstateSocialPostsPage() {
   const [openId, setOpenId] = useState<number | null>(Number(searchParams.get("post")) || null);
   const [draft, setDraft] = useState<{ caption: string; when: string; channels: string[]; style: string; includeMedia: boolean } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [commentDraft, setCommentDraft] = useState<Record<string, string>>({});
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!estateId) return;
@@ -137,6 +139,13 @@ export default function EstateSocialPostsPage() {
   const cancel = (post: Post) => window.confirm("Cancel this post? It will not be sent.") && run(`cancel-${post.id}`, async () => { await api.patch(`/estates/marketing/social/posts/${post.id}`, { cancel: true }); setOpenId(null); setDraft(null); }, "Could not cancel.");
   const markPosted = (post: Post, channel: string) => run(`mark-${post.id}`, async () => { await api.post(`/estates/marketing/social/posts/${post.id}/mark-posted`, { channel }); }, "Could not update the post.");
   const deleteFromChannel = (post: Post, channel: string) => window.confirm(`Delete this post from ${CHANNEL_SHORT[channel] || channel}? This removes it from the live Page/account - it can't be undone.`) && run(`delete-${post.id}-${channel}`, async () => { await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/delete`); toast.success(`Removed from ${CHANNEL_SHORT[channel] || channel}.`); }, "The post could not be deleted.");
+  const postComment = (post: Post, channel: string, message: string, replyToId?: string) => run(`comment-${post.id}-${channel}-${replyToId || "post"}`, async () => {
+    await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/comment`, { message, reply_to_id: replyToId || null });
+    toast.success(replyToId ? "Reply posted." : "Comment posted.");
+    setCommentDraft((current) => ({ ...current, [`${post.id}-${channel}-${replyToId || "post"}`]: "" }));
+    setReplyingTo(null);
+    await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/refresh-stats`);
+  }, "The comment could not be posted.");
   const refreshStats = (post: Post, channel: string) => run(`stats-${post.id}-${channel}`, async () => { await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/refresh-stats`); }, "Engagement stats could not be loaded.");
 
   if (!estateId) return null;
@@ -233,9 +242,23 @@ export default function EstateSocialPostsPage() {
                                         <details className="edash-sp-details-list">
                                           <summary>Comments ({result.stats.comment_list?.length})</summary>
                                           {result.stats.comment_list?.map((comment, index) => (
-                                            <div key={index} className="edash-sp-engagement-row"><strong>{comment.name}</strong><span>{comment.message}</span>{comment.created_time && <small>{formatLagos(comment.created_time, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</small>}</div>
+                                            <div key={index}>
+                                              <div className="edash-sp-engagement-row"><strong>{comment.name}</strong><span>{comment.message}</span>{comment.created_time && <small>{formatLagos(comment.created_time, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</small>}{comment.id && (key === "facebook" || key === "instagram") && <button type="button" className="edash-sp-link-btn" onClick={() => setReplyingTo(replyingTo === `${post.id}-${key}-${comment.id}` ? null : `${post.id}-${key}-${comment.id}`)}>Reply</button>}</div>
+                                              {comment.id && replyingTo === `${post.id}-${key}-${comment.id}` && (
+                                                <div className="edash-sp-comment-box edash-sp-reply-box">
+                                                  <textarea rows={2} maxLength={2200} placeholder={`Reply to ${comment.name}...`} value={commentDraft[`${post.id}-${key}-${comment.id}`] || ""} onChange={(event) => setCommentDraft((current) => ({ ...current, [`${post.id}-${key}-${comment.id}`]: event.target.value }))} />
+                                                  <button type="button" className="edash-btn-outline" disabled={!(commentDraft[`${post.id}-${key}-${comment.id}`] || "").trim()} onClick={() => void postComment(post, key, (commentDraft[`${post.id}-${key}-${comment.id}`] || "").trim(), comment.id)}>Send reply</button>
+                                                </div>
+                                              )}
+                                            </div>
                                           ))}
                                         </details>
+                                      )}
+                                      {(key === "facebook" || key === "instagram") && (
+                                        <div className="edash-sp-comment-box">
+                                          <textarea rows={2} maxLength={2200} placeholder="Write a comment on this post..." value={commentDraft[`${post.id}-${key}-post`] || ""} onChange={(event) => setCommentDraft((current) => ({ ...current, [`${post.id}-${key}-post`]: event.target.value }))} />
+                                          <button type="button" className="edash-btn-outline" disabled={busy === `comment-${post.id}-${key}-post` || !(commentDraft[`${post.id}-${key}-post`] || "").trim()} onClick={() => void postComment(post, key, (commentDraft[`${post.id}-${key}-post`] || "").trim())}>Post comment</button>
+                                        </div>
                                       )}
                                       {(result.stats.reaction_list || []).length > 0 && (
                                         <details className="edash-sp-details-list">

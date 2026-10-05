@@ -312,3 +312,6 @@
 .edash-sp-engagement-row { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 2fr) auto; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--edash-border-soft); align-items: baseline; }
 .edash-sp-engagement-row span { color: var(--edash-ink); overflow-wrap: anywhere; }
 .edash-sp-engagement-row small { color: var(--edash-muted); white-space: nowrap; }
+.edash-sp-comment-box { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin: 6px 0; }
+.edash-sp-comment-box textarea { width: 100%; box-sizing: border-box; resize: vertical; border: 1px solid var(--edash-border); border-radius: 8px; padding: 7px 9px; font: inherit; font-size: .8rem; }
+.edash-sp-reply-box { margin-left: 16px; }
