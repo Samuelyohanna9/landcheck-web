@@ -139,6 +139,10 @@ export default function EstateSocialPostsPage() {
   const cancel = (post: Post) => window.confirm("Cancel this post? It will not be sent.") && run(`cancel-${post.id}`, async () => { await api.patch(`/estates/marketing/social/posts/${post.id}`, { cancel: true }); setOpenId(null); setDraft(null); }, "Could not cancel.");
   const markPosted = (post: Post, channel: string) => run(`mark-${post.id}`, async () => { await api.post(`/estates/marketing/social/posts/${post.id}/mark-posted`, { channel }); }, "Could not update the post.");
   const deleteFromChannel = (post: Post, channel: string) => window.confirm(`Delete this post from ${CHANNEL_SHORT[channel] || channel}? This removes it from the live Page/account - it can't be undone.`) && run(`delete-${post.id}-${channel}`, async () => { await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/delete`); toast.success(`Removed from ${CHANNEL_SHORT[channel] || channel}.`); }, "The post could not be deleted.");
+  const likeTarget = (post: Post, channel: string, targetId?: string) => run(`like-${post.id}-${channel}-${targetId || "post"}`, async () => {
+    await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/like`, targetId ? { target_id: targetId } : {});
+    toast.success(targetId ? "Comment liked." : "Post liked.");
+  }, "The like could not be added.");
   const postComment = (post: Post, channel: string, message: string, replyToId?: string) => run(`comment-${post.id}-${channel}-${replyToId || "post"}`, async () => {
     await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/comment`, { message, reply_to_id: replyToId || null });
     toast.success(replyToId ? "Reply posted." : "Comment posted.");
@@ -243,7 +247,9 @@ export default function EstateSocialPostsPage() {
                                           <summary>Comments ({result.stats.comment_list?.length})</summary>
                                           {result.stats.comment_list?.map((comment, index) => (
                                             <div key={index}>
-                                              <div className="edash-sp-engagement-row"><strong>{comment.name}</strong><span>{comment.message}</span>{comment.created_time && <small>{formatLagos(comment.created_time, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</small>}{comment.id && (key === "facebook" || key === "instagram") && <button type="button" className="edash-sp-link-btn" onClick={() => setReplyingTo(replyingTo === `${post.id}-${key}-${comment.id}` ? null : `${post.id}-${key}-${comment.id}`)}>Reply</button>}</div>
+                                              <div className="edash-sp-engagement-row"><strong>{comment.name}</strong><span>{comment.message}</span>{comment.created_time && <small>{formatLagos(comment.created_time, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</small>}{comment.id && (key === "facebook" || key === "instagram") && (<>
+<button type="button" className="edash-sp-link-btn" onClick={() => void likeTarget(post, key, comment.id)}>Like</button><button type="button" className="edash-sp-link-btn" onClick={() => setReplyingTo(replyingTo === `${post.id}-${key}-${comment.id}` ? null : `${post.id}-${key}-${comment.id}`)}>Reply</button>
+</>)}</div>
                                               {comment.id && replyingTo === `${post.id}-${key}-${comment.id}` && (
                                                 <div className="edash-sp-comment-box edash-sp-reply-box">
                                                   <textarea rows={2} maxLength={2200} placeholder={`Reply to ${comment.name}...`} value={commentDraft[`${post.id}-${key}-${comment.id}`] || ""} onChange={(event) => setCommentDraft((current) => ({ ...current, [`${post.id}-${key}-${comment.id}`]: event.target.value }))} />
@@ -273,7 +279,8 @@ export default function EstateSocialPostsPage() {
                                   {automatic && result.status === "ok" && canManage && (
                                     <span className="edash-sp-result-actions">
                                       <button type="button" className="edash-sp-link-btn" disabled={busy === `stats-${post.id}-${key}`} onClick={() => void refreshStats(post, key)}>{busy === `stats-${post.id}-${key}` ? "Loading..." : result.stats ? "Refresh stats" : "Load stats"}</button>
-                                      <button type="button" className="edash-sp-link-btn is-danger" disabled={busy === `delete-${post.id}-${key}`} onClick={() => void deleteFromChannel(post, key)}>{busy === `delete-${post.id}-${key}` ? "Deleting..." : "Delete"}</button>
+                                      <button type="button" className="edash-sp-link-btn" disabled={busy === `like-${post.id}-${key}-post`} onClick={() => void likeTarget(post, key)}>Like post</button>
+                                  <button type="button" className="edash-sp-link-btn is-danger" disabled={busy === `delete-${post.id}-${key}`} onClick={() => void deleteFromChannel(post, key)}>{busy === `delete-${post.id}-${key}` ? "Deleting..." : "Delete"}</button>
                                     </span>
                                   )}
                                 </div>
