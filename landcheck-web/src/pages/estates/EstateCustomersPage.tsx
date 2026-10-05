@@ -8,18 +8,6 @@ import EstateIcon from "../../components/estates/EstateIcon";
 import EstateModal from "../../components/estates/EstateModal";
 import EstatePagination from "../../components/estates/EstatePagination";
 
-const SMS_MAX_CHARS = 320;
-const SMS_MAX_RECIPIENTS = 50;
-const GSM_CHARS = /^[\x20-\x7E\n\r€^{}\\[~\]|]*$/;
-
-function smsSegmentLabel(text: string): string {
-  if (!text) return "1 SMS";
-  const unicode = !GSM_CHARS.test(text);
-  const length = text.length;
-  const segments = length <= (unicode ? 70 : 160) ? 1 : Math.ceil(length / (unicode ? 67 : 153));
-  return `${segments} SMS${segments === 1 ? "" : " segments"}${unicode ? " (special characters)" : ""}`;
-}
-
 export default function EstateCustomersPage() {
   const { estateId } = useParams();
   const [estateName, setEstateName] = useState("");
@@ -44,9 +32,6 @@ export default function EstateCustomersPage() {
   const [waPreset, setWaPreset] = useState("");
   const [waDetail, setWaDetail] = useState("");
   const [waSending, setWaSending] = useState(false);
-  const [smsSelected, setSmsSelected] = useState<number[]>([]);
-  const [smsText, setSmsText] = useState("");
-  const [smsSending, setSmsSending] = useState(false);
 
   const load = () => {
     if (!estateId) return;
@@ -100,25 +85,6 @@ export default function EstateCustomersPage() {
       toast.success("Buyer portal link created and copied.");
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "Buyer portal link could not be created."));
-    }
-  };
-
-  const sendBulkSms = async () => {
-    if (!estateId || !smsText.trim() || !smsSelected.length) return;
-    setSmsSending(true);
-    try {
-      const response = await api.post<{ sent: number; failed: number; skipped_no_phone: number }>(`/estates/${estateId}/customers/sms`, { customer_ids: smsSelected, message: smsText.trim() });
-      const { sent, failed, skipped_no_phone: skipped } = response.data;
-      const parts = [`${sent} sent`];
-      if (failed) parts.push(`${failed} failed`);
-      if (skipped) parts.push(`${skipped} skipped (no phone number)`);
-      toast.success(parts.join(" · "));
-      setSmsText("");
-      setSmsSelected([]);
-    } catch (error) {
-      toast.error(await extractApiErrorMessage(error, "The SMS could not be sent."));
-    } finally {
-      setSmsSending(false);
     }
   };
 
@@ -180,42 +146,20 @@ export default function EstateCustomersPage() {
               </button>
             </div>
             {customersLoading ? <p className="edash-tab-empty">Loading customers...</p> : customers.length ? (
-              <>
-                <label className="edash-sms-select-all">
-                  <input type="checkbox" checked={customers.length > 0 && customers.every((customer) => smsSelected.includes(customer.id))} onChange={(event) => setSmsSelected(event.target.checked ? customers.map((customer) => customer.id) : [])} />
-                  <span>Select all on this page</span>
-                </label>
-                <div className="edash-activity-list">
-                  {customers.map((customer) => (
-                    <div
-                      key={customer.id}
-                      className="edash-info-card"
-                      style={{ cursor: "pointer", margin: 0, marginBottom: 8, borderColor: selectedId === String(customer.id) ? "var(--edash-brand)" : undefined }}
-                      onClick={() => void chooseCustomer(String(customer.id))}
-                    >
-                      <label className="edash-sms-check" onClick={(event) => event.stopPropagation()}>
-                        <input type="checkbox" checked={smsSelected.includes(customer.id)} onChange={(event) => setSmsSelected((current) => (event.target.checked ? [...current, customer.id] : current.filter((id) => id !== customer.id)))} aria-label={`Select ${customer.name} for SMS`} />
-                      </label>
-                      <span className="edash-info-card-icon"><EstateIcon name="customers" /></span>
-                      <div className="edash-info-card-body"><p className="edash-info-card-name">{customer.name}</p></div>
-                      <button type="button" className="edash-btn-outline edash-info-card-action">View</button>
-                    </div>
-                  ))}
-                </div>
-                {smsSelected.length > 0 && (
-                  <div className="edash-sms-compose">
-                    <div className="edash-sms-compose-head">
-                      <strong>SMS to {smsSelected.length} customer{smsSelected.length === 1 ? "" : "s"}</strong>
-                      <button type="button" className="edash-card-link" onClick={() => setSmsSelected([])}>Clear selection</button>
-                    </div>
-                    <textarea rows={3} value={smsText} maxLength={SMS_MAX_CHARS} placeholder="Write your message..." onChange={(event) => setSmsText(event.target.value)} />
-                    <div className="edash-sms-compose-foot">
-                      <small>{smsText.length}/{SMS_MAX_CHARS} characters · {smsSegmentLabel(smsText)}{smsSelected.length > SMS_MAX_RECIPIENTS ? ` · max ${SMS_MAX_RECIPIENTS} per send` : ""}</small>
-                      <button type="button" className="edash-btn-primary" disabled={smsSending || !smsText.trim() || smsSelected.length > SMS_MAX_RECIPIENTS} onClick={() => void sendBulkSms()}>{smsSending ? "Sending..." : "Send SMS"}</button>
-                    </div>
+              <div className="edash-activity-list">
+                {customers.map((customer) => (
+                  <div
+                    key={customer.id}
+                    className="edash-info-card"
+                    style={{ cursor: "pointer", margin: 0, marginBottom: 8, borderColor: selectedId === String(customer.id) ? "var(--edash-brand)" : undefined }}
+                    onClick={() => void chooseCustomer(String(customer.id))}
+                  >
+                    <span className="edash-info-card-icon"><EstateIcon name="customers" /></span>
+                    <div className="edash-info-card-body"><p className="edash-info-card-name">{customer.name}</p></div>
+                    <button type="button" className="edash-btn-outline edash-info-card-action">View</button>
                   </div>
-                )}
-              </>
+                ))}
+              </div>
             ) : (
               <p className="edash-tab-empty">No customers yet. Use "Add customer" to create your first one.</p>
             )}

@@ -13,7 +13,7 @@ import "../../styles/estate-monday.css";
 import "../../styles/estate-legal.css";
 
 export type EstateNavKey =
-  | "dashboard" | "map" | "plots" | "customers" | "payments" | "commissions" | "marketing" | "whatsapp" | "survey" | "staking"
+  | "dashboard" | "map" | "plots" | "customers" | "payments" | "commissions" | "marketing" | "whatsapp" | "sms" | "survey" | "staking"
   | "documents" | "development" | "hazard" | "soil" | "reports" | "audit" | "public_site" | "settings" | "notifications"
   | "access";
 
@@ -26,6 +26,7 @@ export const estateNavItems: Array<{ key: EstateNavKey; label: string; icon: Est
   { key: "commissions", label: "Commissions", icon: "wallet", path: () => "/estates/commissions" },
   { key: "marketing", label: "Marketing", icon: "megaphone", path: (id) => `/estates/${id}/marketing` },
   { key: "whatsapp", label: "WhatsApp Inbox", icon: "whatsapp", path: (id) => `/estates/${id}/marketing/whatsapp` },
+  { key: "sms", label: "SMS", icon: "mail", path: (id) => `/estates/${id}/sms` },
   { key: "survey", label: "Survey", icon: "survey", path: (id) => `/estates/${id}/survey` },
   { key: "staking", label: "Staking", icon: "staking", path: (id) => `/estates/${id}/staking` },
   { key: "documents", label: "Documents", icon: "documents", path: () => "/estates/documents" },
@@ -54,6 +55,7 @@ const NAV_PERMISSION: Partial<Record<EstateNavKey, string>> = {
   commissions: "allocation.read",
   marketing: "marketing.manage",
   whatsapp: "marketing.manage",
+  sms: "customer.manage",
   survey: "survey.read",
   staking: "staking.read",
   documents: "document.read",

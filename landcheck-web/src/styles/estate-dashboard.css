@@ -2710,10 +2710,22 @@
   .edash-notification-log-head { align-items: flex-start; }
 }
 
-/* ─── Bulk SMS to customers ─── */
-.edash-sms-select-all { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: .78rem; color: var(--edash-muted); cursor: pointer; }
-.edash-sms-check { display: flex; align-items: center; padding: 0 6px 0 0; cursor: pointer; }
-.edash-sms-compose { margin-top: 12px; padding: 12px; border: 1px solid var(--edash-border); border-radius: var(--edash-radius-md); background: var(--edash-surface); display: flex; flex-direction: column; gap: 8px; }
-.edash-sms-compose-head, .edash-sms-compose-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.edash-sms-compose textarea { width: 100%; box-sizing: border-box; resize: vertical; border: 1px solid var(--edash-border); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: .84rem; }
-.edash-sms-compose-foot small { color: var(--edash-muted); font-size: .72rem; }
+/* ─── SMS to customers ─── */
+.edash-sms-layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.edash-sms-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.edash-sms-search { width: 100%; box-sizing: border-box; margin-bottom: 10px; border: 1px solid var(--edash-border); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: .84rem; }
+.edash-sms-select-all { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: .78rem; color: var(--edash-muted); cursor: pointer; }
+.edash-sms-list { display: flex; flex-direction: column; border: 1px solid var(--edash-border-soft); border-radius: 10px; overflow: hidden; }
+.edash-sms-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--edash-border-soft); cursor: pointer; font-size: .84rem; }
+.edash-sms-row:last-child { border-bottom: none; }
+.edash-sms-row:hover { background: var(--edash-neutral-tint); }
+.edash-sms-row-name { flex: 1; min-width: 0; font-weight: 600; color: var(--edash-ink); }
+.edash-sms-row small { color: var(--edash-muted); font-size: .72rem; }
+.edash-sms-text { width: 100%; box-sizing: border-box; resize: vertical; border: 1px solid var(--edash-border); border-radius: 8px; padding: 10px 12px; font: inherit; font-size: .88rem; }
+.edash-sms-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.edash-sms-foot small { color: var(--edash-muted); font-size: .74rem; }
+.edash-sms-history { display: flex; flex-direction: column; }
+.edash-sms-history-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding: 10px 0; border-bottom: 1px solid var(--edash-border-soft); align-items: center; }
+.edash-sms-history-row > div { min-width: 0; display: flex; flex-direction: column; }
+.edash-sms-history-row small { color: var(--edash-muted); font-size: .72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 900px) { .edash-sms-layout { grid-template-columns: 1fr; } }
