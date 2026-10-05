@@ -171,6 +171,7 @@
 .edash-sp-account small { color: var(--edash-muted); }
 .edash-sp-account-icon { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 6px; background: var(--edash-brand-tint); color: var(--edash-brand-dark); }
 .edash-sp-account-icon svg { width: 16px; height: 16px; }
+.edash-sp-account-avatar { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
 .edash-sp-details { margin-top: 10px; font-size: .84rem; }
 .edash-sp-details summary { cursor: pointer; color: var(--edash-brand-dark); font-weight: 500; }
 .edash-sp-details p { margin: 8px 0 0; color: var(--edash-muted); }

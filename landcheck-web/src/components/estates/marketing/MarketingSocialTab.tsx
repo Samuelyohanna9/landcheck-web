@@ -8,7 +8,7 @@ import MarketingAutoPlan from "./MarketingAutoPlan";
 import UpgradeNotice from "../UpgradeNotice";
 
 type Channel = { key: string; label: string; automatic: boolean; format: string };
-type Account = { id: number; provider: "facebook" | "instagram"; name: string; username?: string | null; status: string; is_default?: boolean };
+type Account = { id: number; provider: "facebook" | "instagram"; name: string; username?: string | null; status: string; is_default?: boolean; picture_url?: string | null; followers_count?: number | null };
 type Overview = { meta_available: boolean; whatsapp_available: boolean; accounts: Account[]; channels: Channel[]; published: boolean; auto_posting?: boolean };
 type Template = { key: string; label: string; hint: string; caption: string };
 type Optins = {
@@ -410,8 +410,15 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
             const siblingCount = (account.provider === "facebook" ? facebookAccounts : instagramAccounts).length;
             return (
               <div key={account.id} className="edash-sp-account">
-                <span className="edash-sp-account-icon"><EstateIcon name={account.provider === "facebook" ? "share" : "camera"} /></span>
-                <div><strong>{account.name}</strong><small>{account.provider === "facebook" ? "Facebook Page" : `Instagram${account.username ? ` @${account.username}` : ""}`}</small></div>
+                {account.picture_url ? (
+                  <img className="edash-sp-account-avatar" src={account.picture_url} alt="" />
+                ) : (
+                  <span className="edash-sp-account-icon"><EstateIcon name={account.provider === "facebook" ? "share" : "camera"} /></span>
+                )}
+                <div>
+                  <strong>{account.name}</strong>
+                  <small>{account.provider === "facebook" ? "Facebook Page" : `Instagram${account.username ? ` @${account.username}` : ""}`}{typeof account.followers_count === "number" ? ` · ${account.followers_count.toLocaleString()} followers` : ""}</small>
+                </div>
                 {siblingCount > 1 && (account.is_default
                   ? <span className="edash-status-pill tone-good">Default</span>
                   : (canManage && account.status === "active" && <button type="button" className="edash-btn-outline" onClick={() => void setDefaultAccount(account)}>Set as default</button>))}
