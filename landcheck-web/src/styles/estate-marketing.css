@@ -291,7 +291,14 @@
 .edash-wa-media-image { display: block; max-width: 220px; border-radius: 8px; margin-bottom: 6px; }
 .edash-wa-media-file { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: .8rem; font-weight: 700; color: var(--edash-brand-dark); }
 .edash-wa-reply { display: flex; gap: 8px; align-items: flex-end; padding: 12px 16px; border-top: 1px solid var(--edash-border-soft); }
-.edash-wa-reply textarea { flex: 1; resize: none; border: 1px solid var(--edash-border); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: .84rem; }
+.edash-wa-reply-input { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.edash-wa-reply-input textarea { width: 100%; resize: none; border: 1px solid var(--edash-border); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: .84rem; box-sizing: border-box; }
+.edash-wa-attach-btn { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--edash-border); background: #fff; color: var(--edash-muted); cursor: pointer; }
+.edash-wa-attach-btn:hover { color: var(--edash-brand-dark); border-color: var(--edash-brand); }
+.edash-wa-attach-btn:disabled { opacity: .5; cursor: not-allowed; }
+.edash-wa-attachment-chip { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; padding: 4px 8px 4px 10px; border-radius: 999px; background: var(--edash-brand-tint); color: var(--edash-brand-dark); font-size: .74rem; font-weight: 600; max-width: 100%; }
+.edash-wa-attachment-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; }
+.edash-wa-attachment-chip button { border: none; background: none; color: inherit; font-size: 1rem; line-height: 1; cursor: pointer; padding: 0; }
 @media (max-width: 860px) {
   .edash-wa-layout { grid-template-columns: 1fr; height: auto; }
   .edash-wa-list { max-height: 260px; }

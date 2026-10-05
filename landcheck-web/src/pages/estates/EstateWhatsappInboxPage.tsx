@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { API_URL, api, extractApiErrorMessage } from "../../api/client";
@@ -58,7 +58,9 @@ export default function EstateWhatsappInboxPage() {
   const [loadingList, setLoadingList] = useState(true);
   const [loadingThread, setLoadingThread] = useState(false);
   const [sending, setSending] = useState(false);
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const threadEndRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const loadConversations = useCallback(async () => {
     if (!estateId) return;
@@ -95,7 +97,9 @@ export default function EstateWhatsappInboxPage() {
   const openConversation = (phone: string) => setActivePhone(phone);
 
   const sendReply = async () => {
-    if (!estateId || !activePhone || !reply.trim()) return;
+    if (!estateId || !activePhone) return;
+    if (attachedFile) { await sendMediaReply(); return; }
+    if (!reply.trim()) return;
     setSending(true);
     try {
       await api.post(`/estates/${estateId}/marketing/social/whatsapp/conversations/${activePhone}/reply`, { body: reply.trim() });
@@ -107,6 +111,32 @@ export default function EstateWhatsappInboxPage() {
     } finally {
       setSending(false);
     }
+  };
+
+  const sendMediaReply = async () => {
+    if (!estateId || !activePhone || !attachedFile) return;
+    setSending(true);
+    try {
+      const form = new FormData();
+      form.append("file", attachedFile);
+      form.append("caption", reply.trim());
+      await api.post(`/estates/${estateId}/marketing/social/whatsapp/conversations/${activePhone}/reply-media`, form);
+      setReply("");
+      setAttachedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      await loadThread(activePhone);
+      await loadConversations();
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "The file could not be sent."));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const onFilePicked = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null;
+    if (file && file.size > 16 * 1024 * 1024) { toast.error("This file is too large to send over WhatsApp."); return; }
+    setAttachedFile(file);
   };
 
   const active = conversations.find((item) => item.phone_digits === activePhone) || null;
@@ -173,8 +203,20 @@ export default function EstateWhatsappInboxPage() {
                 <div className="edash-wa-reply">
                   {canReplyFreely ? (
                     <>
-                      <textarea rows={2} value={reply} placeholder="Type a reply..." onChange={(event) => setReply(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void sendReply(); } }} />
-                      <button type="button" className="edash-btn-primary" disabled={sending || !reply.trim()} onClick={() => void sendReply()}>{sending ? "Sending..." : "Send"}</button>
+                      <input ref={fileInputRef} type="file" hidden onChange={onFilePicked} accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx" />
+                      <button type="button" className="edash-wa-attach-btn" disabled={sending} onClick={() => fileInputRef.current?.click()} aria-label="Attach a photo or document" title="Attach a photo or document">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M17.5 7.5 9 16a3 3 0 1 1-4.2-4.2l8.5-8.5a2 2 0 1 1 2.8 2.8L7.6 14.6a1 1 0 1 1-1.4-1.4l7-7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                      </button>
+                      <div className="edash-wa-reply-input">
+                        {attachedFile && (
+                          <div className="edash-wa-attachment-chip">
+                            <span>{attachedFile.name}</span>
+                            <button type="button" onClick={() => { setAttachedFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }} aria-label="Remove attachment">×</button>
+                          </div>
+                        )}
+                        <textarea rows={2} value={reply} placeholder={attachedFile ? "Add a caption (optional)..." : "Type a reply..."} onChange={(event) => setReply(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void sendReply(); } }} />
+                      </div>
+                      <button type="button" className="edash-btn-primary" disabled={sending || (!reply.trim() && !attachedFile)} onClick={() => void sendReply()}>{sending ? "Sending..." : "Send"}</button>
                     </>
                   ) : (
                     <p className="edash-mk-hint">It's been more than 24 hours since {active.customer_name || "this contact"} last messaged - a free reply can't reach them now. Send a template message instead from their customer record, or wait for them to message again.</p>
