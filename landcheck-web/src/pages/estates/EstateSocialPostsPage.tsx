@@ -39,17 +39,20 @@ function dayHeading(key: string): string {
 
 function Thumb({ estateId, post, channels }: { estateId: string; post: Post; channels: string[] }) {
   const [url, setUrl] = useState<string | null>(null);
+  const [errorReason, setErrorReason] = useState<string | null>(null);
   const channel = channels.find((key) => key === "instagram_story" || key === "whatsapp_status") ? "whatsapp_status" : "facebook";
   useEffect(() => {
     let cancelled = false;
     let created: string | null = null;
+    setUrl(null);
+    setErrorReason(null);
     fetchBlobUrl(`/estates/${estateId}/marketing/social/image.png`, { channel, style: post.image_style, plot_id: post.plot_id || undefined, source: post.source_code || undefined }).then((value) => {
       if (cancelled) { URL.revokeObjectURL(value); return; }
       created = value; setUrl(value);
-    }).catch(() => undefined);
+    }).catch(async (error) => { if (!cancelled) setErrorReason(await extractApiErrorMessage(error, "Image could not be generated.")); });
     return () => { cancelled = true; if (created) URL.revokeObjectURL(created); };
   }, [estateId, channel, post.image_style, post.plot_id, post.source_code]);
-  return <div className="edash-sp-thumb">{url ? <img src={url} alt="Post image" /> : <span>Preparing image...</span>}</div>;
+  return <div className="edash-sp-thumb">{url ? <img src={url} alt="Post image" /> : errorReason ? <span className="edash-sp-thumb-error">{errorReason}</span> : <span>Preparing image...</span>}</div>;
 }
 
 export default function EstateSocialPostsPage() {

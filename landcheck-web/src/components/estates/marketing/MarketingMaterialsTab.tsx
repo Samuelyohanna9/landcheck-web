@@ -8,22 +8,22 @@ type Campaign = { id: number; code: string; name: string; channel: string; assig
 
 function AdPreview({ path, params, alt, className = "edash-mk-preview" }: { path: string; params?: Record<string, unknown>; alt: string; className?: string }) {
   const [url, setUrl] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failedReason, setFailedReason] = useState<string | null>(null);
   const key = JSON.stringify([path, params]);
   useEffect(() => {
     let cancelled = false;
     let created: string | null = null;
     setUrl(null);
-    setFailed(false);
+    setFailedReason(null);
     fetchBlobUrl(path, params).then((value) => {
       if (cancelled) { URL.revokeObjectURL(value); return; }
       created = value;
       setUrl(value);
-    }).catch(() => { if (!cancelled) setFailed(true); });
+    }).catch(async (error) => { if (!cancelled) setFailedReason(await extractApiErrorMessage(error, "Preview unavailable.")); });
     return () => { cancelled = true; if (created) URL.revokeObjectURL(created); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
-  return <div className={className}>{url ? <img src={url} alt={alt} /> : failed ? <span style={{ fontSize: ".74rem", padding: 12, textAlign: "center" }}>Preview unavailable</span> : <span style={{ fontSize: ".74rem" }}>Preparing preview...</span>}</div>;
+  return <div className={className}>{url ? <img src={url} alt={alt} /> : failedReason ? <span style={{ fontSize: ".74rem", padding: 12, textAlign: "center" }}>{failedReason}</span> : <span style={{ fontSize: ".74rem" }}>Preparing preview...</span>}</div>;
 }
 
 export default function MarketingMaterialsTab({ estateId, estateName, published }: { estateId: string; estateName: string; published: boolean }) {

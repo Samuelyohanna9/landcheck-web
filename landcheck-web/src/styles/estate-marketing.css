@@ -224,6 +224,7 @@
 .edash-sp-editor-fields { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .edash-sp-thumb { min-height: 120px; border-radius: 10px; background: #eef1f4; display: flex; align-items: center; justify-content: center; color: var(--edash-muted); font-size: .76rem; overflow: hidden; }
 .edash-sp-thumb img { display: block; width: 100%; height: auto; border-radius: 10px; }
+.edash-sp-thumb-error { padding: 10px; text-align: center; color: var(--edash-danger); line-height: 1.4; }
 @media (max-width: 800px) { .edash-sp-editor-grid { grid-template-columns: 1fr; } .edash-sp-thumb { max-width: 220px; } .edash-sp-item-head { gap: 10px; } .edash-sp-item-time { width: 54px; } }
 
 /* ─── Plan upgrade prompt ─── */
