@@ -8,7 +8,8 @@ import EstateIcon from "../../components/estates/EstateIcon";
 import { AD_STYLES, fetchBlobUrl, formatLagos, fromLagosInput, lagosDayKey, toLagosInput } from "../../utils/estateMarketing";
 import "../../styles/estate-marketing.css";
 
-type Stats = { likes: number; comments: number; shares?: number };
+type Engagement = { name: string; message?: string; created_time?: string; likes?: number };
+type Stats = { likes: number; comments: number; shares?: number; comment_list?: Engagement[]; reaction_list?: { name: string; type: string }[]; unavailable?: string | null };
 type Result = { status: "ok" | "failed" | "pending" | "skipped" | "deleted"; error?: string; url?: string; stats?: Stats; stats_fetched_at?: string; deleted_at?: string };
 type Post = {
   id: number; plan_id?: number | null; plan_name?: string | null; auto_caption: boolean; strategy?: string | null; template_label?: string | null; template_key: string;
@@ -224,11 +225,32 @@ export default function EstateSocialPostsPage() {
                                     {CHANNEL_SHORT[key] || key}: {result.status === "ok" ? "posted" : result.status === "pending" ? "post it yourself" : result.status === "deleted" ? "removed" : result.status}
                                     {result.url ? <a href={result.url} target="_blank" rel="noreferrer"> view</a> : null}
                                   </span>
-                                  {result.stats && <span className="edash-sp-stats">{result.stats.likes} likes · {result.stats.comments} comments{typeof result.stats.shares === "number" ? ` · ${result.stats.shares} shares` : ""}</span>}
+                                  {result.stats && (
+                                    <div className="edash-sp-engagement">
+                                      <span className="edash-sp-stats">{result.stats.likes} likes · {result.stats.comments} comments{typeof result.stats.shares === "number" ? ` · ${result.stats.shares} shares` : ""}</span>
+                                      {result.stats.unavailable && <small className="edash-sp-stats">{result.stats.unavailable}</small>}
+                                      {(result.stats.comment_list || []).length > 0 && (
+                                        <details className="edash-sp-details-list">
+                                          <summary>Comments ({result.stats.comment_list?.length})</summary>
+                                          {result.stats.comment_list?.map((comment, index) => (
+                                            <div key={index} className="edash-sp-engagement-row"><strong>{comment.name}</strong><span>{comment.message}</span>{comment.created_time && <small>{formatLagos(comment.created_time, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</small>}</div>
+                                          ))}
+                                        </details>
+                                      )}
+                                      {(result.stats.reaction_list || []).length > 0 && (
+                                        <details className="edash-sp-details-list">
+                                          <summary>Reactions ({result.stats.reaction_list?.length})</summary>
+                                          {result.stats.reaction_list?.map((reaction, index) => (
+                                            <div key={index} className="edash-sp-engagement-row"><strong>{reaction.name}</strong><span>{reaction.type.toLowerCase()}</span></div>
+                                          ))}
+                                        </details>
+                                      )}
+                                    </div>
+                                  )}
                                   {automatic && result.status === "ok" && canManage && (
                                     <span className="edash-sp-result-actions">
                                       <button type="button" className="edash-sp-link-btn" disabled={busy === `stats-${post.id}-${key}`} onClick={() => void refreshStats(post, key)}>{busy === `stats-${post.id}-${key}` ? "Loading..." : result.stats ? "Refresh stats" : "Load stats"}</button>
-                                      <button type="button" className="edash-sp-link-btn is-danger" disabled={busy === `delete-${post.id}-${key}`} onClick={() => void deleteFromChannel(post, key)}>{busy === `delete-${post.id}-${key}` ? "Deleting..." : "Delete"}</button>
+                                      {key === "facebook" ? <button type="button" className="edash-sp-link-btn is-danger" disabled={busy === `delete-${post.id}-${key}`} onClick={() => void deleteFromChannel(post, key)}>{busy === `delete-${post.id}-${key}` ? "Deleting..." : "Delete"}</button> : <small className="edash-sp-stats">Delete in the Instagram app</small>}
                                     </span>
                                   )}
                                 </div>

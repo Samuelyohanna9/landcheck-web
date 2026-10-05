@@ -305,3 +305,10 @@
   .edash-wa-list { max-height: 260px; }
   .edash-wa-thread { height: 60vh; }
 }
+
+.edash-sp-engagement { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.edash-sp-details-list { font-size: .76rem; }
+.edash-sp-details-list summary { cursor: pointer; color: var(--edash-brand-dark); font-weight: 600; }
+.edash-sp-engagement-row { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 2fr) auto; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--edash-border-soft); align-items: baseline; }
+.edash-sp-engagement-row span { color: var(--edash-ink); overflow-wrap: anywhere; }
+.edash-sp-engagement-row small { color: var(--edash-muted); white-space: nowrap; }
