@@ -124,6 +124,12 @@ export default function EstateNotificationLogPage() {
                       </small>
                     )}
                     {row.error_message && <small className="edash-notification-log-error">Delivery error: {row.error_message}</small>}
+                    {(row.details?.meta_subcode || row.details?.meta_trace_id) && (
+                      <small className="edash-notification-log-error">
+                        Meta diagnostic: code {row.details?.meta_code ?? "?"}{row.details?.meta_subcode ? `, subcode ${row.details.meta_subcode}` : ""}{row.details?.meta_trace_id ? ` (trace ${row.details.meta_trace_id})` : ""}
+                      </small>
+                    )}
+                    {row.details?.image_url && <small><a href={String(row.details.image_url)} target="_blank" rel="noreferrer">Open the exact image Facebook tried to fetch</a></small>}
                     {row.details?.due_at && <small>Scheduled due date: {new Date(row.details.due_at).toLocaleDateString()}</small>}
                   </div>
                 </article>

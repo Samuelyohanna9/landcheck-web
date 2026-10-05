@@ -53,6 +53,7 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
   const [caption, setCaption] = useState("");
   const [channels, setChannels] = useState<string[]>(["whatsapp_status"]);
   const [style, setStyle] = useState<AdStyle>("promo");
+  const [includeMedia, setIncludeMedia] = useState(true);
   const [plotId, setPlotId] = useState("");
   const [campaignId, setCampaignId] = useState("");
   const [when, setWhen] = useState<"draft" | "now" | "later">("draft");
@@ -117,6 +118,12 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
   const hasAccount = (channel: string) => Boolean(overview?.accounts.some((account) => account.provider === (channel === "facebook" ? "facebook" : "instagram") && account.status === "active"));
   const chooseTemplate = (item: Template) => { setTemplateKey(item.key); setCaption(item.caption); };
   const toggleChannel = (key: string) => setChannels((current) => (current.includes(key) ? current.filter((entry) => entry !== key) : [...current, key]));
+  const toggleIncludeMedia = (value: boolean) => {
+    setIncludeMedia(value);
+    // Instagram has no text-only post type, so turning media off drops it from "Post to" rather than
+    // leaving a combination that would fail when sent.
+    if (!value) setChannels((current) => current.filter((key) => key !== "instagram" && key !== "instagram_story"));
+  };
   const safeName = estateName.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "") || "estate";
 
   // ── Quick actions that need no approval or connection ──
@@ -157,7 +164,7 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
   };
 
   const resetComposer = () => {
-    setEditingId(null); setWhen("draft"); setScheduledAt("");
+    setEditingId(null); setWhen("draft"); setScheduledAt(""); setIncludeMedia(true);
     const pick = templates.find((item) => item.key === templateKey) || templates[0];
     if (pick) setCaption(pick.caption);
   };
@@ -170,11 +177,11 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
     try {
       const iso = when === "later" ? new Date(scheduledAt).toISOString() : undefined;
       if (editingId !== null) {
-        await api.patch(`/estates/marketing/social/posts/${editingId}`, { caption, channels, image_style: style, ...(iso ? { scheduled_at: iso } : { clear_schedule: when === "draft" }) });
+        await api.patch(`/estates/marketing/social/posts/${editingId}`, { caption, channels, image_style: style, include_media: includeMedia, ...(iso ? { scheduled_at: iso } : { clear_schedule: when === "draft" }) });
         if (when === "now") await api.post(`/estates/marketing/social/posts/${editingId}/publish`);
         toast.success(when === "now" ? "Posted." : "Post updated.");
       } else {
-        await api.post(`/estates/${estateId}/marketing/social/posts`, { template_key: templateKey, caption, channels, image_style: style, plot_id: plotId ? Number(plotId) : null, campaign_id: campaignId ? Number(campaignId) : null, scheduled_at: iso, publish_now: when === "now" });
+        await api.post(`/estates/${estateId}/marketing/social/posts`, { template_key: templateKey, caption, channels, image_style: style, include_media: includeMedia, plot_id: plotId ? Number(plotId) : null, campaign_id: campaignId ? Number(campaignId) : null, scheduled_at: iso, publish_now: when === "now" });
         toast.success(when === "now" ? "Posted." : when === "later" ? "Scheduled." : "Saved as a draft.");
       }
       resetComposer();
@@ -250,24 +257,32 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
             <label className="edash-field"><span>Caption <em className="edash-sp-count">{caption.length}/2200</em></span>
               <textarea value={caption} maxLength={2200} rows={9} onChange={(event) => setCaption(event.target.value)} style={{ fontFamily: "inherit" }} />
             </label>
+            <div className="edash-field"><span>Image</span>
+              <div className="edash-mk-segment" role="group" aria-label="Include an image">
+                <button type="button" className={includeMedia ? "is-active" : ""} onClick={() => toggleIncludeMedia(true)}>With image</button>
+                <button type="button" className={!includeMedia ? "is-active" : ""} onClick={() => toggleIncludeMedia(false)}>Text only</button>
+              </div>
+              {!includeMedia && <p className="edash-mk-hint" style={{ margin: "6px 0 0" }}>A plain status update, no flyer image - Instagram isn't available for text-only posts.</p>}
+            </div>
             <div className="edash-field"><span>Post to</span>
               <div className="edash-sp-channels">
                 {(overview?.channels || []).map((channel) => {
+                  const imageOnlyChannel = !includeMedia && (channel.key === "instagram" || channel.key === "instagram_story");
                   const unavailable = channel.automatic && (overview?.auto_posting === false || !overview?.meta_available || !hasAccount(channel.key));
                   return (
-                    <label key={channel.key} className={`edash-sp-channel${channels.includes(channel.key) ? " is-on" : ""}`}>
-                      <input type="checkbox" checked={channels.includes(channel.key)} onChange={() => toggleChannel(channel.key)} />
-                      <span><strong>{channel.label}</strong><small>{channel.automatic ? (overview?.auto_posting === false ? "Pro plan" : unavailable ? (overview?.meta_available ? "Connect an account below" : "Coming soon") : "Posts automatically") : "You post it - we prepare it and remind you"}</small></span>
+                    <label key={channel.key} className={`edash-sp-channel${channels.includes(channel.key) ? " is-on" : ""}${imageOnlyChannel ? " is-disabled" : ""}`}>
+                      <input type="checkbox" checked={channels.includes(channel.key)} disabled={imageOnlyChannel} onChange={() => toggleChannel(channel.key)} />
+                      <span><strong>{channel.label}</strong><small>{imageOnlyChannel ? "Needs an image" : channel.automatic ? (overview?.auto_posting === false ? "Pro plan" : unavailable ? (overview?.meta_available ? "Connect an account below" : "Coming soon") : "Posts automatically") : "You post it - we prepare it and remind you"}</small></span>
                     </label>
                   );
                 })}
               </div>
             </div>
-            <div className="edash-field"><span>Design</span>
+            {includeMedia && <div className="edash-field"><span>Design</span>
               <div className="edash-mk-segment" role="group" aria-label="Design">
                 {AD_STYLES.map((item) => <button key={item.key} type="button" title={item.hint} className={style === item.key ? "is-active" : ""} onClick={() => setStyle(item.key)}>{item.label}</button>)}
               </div>
-            </div>
+            </div>}
             <div className="edash-field"><span>When</span>
               <div className="edash-sp-when">
                 <label><input type="radio" name="sp-when" checked={when === "draft"} onChange={() => setWhen("draft")} /> Save draft</label>
@@ -284,16 +299,22 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
             {!canManage && <p className="edash-mk-hint">Only owners, managers and marketers can save or schedule posts. Copy, download and share still work.</p>}
           </div>
           <div className="edash-sp-side">
-            <div className="edash-mk-segment" role="group" aria-label="Preview shape">
-              <button type="button" className={previewShape === "status" ? "is-active" : ""} onClick={() => setPreviewShape("status")}>Story / Status</button>
-              <button type="button" className={previewShape === "post" ? "is-active" : ""} onClick={() => setPreviewShape("post")}>Feed post</button>
-            </div>
-            <PreviewImage estateId={estateId} params={imageParams} alt="Post preview" />
-            <div className="edash-sp-actions">
-              <button type="button" className="edash-btn-outline" disabled={busy === "download-status"} onClick={() => void downloadImage("status")}><EstateIcon name="download" />Story image</button>
-              <button type="button" className="edash-btn-outline" disabled={busy === "download-post"} onClick={() => void downloadImage("post")}><EstateIcon name="download" />Feed image</button>
-            </div>
-            <p className="edash-mk-hint">Share to Status opens your phone's share sheet with this image and caption. On a computer it saves the image and copies the caption.</p>
+            {includeMedia ? (
+              <>
+                <div className="edash-mk-segment" role="group" aria-label="Preview shape">
+                  <button type="button" className={previewShape === "status" ? "is-active" : ""} onClick={() => setPreviewShape("status")}>Story / Status</button>
+                  <button type="button" className={previewShape === "post" ? "is-active" : ""} onClick={() => setPreviewShape("post")}>Feed post</button>
+                </div>
+                <PreviewImage estateId={estateId} params={imageParams} alt="Post preview" />
+                <div className="edash-sp-actions">
+                  <button type="button" className="edash-btn-outline" disabled={busy === "download-status"} onClick={() => void downloadImage("status")}><EstateIcon name="download" />Story image</button>
+                  <button type="button" className="edash-btn-outline" disabled={busy === "download-post"} onClick={() => void downloadImage("post")}><EstateIcon name="download" />Feed image</button>
+                </div>
+                <p className="edash-mk-hint">Share to Status opens your phone's share sheet with this image and caption. On a computer it saves the image and copies the caption.</p>
+              </>
+            ) : (
+              <div className="edash-mk-preview edash-sp-preview"><span>Text-only post - no image is generated or sent.</span></div>
+            )}
           </div>
         </div>
       </div></div>

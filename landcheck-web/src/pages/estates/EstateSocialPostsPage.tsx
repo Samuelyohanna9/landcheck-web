@@ -11,7 +11,7 @@ import "../../styles/estate-marketing.css";
 type Result = { status: "ok" | "failed" | "pending" | "skipped"; error?: string; url?: string };
 type Post = {
   id: number; plan_id?: number | null; plan_name?: string | null; auto_caption: boolean; strategy?: string | null; template_label?: string | null; template_key: string;
-  caption: string; channels: string[]; image_style: string; status: string; scheduled_at?: string | null; published_at?: string | null; reminder_sent_at?: string | null;
+  caption: string; channels: string[]; image_style: string; include_media: boolean; status: string; scheduled_at?: string | null; published_at?: string | null; reminder_sent_at?: string | null;
   results: Record<string, Result>; plot_id?: number | null; source_code?: string | null; created_at: string;
 };
 type PlanOption = { id: number; name: string; status: string };
@@ -42,6 +42,7 @@ function Thumb({ estateId, post, channels }: { estateId: string; post: Post; cha
   const [errorReason, setErrorReason] = useState<string | null>(null);
   const channel = channels.find((key) => key === "instagram_story" || key === "whatsapp_status") ? "whatsapp_status" : "facebook";
   useEffect(() => {
+    if (!post.include_media) { setUrl(null); setErrorReason(null); return undefined; }
     let cancelled = false;
     let created: string | null = null;
     setUrl(null);
@@ -51,7 +52,8 @@ function Thumb({ estateId, post, channels }: { estateId: string; post: Post; cha
       created = value; setUrl(value);
     }).catch(async (error) => { if (!cancelled) setErrorReason(await extractApiErrorMessage(error, "Image could not be generated.")); });
     return () => { cancelled = true; if (created) URL.revokeObjectURL(created); };
-  }, [estateId, channel, post.image_style, post.plot_id, post.source_code]);
+  }, [estateId, channel, post.image_style, post.plot_id, post.source_code, post.include_media]);
+  if (!post.include_media) return <div className="edash-sp-thumb"><span>Text-only post - no image</span></div>;
   return <div className="edash-sp-thumb">{url ? <img src={url} alt="Post image" /> : errorReason ? <span className="edash-sp-thumb-error">{errorReason}</span> : <span>Preparing image...</span>}</div>;
 }
 
@@ -71,7 +73,7 @@ export default function EstateSocialPostsPage() {
   const [plans, setPlans] = useState<PlanOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState<number | null>(Number(searchParams.get("post")) || null);
-  const [draft, setDraft] = useState<{ caption: string; when: string; channels: string[]; style: string } | null>(null);
+  const [draft, setDraft] = useState<{ caption: string; when: string; channels: string[]; style: string; includeMedia: boolean } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -95,9 +97,9 @@ export default function EstateSocialPostsPage() {
   const openPost = (post: Post) => {
     if (openId === post.id) { setOpenId(null); setDraft(null); return; }
     setOpenId(post.id);
-    setDraft({ caption: post.caption, when: toLagosInput(post.scheduled_at), channels: post.channels, style: post.image_style });
+    setDraft({ caption: post.caption, when: toLagosInput(post.scheduled_at), channels: post.channels, style: post.image_style, includeMedia: post.include_media });
   };
-  useEffect(() => { if (open && !draft) setDraft({ caption: open.caption, when: toLagosInput(open.scheduled_at), channels: open.channels, style: open.image_style }); }, [open, draft]);
+  useEffect(() => { if (open && !draft) setDraft({ caption: open.caption, when: toLagosInput(open.scheduled_at), channels: open.channels, style: open.image_style, includeMedia: open.include_media }); }, [open, draft]);
 
   const groups = useMemo(() => {
     const map = new Map<string, Post[]>();
@@ -117,6 +119,7 @@ export default function EstateSocialPostsPage() {
     if (draft.caption.trim() !== post.caption.trim()) payload.caption = draft.caption;
     if (JSON.stringify(draft.channels) !== JSON.stringify(post.channels)) payload.channels = draft.channels;
     if (draft.style !== post.image_style) payload.image_style = draft.style;
+    if (draft.includeMedia !== post.include_media) payload.include_media = draft.includeMedia;
     if (draft.when && draft.when !== toLagosInput(post.scheduled_at)) payload.scheduled_at = fromLagosInput(draft.when);
     if (!Object.keys(payload).length) { toast("Nothing changed."); return; }
     await api.patch(`/estates/marketing/social/posts/${post.id}`, payload);
@@ -190,13 +193,22 @@ export default function EstateSocialPostsPage() {
                         </label>
                         <div className="edash-mk-form-grid">
                           <label className="edash-field"><span>Goes out (Lagos time)</span><input type="datetime-local" value={draft.when} disabled={!editable || !canManage} onChange={(event) => setDraft({ ...draft, when: event.target.value })} /></label>
-                          <label className="edash-field"><span>Design</span>
-                            <select value={draft.style} disabled={!editable || !canManage} onChange={(event) => setDraft({ ...draft, style: event.target.value })}>{AD_STYLES.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select>
+                          <label className="edash-field"><span>Image</span>
+                            <select value={draft.includeMedia ? "1" : "0"} disabled={!editable || !canManage} onChange={(event) => { const includeMedia = event.target.value === "1"; setDraft({ ...draft, includeMedia, channels: includeMedia ? draft.channels : draft.channels.filter((key) => key !== "instagram" && key !== "instagram_story") }); }}>
+                              <option value="1">With image</option>
+                              <option value="0">Text only</option>
+                            </select>
                           </label>
+                          {draft.includeMedia && <label className="edash-field"><span>Design</span>
+                            <select value={draft.style} disabled={!editable || !canManage} onChange={(event) => setDraft({ ...draft, style: event.target.value })}>{AD_STYLES.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select>
+                          </label>}
                         </div>
                         <div className="edash-field"><span>Post to</span>
                           <div className="edash-sp-when">
-                            {CHANNELS.map((channel) => <label key={channel.key}><input type="checkbox" checked={draft.channels.includes(channel.key)} disabled={!editable || !canManage} onChange={() => setDraft({ ...draft, channels: draft.channels.includes(channel.key) ? draft.channels.filter((entry) => entry !== channel.key) : [...draft.channels, channel.key] })} /> {channel.label}</label>)}
+                            {CHANNELS.map((channel) => {
+                              const imageOnlyChannel = !draft.includeMedia && (channel.key === "instagram" || channel.key === "instagram_story");
+                              return <label key={channel.key} className={imageOnlyChannel ? "is-disabled" : undefined}><input type="checkbox" checked={draft.channels.includes(channel.key)} disabled={!editable || !canManage || imageOnlyChannel} onChange={() => setDraft({ ...draft, channels: draft.channels.includes(channel.key) ? draft.channels.filter((entry) => entry !== channel.key) : [...draft.channels, channel.key] })} /> {channel.label}{imageOnlyChannel ? " (needs an image)" : ""}</label>;
+                            })}
                           </div>
                         </div>
                         {Object.entries(post.results || {}).length > 0 && (
@@ -214,7 +226,7 @@ export default function EstateSocialPostsPage() {
                           </div>
                         )}
                       </div>
-                      <Thumb estateId={estateId} post={{ ...post, image_style: draft.style }} channels={draft.channels} />
+                      <Thumb estateId={estateId} post={{ ...post, image_style: draft.style, include_media: draft.includeMedia }} channels={draft.channels} />
                     </div>
                   </div>
                 )}
