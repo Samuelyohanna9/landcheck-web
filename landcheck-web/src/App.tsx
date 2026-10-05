@@ -28,6 +28,7 @@ const GreenWorkLogin = lazyWithChunkRecovery(() => import("./pages/GreenWorkLogi
 const GreenWorkRegister = lazyWithChunkRecovery(() => import("./pages/GreenWorkRegister"));
 const DataDeletion = lazyWithChunkRecovery(() => import("./pages/DataDeletion"));
 const EstateSocialPostsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateSocialPostsPage"));
+const EstateWhatsappInboxPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateWhatsappInboxPage"));
 const GreenPartnersLanding = lazyWithChunkRecovery(() => import("./pages/GreenPartnersLanding"));
 const GreenPublicSponsor = lazyWithChunkRecovery(() => import("./pages/GreenPublicSponsor"));
 const GreenFootprintCalculator = lazyWithChunkRecovery(() => import("./pages/GreenFootprintCalculator"));
@@ -374,6 +375,7 @@ export default function App() {
               <Route path="/estates/:estateId/notifications" element={<EstateProtectedRoute element={<EstateNotificationLogPage />} />} />
               <Route path="/estates/:estateId/marketing" element={<EstateProtectedRoute element={<EstateMarketingPage />} />} />
               <Route path="/estates/:estateId/marketing/posts" element={<EstateProtectedRoute element={<EstateSocialPostsPage />} />} />
+              <Route path="/estates/:estateId/marketing/whatsapp" element={<EstateProtectedRoute element={<EstateWhatsappInboxPage />} />} />
               <Route path="/estates/payments" element={<EstateProtectedRoute element={<EstateFinance mode="payments" />} />} />
               <Route path="/estates/reconciliation" element={<Navigate to="/estates/payments" replace />} />
               <Route path="/estates/commissions" element={<EstateProtectedRoute element={<EstateCommissionsPage />} />} />

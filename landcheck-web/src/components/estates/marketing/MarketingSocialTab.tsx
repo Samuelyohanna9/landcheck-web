@@ -46,6 +46,7 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
   const [overview, setOverview] = useState<Overview | null>(null);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [optins, setOptins] = useState<Optins | null>(null);
+  const [waProfile, setWaProfile] = useState<{ configured: boolean; about?: string; description?: string; address?: string; email?: string; websites?: string[] } | null>(null);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [plots, setPlots] = useState<PlotOption[]>([]);
 
@@ -79,6 +80,7 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
     void loadOverview(); void loadOptins();
     api.get<Campaign[]>(`/estates/${estateId}/qr-campaigns`).then((response) => setCampaigns(response.data || [])).catch(() => setCampaigns([]));
     api.get(`/estates/${estateId}/marketing/share-links`).then((response) => setPlots((response.data?.plots || []).map((plot: PlotOption) => ({ id: plot.id, plot_number: plot.plot_number })))).catch(() => setPlots([]));
+    api.get(`/estates/${estateId}/marketing/social/whatsapp/profile`).then((response) => setWaProfile(response.data)).catch(() => setWaProfile(null));
   }, [estateId, loadOverview, loadOptins]);
 
   // Templates depend on the chosen plot and tracked link (they carry that link).
@@ -391,6 +393,26 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
             </>
           )}
         </div></div>
+
+        {optins?.whatsapp_available && (
+          <div className="edash-card"><div className="edash-card-inner">
+            <div className="edash-card-head">
+              <h3 className="edash-card-title">WhatsApp conversations</h3>
+              <Link className="edash-btn-outline" to={`/estates/${estateId}/marketing/whatsapp`}>Open inbox</Link>
+            </div>
+            <p className="edash-mk-hint">Replies, questions and photos customers send to this number land in the inbox - not just opt-in broadcasts.</p>
+            {waProfile?.configured && (
+              <div className="edash-mk-hint" style={{ marginTop: 10 }}>
+                <strong>What customers see on this number:</strong>
+                {waProfile.about && <div>{waProfile.about}</div>}
+                {waProfile.description && <div>{waProfile.description}</div>}
+                {waProfile.address && <div>{waProfile.address}</div>}
+                {waProfile.email && <div>{waProfile.email}</div>}
+                <small>This number is shared across every LandCheck Estates company, so it isn't editable per estate.</small>
+              </div>
+            )}
+          </div></div>
+        )}
       </div>
     </div>
   );

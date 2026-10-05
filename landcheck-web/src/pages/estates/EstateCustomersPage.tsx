@@ -28,6 +28,10 @@ export default function EstateCustomersPage() {
   const [message, setMessage] = useState("");
   const [portalLink, setPortalLink] = useState("");
   const [packetBusy, setPacketBusy] = useState(false);
+  const [waPresets, setWaPresets] = useState<Array<{ key: string; label: string }>>([]);
+  const [waPreset, setWaPreset] = useState("");
+  const [waDetail, setWaDetail] = useState("");
+  const [waSending, setWaSending] = useState(false);
 
   const load = () => {
     if (!estateId) return;
@@ -43,6 +47,14 @@ export default function EstateCustomersPage() {
     api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));
   };
   useEffect(load, [estateId, customerPage, search]);
+  useEffect(() => {
+    if (!estateId) return;
+    api.get(`/estates/${estateId}/marketing/social/optins`).then((response) => {
+      const presets = (response.data?.presets || []) as Array<{ key: string; label: string }>;
+      setWaPresets(presets);
+      if (presets[0]) setWaPreset((current) => current || presets[0].key);
+    }).catch(() => setWaPresets([]));
+  }, [estateId]);
 
   const selectedCustomer = customers.find((customer) => String(customer.id) === selectedId);
 
@@ -73,6 +85,20 @@ export default function EstateCustomersPage() {
       toast.success("Buyer portal link created and copied.");
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "Buyer portal link could not be created."));
+    }
+  };
+
+  const sendWhatsappMessage = async () => {
+    if (!selectedCustomer || !waPreset) return;
+    setWaSending(true);
+    try {
+      await api.post(`/estates/customers/${selectedCustomer.id}/whatsapp-message`, { preset: waPreset, detail: waDetail.trim() || undefined });
+      toast.success("Message sent.");
+      setWaDetail("");
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "The message could not be sent."));
+    } finally {
+      setWaSending(false);
     }
   };
 
@@ -158,6 +184,18 @@ export default function EstateCustomersPage() {
                 ) : <p className="edash-tab-empty">Loading...</p>}
                 {statement && (
                   <button type="button" className="edash-btn-outline" style={{ marginTop: 12 }} disabled={packetBusy} onClick={() => void downloadCustomerPacket()}>{packetBusy ? "Preparing..." : "Download customer packet"}</button>
+                )}
+                {waPresets.length > 0 && (
+                  <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid var(--edash-border-soft)" }}>
+                    <p className="edash-field-note" style={{ margin: "0 0 8px" }}>Message this customer on WhatsApp</p>
+                    <div className="edash-mk-form-grid">
+                      <label className="edash-field"><span>Message</span>
+                        <select value={waPreset} onChange={(event) => setWaPreset(event.target.value)}>{waPresets.map((preset) => <option key={preset.key} value={preset.key}>{preset.label}</option>)}</select>
+                      </label>
+                      <label className="edash-field is-wide"><span>Detail (optional)</span><input value={waDetail} maxLength={200} onChange={(event) => setWaDetail(event.target.value)} placeholder="e.g. your next payment is due Friday" /></label>
+                    </div>
+                    <button type="button" className="edash-btn-primary" style={{ marginTop: 8 }} disabled={waSending} onClick={() => void sendWhatsappMessage()}>{waSending ? "Sending..." : "Send WhatsApp message"}</button>
+                  </div>
                 )}
               </>
             )}
