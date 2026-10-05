@@ -2709,3 +2709,11 @@
   .edash-notification-log-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .edash-notification-log-head { align-items: flex-start; }
 }
+
+/* ─── Bulk SMS to customers ─── */
+.edash-sms-select-all { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: .78rem; color: var(--edash-muted); cursor: pointer; }
+.edash-sms-check { display: flex; align-items: center; padding: 0 6px 0 0; cursor: pointer; }
+.edash-sms-compose { margin-top: 12px; padding: 12px; border: 1px solid var(--edash-border); border-radius: var(--edash-radius-md); background: var(--edash-surface); display: flex; flex-direction: column; gap: 8px; }
+.edash-sms-compose-head, .edash-sms-compose-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.edash-sms-compose textarea { width: 100%; box-sizing: border-box; resize: vertical; border: 1px solid var(--edash-border); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: .84rem; }
+.edash-sms-compose-foot small { color: var(--edash-muted); font-size: .72rem; }
