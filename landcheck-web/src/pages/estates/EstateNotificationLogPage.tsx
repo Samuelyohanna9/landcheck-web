@@ -33,6 +33,7 @@ const eventLabels: Record<string, string> = {
   staked: "Staking update",
   customer_portal_issued: "Buyer portal link",
   social_post: "Marketing post",
+  social_post_deleted: "Marketing post removed",
   whatsapp_update: "WhatsApp update",
 };
 const channelLabels: Record<string, string> = { email: "Email", sms: "SMS", facebook: "Facebook Page", instagram: "Instagram post", instagram_story: "Instagram story", whatsapp_status: "WhatsApp Status", other: "Other", whatsapp: "WhatsApp" };

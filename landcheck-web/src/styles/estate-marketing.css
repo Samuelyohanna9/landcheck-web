@@ -151,12 +151,20 @@
 .edash-sp-post-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .edash-sp-post-head small { color: var(--edash-muted); }
 .edash-sp-post-caption { margin: 0; font-size: .84rem; line-height: 1.45; white-space: pre-line; color: var(--edash-ink); }
-.edash-sp-post-channels { display: flex; flex-wrap: wrap; gap: 6px; }
-.edash-sp-result { padding: 3px 9px; border-radius: 999px; font-size: .72rem; background: var(--edash-neutral-tint); color: var(--edash-neutral); }
+.edash-sp-post-channels { display: flex; flex-direction: column; gap: 6px; }
+.edash-sp-result-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.edash-sp-result { padding: 3px 9px; border-radius: 999px; font-size: .72rem; background: var(--edash-neutral-tint); color: var(--edash-neutral); white-space: nowrap; }
 .edash-sp-result.is-ok { background: var(--edash-good-tint); color: var(--edash-good); }
 .edash-sp-result.is-failed { background: var(--edash-danger-tint); color: var(--edash-danger); }
 .edash-sp-result.is-pending { background: var(--edash-warn-tint); color: var(--edash-warn); }
+.edash-sp-result.is-deleted { background: var(--edash-neutral-tint); color: var(--edash-muted); text-decoration: line-through; }
 .edash-sp-result a { color: inherit; text-decoration: underline; }
+.edash-sp-stats { font-size: .72rem; color: var(--edash-muted); }
+.edash-sp-result-actions { display: flex; gap: 10px; margin-left: auto; }
+.edash-sp-link-btn { border: none; background: none; padding: 0; font-size: .72rem; font-weight: 600; color: var(--edash-brand); cursor: pointer; }
+.edash-sp-link-btn:hover { text-decoration: underline; }
+.edash-sp-link-btn.is-danger { color: var(--edash-danger); }
+.edash-sp-link-btn:disabled { opacity: .55; cursor: not-allowed; }
 .edash-sp-post-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .edash-sp-account { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--edash-border-soft); }
 .edash-sp-account > div { flex: 1; min-width: 0; display: flex; flex-direction: column; }

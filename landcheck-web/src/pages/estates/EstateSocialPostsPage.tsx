@@ -8,7 +8,8 @@ import EstateIcon from "../../components/estates/EstateIcon";
 import { AD_STYLES, fetchBlobUrl, formatLagos, fromLagosInput, lagosDayKey, toLagosInput } from "../../utils/estateMarketing";
 import "../../styles/estate-marketing.css";
 
-type Result = { status: "ok" | "failed" | "pending" | "skipped"; error?: string; url?: string };
+type Stats = { likes: number; comments: number; shares?: number };
+type Result = { status: "ok" | "failed" | "pending" | "skipped" | "deleted"; error?: string; url?: string; stats?: Stats; stats_fetched_at?: string; deleted_at?: string };
 type Post = {
   id: number; plan_id?: number | null; plan_name?: string | null; auto_caption: boolean; strategy?: string | null; template_label?: string | null; template_key: string;
   caption: string; channels: string[]; image_style: string; include_media: boolean; status: string; scheduled_at?: string | null; published_at?: string | null; reminder_sent_at?: string | null;
@@ -134,6 +135,8 @@ export default function EstateSocialPostsPage() {
   const postNow = (post: Post) => run(`now-${post.id}`, async () => { await api.post(`/estates/marketing/social/posts/${post.id}/publish`); toast.success("Sent."); }, "The post could not be sent.");
   const cancel = (post: Post) => window.confirm("Cancel this post? It will not be sent.") && run(`cancel-${post.id}`, async () => { await api.patch(`/estates/marketing/social/posts/${post.id}`, { cancel: true }); setOpenId(null); setDraft(null); }, "Could not cancel.");
   const markPosted = (post: Post, channel: string) => run(`mark-${post.id}`, async () => { await api.post(`/estates/marketing/social/posts/${post.id}/mark-posted`, { channel }); }, "Could not update the post.");
+  const deleteFromChannel = (post: Post, channel: string) => window.confirm(`Delete this post from ${CHANNEL_SHORT[channel] || channel}? This removes it from the live Page/account - it can't be undone.`) && run(`delete-${post.id}-${channel}`, async () => { await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/delete`); toast.success(`Removed from ${CHANNEL_SHORT[channel] || channel}.`); }, "The post could not be deleted.");
+  const refreshStats = (post: Post, channel: string) => run(`stats-${post.id}-${channel}`, async () => { await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/refresh-stats`); }, "Engagement stats could not be loaded.");
 
   if (!estateId) return null;
   const setFilter = (next: Scope) => { setScope(next); setOpenId(null); setDraft(null); const params = new URLSearchParams(searchParams); params.set("scope", next); params.delete("post"); setSearchParams(params, { replace: true }); };
@@ -213,7 +216,24 @@ export default function EstateSocialPostsPage() {
                         </div>
                         {Object.entries(post.results || {}).length > 0 && (
                           <div className="edash-sp-post-channels">
-                            {Object.entries(post.results).map(([key, result]) => <span key={key} className={`edash-sp-result is-${result.status}`} title={result.error || ""}>{CHANNEL_SHORT[key] || key}: {result.status === "ok" ? "posted" : result.status === "pending" ? "post it yourself" : result.status}{result.url ? <a href={result.url} target="_blank" rel="noreferrer"> view</a> : null}</span>)}
+                            {Object.entries(post.results).map(([key, result]) => {
+                              const automatic = CHANNELS.find((item) => item.key === key)?.automatic;
+                              return (
+                                <div key={key} className="edash-sp-result-row">
+                                  <span className={`edash-sp-result is-${result.status}`} title={result.error || ""}>
+                                    {CHANNEL_SHORT[key] || key}: {result.status === "ok" ? "posted" : result.status === "pending" ? "post it yourself" : result.status === "deleted" ? "removed" : result.status}
+                                    {result.url ? <a href={result.url} target="_blank" rel="noreferrer"> view</a> : null}
+                                  </span>
+                                  {result.stats && <span className="edash-sp-stats">{result.stats.likes} likes · {result.stats.comments} comments{typeof result.stats.shares === "number" ? ` · ${result.stats.shares} shares` : ""}</span>}
+                                  {automatic && result.status === "ok" && canManage && (
+                                    <span className="edash-sp-result-actions">
+                                      <button type="button" className="edash-sp-link-btn" disabled={busy === `stats-${post.id}-${key}`} onClick={() => void refreshStats(post, key)}>{busy === `stats-${post.id}-${key}` ? "Loading..." : result.stats ? "Refresh stats" : "Load stats"}</button>
+                                      <button type="button" className="edash-sp-link-btn is-danger" disabled={busy === `delete-${post.id}-${key}`} onClick={() => void deleteFromChannel(post, key)}>{busy === `delete-${post.id}-${key}` ? "Deleting..." : "Delete"}</button>
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
                         {canManage && (
