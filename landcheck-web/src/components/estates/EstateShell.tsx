@@ -25,7 +25,7 @@ export const estateNavItems: Array<{ key: EstateNavKey; label: string; icon: Est
   { key: "payments", label: "Sales & Payments", icon: "payments", path: () => "/estates/payments" },
   { key: "commissions", label: "Commissions", icon: "wallet", path: () => "/estates/commissions" },
   { key: "marketing", label: "Marketing", icon: "megaphone", path: (id) => `/estates/${id}/marketing` },
-  { key: "whatsapp", label: "WhatsApp Inbox", icon: "whatsapp", path: (id) => `/estates/${id}/marketing/whatsapp` },
+  { key: "whatsapp", label: "WhatsApp", icon: "whatsapp", path: (id) => `/estates/${id}/marketing/whatsapp` },
   { key: "sms", label: "SMS", icon: "mail", path: (id) => `/estates/${id}/sms` },
   { key: "survey", label: "Survey", icon: "survey", path: (id) => `/estates/${id}/survey` },
   { key: "staking", label: "Staking", icon: "staking", path: (id) => `/estates/${id}/staking` },
