@@ -248,7 +248,7 @@ export default function EstateSocialPostsPage() {
                                           {result.stats.comment_list?.map((comment, index) => (
                                             <div key={index}>
                                               <div className="edash-sp-engagement-row"><strong>{comment.name}</strong><span>{comment.message}</span>{comment.created_time && <small>{formatLagos(comment.created_time, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</small>}{comment.id && (key === "facebook" || key === "instagram") && (<>
-<button type="button" className="edash-sp-link-btn" onClick={() => void likeTarget(post, key, comment.id)}>Like</button><button type="button" className="edash-sp-link-btn" onClick={() => setReplyingTo(replyingTo === `${post.id}-${key}-${comment.id}` ? null : `${post.id}-${key}-${comment.id}`)}>Reply</button>
+{key === "facebook" && <button type="button" className="edash-sp-link-btn" onClick={() => void likeTarget(post, key, comment.id)}>Like</button>}<button type="button" className="edash-sp-link-btn" onClick={() => setReplyingTo(replyingTo === `${post.id}-${key}-${comment.id}` ? null : `${post.id}-${key}-${comment.id}`)}>Reply</button>
 </>)}</div>
                                               {comment.id && replyingTo === `${post.id}-${key}-${comment.id}` && (
                                                 <div className="edash-sp-comment-box edash-sp-reply-box">
@@ -279,7 +279,7 @@ export default function EstateSocialPostsPage() {
                                   {automatic && result.status === "ok" && canManage && (
                                     <span className="edash-sp-result-actions">
                                       <button type="button" className="edash-sp-link-btn" disabled={busy === `stats-${post.id}-${key}`} onClick={() => void refreshStats(post, key)}>{busy === `stats-${post.id}-${key}` ? "Loading..." : result.stats ? "Refresh stats" : "Load stats"}</button>
-                                      <button type="button" className="edash-sp-link-btn" disabled={busy === `like-${post.id}-${key}-post`} onClick={() => void likeTarget(post, key)}>Like post</button>
+                                      {key === "facebook" && <button type="button" className="edash-sp-link-btn" disabled={busy === `like-${post.id}-${key}-post`} onClick={() => void likeTarget(post, key)}>Like post</button>}
                                   <button type="button" className="edash-sp-link-btn is-danger" disabled={busy === `delete-${post.id}-${key}`} onClick={() => void deleteFromChannel(post, key)}>{busy === `delete-${post.id}-${key}` ? "Deleting..." : "Delete"}</button>
                                     </span>
                                   )}
