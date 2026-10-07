@@ -341,6 +341,8 @@ export default function App() {
     const recoveryKey = `${CHUNK_RECOVERY_STORAGE_KEY}:${window.location.pathname}`;
     window.sessionStorage.removeItem(recoveryKey);
     window.sessionStorage.removeItem(`${CHUNK_RECOVERY_STORAGE_KEY}:attempts`);
+    // The entry-bundle guard set by index.html's own inline bootstrap script, ahead of this.
+    window.sessionStorage.removeItem("landcheck.entry-reload-attempted");
   }, []);
 
   return (

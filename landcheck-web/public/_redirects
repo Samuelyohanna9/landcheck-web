@@ -1,1 +1,12 @@
+# A stale tab that's held a page open across a deploy will still ask for an old build's hashed
+# asset filename (e.g. /assets/index-OLDHASH.js), which no longer exists once a newer deploy
+# replaces it. Without this line, the catch-all below used to swallow that into index.html -
+# served with status 200 and a text/html MIME type - which the browser's module-script loader
+# correctly refuses to execute as JS ("Expected a JavaScript-or-Wasm module script but the server
+# responded with a MIME type of text/html"), leaving a blank page with no visible error for
+# anything client-side to recover from. This makes a missing asset a real 404 instead, which
+# index.html's own inline bootstrap script (see index.html) catches and recovers from with one
+# reload.
+/assets/* /assets/:splat 404
+
 /* /index.html 200

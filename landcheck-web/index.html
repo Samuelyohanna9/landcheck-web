@@ -250,6 +250,40 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Recovers from the entry bundle itself failing to load after a deploy (a stale tab asking
+      // for a previous build's hashed filename that no longer exists). This has to sit here, in
+      // plain JS before the module script below, because the failure happens before any React
+      // code - including lazyWithChunkRecovery.ts's own recovery logic - has had a chance to run.
+      // A resource-load failure on a <script> tag doesn't bubble, so it has to be caught with a
+      // capturing listener on window, not a plain try/catch.
+      (function () {
+        if (typeof window === "undefined") return;
+        var STORAGE_KEY = "landcheck.entry-reload-attempted";
+        window.addEventListener(
+          "error",
+          function (event) {
+            var target = event.target;
+            if (!target || target.tagName !== "SCRIPT" || target.getAttribute("type") !== "module") return;
+            var already = false;
+            try {
+              already = window.sessionStorage.getItem(STORAGE_KEY) === "1";
+              if (!already) window.sessionStorage.setItem(STORAGE_KEY, "1");
+            } catch (e) {
+              // Private browsing / storage disabled - fall through and still attempt one reload,
+              // just without the loop guard.
+            }
+            if (already) return;
+            // A short pause gives an in-flight deploy a moment to finish before the retry, rather
+            // than reloading straight back into the same broken window.
+            window.setTimeout(function () {
+              window.location.reload();
+            }, 1200);
+          },
+          true,
+        );
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
