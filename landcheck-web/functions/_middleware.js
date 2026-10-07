@@ -52,10 +52,24 @@ export const onRequest = async (context) => {
   if (request.method !== "GET") return response;
 
   const url = new URL(request.url);
+  const contentType = response.headers.get("content-type") || "";
+
+  // Never let the SPA fallback turn a missing hashed JavaScript/CSS file into a 200 HTML
+  // response. Browsers reject that response for module scripts, and the stale page shell then
+  // gets stuck showing the boot-error screen instead of being able to recover on the next load.
+  if (url.pathname.startsWith("/assets/") && contentType.includes("text/html")) {
+    return new Response("Asset not found", {
+      status: 404,
+      headers: {
+        "Cache-Control": "no-store",
+        "Content-Type": "text/plain; charset=utf-8",
+      },
+    });
+  }
+
   const seo = ROUTE_SEO[url.pathname];
   if (!seo) return response;
 
-  const contentType = response.headers.get("content-type") || "";
   if (!contentType.includes("text/html")) return response;
 
   const userAgent = request.headers.get("user-agent") || "";

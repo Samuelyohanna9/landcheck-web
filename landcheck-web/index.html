@@ -262,7 +262,7 @@
         <div class="landcheck-boot-fallback-kicker">LandCheck</div>
         <h1>Something went wrong loading this page.</h1>
         <p>This can happen after a new version is released, or from a temporary glitch. Reloading usually fixes it.</p>
-        <button type="button" onclick="window.location.reload()">Reload LandCheck</button>
+        <button type="button" onclick="window.__landcheckRetry()">Reload LandCheck</button>
         <p class="landcheck-boot-fallback-footer">
           Still stuck after reloading? <a href="/">Go to the homepage</a> or email
           <a href="mailto:support@landcheck.online">support@landcheck.online</a>.
@@ -352,6 +352,60 @@
           if (el) el.classList.add("is-visible");
         }
 
+        function clearStaleRuntimeState() {
+          var tasks = [];
+          if ("caches" in window) {
+            tasks.push(
+              window.caches
+                .keys()
+                .then(function (keys) {
+                  return Promise.all(
+                    keys.map(function (key) {
+                      return window.caches.delete(key);
+                    }),
+                  );
+                })
+                .catch(function () {}),
+            );
+          }
+          if ("serviceWorker" in navigator) {
+            tasks.push(
+              navigator.serviceWorker
+                .getRegistrations()
+                .then(function (registrations) {
+                  return Promise.all(
+                    registrations.map(function (registration) {
+                      return registration.unregister();
+                    }),
+                  );
+                })
+                .catch(function () {}),
+            );
+          }
+          return Promise.all(tasks);
+        }
+
+        function reloadFromFreshShell(resetAttempt) {
+          if (resetAttempt) {
+            try {
+              window.sessionStorage.removeItem(STORAGE_KEY);
+            } catch (e) {
+              // Storage can be unavailable in private browsing; the reload still helps.
+            }
+          }
+          clearStaleRuntimeState().then(function () {
+            var url = new URL(window.location.href);
+            url.searchParams.set("__lc_reload", String(Date.now()));
+            window.location.replace(url.pathname + url.search + url.hash);
+          });
+        }
+
+        // The visible fallback remains useful when a deployment is genuinely broken, but its
+        // button should give the user one clean retry instead of reloading the same stale shell.
+        window.__landcheckRetry = function () {
+          reloadFromFreshShell(true);
+        };
+
         window.addEventListener(
           "error",
           function (event) {
@@ -373,10 +427,11 @@
               showFallback();
               return;
             }
-            // A short pause gives an in-flight deploy a moment to finish before the retry, rather
-            // than reloading straight back into the same broken window.
+            // A short pause gives an in-flight deploy a moment to finish before the retry. Clear
+            // stale service-worker/cache state first so the old shell cannot request the same
+            // missing hashed entry again after a successful deployment.
             window.setTimeout(function () {
-              window.location.reload();
+              reloadFromFreshShell(false);
             }, 1200);
           },
           true,
@@ -390,7 +445,17 @@
         window.addEventListener("load", function () {
           window.setTimeout(function () {
             var root = document.getElementById("root");
-            if (root && root.children.length === 0) showFallback();
+            if (root && root.children.length === 0) {
+              showFallback();
+            } else {
+              // Allow a later deploy to use the one-shot recovery again after this tab has
+              // successfully rendered the application.
+              try {
+                window.sessionStorage.removeItem(STORAGE_KEY);
+              } catch (e) {
+                // Storage can be unavailable in private browsing.
+              }
+            }
           }, 6000);
         });
       })();
