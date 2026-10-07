@@ -328,15 +328,24 @@ function RouteLoadingFallback() {
 export default function App() {
   useEffect(() => {
     if (typeof window === "undefined") return;
-    // App rendering this far means the current route's chunk(s) loaded fine - clear both the
-    // per-pathname guard and the global one-shot-reload budget (lazyWithChunkRecovery.ts) so a
-    // long-lived tab that lived through one deploy blip isn't left with a permanently spent
-    // recovery attempt for the rest of the session.
-    const recoveryKey = `${CHUNK_RECOVERY_STORAGE_KEY}:${window.location.pathname}`;
-    window.sessionStorage.removeItem(recoveryKey);
-    window.sessionStorage.removeItem(`${CHUNK_RECOVERY_STORAGE_KEY}:attempts`);
-    // The entry-bundle guard set by index.html's own inline bootstrap script, ahead of this.
-    window.sessionStorage.removeItem("landcheck.entry-reload-attempted");
+    // This effect fires the instant <App> itself mounts - the lazy route content below it is a
+    // Suspense-wrapped CHILD, and React does not wait for a Suspense boundary to resolve before
+    // running an ancestor's effects. So this cannot safely run immediately: on a route whose
+    // chunk is about to fail, it would wipe the recovery budget back to zero (lazyWithChunkRecovery.ts
+    // / index.html's entry-bundle guard) before that failure has even happened, defeating the
+    // one-shot cap entirely and letting a mid-deploy failure reload in a loop instead of stopping
+    // after one attempt. Deferring the reset behind a short delay fixes this: if a reload fires
+    // because the chunk failed, window.location.reload() tears down this whole JS context before
+    // the timeout below can run, so the reset only ever "sticks" on a load that's genuinely still
+    // alive a few seconds later - i.e. one that actually succeeded.
+    const handle = window.setTimeout(() => {
+      const recoveryKey = `${CHUNK_RECOVERY_STORAGE_KEY}:${window.location.pathname}`;
+      window.sessionStorage.removeItem(recoveryKey);
+      window.sessionStorage.removeItem(`${CHUNK_RECOVERY_STORAGE_KEY}:attempts`);
+      // The entry-bundle guard set by index.html's own inline bootstrap script, ahead of this.
+      window.sessionStorage.removeItem("landcheck.entry-reload-attempted");
+    }, 4000);
+    return () => window.clearTimeout(handle);
   }, []);
 
   return (
