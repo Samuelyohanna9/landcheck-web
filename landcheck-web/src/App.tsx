@@ -86,25 +86,33 @@ type ChunkLoadBoundaryProps = {
 
 type ChunkLoadBoundaryState = {
   hasError: boolean;
-  message: string;
 };
+
+// Colour/type tokens copied from estate-portal.css (:root / .estate-portal) rather than imported,
+// since this boundary wraps the entire app and can catch a failure before that stylesheet - or
+// any page-specific one - is guaranteed to have loaded. Kept in sync by hand; estate-portal.css
+// is the source of truth if the Estates brand colours ever change.
+const ESTATE_INK = "#102a27";
+const ESTATE_SLATE = "#5d6f69";
+const ESTATE_PAPER = "#f5f3eb";
+const ESTATE_LINE = "rgba(16, 42, 39, 0.16)";
+const ESTATE_ACCENT = "#16816e";
+const ESTATE_FONT_BODY = '"Aptos", "Segoe UI", Arial, sans-serif';
+const ESTATE_FONT_DISPLAY = '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif';
 
 class ChunkLoadBoundary extends Component<ChunkLoadBoundaryProps, ChunkLoadBoundaryState> {
   state: ChunkLoadBoundaryState = {
     hasError: false,
-    message: "",
   };
 
-  static getDerivedStateFromError(error: unknown): ChunkLoadBoundaryState {
-    const message = error instanceof Error ? error.message : "A page asset failed to load.";
-    return {
-      hasError: true,
-      message,
-    };
+  static getDerivedStateFromError(): ChunkLoadBoundaryState {
+    return { hasError: true };
   }
 
   componentDidCatch(_error: unknown, _info: ErrorInfo) {
-    // Intentionally swallow here and render a recovery prompt.
+    // Intentionally swallow here and render a recovery prompt. The raw error (e.g. "Failed to
+    // fetch dynamically imported module: ...") used to be shown on the card itself - it's not
+    // something a visitor can act on, so it's dropped rather than displayed.
   }
 
   render() {
@@ -116,26 +124,27 @@ class ChunkLoadBoundary extends Component<ChunkLoadBoundaryProps, ChunkLoadBound
           display: "grid",
           placeItems: "center",
           padding: "2rem 1rem",
-          background: "linear-gradient(180deg, #f4fbf6 0%, #ffffff 100%)",
+          background: ESTATE_PAPER,
+          fontFamily: ESTATE_FONT_BODY,
         }}
       >
         <div
           style={{
             width: "min(92vw, 540px)",
-            borderRadius: "24px",
-            border: "1px solid rgba(17, 61, 36, 0.14)",
+            borderRadius: "4px",
+            border: `1px solid ${ESTATE_LINE}`,
             background: "#ffffff",
-            boxShadow: "0 24px 60px rgba(20, 61, 39, 0.12)",
-            padding: "1.5rem",
+            boxShadow: "0 18px 40px rgba(16, 36, 58, 0.08)",
+            padding: "2rem 1.75rem",
           }}
         >
-          <div style={{ fontSize: "0.78rem", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: "#24804a", marginBottom: "0.8rem" }}>
+          <div style={{ fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.17em", textTransform: "uppercase", color: ESTATE_ACCENT, marginBottom: "0.9rem" }}>
             LandCheck
           </div>
-          <h1 style={{ margin: "0 0 0.6rem", fontSize: "1.8rem", lineHeight: 1.1, color: "#133525" }}>
+          <h1 style={{ margin: "0 0 0.7rem", fontFamily: ESTATE_FONT_DISPLAY, fontWeight: 500, fontSize: "1.9rem", lineHeight: 1.15, color: ESTATE_INK }}>
             Something went wrong loading this page.
           </h1>
-          <p style={{ margin: "0 0 1rem", color: "#51695b", lineHeight: 1.6 }}>
+          <p style={{ margin: "0 0 1.3rem", color: ESTATE_SLATE, fontSize: "0.95rem", lineHeight: 1.65 }}>
             {/* This boundary catches a stale-chunk failure that survived lazyWithChunkRecovery.ts's
                 own silent one-shot recovery (rare - usually a second failure in a row), and any
                 other rendering error in the app. Both are handled the same way here, since a reload
@@ -148,40 +157,25 @@ class ChunkLoadBoundary extends Component<ChunkLoadBoundaryProps, ChunkLoadBound
             onClick={() => window.location.reload()}
             style={{
               width: "100%",
-              minHeight: "50px",
+              minHeight: "46px",
               border: "0",
-              borderRadius: "16px",
-              background: "linear-gradient(180deg, #2aa85f 0%, #1d7e46 100%)",
+              borderRadius: "2px",
+              background: ESTATE_INK,
               color: "#ffffff",
-              fontSize: "1rem",
-              fontWeight: 800,
+              fontFamily: ESTATE_FONT_BODY,
+              fontSize: "0.82rem",
+              fontWeight: 700,
               cursor: "pointer",
             }}
           >
             Reload LandCheck
           </button>
-          <p style={{ margin: "0.85rem 0 0", color: "#7b9084", fontSize: "0.84rem", lineHeight: 1.5 }}>
+          <p style={{ margin: "1rem 0 0", color: ESTATE_SLATE, fontSize: "0.84rem", lineHeight: 1.5 }}>
             Still stuck after reloading?{" "}
-            <a href="/" style={{ color: "#1d7e46", fontWeight: 700 }}>Go to the homepage</a>
+            <a href="/" style={{ color: ESTATE_INK, fontWeight: 700, textDecoration: "underline" }}>Go to the homepage</a>
             {" "}or email{" "}
-            <a href="mailto:support@landcheck.online" style={{ color: "#1d7e46", fontWeight: 700 }}>support@landcheck.online</a>.
+            <a href="mailto:support@landcheck.online" style={{ color: ESTATE_INK, fontWeight: 700, textDecoration: "underline" }}>support@landcheck.online</a>.
           </p>
-          {this.state.message ? (
-            <pre
-              style={{
-                margin: "0.9rem 0 0",
-                padding: "0.8rem",
-                borderRadius: "14px",
-                background: "#f6faf7",
-                color: "#6a7d71",
-                fontSize: "0.72rem",
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-              }}
-            >
-              {this.state.message}
-            </pre>
-          ) : null}
         </div>
       </div>
     );
