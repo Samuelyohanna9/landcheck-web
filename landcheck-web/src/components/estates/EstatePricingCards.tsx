@@ -38,11 +38,12 @@ const PLAN_FEATURES: Record<EstatePlanKey, string[]> = {
   pro: [
     "Manage up to 6 estates",
     "Everything in Plus",
-    "Automatic Facebook and Instagram posting",
+    "WhatsApp chat with customers, right in the dashboard",
+    "Facebook & Instagram posting - write, schedule and publish, then reply to comments and likes from the dashboard",
     "Auto-written posting plans, scheduled for you",
     "Five premium flyer, poster and ad designs",
     "Soil analysis - indicative bearing capacity, water table and drainage",
-    "SMS notifications to customers - payment reminders, allocation and milestone updates",
+    "SMS to customers - automatic payment and milestone alerts, plus bulk messages you send",
   ],
   enterprise: [
     "Unlimited estates",

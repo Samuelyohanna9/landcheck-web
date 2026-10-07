@@ -9,7 +9,7 @@ import UpgradeNotice from "../UpgradeNotice";
 
 type Channel = { key: string; label: string; automatic: boolean; format: string };
 type Account = { id: number; provider: "facebook" | "instagram"; name: string; username?: string | null; status: string; is_default?: boolean; picture_url?: string | null; followers_count?: number | null };
-type Overview = { meta_available: boolean; whatsapp_available: boolean; accounts: Account[]; channels: Channel[]; published: boolean; auto_posting?: boolean };
+type Overview = { meta_available: boolean; whatsapp_available: boolean; accounts: Account[]; channels: Channel[]; published: boolean; auto_posting?: boolean; whatsapp_enabled?: boolean };
 type Template = { key: string; label: string; hint: string; caption: string };
 type Optins = {
   whatsapp_available: boolean; active: number; revoked: number; template_images?: boolean;
@@ -431,8 +431,8 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
         </div></div>
 
         <div className="edash-card"><div className="edash-card-inner">
-          <div className="edash-card-head"><h3 className="edash-card-title">WhatsApp updates</h3><span className="edash-mk-hint" style={{ margin: 0 }}>{optins ? `${optins.active} subscribed` : ""}</span></div>
-          {!optins?.whatsapp_available ? <p className="edash-mk-hint">Buyers can opt in on your public page and you can message them new plots, prices and site visits. This is being switched on with WhatsApp Business approval.</p> : (
+          <div className="edash-card-head"><h3 className="edash-card-title">WhatsApp updates</h3>{overview?.whatsapp_enabled !== false && <span className="edash-mk-hint" style={{ margin: 0 }}>{optins ? `${optins.active} subscribed` : ""}</span>}</div>
+          {overview?.whatsapp_enabled === false ? <UpgradeNotice title="Message buyers on WhatsApp" message="WhatsApp chat, opt-in updates and the conversation inbox are included in the Pro and Enterprise plans." cta="Upgrade to Pro" /> : !optins?.whatsapp_available ? <p className="edash-mk-hint">Buyers can opt in on your public page and you can message them new plots, prices and site visits. This is being switched on with WhatsApp Business approval.</p> : (
             <>
               <p className="edash-mk-hint">Only people who ticked the opt-in box on your Estate page receive these. They can reply STOP at any time.</p>
               {canManage && (
@@ -466,7 +466,7 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
           )}
         </div></div>
 
-        {optins?.whatsapp_available && (
+        {optins?.whatsapp_available && overview?.whatsapp_enabled !== false && (
           <div className="edash-card"><div className="edash-card-inner">
             <div className="edash-card-head">
               <h3 className="edash-card-title">WhatsApp conversations</h3>

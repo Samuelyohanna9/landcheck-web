@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { API_URL, api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
+import UpgradeNotice from "../../components/estates/UpgradeNotice";
 import { formatLagos } from "../../utils/estateMarketing";
 import "../../styles/estate-marketing.css";
 
@@ -71,6 +72,7 @@ export default function EstateWhatsappInboxPage() {
   const [templateKey, setTemplateKey] = useState("");
   const [templateDetail, setTemplateDetail] = useState("");
   const [startingChat, setStartingChat] = useState(false);
+  const [entitled, setEntitled] = useState<boolean | null>(null);
   const threadEndRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -102,7 +104,13 @@ export default function EstateWhatsappInboxPage() {
   }, [estateId]);
 
   useEffect(() => { if (estateId) api.get(`/estates/${estateId}`).then((response) => setEstateName(response.data?.name || "Estate")).catch(() => undefined); }, [estateId]);
-  useEffect(() => { void loadConversations(); }, [loadConversations]);
+  useEffect(() => {
+    if (!estateId) return;
+    api.get(`/estates/${estateId}/marketing/social/overview`)
+      .then((response) => setEntitled(response.data?.whatsapp_enabled !== false))
+      .catch(() => setEntitled(true)); // fail open on an unrelated network error - this isn't the security boundary, the backend still enforces it per action
+  }, [estateId]);
+  useEffect(() => { if (entitled === false) return; void loadConversations(); }, [loadConversations, entitled]);
   useEffect(() => { if (activePhone) void loadThread(activePhone); }, [activePhone, loadThread]);
   useEffect(() => { threadEndRef.current?.scrollIntoView({ block: "end" }); }, [messages]);
   useEffect(() => {
@@ -211,6 +219,20 @@ export default function EstateWhatsappInboxPage() {
     : null);
 
   if (!estateId) return null;
+
+  if (entitled === false) {
+    return (
+      <EstateShell estateId={estateId} estateName={estateName} activeKey="whatsapp">
+        <div className="edash-page-head">
+          <div>
+            <span className="edash-section-kicker">Marketing</span>
+            <h1>WhatsApp</h1>
+          </div>
+        </div>
+        <UpgradeNotice title="Chat with buyers on WhatsApp" message="WhatsApp chat, the conversation inbox and approved template messages are included in the Pro and Enterprise plans." cta="Upgrade to Pro" />
+      </EstateShell>
+    );
+  }
 
   return (
     <EstateShell estateId={estateId} estateName={estateName} activeKey="whatsapp">
