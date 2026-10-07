@@ -250,6 +250,92 @@
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- Last-resort fallback, shown only if nothing has rendered into #root a few seconds after
+         the page loaded (see the watchdog script below). Styled by hand, inline, matching the
+         Estates brand tokens (estate-portal.css is the source of truth) rather than relying on
+         any external stylesheet - this has to render correctly even when every other asset on
+         the page, including the app's own CSS, failed to load. Hidden by default; CSS-only, no
+         JS needed to show/hide it beyond toggling this one class. -->
+    <div id="landcheck-boot-fallback" class="landcheck-boot-fallback">
+      <div class="landcheck-boot-fallback-card">
+        <div class="landcheck-boot-fallback-kicker">LandCheck</div>
+        <h1>Something went wrong loading this page.</h1>
+        <p>This can happen after a new version is released, or from a temporary glitch. Reloading usually fixes it.</p>
+        <button type="button" onclick="window.location.reload()">Reload LandCheck</button>
+        <p class="landcheck-boot-fallback-footer">
+          Still stuck after reloading? <a href="/">Go to the homepage</a> or email
+          <a href="mailto:support@landcheck.online">support@landcheck.online</a>.
+        </p>
+      </div>
+    </div>
+    <style>
+      .landcheck-boot-fallback {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1rem;
+        background: #f5f3eb;
+        font-family: "Aptos", "Segoe UI", Arial, sans-serif;
+      }
+      .landcheck-boot-fallback.is-visible {
+        display: flex;
+      }
+      .landcheck-boot-fallback-card {
+        width: min(92vw, 540px);
+        border-radius: 4px;
+        border: 1px solid rgba(16, 42, 39, 0.16);
+        background: #ffffff;
+        box-shadow: 0 18px 40px rgba(16, 36, 58, 0.08);
+        padding: 2rem 1.75rem;
+      }
+      .landcheck-boot-fallback-kicker {
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.17em;
+        text-transform: uppercase;
+        color: #16816e;
+        margin-bottom: 0.9rem;
+      }
+      .landcheck-boot-fallback-card h1 {
+        margin: 0 0 0.7rem;
+        font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+        font-weight: 500;
+        font-size: 1.9rem;
+        line-height: 1.15;
+        color: #102a27;
+      }
+      .landcheck-boot-fallback-card p {
+        margin: 0 0 1.3rem;
+        color: #5d6f69;
+        font-size: 0.95rem;
+        line-height: 1.65;
+      }
+      .landcheck-boot-fallback-card button {
+        width: 100%;
+        min-height: 46px;
+        border: 0;
+        border-radius: 2px;
+        background: #102a27;
+        color: #ffffff;
+        font-family: inherit;
+        font-size: 0.82rem;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .landcheck-boot-fallback-footer {
+        margin: 1rem 0 0 !important;
+        font-size: 0.84rem !important;
+      }
+      .landcheck-boot-fallback-footer a {
+        color: #102a27;
+        font-weight: 700;
+        text-decoration: underline;
+      }
+    </style>
     <script>
       // Recovers from the entry bundle itself failing to load after a deploy (a stale tab asking
       // for a previous build's hashed filename that no longer exists). This has to sit here, in
@@ -260,6 +346,12 @@
       (function () {
         if (typeof window === "undefined") return;
         var STORAGE_KEY = "landcheck.entry-reload-attempted";
+
+        function showFallback() {
+          var el = document.getElementById("landcheck-boot-fallback");
+          if (el) el.classList.add("is-visible");
+        }
+
         window.addEventListener(
           "error",
           function (event) {
@@ -273,7 +365,14 @@
               // Private browsing / storage disabled - fall through and still attempt one reload,
               // just without the loop guard.
             }
-            if (already) return;
+            if (already) {
+              // The one guarded reload already happened and this is still failing - stop
+              // reloading (that would loop for as long as the server-side problem lasts) and
+              // show the plain-HTML fallback instead, so the person is never just looking at a
+              // blank page with nothing to do about it.
+              showFallback();
+              return;
+            }
             // A short pause gives an in-flight deploy a moment to finish before the retry, rather
             // than reloading straight back into the same broken window.
             window.setTimeout(function () {
@@ -282,6 +381,18 @@
           },
           true,
         );
+
+        // A second, independent backstop that doesn't depend on catching any particular error
+        // event at all: if nothing has rendered into #root a few seconds after the page loaded,
+        // something is wrong regardless of why (a hung fetch that never rejects, a blocked
+        // request, anything this file's error listener doesn't happen to match) - show the same
+        // fallback rather than leaving an unexplained blank page.
+        window.addEventListener("load", function () {
+          window.setTimeout(function () {
+            var root = document.getElementById("root");
+            if (root && root.children.length === 0) showFallback();
+          }, 6000);
+        });
       })();
     </script>
     <script type="module" src="/src/main.tsx"></script>
