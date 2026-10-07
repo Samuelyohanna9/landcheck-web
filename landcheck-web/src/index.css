@@ -303,7 +303,60 @@ img {
   min-height: 100vh;
   width: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 1.1rem;
   background: #050b1a;
+}
+
+/* Shown only once a route's chunk has been loading for several seconds straight through - gives
+   the person a way out instead of an unexplained, indefinite spinner (the common case being a
+   deploy mid-restart on the server). Inline-safe colours rather than a shared button class, since
+   this can render before any other page CSS/components are guaranteed to have mounted. */
+.route-loading-stuck-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  animation: route-loading-stuck-in 0.4s ease-out;
+}
+
+.route-loading-stuck-hint p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.route-loading-stuck-hint button {
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.5rem 1.4rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.route-loading-stuck-hint button:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+@keyframes route-loading-stuck-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-loading-stuck-hint {
+    animation: none;
+  }
 }

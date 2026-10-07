@@ -10,6 +10,16 @@ import { lazy, type ComponentType } from "react";
 export const CHUNK_RECOVERY_STORAGE_KEY = "landcheck.chunk-recovery";
 const CHUNK_ERROR_PATTERN = /ChunkLoadError|Loading chunk|Failed to fetch dynamically imported module/i;
 
+// A per-pathname guard alone isn't enough: a redirect chain through two or three routes while a
+// deploy is still finishing (e.g. "/" -> "/estates/workspace" -> "/estates/login") gives each
+// pathname its own one-shot budget, so the tab can silently self-reload several times in a row -
+// which reads to the person watching as the loading screen "blinking" rather than one clean retry.
+// This caps it at one silent auto-reload per tab session, full stop, regardless of how many
+// different pathnames the redirect chain touches - anything after that goes straight to the
+// visible ChunkLoadBoundary card instead of chaining more invisible reloads.
+const GLOBAL_RECOVERY_ATTEMPTS_KEY = `${CHUNK_RECOVERY_STORAGE_KEY}:attempts`;
+const MAX_GLOBAL_RECOVERY_ATTEMPTS = 1;
+
 // Shared by lazyWithChunkRecovery (route/component lazy-loading, below) and
 // importWithChunkRecovery (plain inline `await import(...)` calls, e.g. a library loaded on
 // demand inside an event handler - CoordinateInput.tsx's CSV/Excel parsers are the first case of
@@ -28,7 +38,10 @@ async function attemptChunkErrorRecovery(error: unknown, recoveryScope: string):
   const recoveryKey = `${CHUNK_RECOVERY_STORAGE_KEY}:${recoveryScope}`;
   const recoveredAlready = window.sessionStorage.getItem(recoveryKey) === "1";
   if (recoveredAlready) return false;
+  const attemptsSoFar = Number(window.sessionStorage.getItem(GLOBAL_RECOVERY_ATTEMPTS_KEY) || "0");
+  if (attemptsSoFar >= MAX_GLOBAL_RECOVERY_ATTEMPTS) return false;
   window.sessionStorage.setItem(recoveryKey, "1");
+  window.sessionStorage.setItem(GLOBAL_RECOVERY_ATTEMPTS_KEY, String(attemptsSoFar + 1));
   // Clear Cache Storage (and nudge the service worker to check for an update) BEFORE reloading,
   // not just after - a reload alone can still be served the same stale cached chunk by the
   // service worker, making this one-shot recovery a no-op and pushing the user straight to the
@@ -45,6 +58,11 @@ async function attemptChunkErrorRecovery(error: unknown, recoveryScope: string):
   } catch {
     // Best-effort cleanup - still reload even if clearing caches failed.
   }
+  // A short, deliberate pause before reloading - retrying instantly tends to land in the exact
+  // same mid-deploy window it just failed in (the container restart or build swap that caused
+  // this is usually only a few seconds), so giving it a moment measurably improves the odds this
+  // one allotted attempt actually succeeds instead of spending it for nothing.
+  await new Promise((resolve) => window.setTimeout(resolve, 1200));
   window.location.reload();
   return true;
 }

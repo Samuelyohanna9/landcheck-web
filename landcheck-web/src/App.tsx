@@ -1,4 +1,4 @@
-import { Component, Suspense, useEffect, useLayoutEffect, type ErrorInfo, type ReactElement, type ReactNode } from "react";
+import { Component, Suspense, useEffect, useLayoutEffect, useState, type ErrorInfo, type ReactElement, type ReactNode } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import CookieConsentManager from "./components/CookieConsentManager";
 import SeoRouteMeta from "./components/SeoRouteMeta";
@@ -279,31 +279,54 @@ function RouteScrollManager() {
 // LandCheck Work, and Survey all share the same quiet, compact mark (the one that used to be
 // Estates-only) rather than each having its own look - only the public Green field app and the
 // Hazard/Flood tool keep their own larger, more illustrated fallback.
+//
+// How long this fallback can be on screen before the person sees a way out. This is Suspense
+// waiting on a lazy import()'s promise - if that request just hangs (common for a few seconds
+// while a reverse proxy or container is mid-restart during a deploy) rather than cleanly
+// rejecting, nothing ever throws for lazyWithChunkRecovery.ts or ChunkLoadBoundary to catch, so
+// without this the person is left looking at a spinner with no error and no escape hatch.
+const STUCK_LOADING_MS = 7000;
+
 function RouteLoadingFallback() {
   const { pathname } = useLocation();
+  const [stuck, setStuck] = useState(false);
+
+  useEffect(() => {
+    setStuck(false);
+    const handle = window.setTimeout(() => setStuck(true), STUCK_LOADING_MS);
+    return () => window.clearTimeout(handle);
+    // Re-arm the timer per pathname, same scope the recovery guard itself uses.
+  }, [pathname]);
+
   const path = pathname.toLowerCase().replace(/\/+$/, "") || "/";
-
-  if (["/survey", "/survey/guides", "/flood", "/green-partners"].includes(path)) return null;
-
   const isEstateRoute = path.startsWith("/estates") || path.startsWith("/estate-admin");
   const isGreenWorkRoute = path.startsWith("/green-work");
   const isSurveyRoute = path.startsWith("/survey") || path.startsWith("/dashboard");
   const useCompactMark = isEstateRoute || isGreenWorkRoute || isSurveyRoute;
+  const showsOwnAnimation = !["/survey", "/survey/guides", "/flood", "/green-partners"].includes(path);
 
   let Animation: typeof GreenLoadingAnimation | null = null;
-  if (useCompactMark) {
-    Animation = GreenLoadingAnimation;
-  } else if (path.startsWith("/hazard-analysis") || path.startsWith("/flood")) {
-    Animation = HazardLoadingAnimation;
-  } else if (path.startsWith("/green")) {
-    Animation = GreenLoadingAnimation;
+  if (showsOwnAnimation) {
+    if (useCompactMark) {
+      Animation = GreenLoadingAnimation;
+    } else if (path.startsWith("/hazard-analysis") || path.startsWith("/flood")) {
+      Animation = HazardLoadingAnimation;
+    } else if (path.startsWith("/green")) {
+      Animation = GreenLoadingAnimation;
+    }
   }
 
-  if (!Animation) return null;
+  if (!Animation && !stuck) return null;
 
   return (
     <div className="route-loading-fallback">
-      <Animation size={useCompactMark ? "small" : "large"} className={useCompactMark ? "estate-loading-animation" : undefined} />
+      {Animation && <Animation size={useCompactMark ? "small" : "large"} className={useCompactMark ? "estate-loading-animation" : undefined} />}
+      {stuck && (
+        <div className="route-loading-stuck-hint" role="status">
+          <p>Taking longer than usual to load.</p>
+          <button type="button" onClick={() => window.location.reload()}>Reload</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -311,8 +334,13 @@ function RouteLoadingFallback() {
 export default function App() {
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // App rendering this far means the current route's chunk(s) loaded fine - clear both the
+    // per-pathname guard and the global one-shot-reload budget (lazyWithChunkRecovery.ts) so a
+    // long-lived tab that lived through one deploy blip isn't left with a permanently spent
+    // recovery attempt for the rest of the session.
     const recoveryKey = `${CHUNK_RECOVERY_STORAGE_KEY}:${window.location.pathname}`;
     window.sessionStorage.removeItem(recoveryKey);
+    window.sessionStorage.removeItem(`${CHUNK_RECOVERY_STORAGE_KEY}:attempts`);
   }, []);
 
   return (
