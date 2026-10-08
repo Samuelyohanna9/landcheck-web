@@ -2076,12 +2076,15 @@
 }
 
 /* ---- Hero: full-bleed photo ---- */
+/* padding-top used to be 200px specifically to clear the old fixed, transparent nav that floated
+   over this hero. NavBar now renders as a normal solid bar above this section (light), taking its
+   own space in document flow, so the hero only needs ordinary breathing room, not nav clearance. */
 .green-partners-page .gp-new-hero {
   position: relative;
   min-height: 640px;
   display: flex;
   align-items: center;
-  padding: 200px 0 110px;
+  padding: 72px 0 110px;
   background-color: #08150e;
   background-size: cover;
   background-position: center;

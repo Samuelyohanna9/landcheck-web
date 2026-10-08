@@ -256,9 +256,7 @@ export default function GreenPartnersLanding() {
   return (
     <div className="green-partners-page public-landing">
       <NavBar
-        fixed
-        overlay
-        logoBadge="wordmark"
+        light
         activeRoute="/green-partners"
         ctaLabel="Get Started"
         ctaRoute="/green-work/login"

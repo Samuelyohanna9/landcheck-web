@@ -256,7 +256,7 @@ export default function LandingPage() {
 
   return (
     <div className="landcheck-landing public-landing">
-      <NavBar fixed overlay logoBadge="wordmark" />
+      <NavBar light />
       <main>
 
       {/* Hero */}
