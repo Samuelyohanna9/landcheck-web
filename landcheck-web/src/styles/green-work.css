@@ -4938,7 +4938,7 @@
   object-fit: contain;
   border: 1px solid var(--gw-border);
   border-radius: 8px;
-  background: var(--gw-brand-dark);
+  background: var(--gw-surface);
 }
 
 .green-work-menu-brand-logos img.green-work-partner-logo {
