@@ -91,7 +91,7 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
     description:
       "Plan and manage property developments in Nigeria with LandCheck Estates. Import estate layouts from CSV, GIS, CAD, or scanned plans, digitize plots, manage buyers and payments, message leads over WhatsApp, and auto-post listings to Facebook and Instagram - all from one dashboard.",
     keywords:
-      "estate management software Nigeria, real estate development software Nigeria, estate layout design Nigeria, plot management software, estate plot sales, land development platform Nigeria, estate mapping, georeference estate layout, scanned survey plan digitizing, CAD DXF estate import, estate road and open space mapping, UTM coordinate system Nigeria, customer allocation, plot payment tracking, survey plan software, DGPS staking coordinates, estate development tracking, estate audit trail, estate WhatsApp inbox, Facebook Instagram posting software Nigeria, real estate social media automation, SMS notifications real estate Nigeria, estate marketing software Nigeria, QR code lead tracking real estate",
+      "estate management software Nigeria, real estate development software Nigeria, estate layout design Nigeria, plot management software, estate plot sales, land development platform Nigeria, estate mapping, georeference estate layout, scanned survey plan digitizing, CAD DXF estate import, estate road and open space mapping, UTM coordinate system Nigeria, customer allocation, plot payment tracking, survey plan software, DGPS staking coordinates, estate development tracking, estate audit trail, estate WhatsApp inbox, Facebook Instagram posting software Nigeria, real estate social media automation, SMS notifications real estate Nigeria, estate marketing software Nigeria, QR code lead tracking real estate, soil analysis Nigeria, bearing capacity estimate Nigeria, water table tendency Nigeria, geotechnical survey request Nigeria",
     canonicalPath: "/estates",
     ogType: "website",
     ogImage: `${SITE_ORIGIN}/estates.jpg`,
@@ -117,6 +117,7 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
         "Payment, receipt, statement, and commission tracking",
         "Survey plan and DGPS staking outputs",
         "Estate and plot-level terrain, flood, and erosion screening",
+        "Indicative soil analysis: presumptive bearing-capacity range, water-table tendency, and 0-2m soil texture profile, with a one-click request for a licensed geotechnical survey",
         "Development progress tracking and full audit trail",
         "WhatsApp inbox to message buyers and leads directly from the dashboard",
         "Automatic Facebook and Instagram post scheduling with in-dashboard comment replies and likes",
