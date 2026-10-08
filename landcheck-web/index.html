@@ -29,14 +29,14 @@
     <link rel="preconnect" href="https://api.mapbox.com" crossorigin />
     <link rel="dns-prefetch" href="https://api.mapbox.com" />
 
-    <title>LandCheck Nigeria | Survey Plan, Flood Risk & Tree Monitoring</title>
+    <title>LandCheck Nigeria | Survey Plans, Estate Management & Flood Risk</title>
     <meta
       name="description"
-      content="LandCheck is Nigeria's geospatial intelligence platform for survey plan production, flood risk analysis, and GPS tree monitoring with audit-ready reports."
+      content="LandCheck is Nigeria's geospatial intelligence platform for survey plan production, estate planning and plot management with built-in WhatsApp, SMS, and Facebook/Instagram marketing, flood risk analysis, and GPS tree monitoring with audit-ready reports."
     />
     <meta
       name="keywords"
-      content="survey plan Nigeria, flood risk analysis Nigeria, tree monitoring app Nigeria, geospatial platform Nigeria, LandCheck Nigeria, land survey Nigeria, GPS tree monitoring"
+      content="survey plan Nigeria, estate management software Nigeria, real estate development software Nigeria, estate marketing software Nigeria, flood risk analysis Nigeria, tree monitoring app Nigeria, geospatial platform Nigeria, LandCheck Nigeria, land survey Nigeria, GPS tree monitoring"
     />
     <meta name="author" content="LandCheck Geospatial Technologies Limited" />
     <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
@@ -47,10 +47,10 @@
     <meta property="og:site_name" content="LandCheck" />
     <meta property="og:locale" content="en_NG" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="LandCheck Nigeria | Survey Plan, Flood Risk & Tree Monitoring" />
+    <meta property="og:title" content="LandCheck Nigeria | Survey Plans, Estate Management & Flood Risk" />
     <meta
       property="og:description"
-      content="Nigeria's geospatial intelligence platform — survey plans, flood risk screening, and GPS tree monitoring for development projects."
+      content="Nigeria's geospatial intelligence platform — survey plans, estate and plot management with WhatsApp, SMS, and Facebook/Instagram marketing built in, flood risk screening, and GPS tree monitoring for development projects."
     />
     <meta property="og:url" content="https://landcheck.online/" />
     <meta property="og:image" content="https://landcheck.online/logo-icon-512.png" />
@@ -61,10 +61,10 @@
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@LandCheckNG" />
-    <meta name="twitter:title" content="LandCheck Nigeria | Survey Plan, Flood Risk & Tree Monitoring" />
+    <meta name="twitter:title" content="LandCheck Nigeria | Survey Plans, Estate Management & Flood Risk" />
     <meta
       name="twitter:description"
-      content="Nigeria's geospatial intelligence platform — survey plans, flood risk screening, and GPS tree monitoring for development projects."
+      content="Nigeria's geospatial intelligence platform — survey plans, estate and plot management with WhatsApp, SMS, and Facebook/Instagram marketing built in, flood risk screening, and GPS tree monitoring for development projects."
     />
     <meta name="twitter:image" content="https://landcheck.online/logo-icon-512.png" />
     <meta name="twitter:image:alt" content="LandCheck Nigeria — Geospatial Intelligence Platform" />
@@ -101,6 +101,8 @@
             "knowsAbout": [
               "Survey Plans",
               "Geographic Information Systems",
+              "Estate Management",
+              "Real Estate Marketing Automation",
               "Flood Risk Analysis",
               "Tree Monitoring",
               "Agricultural Monitoring",
@@ -111,6 +113,11 @@
               "@type": "OfferCatalog",
               "name": "LandCheck Products and Services",
               "itemListElement": [
+                {
+                  "@type": "Offer",
+                  "name": "LandCheck Estates — Estate Management, Sales & Marketing Software",
+                  "url": "https://landcheck.online/estates"
+                },
                 {
                   "@type": "Offer",
                   "name": "LandCheck Green — Tree & Agricultural Monitoring App",
@@ -192,11 +199,36 @@
             ]
           },
           {
+            "@type": "SoftwareApplication",
+            "@id": "https://landcheck.online/estates#software",
+            "name": "LandCheck Estates",
+            "applicationCategory": "BusinessApplication",
+            "operatingSystem": "Web",
+            "url": "https://landcheck.online/estates",
+            "description": "A web workspace for property developers to bring in estate layouts from CSV, GIS, CAD, or scanned plans, digitize plots and layout features, review and manage plots and customers, track payments, message leads over WhatsApp, run Facebook and Instagram marketing, and prepare survey and staking outputs.",
+            "provider": { "@id": "https://landcheck.online/#organization" },
+            "areaServed": { "@type": "Country", "name": "Nigeria" },
+            "featureList": [
+              "Import estate layouts from CSV, GIS/GeoJSON, CAD (DXF), or scanned paper plans",
+              "Georeference scanned plans and digitize plot boundaries, roads, drainage, and open space",
+              "Automatic estate layout design",
+              "Map-based plot register and availability tracking",
+              "Customer reservations, allocations, and payment tracking",
+              "Survey plan and DGPS staking outputs",
+              "Estate and plot-level flood and erosion screening",
+              "WhatsApp inbox to message buyers and leads directly from the dashboard",
+              "Automatic Facebook and Instagram post scheduling with in-dashboard comment replies and likes",
+              "SMS and email customer notifications",
+              "QR-coded marketing campaigns to track leads by channel",
+              "Development progress tracking and full audit trail"
+            ]
+          },
+          {
             "@type": "WebPage",
             "@id": "https://landcheck.online/#homepage",
             "url": "https://landcheck.online/",
-            "name": "LandCheck Nigeria | Survey Plan, Flood Risk & Tree Monitoring",
-            "description": "LandCheck is Nigeria's geospatial intelligence platform for survey plan production, flood risk analysis, and GPS tree monitoring.",
+            "name": "LandCheck Nigeria | Survey Plans, Estate Management & Flood Risk",
+            "description": "LandCheck is Nigeria's geospatial intelligence platform for survey plan production, estate planning and plot management, flood risk analysis, and GPS tree monitoring.",
             "isPartOf": { "@id": "https://landcheck.online/#website" },
             "about": { "@id": "https://landcheck.online/#organization" },
             "inLanguage": "en-NG"

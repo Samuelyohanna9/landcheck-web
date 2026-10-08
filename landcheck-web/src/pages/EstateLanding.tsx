@@ -29,6 +29,9 @@ const includedGroups = [
       "Customers and allocations",
       "Payments and commissions",
       "SMS and email updates for customers",
+      "WhatsApp inbox for buyer and lead chats",
+      "Facebook and Instagram auto-posting with comments and likes",
+      "QR-coded marketing campaigns by channel",
     ],
   },
 ];

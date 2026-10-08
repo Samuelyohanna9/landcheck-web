@@ -47,9 +47,9 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
   "/": {
     title: "LandCheck Nigeria | Survey Plans, Estate Management & Flood Risk",
     description:
-      "LandCheck brings together survey plan production, estate planning and plot management, flood and erosion analysis, and GPS-verified tree monitoring for teams in Nigeria.",
+      "LandCheck brings together survey plan production, estate planning and plot management with built-in WhatsApp, SMS, and Facebook/Instagram marketing, flood and erosion analysis, and GPS-verified tree monitoring for teams in Nigeria.",
     keywords:
-      "survey plan Nigeria, estate management software Nigeria, real estate development software Nigeria, plot management Nigeria, flood risk analysis Nigeria, tree monitoring app Nigeria, geospatial platform Nigeria, LandCheck Nigeria",
+      "survey plan Nigeria, estate management software Nigeria, real estate development software Nigeria, plot management Nigeria, estate marketing software Nigeria, flood risk analysis Nigeria, tree monitoring app Nigeria, geospatial platform Nigeria, LandCheck Nigeria",
     canonicalPath: "/",
     ogType: "website",
     ogImage: DEFAULT_OG_IMAGE,
@@ -87,11 +87,11 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
   },
 
   "/estates": {
-    title: "LandCheck Estates | Estate Planning & Plot Management Software Nigeria",
+    title: "LandCheck Estates | Estate Management, Sales & Marketing Software Nigeria",
     description:
-      "Plan and manage property developments in Nigeria with LandCheck Estates. Import estate layouts from CSV, GIS files, CAD drawings, or scanned paper plans, digitize plots plus roads, drainage, and open space, manage buyers and payments, and prepare survey and staking outputs.",
+      "Plan and manage property developments in Nigeria with LandCheck Estates. Import estate layouts from CSV, GIS, CAD, or scanned plans, digitize plots, manage buyers and payments, message leads over WhatsApp, and auto-post listings to Facebook and Instagram - all from one dashboard.",
     keywords:
-      "estate management software Nigeria, real estate development software Nigeria, estate layout design Nigeria, plot management software, estate plot sales, land development platform Nigeria, estate mapping, georeference estate layout, scanned survey plan digitizing, CAD DXF estate import, estate road and open space mapping, UTM coordinate system Nigeria, customer allocation, plot payment tracking, survey plan software, DGPS staking coordinates, estate development tracking, estate audit trail",
+      "estate management software Nigeria, real estate development software Nigeria, estate layout design Nigeria, plot management software, estate plot sales, land development platform Nigeria, estate mapping, georeference estate layout, scanned survey plan digitizing, CAD DXF estate import, estate road and open space mapping, UTM coordinate system Nigeria, customer allocation, plot payment tracking, survey plan software, DGPS staking coordinates, estate development tracking, estate audit trail, estate WhatsApp inbox, Facebook Instagram posting software Nigeria, real estate social media automation, SMS notifications real estate Nigeria, estate marketing software Nigeria, QR code lead tracking real estate",
     canonicalPath: "/estates",
     ogType: "website",
     ogImage: `${SITE_ORIGIN}/estates.jpg`,
@@ -104,7 +104,7 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
       "operatingSystem": "Web",
       "url": `${SITE_ORIGIN}/estates`,
       "description":
-        "A web workspace for property developers to bring in estate layouts from CSV, GIS, CAD, or scanned plans, digitize plots and layout features, review and manage plots and customers, track payments, and prepare survey and staking outputs.",
+        "A web workspace for property developers to bring in estate layouts from CSV, GIS, CAD, or scanned plans, digitize plots and layout features, review and manage plots and customers, track payments, message leads over WhatsApp, run Facebook and Instagram marketing, and prepare survey and staking outputs.",
       "provider": { "@id": `${SITE_ORIGIN}/#organization` },
       "areaServed": { "@type": "Country", "name": "Nigeria" },
       "featureList": [
@@ -118,6 +118,10 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
         "Survey plan and DGPS staking outputs",
         "Estate and plot-level terrain, flood, and erosion screening",
         "Development progress tracking and full audit trail",
+        "WhatsApp inbox to message buyers and leads directly from the dashboard",
+        "Automatic Facebook and Instagram post scheduling with in-dashboard comment replies and likes",
+        "SMS and email customer notifications",
+        "QR-coded marketing campaigns to track leads by channel",
       ],
     },
   },
