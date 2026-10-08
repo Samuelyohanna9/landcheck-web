@@ -3105,8 +3105,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
       <div className="edash-onboard">
         <div className="edash-onboard-topbar">
           <div className="edash-sidebar-brand" style={{ padding: 0 }}>
-            <span className="edash-sidebar-brand-logo"><img src="/logo-icon-192.png" alt="LandCheck" width="40" height="40" /></span>
-            <small className="edash-sidebar-brand-tag">Estates</small>
+            <span className="edash-sidebar-brand-logo"><img src="/logo-wordmark-web.png" alt="LandCheck Estates" width="182" height="58" /></span>
           </div>
           <button type="button" className="edash-btn-outline" onClick={() => { clearEstateAuthSession(); navigate("/estates", { replace: true }); }}>Sign out</button>
         </div>

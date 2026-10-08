@@ -787,7 +787,7 @@ export default function Dashboard() {
             {/* Same boxed badge treatment as the Survey workspace's own top bar (.survey-top-bar-brand-logo) -
                 the icon mark alone on its dark badge. The brand wordmark's dark ink text has no
                 light-on-dark variant, so it can't sit directly on this dark badge the way the icon can. */}
-            <span className="dashboard-logo-mark" aria-hidden="true"><img src="/logo-icon-192.png" alt="" /></span>
+            <span className="dashboard-logo-mark" aria-hidden="true"><img src="/logo-wordmark-web.png" alt="" /></span>
           </button>
           <h1>{greetingForNow()}, {displayName}</h1>
         </div>

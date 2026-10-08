@@ -225,7 +225,7 @@ export default function NavBar({
           aria-label="Mobile navigation"
         >
           <div className="lc-mobile-header">
-            <img src={logoSrc} alt="LandCheck" className="lc-mobile-logo" width="110" height="36" />
+            <img src={resolvedLogoSrc} alt="LandCheck" className="lc-mobile-logo" width={logoIsWordmark ? "138" : "44"} height="44" />
             <button
               type="button"
               className="lc-mobile-close"

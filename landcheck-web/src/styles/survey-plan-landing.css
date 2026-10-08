@@ -186,6 +186,8 @@
   pointer-events: auto;
 }
 
+/* White drawer, not dark - matches the now-white .spl-nav bar instead of standing out as the one
+   remaining dark surface. The logo sits directly on it, no chip needed. */
 .spl-mobile-drawer {
   position: fixed;
   top: 0;
@@ -197,8 +199,8 @@
   gap: 4px;
   width: min(300px, 84vw);
   padding: 18px;
-  background: var(--spl-navy);
-  box-shadow: -18px 0 44px rgba(2, 8, 16, 0.4);
+  background: #ffffff;
+  box-shadow: -18px 0 44px rgba(16, 36, 58, 0.18);
   transform: translateX(100%);
   transition: transform 0.24s ease;
 }
@@ -214,20 +216,10 @@
   margin-bottom: 10px;
 }
 
-/* The drawer itself stays dark (var(--spl-navy)), unlike the now-light .spl-nav bar, so its logo
-   still needs the white chip the bar no longer does. */
-.spl-mobile-drawer-head .spl-brand-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 10px;
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.98);
-}
-
-.spl-mobile-drawer-head .spl-brand-chip img {
+.spl-mobile-drawer-head img {
   display: block;
   width: auto;
-  height: 30px;
+  height: 38px;
 }
 
 .spl-mobile-close {
@@ -235,8 +227,8 @@
   height: 32px;
   border: 0;
   border-radius: 999px;
-  background: rgba(245, 243, 235, 0.1);
-  color: #f5f3eb;
+  background: rgba(16, 42, 39, 0.06);
+  color: var(--spl-ink);
   font-size: 1.2rem;
   line-height: 1;
   cursor: pointer;
@@ -249,7 +241,7 @@
 
 .spl-mobile-group-label {
   padding: 14px 4px 2px;
-  color: rgba(245, 243, 235, 0.4);
+  color: var(--spl-muted);
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -259,9 +251,9 @@
 .spl-mobile-item {
   padding: 13px 4px;
   border: 0;
-  border-top: 1px solid rgba(245, 243, 235, 0.12);
+  border-top: 1px solid var(--spl-line);
   background: none;
-  color: rgba(245, 243, 235, 0.85);
+  color: var(--spl-ink);
   font: inherit;
   font-size: 0.92rem;
   text-align: left;

@@ -87,7 +87,7 @@ export default function AgentPortalAccessPage() {
     <main className={`agent-public${menuOpen ? " is-menu-open" : ""}`}>
       <div className="agent-public-backdrop" onClick={() => setMenuOpen(false)} aria-hidden="true" />
       <aside className="agent-public-sidebar">
-        <div className="agent-public-brand"><span className="agent-public-logo"><img src="/logo-icon-192.png" alt="LandCheck" /></span><span>Estates</span></div>
+        <div className="agent-public-brand"><span className="agent-public-logo"><img src="/logo-wordmark-web.png" alt="LandCheck Estates" /></span></div>
         <div className="agent-public-profile"><span className="agent-public-avatar">{workspace.agent.name.slice(0, 1).toUpperCase()}</span><div><strong>{workspace.agent.name}</strong><small>{workspace.agent.role.replaceAll("_", " ")}</small></div></div>
         <nav className="agent-public-nav" aria-label="Agent workspace">
           <a href="#overview" onClick={() => setMenuOpen(false)}><EstateIcon name="grid" />Overview</a>

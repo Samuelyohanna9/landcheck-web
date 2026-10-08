@@ -95,22 +95,17 @@
   padding: 4px 8px 20px;
 }
 
-/* Shows the icon mark alone (/logo-icon-192.png), not the full wordmark - the current brand
-   logo's "Land" text is dark ink, meant for a light background, with no reversed/light-text
-   variant for a dark surface. Dropped straight onto the (light) sidebar the icon would wash out,
-   so it gets its own small dark chip to sit on instead. Uses the dashboard's own brand green (not
-   the site's navy) so the chip reads as part of this product's palette rather than a mismatched
-   dark box. Revisit if a light-on-dark wordmark variant is ever produced. */
+/* The full wordmark lockup, sitting directly on the sidebar - --edash-surface is #ffffff, so the
+   logo's dark ink text reads fine with no chip needed at all. (An earlier version of this comment
+   put a dark chip here on the mistaken assumption every dashboard surface was dark - this one
+   never was.) */
 .edash-sidebar-brand-logo {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  padding: 9px 13px;
-  border-radius: 10px;
-  background: var(--edash-brand-dark);
 }
 
-.edash-sidebar-brand-logo img { display: block; height: 22px; width: auto; }
+.edash-sidebar-brand-logo img { display: block; height: 34px; width: auto; }
 
 .edash-sidebar-brand-tag {
   color: var(--edash-brand);
@@ -1344,8 +1339,7 @@
 @media (max-height: 760px) {
   .edash-sidebar { padding: 10px 12px 8px; }
   .edash-sidebar-brand { padding: 2px 6px 8px; }
-  .edash-sidebar-brand-logo { padding: 6px 10px; }
-  .edash-sidebar-brand-logo img { height: 18px; }
+  .edash-sidebar-brand-logo img { height: 26px; }
   .edash-nav { gap: 0; }
   .edash-nav-item { padding: 5px 10px; font-size: 0.8rem; }
   .edash-nav-icon, .edash-nav-icon svg { width: 15px; height: 15px; }

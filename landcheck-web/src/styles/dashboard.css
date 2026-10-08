@@ -2621,7 +2621,7 @@
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  padding: 6px 10px;
+  padding: 7px 12px;
   border-radius: 9px;
   background: #0f6e44;
 }
@@ -2629,7 +2629,7 @@
 .workspace-container .dashboard-logo-mark img {
   display: block;
   width: auto;
-  height: 24px;
+  height: 28px;
 }
 
 @media (max-width: 768px) {

@@ -33,10 +33,7 @@
 .estate-brand { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; color: #0f6e44; font-size: .62rem; font-weight: 800; letter-spacing: .16em; text-decoration: none; }
 .estate-brand img { display: block; width: auto; height: 42px; }
 
-/* The mobile drawer is a separate dark slide-in panel (see .estate-mobile-drawer below), so its
-   logo still needs the white chip the dark bar needed before. */
-.estate-mobile-drawer-head .estate-brand-chip { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 9px; background: rgba(255, 255, 255, .98); }
-.estate-mobile-drawer-head .estate-brand-chip img { display: block; width: auto; height: 30px; }
+.estate-mobile-drawer-head img { display: block; width: auto; height: 38px; }
 /* The same LandCheck mark used in the Estates dashboard sidebar, so the auth pages read as the
    same product rather than a different, older brand treatment. Centered at the top of its own
    column via align-self - overriding the auth shell's default stretch - regardless of how wide
@@ -57,15 +54,17 @@
 .estate-nav-hamburger { display: none; flex-direction: column; justify-content: center; gap: 5px; flex-shrink: 0; margin-right: 4px; padding: 7px; border: none; border-radius: 8px; background: none; cursor: pointer; }
 .estate-nav-hamburger:hover { background: rgba(16, 42, 39, .06); }
 .estate-nav-hamburger span { display: block; width: 21px; height: 2px; border-radius: 2px; background: rgba(16, 42, 39, .78); }
+/* White drawer, not dark - matches the now-white top bar instead of standing out as the one
+   remaining dark surface. The logo sits directly on it, no chip needed. */
 .estate-mobile-overlay { position: fixed; inset: 0; z-index: 400; background: rgba(5, 10, 20, .55); opacity: 0; pointer-events: none; transition: opacity .22s ease; }
 .estate-mobile-overlay--open { opacity: 1; pointer-events: auto; }
-.estate-mobile-drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 280px; max-width: 82vw; display: flex; flex-direction: column; background: var(--estate-navy, #0a1228); border-left: 1px solid rgba(255, 255, 255, .08); transform: translateX(100%); transition: transform .26s cubic-bezier(.4, 0, .2, 1); overflow-y: auto; }
+.estate-mobile-drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 280px; max-width: 82vw; display: flex; flex-direction: column; background: #ffffff; border-left: 1px solid var(--estate-line); transform: translateX(100%); transition: transform .26s cubic-bezier(.4, 0, .2, 1); overflow-y: auto; }
 .estate-mobile-drawer--open { transform: translateX(0); }
-.estate-mobile-drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 16px; border-bottom: 1px solid rgba(255, 255, 255, .08); flex-shrink: 0; }
-.estate-mobile-close { background: none; border: none; color: rgba(255, 255, 255, .7); font-size: 1.4rem; line-height: 1; padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: color .15s, background .15s; }
-.estate-mobile-close:hover { color: #fff; background: rgba(255, 255, 255, .08); }
-.estate-mobile-item { display: block; width: 100%; padding: 16px 22px; border-bottom: 1px solid rgba(255, 255, 255, .06); color: rgba(244, 247, 242, .85); font-size: 1rem; font-weight: 600; text-decoration: none; text-align: left; background: none; transition: background .14s, color .14s; }
-.estate-mobile-item:hover { background: rgba(255, 255, 255, .05); color: #fff; }
+.estate-mobile-drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 16px; border-bottom: 1px solid var(--estate-line); flex-shrink: 0; }
+.estate-mobile-close { background: none; border: none; color: rgba(16, 42, 39, .6); font-size: 1.4rem; line-height: 1; padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: color .15s, background .15s; }
+.estate-mobile-close:hover { color: #102a27; background: rgba(16, 42, 39, .06); }
+.estate-mobile-item { display: block; width: 100%; padding: 16px 22px; border-bottom: 1px solid var(--estate-line); color: var(--estate-slate); font-size: 1rem; font-weight: 600; text-decoration: none; text-align: left; background: none; transition: background .14s, color .14s; }
+.estate-mobile-item:hover { background: rgba(16, 42, 39, .05); color: var(--estate-ink); }
 .estate-mobile-cta { display: block; margin: 20px 22px; padding: 13px 18px; border-radius: 7px; background: #167c60; color: #fff; font-size: .9rem; font-weight: 700; text-align: center; text-decoration: none; transition: background .15s; }
 .estate-mobile-cta:hover { background: #1b9271; }
 .estate-kicker { margin: 0; color: #198e89; font: 700 .68rem Arial, sans-serif; letter-spacing: .19em; text-transform: uppercase; }

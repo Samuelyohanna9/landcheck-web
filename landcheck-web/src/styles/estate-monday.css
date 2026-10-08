@@ -62,7 +62,6 @@
 
 /* ─── Navigation ─── */
 .edash .edash-sidebar-brand { padding: 2px 6px 14px; }
-.edash .edash-sidebar-brand-logo { border-radius: 8px; }
 
 .edash .edash-nav { gap: 2px; }
 .edash .edash-nav-item {
@@ -360,7 +359,6 @@
 .edash .edash-sidebar-footer { margin-top: 4px; padding: 7px 10px; }
 @media (max-height: 800px) {
   .edash .edash-nav-item { padding: 4px 10px; }
-  .edash .edash-sidebar-brand-logo { padding: 6px 12px; }
 }
 @media (max-height: 680px) {
   .edash .edash-nav-item { padding: 3px 10px; font-size: 0.8rem; }

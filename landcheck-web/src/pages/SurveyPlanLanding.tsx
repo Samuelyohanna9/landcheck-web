@@ -245,7 +245,7 @@ export default function SurveyPlanLanding() {
       <div className={`spl-mobile-overlay${menuOpen ? " spl-mobile-overlay--open" : ""}`} onClick={closeMenu} aria-hidden={!menuOpen}>
         <nav className={`spl-mobile-drawer${menuOpen ? " spl-mobile-drawer--open" : ""}`} onClick={(event) => event.stopPropagation()} aria-label="Survey navigation (mobile)">
           <div className="spl-mobile-drawer-head">
-            <span className="spl-brand-chip"><img src="/logo-wordmark-web.png" alt="LandCheck" width="156" height="50" /></span>
+            <img src="/logo-wordmark-web.png" alt="LandCheck" width="156" height="50" />
             <button type="button" className="spl-mobile-close" onClick={closeMenu} aria-label="Close navigation">&times;</button>
           </div>
           <a href="#features" className="spl-mobile-item" onClick={closeMenu}>Features</a>

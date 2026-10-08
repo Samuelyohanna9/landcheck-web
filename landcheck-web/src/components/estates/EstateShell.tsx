@@ -419,8 +419,7 @@ export default function EstateShell({
       <div className="edash-sidebar-backdrop" onClick={() => setSidebarOpen(false)} aria-hidden="true" />
       <aside className="edash-sidebar">
         <div className="edash-sidebar-brand">
-          <span className="edash-sidebar-brand-logo"><img src="/logo-icon-192.png" alt="LandCheck" width="40" height="40" /></span>
-          <small className="edash-sidebar-brand-tag">Estates</small>
+          <span className="edash-sidebar-brand-logo"><img src="/logo-wordmark-web.png" alt="LandCheck Estates" width="182" height="58" /></span>
         </div>
         <nav className="edash-nav" aria-label="Estate navigation">
           <Link className="edash-nav-item" to="/estates/workspace" onClick={() => setSidebarOpen(false)} title="Switch to another estate or add a new one">
