@@ -1945,46 +1945,6 @@
 
 /* --- Contrast Overrides for Header and Secondary Hero Button --- */
 
-/* Page-specific Navbar override (Same background as the dark footer) */
-.green-partners-page .lc-nav--fixed.lc-nav--overlay {
-  background: rgba(10, 30, 22, 0.96) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-}
-
-/* Mobile menu drawer override - NavBar's default is navy blue (matches the main landing page),
-   which clashed against this page's dark forest-green theme. Same green used everywhere else
-   on this page (footer, feature icons, nav bar above). */
-.green-partners-page .lc-mobile-drawer {
-  background: #0a1e14 !important;
-  border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
-}
-
-.green-partners-page .lc-mobile-header {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
-}
-
-.green-partners-page .lc-mobile-item {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
-}
-
-.green-partners-page .lc-mobile-item:hover {
-  background: rgba(95, 215, 148, 0.08) !important;
-}
-
-.green-partners-page .lc-mobile-item--active {
-  color: #5fd794 !important;
-}
-
-.green-partners-page .lc-mobile-cta {
-  background: #1f8c58 !important;
-}
-
-.green-partners-page .lc-mobile-cta:hover {
-  background: #197549 !important;
-}
-
 @media (max-width: 768px) {
   .gp-photo-carousel__arrow {
     display: flex;
