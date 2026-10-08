@@ -18,7 +18,7 @@
 .estate-public-app button, .estate-public-app input, .estate-public-app select, .estate-public-app textarea { font: inherit; }
 .estate-public-header { min-height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 14px clamp(18px, 4vw, 64px); background: #fff; border-bottom: 1px solid var(--estate-public-border); }
 .estate-public-brand { display: inline-flex; align-items: center; gap: 7px; color: var(--estate-public-ink); text-decoration: none; font-weight: 800; white-space: nowrap; }
-.estate-public-brand img { display: block; width: 124px; height: auto; }
+.estate-public-brand img { display: block; width: auto; height: 36px; }
 .estate-public-brand span { color: var(--estate-public-brand); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; }
 .estate-public-header-meta { display: flex; align-items: center; gap: 18px; color: var(--estate-public-muted); font-size: .78rem; }
 .estate-public-header-meta a, .estate-public-text-link { color: var(--estate-public-brand-dark); font-weight: 750; text-decoration: none; }
@@ -100,7 +100,7 @@
   .estate-public-header { align-items: flex-start; padding: 14px 16px; }
   .estate-public-header-meta { align-items: flex-end; flex-direction: column; gap: 4px; text-align: right; }
   .estate-public-header-meta span { display: none; }
-  .estate-public-brand img { width: 111px; }
+  .estate-public-brand img { height: 30px; }
   .estate-public-intro { padding: 42px 16px 26px; }
   .estate-public-intro h1 { font-size: clamp(2.15rem, 12vw, 3.3rem); }
   .estate-public-metrics { grid-template-columns: repeat(2, 1fr); padding: 0 16px; }

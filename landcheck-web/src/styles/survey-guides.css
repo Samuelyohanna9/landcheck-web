@@ -44,10 +44,12 @@
   text-transform: uppercase;
 }
 
+/* Height-constrained, not width - see estate-portal.css's .estate-brand img comment for why a
+   width-based rule sized for the old wide wordmark oversizes the roughly-square icon mark. */
 .survey-guides-brand img {
   display: block;
-  width: 132px;
-  height: auto;
+  width: auto;
+  height: 34px;
 }
 
 .survey-guides-brand span {
@@ -528,7 +530,7 @@
   }
 
   .survey-guides-brand img {
-    width: 112px;
+    height: 30px;
   }
 
   .survey-guides-brand span {

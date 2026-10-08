@@ -317,10 +317,12 @@
   text-decoration: none;
 }
 
+/* Height-constrained, not width - see estate-portal.css's .estate-brand img comment for why a
+   width-based rule sized for the old wide wordmark oversizes the roughly-square icon mark. */
 .privacy-policy-brand img {
   display: block;
-  width: 120px;
-  height: auto;
+  width: auto;
+  height: 34px;
 }
 
 .privacy-policy-brand span,
@@ -479,8 +481,8 @@
 
 .privacy-policy-footer-brand img {
   display: block;
-  width: 100px;
-  height: auto;
+  width: auto;
+  height: 28px;
   filter: brightness(0) invert(1);
   opacity: .85;
 }

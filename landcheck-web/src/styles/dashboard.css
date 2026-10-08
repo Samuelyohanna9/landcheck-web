@@ -1769,8 +1769,8 @@
 
 @media (max-width: 420px) {
   .workspace-container .dashboard-logo-btn img {
-    width: 92px;
-    height: auto;
+    width: auto;
+    height: 20px;
   }
 
   .workspace-container .header-left h1 {
@@ -2206,8 +2206,8 @@
   .workspace-mobile-menu-trigger { display: inline-flex; }
 
   .workspace-container .dashboard-logo-btn img {
-    width: 108px;
-    height: auto;
+    width: auto;
+    height: 22px;
   }
 
   .workspace-container .header-left h1 {

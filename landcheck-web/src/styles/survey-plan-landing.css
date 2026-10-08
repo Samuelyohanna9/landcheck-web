@@ -47,10 +47,12 @@
   white-space: nowrap;
 }
 
+/* Height-constrained, not width - see estate-portal.css's .estate-brand img comment for why a
+   width-based rule sized for the old wide wordmark oversizes the roughly-square icon mark. */
 .spl-brand img {
   display: block;
-  width: 130px;
-  height: auto;
+  width: auto;
+  height: 34px;
 }
 
 .spl-brand-product {
@@ -736,7 +738,7 @@
 }
 
 .spl-footer-brand .spl-brand img {
-  width: 100px;
+  width: auto;
   filter: brightness(0) invert(1);
   opacity: 0.85;
 }

@@ -18,7 +18,9 @@
 .agent-public-sidebar { position: sticky; top: 0; height: 100vh; padding: 22px 14px; border-right: 1px solid var(--agent-border); background: var(--agent-surface); }
 .agent-public-brand { display: flex; align-items: center; gap: 9px; padding: 2px 7px 20px; color: var(--agent-brand); font-size: .72rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
 .agent-public-logo { display: inline-flex; align-items: center; padding: 8px 11px; border-radius: 10px; background: var(--agent-brand-dark); }
-.agent-public-logo img { display: block; width: 84px; height: auto; }
+/* Height-constrained, not width - see estate-portal.css's .estate-brand img comment for why a
+   width-based rule sized for the old wide wordmark oversizes the roughly-square icon mark. */
+.agent-public-logo img { display: block; width: auto; height: 32px; }
 .agent-public-profile { display: flex; align-items: center; gap: 9px; padding: 13px 8px; border-top: 1px solid var(--agent-border); border-bottom: 1px solid var(--agent-border); }
 .agent-public-avatar { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: #dff5e8; color: var(--agent-brand-dark); font-weight: 800; }
 .agent-public-profile div { display: grid; min-width: 0; }
