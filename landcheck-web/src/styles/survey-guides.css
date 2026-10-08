@@ -13,12 +13,14 @@
   font-family: "Aptos", "Segoe UI", Arial, sans-serif;
 }
 
+/* Plain white bar (R3GIS-style), not a dark bar with a floating chip - see estate-portal.css's
+   .estate-portal-nav comment for why. */
 .survey-guides-header {
   position: sticky;
   top: 0;
   z-index: 10;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(10, 18, 40, 0.98);
+  border-bottom: 1px solid rgba(16, 42, 39, 0.12);
+  background: #ffffff;
 }
 
 .survey-guides-header-inner {
@@ -36,7 +38,7 @@
   align-items: center;
   min-width: 0;
   gap: 10px;
-  color: #fff;
+  color: #102a27;
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -44,26 +46,16 @@
   text-transform: uppercase;
 }
 
-/* White chip around the full wordmark lockup - see estate-portal.css's .estate-brand-chip comment
-   for why the dark ink text needs its own light surface on this dark bar. */
-.survey-guides-brand-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 12px;
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.98);
-}
-
-.survey-guides-brand-chip img {
+.survey-guides-brand img {
   display: block;
   width: auto;
-  height: 36px;
+  height: 42px;
 }
 
 .survey-guides-brand span {
   padding-left: 10px;
-  border-left: 1px solid rgba(255, 255, 255, 0.24);
-  color: #8fe6c8;
+  border-left: 1px solid rgba(16, 42, 39, 0.16);
+  color: #0f6e44;
   white-space: nowrap;
 }
 
@@ -76,13 +68,13 @@
 }
 
 .survey-guides-header-actions a {
-  color: rgba(244, 247, 242, 0.82);
+  color: #5d6f69;
   text-decoration: none;
 }
 
 .survey-guides-header-actions a:hover,
 .survey-guides-header-actions a:focus-visible {
-  color: #fff;
+  color: #102a27;
 }
 
 .survey-guides-header-actions a:last-child {
@@ -537,8 +529,8 @@
     display: none;
   }
 
-  .survey-guides-brand-chip img {
-    height: 28px;
+  .survey-guides-brand img {
+    height: 32px;
   }
 
   .survey-guides-brand span {

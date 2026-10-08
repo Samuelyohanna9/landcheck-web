@@ -10,7 +10,7 @@ export default function CareersPage() {
 
   return (
     <div className="ip-page public-landing">
-      <NavBar activeRoute="/career" logoBadge="wordmark" />
+      <NavBar activeRoute="/career" light />
 
       <main>
         <section className="cp-hero">

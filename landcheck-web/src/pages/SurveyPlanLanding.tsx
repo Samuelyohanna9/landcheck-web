@@ -190,7 +190,7 @@ export default function SurveyPlanLanding() {
     <div className="spl-page public-landing">
       <header className="spl-nav">
         <Link to="/" className="spl-brand" aria-label="LandCheck home">
-          <span className="spl-brand-chip"><img src="/logo-wordmark-web.png" alt="LandCheck" width="182" height="58" /></span>
+          <img src="/logo-wordmark-web.png" alt="LandCheck" width="182" height="58" />
           <span className="spl-brand-product">Survey</span>
         </Link>
         <button

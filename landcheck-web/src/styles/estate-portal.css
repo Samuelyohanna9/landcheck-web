@@ -24,16 +24,19 @@
   color: var(--estate-ink);
   font-family: "Aptos", "Segoe UI", Arial, sans-serif;
 }
-.estate-portal-nav { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; min-height: 70px; padding: 0 clamp(22px, 5vw, 76px); background: rgba(10, 18, 40, .98); }
-.estate-brand { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; color: #69d7b0; font-size: .62rem; font-weight: 800; letter-spacing: .16em; text-decoration: none; }
-/* White chip around the full wordmark lockup (icon + "LandCheck" + tagline) - the dark ink text
-   needs its own light surface to read against this bar's dark navy, same approach as NavBar.tsx's
-   logoBadge="wordmark". "ESTATES" stays outside the chip, in its own teal that already reads fine
-   directly on the dark bar. */
-.estate-brand-chip { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 9px; background: rgba(255, 255, 255, .98); }
-.estate-brand-chip img { display: block; width: auto; height: 36px; }
-.estate-mobile-drawer-head .estate-brand-chip { padding: 5px 10px; }
-.estate-mobile-drawer-head .estate-brand-chip img { height: 30px; }
+/* Plain white bar (R3GIS-style), not a dark bar with a floating chip - a floating white chip on
+   top of a dark/patterned background reads as a sticker stuck onto the header, not as a clean
+   integrated header. The logo's dark ink text can sit directly on this bar now that the bar
+   itself is light, so the desktop nav no longer needs .estate-brand-chip at all - only the
+   mobile drawer still does, since it deliberately stays dark (see its own comment below). */
+.estate-portal-nav { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; min-height: 70px; padding: 0 clamp(22px, 5vw, 76px); background: #ffffff; border-bottom: 1px solid var(--estate-line); }
+.estate-brand { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; color: #0f6e44; font-size: .62rem; font-weight: 800; letter-spacing: .16em; text-decoration: none; }
+.estate-brand img { display: block; width: auto; height: 42px; }
+
+/* The mobile drawer is a separate dark slide-in panel (see .estate-mobile-drawer below), so its
+   logo still needs the white chip the dark bar needed before. */
+.estate-mobile-drawer-head .estate-brand-chip { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 9px; background: rgba(255, 255, 255, .98); }
+.estate-mobile-drawer-head .estate-brand-chip img { display: block; width: auto; height: 30px; }
 /* The same LandCheck mark used in the Estates dashboard sidebar, so the auth pages read as the
    same product rather than a different, older brand treatment. Centered at the top of its own
    column via align-self - overriding the auth shell's default stretch - regardless of how wide
@@ -43,17 +46,17 @@
 .estate-auth-brand-logo img { display: block; height: 26px; width: auto; }
 .estate-auth-brand-tag { color: #16816e; font: 800 .68rem Arial, sans-serif; letter-spacing: .17em; text-transform: uppercase; }
 .estate-portal-nav-links { display: flex; align-items: center; gap: clamp(17px, 2.4vw, 36px); font-size: .78rem; font-weight: 600; }
-.estate-portal-nav-links a { color: rgba(244, 247, 242, .82); text-decoration: none; transition: color .18s ease; }
-.estate-portal-nav-links a:hover, .estate-portal-nav-links a:focus-visible { color: #fff; }
-.estate-portal-nav-links .estate-nav-login { color: #fff; }
+.estate-portal-nav-links a { color: var(--estate-slate); text-decoration: none; transition: color .18s ease; }
+.estate-portal-nav-links a:hover, .estate-portal-nav-links a:focus-visible { color: var(--estate-ink); }
+.estate-portal-nav-links .estate-nav-login { color: var(--estate-ink); }
 .estate-portal-nav-links .estate-nav-cta { padding: 11px 15px; background: #167c60; color: #fff; }
 .estate-portal-nav-links .estate-nav-cta:hover { background: #1b9271; }
 
 /* Mobile nav: a hamburger opens a slide-in drawer instead of the desktop links wrapping onto
    several cramped rows - same pattern (overlay + right-hand drawer) as the main site's NavBar. */
 .estate-nav-hamburger { display: none; flex-direction: column; justify-content: center; gap: 5px; flex-shrink: 0; margin-right: 4px; padding: 7px; border: none; border-radius: 8px; background: none; cursor: pointer; }
-.estate-nav-hamburger:hover { background: rgba(255, 255, 255, .09); }
-.estate-nav-hamburger span { display: block; width: 21px; height: 2px; border-radius: 2px; background: rgba(255, 255, 255, .88); }
+.estate-nav-hamburger:hover { background: rgba(16, 42, 39, .06); }
+.estate-nav-hamburger span { display: block; width: 21px; height: 2px; border-radius: 2px; background: rgba(16, 42, 39, .78); }
 .estate-mobile-overlay { position: fixed; inset: 0; z-index: 400; background: rgba(5, 10, 20, .55); opacity: 0; pointer-events: none; transition: opacity .22s ease; }
 .estate-mobile-overlay--open { opacity: 1; pointer-events: auto; }
 .estate-mobile-drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 280px; max-width: 82vw; display: flex; flex-direction: column; background: var(--estate-navy, #0a1228); border-left: 1px solid rgba(255, 255, 255, .08); transform: translateX(100%); transition: transform .26s cubic-bezier(.4, 0, .2, 1); overflow-y: auto; }
@@ -297,7 +300,7 @@
 
 @media (max-width: 600px) {
   .estate-brand { gap: 5px; }
-  .estate-brand-chip img { height: 30px; }
+  .estate-brand img { height: 36px; }
   .estate-hero { min-height: 78vh; padding: 60px 20px 64px; background-position: 55% center; }
   .estate-hero h1 { margin-top: 13px; font-size: clamp(2.35rem, 10vw, 3.3rem); }
   .estate-hero-summary { font-size: .94rem; }

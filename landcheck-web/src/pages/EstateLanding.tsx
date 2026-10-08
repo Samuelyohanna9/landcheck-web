@@ -88,7 +88,7 @@ export default function EstateLanding() {
           <span /><span /><span />
         </button>
         <Link to="/estates" className="estate-brand" aria-label="LandCheck Estates home">
-          <span className="estate-brand-chip"><img src="/logo-wordmark-web.png" alt="LandCheck" width="182" height="58" /></span>
+          <img src="/logo-wordmark-web.png" alt="LandCheck" width="182" height="58" />
           <span>ESTATES</span>
         </Link>
         <nav className="estate-portal-nav-links" aria-label="Estate product navigation">

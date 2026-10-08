@@ -22,6 +22,8 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Plain white bar (R3GIS-style), not a dark bar with a floating chip - see estate-portal.css's
+   .estate-portal-nav comment for why. The logo's dark ink text now sits directly on the bar. */
 .spl-nav {
   position: relative;
   z-index: 10;
@@ -31,15 +33,16 @@
   justify-content: space-between;
   gap: 24px;
   padding: 0 clamp(22px, 5vw, 76px);
-  background: var(--spl-navy);
-  color: #f5f3eb;
+  background: #ffffff;
+  border-bottom: 1px solid var(--spl-line);
+  color: var(--spl-ink);
 }
 
 .spl-brand {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #f5f3eb;
+  color: var(--spl-ink);
   font-size: 1rem;
   font-weight: 700;
   letter-spacing: -0.025em;
@@ -47,24 +50,14 @@
   white-space: nowrap;
 }
 
-/* White chip around the full wordmark lockup - see estate-portal.css's .estate-brand-chip comment
-   for why the dark ink text needs its own light surface on this dark bar. */
-.spl-brand-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 12px;
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.98);
-}
-
-.spl-brand-chip img {
+.spl-brand img {
   display: block;
   width: auto;
-  height: 36px;
+  height: 42px;
 }
 
 .spl-brand-product {
-  color: #7bd8b5;
+  color: #0f6e44;
   font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.17em;
@@ -83,7 +76,7 @@
   padding: 8px 0;
   border: 0;
   background: none;
-  color: rgba(245, 243, 235, 0.78);
+  color: var(--spl-muted);
   font: inherit;
   font-size: 0.8rem;
   text-decoration: none;
@@ -93,11 +86,11 @@
 
 .spl-nav-links a:hover,
 .spl-nav-links button:hover {
-  color: #fff;
+  color: var(--spl-ink);
 }
 
 .spl-nav-links .spl-nav-workspace {
-  color: #82dfbf;
+  color: #0f6e44;
   font-weight: 700;
 }
 
@@ -133,25 +126,25 @@
   gap: 2px;
   min-width: 190px;
   padding: 6px;
-  background: var(--spl-navy);
-  border: 1px solid rgba(123, 216, 181, 0.28);
+  background: #ffffff;
+  border: 1px solid var(--spl-line);
   border-radius: 12px;
-  box-shadow: 0 20px 45px rgba(2, 8, 16, 0.4);
+  box-shadow: 0 20px 45px rgba(16, 36, 58, 0.16);
 }
 
 .spl-nav-group-menu a {
   display: block;
   padding: 9px 12px;
   border-radius: 8px;
-  color: rgba(245, 243, 235, 0.82);
+  color: var(--spl-muted);
   font-size: 0.85rem;
   text-decoration: none;
   white-space: nowrap;
 }
 
 .spl-nav-group-menu a:hover {
-  background: rgba(123, 216, 181, 0.16);
-  color: #fff;
+  background: rgba(16, 42, 39, 0.06);
+  color: var(--spl-ink);
 }
 
 .spl-nav-hamburger {
@@ -175,7 +168,7 @@
   width: 20px;
   height: 2px;
   border-radius: 2px;
-  background: #f5f3eb;
+  background: rgba(16, 42, 39, 0.78);
 }
 
 .spl-mobile-overlay {
@@ -219,6 +212,22 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 10px;
+}
+
+/* The drawer itself stays dark (var(--spl-navy)), unlike the now-light .spl-nav bar, so its logo
+   still needs the white chip the bar no longer does. */
+.spl-mobile-drawer-head .spl-brand-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.98);
+}
+
+.spl-mobile-drawer-head .spl-brand-chip img {
+  display: block;
+  width: auto;
+  height: 30px;
 }
 
 .spl-mobile-close {

@@ -187,7 +187,7 @@ export default function SurveyGuides() {
       <header className="survey-guides-header">
         <div className="survey-guides-header-inner">
           <Link to="/" className="survey-guides-brand" aria-label="LandCheck home">
-            <span className="survey-guides-brand-chip"><img src="/logo-wordmark-web.png" alt="LandCheck" width="182" height="58" /></span>
+            <img src="/logo-wordmark-web.png" alt="LandCheck" width="182" height="58" />
             <span>Survey guides</span>
           </Link>
           <nav className="survey-guides-header-actions" aria-label="Guide actions">
