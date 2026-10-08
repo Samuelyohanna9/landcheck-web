@@ -31,12 +31,19 @@ export const NAV_GROUPS = [
 ] as const;
 
 interface NavBarProps {
-  /** Logo image src. Defaults to the icon mark (/logo-icon-192.png) - .lc-nav is a dark bar, and
-   * the brand wordmark's dark ink text needs a light background to read, so only override this
-   * with the wordmark (/logo-wordmark-web.png) on a page where this specific nav is styled light. */
+  /** Logo image src. Defaults to the icon mark on the normal dark bar, or the full wordmark
+   * lockup (icon + "LandCheck" + tagline) when `light` is set - the brand wordmark's dark ink
+   * text needs a light background to read, so only pass the wordmark yourself if you're using
+   * this on a bar styled light some other way than the `light` prop. */
   logoSrc?: string;
   /** Renders logo inside the white-square badge (GreenPartnersLanding style) */
   logoBadge?: boolean;
+  /** White bar instead of the usual dark one, with the full wordmark lockup instead of just the
+   * icon mark (the R3GIS-style compact header: plain light bar, full logo, no extra chip). Use on
+   * a page whose hero/body is itself light, so the bar doesn't look like an inserted strip.
+   * Only restyles the top bar - the slide-in mobile drawer stays the usual dark panel, since it's
+   * a separate surface and the icon mark already reads fine on it. */
+  light?: boolean;
   /** Fixes nav over hero background (use for full-screen hero pages) */
   fixed?: boolean;
   /** Route string matching current page — highlights that nav item */
@@ -49,15 +56,20 @@ interface NavBarProps {
   overlay?: boolean;
 }
 
+const ICON_LOGO_SRC = "/logo-icon-192.png";
+const WORDMARK_LOGO_SRC = "/logo-wordmark-web.png";
+
 export default function NavBar({
-  logoSrc = "/logo-icon-192.png",
+  logoSrc,
   logoBadge = false,
+  light = false,
   fixed = false,
   activeRoute,
   ctaLabel,
   ctaRoute,
   overlay = false,
 }: NavBarProps) {
+  const resolvedLogoSrc = logoSrc ?? (light ? WORDMARK_LOGO_SRC : ICON_LOGO_SRC);
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [signInOpen, setSignInOpen] = useState(false);
@@ -96,7 +108,7 @@ export default function NavBar({
 
   return (
     <>
-      <header className={`lc-nav${fixed ? " lc-nav--fixed" : ""}${overlay ? " lc-nav--overlay" : ""}`}>
+      <header className={`lc-nav${light ? " lc-nav--light" : ""}${fixed ? " lc-nav--fixed" : ""}${overlay ? " lc-nav--overlay" : ""}`}>
         {/* Hamburger — top left on mobile */}
         <button
           type="button"
@@ -116,7 +128,7 @@ export default function NavBar({
           className={logoBadge ? "lc-nav-brand lc-nav-brand--badge" : "lc-nav-brand"}
           onClick={() => navigate("/")}
         >
-          <img src={logoSrc} alt="LandCheck" width="140" height="42" />
+          <img src={resolvedLogoSrc} alt="LandCheck" width={light ? "182" : "140"} height={light ? "58" : "42"} />
         </button>
 
         {/* Desktop links */}

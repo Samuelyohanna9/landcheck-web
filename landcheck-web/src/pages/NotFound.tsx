@@ -25,7 +25,7 @@ export default function NotFound() {
 
   return (
     <div className="nf-page">
-      <NavBar />
+      <NavBar light />
       <main className="nf-main">
         <p className="nf-eyebrow">Error 404</p>
         <h1>This page doesn't exist.</h1>

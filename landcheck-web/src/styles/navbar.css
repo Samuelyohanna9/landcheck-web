@@ -15,6 +15,68 @@
   gap: 6px;
 }
 
+/* R3GIS-style compact light header: plain white bar, full wordmark lockup (icon + "LandCheck" +
+   tagline) instead of just the icon - see NavBar.tsx's `light` prop doc. Taller than the usual
+   dark bar (76px vs 66px) because the lockup's baked-in tagline line needs real height to stay
+   legible (it reads as a grey smear below about 55px tall); the logo's own 58px height leaves 9px
+   of breathing room above and below, matching the reference's spacing rather than a tight crop. */
+.lc-nav--light {
+  height: 76px;
+  background: #ffffff;
+  border-bottom: 1px solid rgba(16, 42, 39, 0.12);
+}
+
+.lc-nav--light .lc-nav-brand img {
+  height: 58px;
+}
+
+.lc-nav--light .lc-nav-hamburger span {
+  background: rgba(16, 42, 39, 0.78);
+}
+
+.lc-nav--light .lc-nav-hamburger:hover {
+  background: rgba(16, 42, 39, 0.06);
+}
+
+.lc-nav--light .lc-nav-desktop button,
+.lc-nav--light .lc-nav-desktop a.lc-nav-link {
+  color: rgba(16, 42, 39, 0.72);
+}
+
+.lc-nav--light .lc-nav-desktop button:hover,
+.lc-nav--light .lc-nav-desktop a.lc-nav-link:hover {
+  background: rgba(16, 42, 39, 0.06);
+  color: #102a27;
+}
+
+.lc-nav--light .lc-nav-item-active {
+  background: rgba(16, 42, 39, 0.08) !important;
+  color: #102a27 !important;
+}
+
+/* The dropdown menu defaults to dark (plain navy, or whatever --lc-dropdown-* a page sets) since
+   it floats above whatever content sits below the bar, not the bar itself - on the light bar it
+   needs its own light menu instead, or white-on-white text would be invisible. */
+.lc-nav--light .lc-nav-group-menu {
+  background: #ffffff;
+  border: 1px solid rgba(16, 42, 39, 0.12);
+  box-shadow: 0 20px 45px rgba(16, 36, 58, 0.16);
+}
+
+.lc-nav--light .lc-nav-group-menu button {
+  color: rgba(16, 42, 39, 0.78);
+}
+
+.lc-nav--light .lc-nav-group-menu button:hover {
+  background: rgba(16, 42, 39, 0.06);
+  color: #102a27;
+}
+
+@media (max-width: 768px) {
+  .lc-nav--light { height: 64px; }
+  .lc-nav--light .lc-nav-brand img { height: 46px; }
+}
+
 .lc-nav--fixed {
   position: fixed;
   top: 0;
