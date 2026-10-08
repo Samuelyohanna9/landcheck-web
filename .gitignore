@@ -1,1 +1,13 @@
-landcheck-web/tmpclaude-*-cwd
+# Dependencies and generated build output
+node_modules/
+dist/
+.wrangler/
+*.log
+
+# Local environment and secrets
+.env
+.env.*
+!.env.*.example
+
+# Local agent artifacts
+tmpclaude-*-cwd
