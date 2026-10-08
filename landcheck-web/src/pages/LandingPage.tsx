@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "../styles/landing.css";
 import { fetchPublicImpactStats, fetchPublicPartnerOrganizations } from "../api/greenSponsor";
 import NavBar from "../components/NavBar";
@@ -453,20 +453,17 @@ export default function LandingPage() {
         </div>
         <div className="lp-products-row">
           {products.map((prod) => (
-            <div
+            <Link
               key={prod.key}
+              to={prod.route}
               className={`lp-prod-card ${prod.bgClass}`}
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate(prod.route)}
-              onKeyDown={(e) => e.key === "Enter" && navigate(prod.route)}
             >
               <div className="lp-prod-overlay" />
               <div className="lp-prod-content">
                 <h2>{prod.title}</h2>
                 <p>{prod.description}</p>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </section>
@@ -525,24 +522,24 @@ export default function LandingPage() {
             <h3>Products</h3>
             <ul>
               <li>
-                <button type="button" onClick={() => navigate("/estates")}>
+                <Link to="/estates">
                   LandCheck Estates
-                </button>
+                </Link>
               </li>
               <li>
-                <button type="button" onClick={() => navigate("/green-partners")}>
+                <Link to="/green-partners">
                   LandCheck Green
-                </button>
+                </Link>
               </li>
               <li>
-                <button type="button" onClick={() => navigate("/survey")}>
+                <Link to="/survey">
                   Survey Plan
-                </button>
+                </Link>
               </li>
               <li>
-                <button type="button" onClick={() => navigate("/flood")}>
+                <Link to="/flood">
                   Flood Risk Analysis
-                </button>
+                </Link>
               </li>
             </ul>
           </div>
@@ -550,20 +547,19 @@ export default function LandingPage() {
             <h3>Tools</h3>
             <ul>
               <li>
-                <button
-                  type="button"
+                <Link
+                  to="/survey-plan"
                   onMouseEnter={warmSurveyPlanEntry}
                   onFocus={warmSurveyPlanEntry}
                   onTouchStart={warmSurveyPlanEntry}
-                  onClick={() => navigate("/survey-plan")}
                 >
                   Survey Plan Tool
-                </button>
+                </Link>
               </li>
               <li>
-                <button type="button" onClick={() => navigate("/hazard-analysis")}>
+                <Link to="/hazard-analysis">
                   Hazard Analysis
-                </button>
+                </Link>
               </li>
               <li>
                 <a
@@ -575,9 +571,9 @@ export default function LandingPage() {
                 </a>
               </li>
               <li>
-                <button type="button" onClick={() => navigate("/sponsor")}>
+                <Link to="/sponsor">
                   Sponsor a Tree
-                </button>
+                </Link>
               </li>
             </ul>
           </div>
@@ -585,14 +581,14 @@ export default function LandingPage() {
             <h3>Company</h3>
             <ul>
               <li>
-                <button type="button" onClick={() => navigate("/career")}>
+                <Link to="/career">
                   Career
-                </button>
+                </Link>
               </li>
               <li>
-                <button type="button" onClick={() => navigate("/news")}>
+                <Link to="/news">
                   News
-                </button>
+                </Link>
               </li>
               <li>
                 <a href="mailto:support@landcheck.online?subject=LandCheck%20Support">
@@ -600,9 +596,9 @@ export default function LandingPage() {
                 </a>
               </li>
               <li>
-                <button type="button" onClick={() => navigate("/feedback")}>
+                <Link to="/feedback">
                   Feedback
-                </button>
+                </Link>
               </li>
             </ul>
           </div>
@@ -613,9 +609,9 @@ export default function LandingPage() {
           </span>
           <ul className="lp-footer-legal">
             <li>
-              <button type="button" onClick={() => navigate("/privacy")}>
+              <Link to="/privacy">
                 Privacy
-              </button>
+              </Link>
             </li>
           </ul>
         </div>
