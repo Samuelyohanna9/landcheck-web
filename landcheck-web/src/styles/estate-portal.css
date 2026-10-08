@@ -26,11 +26,14 @@
 }
 .estate-portal-nav { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; min-height: 70px; padding: 0 clamp(22px, 5vw, 76px); background: rgba(10, 18, 40, .98); }
 .estate-brand { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; color: #69d7b0; font-size: .62rem; font-weight: 800; letter-spacing: .16em; text-decoration: none; }
-/* Height-constrained, not width - the old wordmark was wide and short, so constraining its width
-   to 130px kept it compact; the icon mark is roughly square, so that same 130px width rule
-   rendered it ~130px TALL, nearly twice this nav's own 70px height. */
-.estate-brand img { display: block; width: auto; height: 40px; }
-.estate-mobile-drawer-head img { display: block; width: auto; height: 32px; }
+/* White chip around the full wordmark lockup (icon + "LandCheck" + tagline) - the dark ink text
+   needs its own light surface to read against this bar's dark navy, same approach as NavBar.tsx's
+   logoBadge="wordmark". "ESTATES" stays outside the chip, in its own teal that already reads fine
+   directly on the dark bar. */
+.estate-brand-chip { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 9px; background: rgba(255, 255, 255, .98); }
+.estate-brand-chip img { display: block; width: auto; height: 36px; }
+.estate-mobile-drawer-head .estate-brand-chip { padding: 5px 10px; }
+.estate-mobile-drawer-head .estate-brand-chip img { height: 30px; }
 /* The same LandCheck mark used in the Estates dashboard sidebar, so the auth pages read as the
    same product rather than a different, older brand treatment. Centered at the top of its own
    column via align-self - overriding the auth shell's default stretch - regardless of how wide
@@ -294,7 +297,7 @@
 
 @media (max-width: 600px) {
   .estate-brand { gap: 5px; }
-  .estate-brand img { height: 34px; }
+  .estate-brand-chip img { height: 30px; }
   .estate-hero { min-height: 78vh; padding: 60px 20px 64px; background-position: 55% center; }
   .estate-hero h1 { margin-top: 13px; font-size: clamp(2.35rem, 10vw, 3.3rem); }
   .estate-hero-summary { font-size: .94rem; }

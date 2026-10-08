@@ -263,6 +263,33 @@
   border-radius: 5px;
 }
 
+/* Wide white chip for the full wordmark lockup (icon + "LandCheck" + tagline) - the default way
+   to show the full brand mark on any bar, since the chip's own opaque white background means it
+   reads correctly regardless of what's behind it (the usual dark bar, the transparent overlay
+   over a hero photo/video, anything), unlike the plain `light` bar which only works when the
+   whole page behind it is already light. */
+.lc-nav-brand--wordmark-badge {
+  padding: 7px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(203, 236, 212, 0.28);
+  background: rgba(255, 255, 255, 0.98);
+}
+
+.lc-nav-brand--wordmark-badge img {
+  height: 42px;
+  width: auto;
+}
+
+@media (max-width: 768px) {
+  .lc-nav-brand--wordmark-badge {
+    padding: 5px 10px;
+  }
+
+  .lc-nav-brand--wordmark-badge img {
+    height: 32px;
+  }
+}
+
 /* ── Desktop nav links ──────────────────────────────────── */
 .lc-nav-desktop {
   display: flex;

@@ -88,7 +88,7 @@ export default function EstateLanding() {
           <span /><span /><span />
         </button>
         <Link to="/estates" className="estate-brand" aria-label="LandCheck Estates home">
-          <img src="/logo-icon-192.png" alt="LandCheck" width="138" height="38" />
+          <span className="estate-brand-chip"><img src="/logo-wordmark-web.png" alt="LandCheck" width="182" height="58" /></span>
           <span>ESTATES</span>
         </Link>
         <nav className="estate-portal-nav-links" aria-label="Estate product navigation">
@@ -103,7 +103,7 @@ export default function EstateLanding() {
       <div className={`estate-mobile-overlay${menuOpen ? " estate-mobile-overlay--open" : ""}`} onClick={closeMenu} aria-hidden={!menuOpen}>
         <nav className={`estate-mobile-drawer${menuOpen ? " estate-mobile-drawer--open" : ""}`} onClick={(event) => event.stopPropagation()} aria-label="Estate product navigation (mobile)">
           <div className="estate-mobile-drawer-head">
-            <img src="/logo-icon-192.png" alt="LandCheck" width="120" height="33" />
+            <span className="estate-brand-chip"><img src="/logo-wordmark-web.png" alt="LandCheck" width="156" height="50" /></span>
             <button type="button" className="estate-mobile-close" onClick={closeMenu} aria-label="Close navigation">&times;</button>
           </div>
           <a href="#platform" className="estate-mobile-item" onClick={closeMenu}>Platform</a>

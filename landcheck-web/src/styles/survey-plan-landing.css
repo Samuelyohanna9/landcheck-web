@@ -47,12 +47,20 @@
   white-space: nowrap;
 }
 
-/* Height-constrained, not width - see estate-portal.css's .estate-brand img comment for why a
-   width-based rule sized for the old wide wordmark oversizes the roughly-square icon mark. */
-.spl-brand img {
+/* White chip around the full wordmark lockup - see estate-portal.css's .estate-brand-chip comment
+   for why the dark ink text needs its own light surface on this dark bar. */
+.spl-brand-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.98);
+}
+
+.spl-brand-chip img {
   display: block;
   width: auto;
-  height: 34px;
+  height: 36px;
 }
 
 .spl-brand-product {

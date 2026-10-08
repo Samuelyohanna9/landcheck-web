@@ -258,8 +258,7 @@ export default function GreenPartnersLanding() {
       <NavBar
         fixed
         overlay
-        logoBadge
-        logoSrc="/logo-icon-192.png"
+        logoBadge="wordmark"
         activeRoute="/green-partners"
         ctaLabel="Get Started"
         ctaRoute="/green-work/login"

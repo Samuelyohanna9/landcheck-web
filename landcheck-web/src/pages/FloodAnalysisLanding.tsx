@@ -120,7 +120,7 @@ export default function FloodAnalysisLanding() {
   return (
     <div className="fal-page public-landing">
       {/* Navigation */}
-      <NavBar fixed activeRoute="/flood" ctaLabel="Run Analysis" ctaRoute="/hazard-analysis" />
+      <NavBar fixed activeRoute="/flood" ctaLabel="Run Analysis" ctaRoute="/hazard-analysis" logoBadge="wordmark" />
       <main>
 
       {/* Hero */}

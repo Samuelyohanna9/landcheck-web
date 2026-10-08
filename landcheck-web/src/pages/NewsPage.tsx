@@ -52,7 +52,7 @@ export default function NewsPage() {
   return (
     <div className="ip-page np-page public-landing">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
-      <NavBar activeRoute="/news" />
+      <NavBar activeRoute="/news" logoBadge="wordmark" />
 
       <main>
         <section className="np-page-header">

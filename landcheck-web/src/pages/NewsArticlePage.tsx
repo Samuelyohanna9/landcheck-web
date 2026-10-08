@@ -20,7 +20,7 @@ export default function NewsArticlePage() {
   if (!article) {
     return (
       <div className="ip-page np-page public-landing">
-        <NavBar activeRoute="/news" />
+        <NavBar activeRoute="/news" logoBadge="wordmark" />
         <main>
           <section className="np-page-header">
             <div className="ip-container">
@@ -51,7 +51,7 @@ export default function NewsArticlePage() {
   return (
     <div className="ip-page np-page public-landing">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <NavBar activeRoute="/news" />
+      <NavBar activeRoute="/news" logoBadge="wordmark" />
 
       <main>
         <article className="np-story">

@@ -31,16 +31,21 @@ export const NAV_GROUPS = [
 ] as const;
 
 interface NavBarProps {
-  /** Logo image src. Defaults to the icon mark on the normal dark bar, or the full wordmark
-   * lockup (icon + "LandCheck" + tagline) when `light` is set - the brand wordmark's dark ink
-   * text needs a light background to read, so only pass the wordmark yourself if you're using
-   * this on a bar styled light some other way than the `light` prop. */
+  /** Logo image src. Defaults to the icon mark, or the full wordmark lockup (icon + "LandCheck" +
+   * tagline) when `light` is set or `logoBadge="wordmark"` - the brand wordmark's dark ink text
+   * needs a light background to read, so only pass it yourself alongside some other light
+   * treatment you're giving the bar. */
   logoSrc?: string;
-  /** Renders logo inside the white-square badge (GreenPartnersLanding style) */
-  logoBadge?: boolean;
-  /** White bar instead of the usual dark one, with the full wordmark lockup instead of just the
-   * icon mark (the R3GIS-style compact header: plain light bar, full logo, no extra chip). Use on
-   * a page whose hero/body is itself light, so the bar doesn't look like an inserted strip.
+  /** `true`: icon alone in a small white square badge (GreenPartnersLanding style) - for a bar
+   * with little vertical room. `"wordmark"`: the full lockup in a wider white chip - this is the
+   * one to reach for by default, since the chip carries its own opaque background regardless of
+   * what's behind the bar (dark, transparent-over-photo, anything), so it's always safe and shows
+   * the full brand name rather than just the icon. */
+  logoBadge?: boolean | "wordmark";
+  /** White bar instead of the usual dark one, with the full wordmark lockup sitting directly on
+   * it rather than in its own chip (the R3GIS-style compact header). Use only when the page's own
+   * hero/body is itself light, so the bar doesn't look like an inserted strip - logoBadge="wordmark"
+   * is the safer default since it doesn't depend on what's behind the bar.
    * Only restyles the top bar - the slide-in mobile drawer stays the usual dark panel, since it's
    * a separate surface and the icon mark already reads fine on it. */
   light?: boolean;
@@ -69,7 +74,13 @@ export default function NavBar({
   ctaRoute,
   overlay = false,
 }: NavBarProps) {
-  const resolvedLogoSrc = logoSrc ?? (light ? WORDMARK_LOGO_SRC : ICON_LOGO_SRC);
+  const resolvedLogoSrc = logoSrc ?? (light || logoBadge === "wordmark" ? WORDMARK_LOGO_SRC : ICON_LOGO_SRC);
+  const logoIsWordmark = resolvedLogoSrc === WORDMARK_LOGO_SRC;
+  const brandClassName = [
+    "lc-nav-brand",
+    logoBadge === true && "lc-nav-brand--badge",
+    logoBadge === "wordmark" && "lc-nav-brand--wordmark-badge",
+  ].filter(Boolean).join(" ");
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [signInOpen, setSignInOpen] = useState(false);
@@ -125,10 +136,10 @@ export default function NavBar({
         {/* Logo */}
         <button
           type="button"
-          className={logoBadge ? "lc-nav-brand lc-nav-brand--badge" : "lc-nav-brand"}
+          className={brandClassName}
           onClick={() => navigate("/")}
         >
-          <img src={resolvedLogoSrc} alt="LandCheck" width={light ? "182" : "140"} height={light ? "58" : "42"} />
+          <img src={resolvedLogoSrc} alt="LandCheck" width={logoIsWordmark ? "182" : "140"} height={logoIsWordmark ? "58" : "42"} />
         </button>
 
         {/* Desktop links */}
