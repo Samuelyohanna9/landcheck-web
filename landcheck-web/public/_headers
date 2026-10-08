@@ -8,8 +8,11 @@
 /sw.js
   Cache-Control: public, max-age=0, must-revalidate
 
+# Keep asset responses revalidated during deploy rollouts. The build also adds a deployment id
+# to every asset filename, but this prevents a previous bad HTML response from being kept for a
+# year under a JavaScript URL.
 /assets/*
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: public, max-age=0, must-revalidate
 
 /*.png
   Cache-Control: public, max-age=2592000, stale-while-revalidate=86400
