@@ -28,7 +28,7 @@
   align-items: center;
   justify-content: space-between;
   width: min(1180px, calc(100% - 40px));
-  min-height: 68px;
+  min-height: 76px;
   gap: 24px;
   margin: 0 auto;
 }
@@ -49,7 +49,7 @@
 .survey-guides-brand img {
   display: block;
   width: auto;
-  height: 42px;
+  height: 58px;
 }
 
 .survey-guides-brand span {
@@ -530,7 +530,7 @@
   }
 
   .survey-guides-brand img {
-    height: 32px;
+    height: 46px;
   }
 
   .survey-guides-brand span {

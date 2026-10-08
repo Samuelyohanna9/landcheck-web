@@ -23,12 +23,14 @@
 }
 
 /* Plain white bar (R3GIS-style), not a dark bar with a floating chip - see estate-portal.css's
-   .estate-portal-nav comment for why. The logo's dark ink text now sits directly on the bar. */
+   .estate-portal-nav comment for why. The logo's dark ink text now sits directly on the bar.
+   76px bar / 58px logo - matches every other public page's nav exactly (see .lc-nav--light in
+   navbar.css, the reference). */
 .spl-nav {
   position: relative;
   z-index: 10;
   display: flex;
-  min-height: 68px;
+  min-height: 76px;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
@@ -53,7 +55,7 @@
 .spl-brand img {
   display: block;
   width: auto;
-  height: 42px;
+  height: 58px;
 }
 
 .spl-brand-product {
@@ -197,7 +199,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  width: min(300px, 84vw);
+  width: min(280px, 84vw);
   padding: 18px;
   background: #ffffff;
   box-shadow: -18px 0 44px rgba(16, 36, 58, 0.18);
@@ -219,7 +221,7 @@
 .spl-mobile-drawer-head img {
   display: block;
   width: auto;
-  height: 38px;
+  height: 44px;
 }
 
 .spl-mobile-close {

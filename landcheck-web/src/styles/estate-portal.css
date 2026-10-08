@@ -29,11 +29,13 @@
    integrated header. The logo's dark ink text can sit directly on this bar now that the bar
    itself is light, so the desktop nav no longer needs .estate-brand-chip at all - only the
    mobile drawer still does, since it deliberately stays dark (see its own comment below). */
-.estate-portal-nav { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; min-height: 70px; padding: 0 clamp(22px, 5vw, 76px); background: #ffffff; border-bottom: 1px solid var(--estate-line); }
+/* 76px bar / 58px logo - matches navbar.css's .lc-nav--light exactly, so every public page's nav
+   is the same size regardless of which page's own hand-rolled markup renders it. */
+.estate-portal-nav { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; min-height: 76px; padding: 0 clamp(22px, 5vw, 76px); background: #ffffff; border-bottom: 1px solid var(--estate-line); }
 .estate-brand { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; color: #0f6e44; font-size: .62rem; font-weight: 800; letter-spacing: .16em; text-decoration: none; }
-.estate-brand img { display: block; width: auto; height: 42px; }
+.estate-brand img { display: block; width: auto; height: 58px; }
 
-.estate-mobile-drawer-head img { display: block; width: auto; height: 38px; }
+.estate-mobile-drawer-head img { display: block; width: auto; height: 44px; }
 /* The same LandCheck mark used in the Estates dashboard sidebar, so the auth pages read as the
    same product rather than a different, older brand treatment. Centered at the top of its own
    column via align-self - overriding the auth shell's default stretch - regardless of how wide
@@ -299,7 +301,7 @@
 
 @media (max-width: 600px) {
   .estate-brand { gap: 5px; }
-  .estate-brand img { height: 36px; }
+  .estate-brand img { height: 46px; }
   .estate-hero { min-height: 78vh; padding: 60px 20px 64px; background-position: 55% center; }
   .estate-hero h1 { margin-top: 13px; font-size: clamp(2.35rem, 10vw, 3.3rem); }
   .estate-hero-summary { font-size: .94rem; }
