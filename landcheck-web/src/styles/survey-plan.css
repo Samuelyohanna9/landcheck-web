@@ -7432,15 +7432,16 @@ select.field-error {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  padding: 7px 12px;
-  border-radius: 10px;
-  background: #0f6e44;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: #ffffff;
 }
 
 .geo-top-bar-brand-logo img {
   display: block;
   width: auto;
-  height: 28px;
+  height: 29px;
+  max-width: 132px;
 }
 
 .geo-top-bar-brand-tag {
@@ -7649,15 +7650,16 @@ button.geo-h-step:focus-visible {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  padding: 7px 12px;
-  border-radius: 10px;
-  background: #0f6e44;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: #ffffff;
 }
 
 .survey-top-bar-brand-logo img {
   display: block;
   width: auto;
-  height: 28px;
+  height: 29px;
+  max-width: 132px;
 }
 
 .survey-top-bar-brand-tag {

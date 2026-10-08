@@ -2613,28 +2613,27 @@
   gap: 8px;
 }
 
-/* Same boxed badge as Survey's .survey-top-bar-brand-logo: shows the icon mark alone
-   (/logo-icon-192.png), not the wordmark - the brand logo's "Land" text is dark ink with no
-   light-on-dark variant, so it needs its own dark badge to sit on rather than the plain
-   dashboard header, in both themes. */
+/* Use the same full LandCheck wordmark as the Estate dashboard. The light surface keeps the
+   dark wordmark readable when the workspace itself is in dark mode. */
 .workspace-container .dashboard-logo-mark {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  padding: 7px 12px;
-  border-radius: 9px;
-  background: #0f6e44;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: #ffffff;
 }
 
 .workspace-container .dashboard-logo-mark img {
   display: block;
   width: auto;
-  height: 28px;
+  height: 29px;
+  max-width: 132px;
 }
 
 @media (max-width: 768px) {
   .workspace-container .dashboard-logo-mark {
-    padding: 5px 8px;
+    padding: 3px 6px;
     border-radius: 8px;
   }
 

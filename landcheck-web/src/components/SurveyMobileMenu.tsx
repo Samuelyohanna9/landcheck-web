@@ -40,7 +40,7 @@ export default function SurveyMobileMenu({
       >
         <div className="survey-mobile-menu-head">
           <div className="survey-mobile-menu-brand">
-            <span className="survey-mobile-menu-logo"><img src="/logo-icon-192.png" alt="" /></span>
+            <span className="survey-mobile-menu-logo"><img src="/logo-wordmark-web.png" alt="" /></span>
             <strong>{title}</strong>
           </div>
           <button type="button" className="survey-mobile-menu-close" onClick={onClose} aria-label="Close menu">

@@ -50,19 +50,22 @@
 }
 
 .survey-mobile-menu-logo {
-  display: grid;
-  width: 32px;
-  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  max-width: 132px;
+  height: 30px;
   flex-shrink: 0;
-  place-items: center;
-  border-radius: 9px;
-  background: #0f6e44;
+  padding: 3px 6px;
+  border-radius: 8px;
+  background: #ffffff;
 }
 
 .survey-mobile-menu-logo img {
   display: block;
-  width: 24px;
-  height: auto;
+  width: auto;
+  max-width: 120px;
+  height: 24px;
 }
 
 .survey-mobile-menu-close,
