@@ -14,7 +14,6 @@
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-.estate-auth-brand-logo { background: var(--auth-brand-dark); border-radius: 8px; }
 .estate-auth-brand-tag { color: var(--auth-brand); font-family: inherit; font-weight: 800; letter-spacing: .12em; }
 
 .estate-auth-card {

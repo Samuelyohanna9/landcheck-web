@@ -36,13 +36,13 @@
 .estate-brand img { display: block; width: auto; height: 58px; }
 
 .estate-mobile-drawer-head img { display: block; width: auto; height: 44px; }
-/* The same LandCheck mark used in the Estates dashboard sidebar, so the auth pages read as the
-   same product rather than a different, older brand treatment. Centered at the top of its own
+/* The same LandCheck icon mark used across the site's nav bars, centered at the top of its own
    column via align-self - overriding the auth shell's default stretch - regardless of how wide
-   that column is. The mark's own light "Land" text is meant for a dark surface, hence the chip. */
+   that column is. No chip: the icon is a full-color mark, not dark-ink text, so it sits directly
+   on this page's light surface like everywhere else. */
 .estate-auth-brand { display: inline-flex; flex-direction: column; align-items: center; gap: 7px; align-self: center; text-decoration: none; }
-.estate-auth-brand-logo { display: inline-flex; align-items: center; padding: 10px 16px; border-radius: 10px; background: var(--estate-navy); }
-.estate-auth-brand-logo img { display: block; height: 26px; width: auto; }
+.estate-auth-brand-logo { display: inline-flex; align-items: center; }
+.estate-auth-brand-logo img { display: block; height: 40px; width: auto; }
 .estate-auth-brand-tag { color: #16816e; font: 800 .68rem Arial, sans-serif; letter-spacing: .17em; text-transform: uppercase; }
 .estate-portal-nav-links { display: flex; align-items: center; gap: clamp(17px, 2.4vw, 36px); font-size: .78rem; font-weight: 600; }
 .estate-portal-nav-links a { color: var(--estate-slate); text-decoration: none; transition: color .18s ease; }
@@ -343,8 +343,7 @@
 .estate-auth-shell { gap: 12px; min-height: 100dvh; width: min(100% - 32px, 400px); padding: 12px 0; }
 .estate-auth-shell--register { grid-template-columns: minmax(200px, 1fr) minmax(340px, 400px); gap: clamp(24px, 5vw, 64px); width: min(100% - 32px, 900px); }
 .estate-auth-brand { gap: 3px; }
-.estate-auth-brand-logo { padding: 6px 12px; border-radius: 8px; }
-.estate-auth-brand-logo img { height: 20px; }
+.estate-auth-brand-logo img { height: 32px; }
 .estate-auth-brand-tag { font-size: .6rem; }
 .estate-auth-card { padding: 18px 24px 16px; }
 .estate-auth-card .estate-kicker { margin: 0; font-size: .6rem; }
