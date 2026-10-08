@@ -7440,7 +7440,7 @@ select.field-error {
 .geo-top-bar-brand-logo img {
   display: block;
   width: auto;
-  height: 22px;
+  height: 28px;
 }
 
 .geo-top-bar-brand-tag {
@@ -7597,7 +7597,7 @@ button.geo-h-step:focus-visible {
   }
 
   .geo-top-bar-brand-logo img {
-    height: 18px;
+    height: 20px;
   }
 
   .geo-top-bar-brand-tag {
@@ -7657,7 +7657,7 @@ button.geo-h-step:focus-visible {
 .survey-top-bar-brand-logo img {
   display: block;
   width: auto;
-  height: 22px;
+  height: 28px;
 }
 
 .survey-top-bar-brand-tag {
@@ -7796,7 +7796,7 @@ button.geo-h-step:focus-visible {
   }
 
   .survey-top-bar-brand-logo img {
-    height: 18px;
+    height: 20px;
   }
 
   .survey-top-bar-brand-tag {
@@ -7963,7 +7963,7 @@ button.geo-h-step:focus-visible {
 
   .geo-top-bar-brand-logo img,
   .survey-top-bar-brand-logo img {
-    height: 17px;
+    height: 20px;
   }
 
   .geo-top-bar-brand-tag,
