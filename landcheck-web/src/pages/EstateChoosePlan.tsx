@@ -57,7 +57,7 @@ export default function EstateChoosePlan() {
     <main className="estate-auth-page" style={{ minHeight: "100vh" }}>
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "48px 24px 80px", textAlign: "center" }}>
         <Link to="/estates" className="estate-auth-brand" aria-label="LandCheck Estates home" style={{ margin: "0 auto 30px" }}>
-          <span className="estate-auth-brand-logo"><img src="/logo.svg" alt="LandCheck" width="520" height="140" /></span>
+          <span className="estate-auth-brand-logo"><img src="/logo-icon-192.png" alt="LandCheck" width="40" height="40" /></span>
           <span className="estate-auth-brand-tag">Estates</span>
         </Link>
         <p className="estate-kicker">Company workspace</p>

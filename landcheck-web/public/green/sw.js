@@ -98,9 +98,8 @@ function isGreenAsset(pathname) {
     pathname.startsWith("/green-work/") ||
     pathname === "/green" ||
     pathname === "/green-work" ||
-    pathname === "/green-logo-cropped-760.png" ||
-    pathname === "/green-logo-cropped-700.png" ||
-    pathname === "/green%20logo.png"
+    pathname === "/logo-icon-192.png" ||
+    pathname === "/logo-icon-512.png"
   );
 }
 
@@ -156,7 +155,7 @@ self.addEventListener("fetch", (event) => {
   // Never intercept same-origin Green API/data requests. Let them go straight to the network.
   if (isLikelyGreenApiRequest(req, url)) return;
 
-  // Skip API calls – let them go straight to network
+  // Skip API calls ï¿½ let them go straight to network
   if (isSameOrigin && url.pathname.startsWith("/api/")) return;
 
   /* Mapbox tile / style / font caching (network-first, cache fallback) */

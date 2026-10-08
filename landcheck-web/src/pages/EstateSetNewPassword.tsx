@@ -46,7 +46,7 @@ export default function EstateSetNewPassword() {
     <main className="estate-auth-page">
       <div className="estate-auth-shell">
         <span className="estate-auth-brand" aria-label="LandCheck Estates">
-          <span className="estate-auth-brand-logo"><img src="/logo.svg" alt="LandCheck" width="520" height="140" /></span>
+          <span className="estate-auth-brand-logo"><img src="/logo-icon-192.png" alt="LandCheck" width="40" height="40" /></span>
           <span className="estate-auth-brand-tag">Estates</span>
         </span>
         <div className="estate-auth-card">

@@ -52,7 +52,7 @@ export default function EstateRegister() {
       <div className="estate-auth-shell estate-auth-shell--register">
         <div className="estate-register-intro">
           <Link to="/estates" className="estate-auth-brand" aria-label="LandCheck Estates home">
-            <span className="estate-auth-brand-logo"><img src="/logo.svg" alt="LandCheck" width="520" height="140" /></span>
+            <span className="estate-auth-brand-logo"><img src="/logo-icon-192.png" alt="LandCheck" width="40" height="40" /></span>
             <span className="estate-auth-brand-tag">Estates</span>
           </Link>
           <p className="estate-kicker">Start with the land</p>

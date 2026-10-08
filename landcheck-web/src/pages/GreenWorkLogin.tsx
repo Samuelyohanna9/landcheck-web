@@ -6,7 +6,7 @@ import GreenLoadingAnimation from "../components/GreenLoadingAnimation";
 import "../styles/green-work-login.css";
 import "../styles/green-work-login-dashboard.css";
 
-const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
+const GREEN_LOGO_SRC = "/logo-icon-192.png";
 const REMEMBERED_USERNAME_KEY = "work-login-remembered-username";
 
 // Land-parcel/cadastral backdrop - LandCheck's own product vocabulary (plot boundaries, a

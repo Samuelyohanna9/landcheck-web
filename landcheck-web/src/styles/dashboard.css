@@ -2613,9 +2613,10 @@
   gap: 8px;
 }
 
-/* Same boxed badge as Survey's .survey-top-bar-brand-logo: the full logo.svg's "Land" text is
-   near-white (#F1F5F9), meant to sit on a dark backdrop, not a plain white dashboard header - the
-   dark badge is what makes it legible, in both themes. */
+/* Same boxed badge as Survey's .survey-top-bar-brand-logo: shows the icon mark alone
+   (/logo-icon-192.png), not the wordmark - the brand logo's "Land" text is dark ink with no
+   light-on-dark variant, so it needs its own dark badge to sit on rather than the plain
+   dashboard header, in both themes. */
 .workspace-container .dashboard-logo-mark {
   display: inline-flex;
   align-items: center;

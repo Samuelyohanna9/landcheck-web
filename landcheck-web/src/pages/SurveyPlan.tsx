@@ -4964,7 +4964,7 @@ export default function SurveyPlan() {
       <header className="geo-top-bar">
         <div className="geo-top-bar-brand">
           <span className="geo-top-bar-brand-logo" aria-hidden="true">
-            <img src="/logo.svg" alt="" />
+            <img src="/logo-icon-192.png" alt="" />
           </span>
           <span className="geo-top-bar-brand-tag">SURVEY</span>
         </div>
@@ -5073,7 +5073,7 @@ export default function SurveyPlan() {
       <header className="survey-top-bar">
         <div className="survey-top-bar-brand">
           <span className="survey-top-bar-brand-logo" aria-hidden="true">
-            <img src="/logo.svg" alt="" />
+            <img src="/logo-icon-192.png" alt="" />
           </span>
           <span className="survey-top-bar-brand-tag">SURVEY</span>
         </div>

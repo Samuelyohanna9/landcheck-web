@@ -14,7 +14,7 @@ type SeoConfig = {
 };
 
 const SITE_ORIGIN = "https://landcheck.online";
-const DEFAULT_OG_IMAGE = "https://landcheck.online/green-logo-cropped-820.png";
+const DEFAULT_OG_IMAGE = "https://landcheck.online/logo-icon-512.png";
 
 const APP_MOBILE_JSON_LD = {
   "@context": "https://schema.org",
@@ -544,9 +544,9 @@ const resolveSeoConfig = (pathname: string): SeoConfig => {
           publisher: {
             "@type": "Organization",
             name: "LandCheck Geospatial Technologies Limited",
-            logo: { "@type": "ImageObject", url: `${SITE_ORIGIN}/green-logo-cropped-820.png` },
+            logo: { "@type": "ImageObject", url: `${SITE_ORIGIN}/logo-icon-512.png` },
           },
-          image: article.heroImage ? `${SITE_ORIGIN}${article.heroImage}` : `${SITE_ORIGIN}/green-logo-cropped-820.png`,
+          image: article.heroImage ? `${SITE_ORIGIN}${article.heroImage}` : `${SITE_ORIGIN}/logo-icon-512.png`,
           articleSection: article.tag,
         },
       };

@@ -190,7 +190,7 @@ export default function SurveyPlanLanding() {
     <div className="spl-page public-landing">
       <header className="spl-nav">
         <Link to="/" className="spl-brand" aria-label="LandCheck home">
-          <img src="/logo.svg" alt="LandCheck" width="130" height="38" />
+          <img src="/logo-icon-192.png" alt="LandCheck" width="130" height="38" />
           <span className="spl-brand-product">Survey</span>
         </Link>
         <button
@@ -245,7 +245,7 @@ export default function SurveyPlanLanding() {
       <div className={`spl-mobile-overlay${menuOpen ? " spl-mobile-overlay--open" : ""}`} onClick={closeMenu} aria-hidden={!menuOpen}>
         <nav className={`spl-mobile-drawer${menuOpen ? " spl-mobile-drawer--open" : ""}`} onClick={(event) => event.stopPropagation()} aria-label="Survey navigation (mobile)">
           <div className="spl-mobile-drawer-head">
-            <img src="/logo.svg" alt="LandCheck" width="112" height="32" />
+            <img src="/logo-icon-192.png" alt="LandCheck" width="112" height="32" />
             <button type="button" className="spl-mobile-close" onClick={closeMenu} aria-label="Close navigation">&times;</button>
           </div>
           <a href="#features" className="spl-mobile-item" onClick={closeMenu}>Features</a>
@@ -393,7 +393,7 @@ export default function SurveyPlanLanding() {
         <div className="spl-footer-main">
           <div className="spl-footer-brand">
             <Link to="/" className="spl-brand">
-              <img src="/logo.svg" alt="LandCheck" width="100" height="34" loading="lazy" />
+              <img src="/logo-icon-192.png" alt="LandCheck" width="100" height="34" loading="lazy" />
               <span className="spl-brand-product">Survey</span>
             </Link>
             <a href="mailto:admin@landcheck.online">admin@landcheck.online</a>

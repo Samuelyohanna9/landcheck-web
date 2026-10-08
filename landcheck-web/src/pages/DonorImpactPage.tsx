@@ -23,7 +23,7 @@ const ProjectMap = lazy(() =>
   import("../components/ProjectMap").then((module) => ({ default: module.ProjectMap }))
 );
 
-const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
+const GREEN_LOGO_SRC = "/logo-icon-192.png";
 
 const resolveAssetUrl = (url: string | null | undefined): string => {
   const raw = String(url || "").trim();

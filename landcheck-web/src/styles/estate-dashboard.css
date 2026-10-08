@@ -95,10 +95,12 @@
   padding: 4px 8px 20px;
 }
 
-/* The LandCheck wordmark (/logo.svg) bakes in a light "Land" and a green "Check" for display on a
-   dark surface - dropped straight onto the (light) sidebar it would wash out, so it gets its own
-   small dark chip to sit on instead. Uses the dashboard's own brand green (not the site's navy)
-   so the chip reads as part of this product's palette rather than a mismatched dark box. */
+/* Shows the icon mark alone (/logo-icon-192.png), not the full wordmark - the current brand
+   logo's "Land" text is dark ink, meant for a light background, with no reversed/light-text
+   variant for a dark surface. Dropped straight onto the (light) sidebar the icon would wash out,
+   so it gets its own small dark chip to sit on instead. Uses the dashboard's own brand green (not
+   the site's navy) so the chip reads as part of this product's palette rather than a mismatched
+   dark box. Revisit if a light-on-dark wordmark variant is ever produced. */
 .edash-sidebar-brand-logo {
   display: inline-flex;
   align-items: center;

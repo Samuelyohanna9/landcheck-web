@@ -1,7 +1,7 @@
-/* The LandCheck wordmark (/logo.svg) bakes in a light "Land" for display on a dark
-   surface - the dashboard sidebar gives it its own dark chip to sit on (see
-   estate-dashboard.css) so it doesn't wash out; this page's header/footer brand marks
-   need the same chip, since they sit directly on the white page background. */
+/* Icon mark only (/logo-icon-192.png), not the wordmark - the brand logo's "Land" text is
+   dark ink, meant for a light background, with no reversed/light-text variant for a dark
+   surface (see estate-dashboard.css for the fuller explanation). This page's header/footer
+   brand marks get their own dark-green chip to sit on for the same reason. */
 .privacy-policy-page.estate-portal .privacy-policy-brand img,
 .privacy-policy-page.estate-portal .privacy-policy-footer-brand img {
   background: #0f6e44;

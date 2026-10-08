@@ -35,12 +35,12 @@ const articleSchema = {
       name: "LandCheck Geospatial Technologies Limited",
       logo: {
         "@type": "ImageObject",
-        url: "https://landcheck.online/green-logo-cropped-820.png",
+        url: "https://landcheck.online/logo-icon-512.png",
       },
     },
     image: article.heroImage
       ? `https://landcheck.online${article.heroImage}`
-      : "https://landcheck.online/green-logo-cropped-820.png",
+      : "https://landcheck.online/logo-icon-512.png",
     articleSection: article.tag,
   })),
 };

@@ -259,7 +259,7 @@ export default function GreenPartnersLanding() {
         fixed
         overlay
         logoBadge
-        logoSrc="/green-logo-cropped-700.png"
+        logoSrc="/logo-icon-192.png"
         activeRoute="/green-partners"
         ctaLabel="Get Started"
         ctaRoute="/green-work/login"
@@ -512,7 +512,7 @@ export default function GreenPartnersLanding() {
         <div className="gp-shell">
           <div className="gp-global-footer__top">
             <div className="gp-footer-brand">
-              <img src="/green-logo-cropped-700.png" alt="LandCheck Green" className="gp-footer-logo" loading="lazy" decoding="async" />
+              <img src="/logo-icon-192.png" alt="LandCheck Green" className="gp-footer-logo" loading="lazy" decoding="async" />
               <p className="gp-footer-brand-text">
                 Verifiably restoring forests through cryptographic site evidence, real-time tracking, and board-ready reporting.
               </p>

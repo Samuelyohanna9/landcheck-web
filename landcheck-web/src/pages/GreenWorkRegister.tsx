@@ -7,7 +7,7 @@ import { WorkLoginBackdropArt, EyeIcon } from "./GreenWorkLogin";
 import "../styles/green-work-login.css";
 import "../styles/green-work-login-dashboard.css";
 
-const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
+const GREEN_LOGO_SRC = "/logo-icon-192.png";
 
 export default function GreenWorkRegister() {
   const navigate = useNavigate();

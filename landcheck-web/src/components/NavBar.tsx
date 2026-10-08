@@ -31,7 +31,9 @@ export const NAV_GROUPS = [
 ] as const;
 
 interface NavBarProps {
-  /** Logo image src. Defaults to /logo.svg */
+  /** Logo image src. Defaults to the icon mark (/logo-icon-192.png) - .lc-nav is a dark bar, and
+   * the brand wordmark's dark ink text needs a light background to read, so only override this
+   * with the wordmark (/logo-wordmark-web.png) on a page where this specific nav is styled light. */
   logoSrc?: string;
   /** Renders logo inside the white-square badge (GreenPartnersLanding style) */
   logoBadge?: boolean;
@@ -48,7 +50,7 @@ interface NavBarProps {
 }
 
 export default function NavBar({
-  logoSrc = "/logo.svg",
+  logoSrc = "/logo-icon-192.png",
   logoBadge = false,
   fixed = false,
   activeRoute,

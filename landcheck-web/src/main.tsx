@@ -62,9 +62,8 @@ function precacheBuildAssets() {
     if (src) urls.push(src);
   });
   // Also cache the logo
-  urls.push("/green-logo-cropped-760.png");
-  urls.push("/green-logo-cropped-700.png");
-  urls.push("/green-logo-cropped-820.png");
+  urls.push("/logo-icon-192.png");
+  urls.push("/logo-icon-512.png");
   urls.push("/background-sponsor.png");
 
   if (urls.length > 0 && navigator.serviceWorker.controller) {

@@ -785,9 +785,9 @@ export default function Dashboard() {
           </button>
           <button className="dashboard-logo-btn" onClick={() => navigate("/")} aria-label="Go to LandCheck home">
             {/* Same boxed badge treatment as the Survey workspace's own top bar (.survey-top-bar-brand-logo) -
-                the full logo.svg (icon + wordmark) on its dark badge, instead of a separately cropped icon
-                plus hand-styled "Land"/"Check" text trying to recreate it. */}
-            <span className="dashboard-logo-mark" aria-hidden="true"><img src="/logo.svg" alt="" /></span>
+                the icon mark alone on its dark badge. The brand wordmark's dark ink text has no
+                light-on-dark variant, so it can't sit directly on this dark badge the way the icon can. */}
+            <span className="dashboard-logo-mark" aria-hidden="true"><img src="/logo-icon-192.png" alt="" /></span>
           </button>
           <h1>{greetingForNow()}, {displayName}</h1>
         </div>

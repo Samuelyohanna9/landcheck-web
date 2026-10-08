@@ -40,7 +40,7 @@ const GreenWorkLiveTablePanel = lazyWithChunkRecovery(() => import("../component
 const GreenWorkExistingTreeIntakePanel = lazyWithChunkRecovery(() => import("../components/green-work/GreenWorkExistingTreeIntakePanel"));
 const GreenWorkShareImpactPanel = lazyWithChunkRecovery(() => import("../components/green-work/GreenWorkShareImpactPanel"));
 
-const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
+const GREEN_LOGO_SRC = "/logo-icon-192.png";
 const REMOTE_MONITORING_PROGRESS_STEPS = [
   "Validating selected monitoring area",
   "Counting stored trees inside polygon",

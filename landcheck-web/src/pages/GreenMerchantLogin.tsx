@@ -5,7 +5,7 @@ import { GreenGlyph } from "../components/GreenGlyph";
 import GreenLoadingAnimation from "../components/GreenLoadingAnimation";
 import "../styles/green-merchant.css";
 
-const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
+const GREEN_LOGO_SRC = "/logo-icon-192.png";
 
 export default function GreenMerchantLogin() {
   const navigate = useNavigate();

@@ -45,7 +45,7 @@ import "../styles/green.css";
 
 const TreeMap = lazyWithChunkRecovery(() => import("../components/TreeMap"));
 
-const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
+const GREEN_LOGO_SRC = "/logo-icon-192.png";
 
 type WorkflowProfile = "green" | "agric" | "relief_recovery";
 type ProjectAccessModel = "partner_org" | "public_sponsorship";
