@@ -173,25 +173,37 @@ export async function withRetry<T>(
 
 /**
  * Pulls the backend's actual `detail` message out of a failed request, falling back to a caller
- *-supplied message. Two things otherwise hide that message: axios errors are `instanceof Error`,
+ *-supplied message. Three things otherwise hide that message: axios errors are `instanceof Error`,
  * so a naive `err instanceof Error ? err.message : ...` check always wins and shows axios's
- * generic "Request failed with status code 400/500" instead; and for a request made with
+ * generic "Request failed with status code 400/500" instead; for a request made with
  * `responseType: "blob"` (every preview/orthophoto/topo/export render), a JSON error body still
  * arrives as a Blob, not a parsed object, so `err.response.data.detail` is undefined unless that
- * blob is read back out as text first.
+ * blob is read back out as text first; and `detail` is sometimes an object, not a string - every
+ * "upgrade_required"/"subscription_required" 402 in this app (hazard analysis, soil analysis, the
+ * Estates billing gate) raises `detail: {code, message}`, which a plain `typeof === "string"` check
+ * skips entirely, falling through to the same generic axios message.
  */
 export async function extractApiErrorMessage(err: any, fallback: string): Promise<string> {
   const data = err?.response?.data;
+  const messageFromDetail = (detail: unknown): string | null => {
+    if (typeof detail === "string" && detail) return detail;
+    if (detail && typeof detail === "object" && typeof (detail as { message?: unknown }).message === "string") {
+      return (detail as { message: string }).message;
+    }
+    return null;
+  };
   if (data && typeof Blob !== "undefined" && data instanceof Blob) {
     try {
       const text = await data.text();
       const parsed = JSON.parse(text);
-      if (typeof parsed?.detail === "string" && parsed.detail) return parsed.detail;
+      const message = messageFromDetail(parsed?.detail);
+      if (message) return message;
     } catch {
       // Not JSON (a genuinely broken/binary response) - fall through to the other checks.
     }
-  } else if (typeof data?.detail === "string" && data.detail) {
-    return data.detail;
+  } else {
+    const message = messageFromDetail(data?.detail);
+    if (message) return message;
   }
   if (err instanceof Error && err.message) return err.message;
   return fallback;
