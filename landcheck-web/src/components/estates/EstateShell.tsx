@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
-import { API_URL, api, extractApiErrorMessage } from "../../api/client";
+import { API_URL, api, extractApiErrorMessage, setEstateReadOnly } from "../../api/client";
 import EstateIcon, { type EstateIconName } from "./EstateIcon";
 import EstateModal from "./EstateModal";
 import { clearEstateAuthSession, getEstateAuthSession, setEstateAuthSession } from "../../auth/estateAuth";
@@ -75,6 +75,28 @@ export function hasEstatePermission(permissions: string[] | null | undefined, ke
   return permissions.includes("*") || permissions.includes(key);
 }
 
+export type EstateSubscriptionStatus = "none" | "trialing" | "active" | "past_due" | "canceled" | "expired";
+
+type EstateAccessContextValue = {
+  readOnly: boolean;
+  billingLoading: boolean;
+  subscriptionStatus: EstateSubscriptionStatus | null;
+};
+
+const EstateAccessContext = createContext<EstateAccessContextValue>({
+  readOnly: false,
+  billingLoading: false,
+  subscriptionStatus: null,
+});
+
+/**
+ * The server remains authoritative, but pages can use this state to hide or disable write
+ * controls immediately when an organisation's trial or subscription has lapsed.
+ */
+export function useEstateAccess(): EstateAccessContextValue {
+  return useContext(EstateAccessContext);
+}
+
 function relativeTime(value: string) {
   const then = new Date(value).getTime();
   if (!Number.isFinite(then)) return "";
@@ -136,6 +158,8 @@ export default function EstateShell({
   const [displayEstateName, setDisplayEstateName] = useState(estateName || "Estate");
   const [companyLogoPath, setCompanyLogoPath] = useState<string | null>(null);
   const [estateSession, setEstateSession] = useState(getEstateAuthSession());
+  const [subscriptionStatus, setSubscriptionStatus] = useState<EstateSubscriptionStatus | null>(null);
+  const [billingLoading, setBillingLoading] = useState(!skipBillingGate);
   const activeItem = estateNavItems.find((item) => item.key === activeKey);
   const notifButtonRef = useRef<HTMLButtonElement>(null);
   const notifPopoverRef = useRef<HTMLDivElement>(null);
@@ -305,6 +329,10 @@ export default function EstateShell({
   const saveEstateName = async () => {
     const nextName = renameValue.trim();
     if (!estateId || !nextName) return;
+    if (subscriptionStatus && ["past_due", "canceled", "expired"].includes(subscriptionStatus)) {
+      toast("Renew your subscription before making changes to this Estate.");
+      return;
+    }
     setRenameBusy(true);
     try {
       const response = await api.patch(`/estates/${estateId}`, { name: nextName });
@@ -345,31 +373,43 @@ export default function EstateShell({
     setSeenTimestamp(latestActivityTimestamp);
   };
 
-  // Every Estates page renders inside this shell, which makes it the one place to enforce "has a
-  // trialing/active subscription" without touching every individual page - mirrors how the
-  // backend enforces the same thing in one place (require_estate_access). The Billing page itself
-  // opts out via skipBillingGate, since it's the one page an unpaid organization must still reach.
-  //
-  // Where a non-trialing/active org is sent depends on WHY: an org that never subscribed
-  // (status "none") belongs on /estates/choose-plan (pick a plan, start a 3-day trial). An org
-  // whose trial/subscription already lapsed (past_due/canceled/expired) has already used its free
-  // trial - sending it to choose-plan puts it in front of a "start your free trial" pitch that
-  // dead-ends with a 409 ("already used its free trial") the moment it tries to pay. That account
-  // belongs on /estates/billing instead, which already has the correct re-payment flow
-  // (POST /estates/billing/payment-checkout) for exactly this case.
+  // Every Estates page renders inside this shell. An organisation that never subscribed still
+  // needs to choose a plan before entering the workspace. An organisation whose trial or paid
+  // period has lapsed must stay in the workspace in read-only mode so its records remain useful
+  // and can be exported/reviewed while renewal is pending. The API independently blocks every
+  // write, so this client state is UX only and never a security boundary.
   useEffect(() => {
-    if (skipBillingGate) return;
+    if (skipBillingGate) {
+      setBillingLoading(false);
+      setSubscriptionStatus(null);
+      return;
+    }
     const organizationId = estateSession?.user.organization_id;
-    if (!organizationId) return;
+    if (!organizationId) {
+      setBillingLoading(false);
+      return;
+    }
+    setBillingLoading(true);
     api.get("/estates/billing/status", { params: { organization_id: organizationId } })
       .then((response) => {
-        const status = response.data?.status;
-        if (["trialing", "active"].includes(status)) return;
-        navigate(status === "none" ? "/estates/choose-plan" : "/estates/billing", { replace: true });
+        const status = String(response.data?.status || "none") as EstateSubscriptionStatus;
+        setSubscriptionStatus(status);
+        if (status === "none") navigate("/estates/choose-plan", { replace: true });
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => setBillingLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [skipBillingGate, estateSession?.user.organization_id]);
+
+  const readOnly = !billingLoading && ["past_due", "canceled", "expired"].includes(String(subscriptionStatus));
+  const readOnlyMessage = subscriptionStatus === "past_due"
+    ? "Your subscription payment is past due. You can view your Estate records, but changes are disabled until you renew."
+    : "Your Estate subscription has ended. You can view your Estate records, but changes are disabled until you renew.";
+
+  useEffect(() => {
+    setEstateReadOnly(readOnly);
+    return () => setEstateReadOnly(false);
+  }, [readOnly]);
 
   // The company logo is configured once in Estate settings and reused throughout the workspace.
   // Keep the account avatar for the signed-in person; the adjacent mark identifies the company.
@@ -424,7 +464,8 @@ export default function EstateShell({
   }, [sidebarOpen]);
 
   return (
-    <div className={`edash${sidebarOpen ? " is-sidebar-open" : ""}`}>
+    <EstateAccessContext.Provider value={{ readOnly, billingLoading, subscriptionStatus }}>
+      <div className={`edash${sidebarOpen ? " is-sidebar-open" : ""}${readOnly ? " is-read-only" : ""}`}>
       <Toaster position="top-right" />
       <div className="edash-sidebar-backdrop" onClick={() => setSidebarOpen(false)} aria-hidden="true" />
       <aside className="edash-sidebar">
@@ -479,7 +520,7 @@ export default function EstateShell({
             <b>&rsaquo;</b>
             <span className="edash-breadcrumb-estate">
               <strong>{displayEstateName}</strong>
-              {canRenameEstate && estateId && <button type="button" className="edash-breadcrumb-edit" onClick={() => { setRenameValue(displayEstateName === "Estate" ? "" : displayEstateName); setRenameOpen(true); }} aria-label="Edit estate name">Edit</button>}
+              {canRenameEstate && estateId && !readOnly && <button type="button" className="edash-breadcrumb-edit" onClick={() => { setRenameValue(displayEstateName === "Estate" ? "" : displayEstateName); setRenameOpen(true); }} aria-label="Edit estate name">Edit</button>}
             </span>
             <b>&rsaquo;</b>
             <strong>{activeItem?.label}</strong>
@@ -573,7 +614,16 @@ export default function EstateShell({
           </div>,
           document.body,
         )}
-        <div className={`edash-body${activeKey === "map" ? " edash-body--fill" : ""}`}>{children}</div>
+        {readOnly && (
+          <div className="edash-read-only-banner" role="status" aria-live="polite">
+            <div>
+              <strong>Read-only access</strong>
+              <span>{readOnlyMessage}</span>
+            </div>
+            <Link className="edash-btn-primary" to="/estates/billing">Renew subscription</Link>
+          </div>
+        )}
+        <div className={`edash-body${activeKey === "map" ? " edash-body--fill" : ""}${readOnly ? " edash-body--read-only" : ""}`}>{children}</div>
       </div>
       {dpaOpen && (
         <EstateModal title="Data Processing Agreement" subtitle="How LandCheck handles your customers', agents' and staff's personal data." onClose={() => setDpaOpen(false)}>
@@ -628,6 +678,7 @@ export default function EstateShell({
           </div>
         </EstateModal>
       )}
-    </div>
+      </div>
+    </EstateAccessContext.Provider>
   );
 }

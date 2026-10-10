@@ -473,6 +473,34 @@
   padding: 22px 26px 30px;
 }
 
+.edash-read-only-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 26px;
+  border-bottom: 1px solid #f0d8a6;
+  background: #fff8e8;
+  color: #704f12;
+  font-size: 0.8rem;
+}
+
+.edash-read-only-banner > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.edash-read-only-banner strong { color: #5f4008; white-space: nowrap; }
+.edash-read-only-banner span { overflow-wrap: anywhere; }
+.edash-read-only-banner .edash-btn-primary { flex-shrink: 0; padding: 7px 11px; font-size: 0.75rem; }
+
+@media (max-width: 640px) {
+  .edash-read-only-banner { align-items: flex-start; flex-direction: column; padding: 10px 14px; }
+  .edash-read-only-banner > div { align-items: flex-start; flex-direction: column; gap: 2px; }
+}
+
 /* Map view: this column becomes the full remaining viewport height, and only its last child (the
    map+drawer row) is allowed to grow into whatever's left after the tools bar/banner/stats row -
    those keep their natural size, so the map gets everything else instead of the page just growing
