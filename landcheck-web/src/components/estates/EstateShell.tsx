@@ -349,13 +349,23 @@ export default function EstateShell({
   // trialing/active subscription" without touching every individual page - mirrors how the
   // backend enforces the same thing in one place (require_estate_access). The Billing page itself
   // opts out via skipBillingGate, since it's the one page an unpaid organization must still reach.
+  //
+  // Where a non-trialing/active org is sent depends on WHY: an org that never subscribed
+  // (status "none") belongs on /estates/choose-plan (pick a plan, start a 3-day trial). An org
+  // whose trial/subscription already lapsed (past_due/canceled/expired) has already used its free
+  // trial - sending it to choose-plan puts it in front of a "start your free trial" pitch that
+  // dead-ends with a 409 ("already used its free trial") the moment it tries to pay. That account
+  // belongs on /estates/billing instead, which already has the correct re-payment flow
+  // (POST /estates/billing/payment-checkout) for exactly this case.
   useEffect(() => {
     if (skipBillingGate) return;
     const organizationId = estateSession?.user.organization_id;
     if (!organizationId) return;
     api.get("/estates/billing/status", { params: { organization_id: organizationId } })
       .then((response) => {
-        if (!["trialing", "active"].includes(response.data?.status)) navigate("/estates/choose-plan", { replace: true });
+        const status = response.data?.status;
+        if (["trialing", "active"].includes(status)) return;
+        navigate(status === "none" ? "/estates/choose-plan" : "/estates/billing", { replace: true });
       })
       .catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
