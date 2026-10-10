@@ -36,6 +36,13 @@ export const api = axios.create({
   withCredentials: true,
 });
 
+let estateReadOnly = false;
+
+/** Set by EstateShell after billing status is resolved. The API remains the final authority. */
+export function setEstateReadOnly(value: boolean): void {
+  estateReadOnly = value;
+}
+
 // Mutation callers keep this key while retrying the same logical action. The API uses it to
 // return the original allocation/payment instead of creating a second financial record.
 export function createIdempotencyKey(prefix = "estate-action") {
@@ -129,7 +136,21 @@ const attachLandCheckHeaders = (config: InternalAxiosRequestConfig) => {
   return config;
 };
 
-api.interceptors.request.use((config) => attachLandCheckHeaders(config));
+api.interceptors.request.use((config) => {
+  const next = attachLandCheckHeaders(config);
+  const method = String(next.method || "get").toLowerCase();
+  const pathname = typeof window !== "undefined" ? String(window.location.pathname || "").toLowerCase() : "";
+  const requestPath = String(next.url || "").toLowerCase();
+  const isMutation = ["post", "put", "patch", "delete"].includes(method);
+  const isEstateWorkspace = pathname.startsWith("/estates/") && !pathname.startsWith("/estates/public/");
+  const isEstateRequest = requestPath.startsWith("/estates") || requestPath.includes("/estates/");
+  const isBillingRequest = requestPath.startsWith("/estates/billing") || requestPath.includes("/estates/billing/");
+  const isDpaRequest = requestPath.includes("/estates/legal/");
+  if (estateReadOnly && isMutation && (isEstateWorkspace || isEstateRequest) && !isBillingRequest && !isDpaRequest) {
+    return Promise.reject(new Error("Your Estate subscription has ended. Renew your subscription to make changes."));
+  }
+  return next;
+});
 
 // Export the base URL for components that need direct links
 export const BACKEND_URL = API_URL;
