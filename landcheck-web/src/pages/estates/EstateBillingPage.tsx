@@ -151,6 +151,21 @@ export default function EstateBillingPage() {
             <p className="edash-tab-empty"><Spinner size={13} /> Loading...</p>
           ) : (
             <>
+              {status.status === "past_due" && (
+                <div className="edash-banner tone-danger" style={{ marginBottom: 16 }}>
+                  Your free trial has ended and your last payment didn't go through. Subscribe below to keep using LandCheck Estates - your estates, plots, and records are safe and waiting.
+                </div>
+              )}
+              {status.status === "canceled" && (
+                <div className="edash-banner tone-danger" style={{ marginBottom: 16 }}>
+                  Your subscription has been cancelled. Subscribe below to regain access - your estates, plots, and records are safe and waiting.
+                </div>
+              )}
+              {status.status === "expired" && (
+                <div className="edash-banner tone-danger" style={{ marginBottom: 16 }}>
+                  Your subscription has expired. Subscribe below to regain access - your estates, plots, and records are safe and waiting.
+                </div>
+              )}
               <div className="edash-overview-grid edash-overview-grid--3" style={{ marginBottom: 16 }}>
                 <div className="edash-overview-field"><span>Plan</span><strong>{status.plan_label || "-"}</strong></div>
                 <div className="edash-overview-field"><span>Status</span><strong>{STATUS_LABEL[status.status] || status.status}</strong></div>

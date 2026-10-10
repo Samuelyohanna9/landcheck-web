@@ -23,8 +23,15 @@ export default function EstateChoosePlan() {
     if (!organizationId) { navigate("/estates/login", { replace: true }); return; }
     api.get(`/estates/billing/status`, { params: { organization_id: organizationId } })
       .then((response) => {
-        if (["trialing", "active"].includes(response.data?.status)) {
+        const status = response.data?.status;
+        if (["trialing", "active"].includes(status)) {
           navigate("/estates/workspace", { replace: true });
+        } else if (["past_due", "canceled", "expired"].includes(status)) {
+          // This account has already used its free trial, so the "start a free trial" pitch
+          // below would only dead-end: selecting a plan calls the trial-start endpoint, which
+          // correctly rejects an account that already claimed a trial. /estates/billing has the
+          // real re-payment flow for a lapsed subscription - send it there instead.
+          navigate("/estates/billing", { replace: true });
         } else {
           setChecking(false);
         }
