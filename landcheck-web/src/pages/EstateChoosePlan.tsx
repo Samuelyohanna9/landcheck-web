@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../api/client";
 import { getEstateAuthSession } from "../auth/estateAuth";
-import EstatePricingCards, { type EstateBillingCycle, type EstatePlanKey } from "../components/estates/EstatePricingCards";
+import EstatePricingCards, { type EstateBillingCycle, type EstatePaymentProvider, type EstatePlanKey } from "../components/estates/EstatePricingCards";
 import "../styles/estate-portal.css";
 
 export default function EstateChoosePlan() {
@@ -14,6 +14,7 @@ export default function EstateChoosePlan() {
   const [checking, setChecking] = useState(true);
   const [busyPlan, setBusyPlan] = useState<EstatePlanKey | null>(null);
   const [error, setError] = useState("");
+  const [availableProviders, setAvailableProviders] = useState<Partial<Record<EstatePaymentProvider, boolean>>>({ flutterwave: true });
 
   useEffect(() => {
     if (searchParams.get("result") === "failed") setError("We couldn't confirm that payment. Please try again, or use a different card.");
@@ -24,6 +25,7 @@ export default function EstateChoosePlan() {
     api.get(`/estates/billing/status`, { params: { organization_id: organizationId } })
       .then((response) => {
         const status = response.data?.status;
+        if (response.data?.payment_providers) setAvailableProviders(response.data.payment_providers);
         if (["trialing", "active"].includes(status)) {
           navigate("/estates/workspace", { replace: true });
         } else if (["past_due", "canceled", "expired"].includes(status)) {
@@ -39,14 +41,14 @@ export default function EstateChoosePlan() {
       .catch(() => setChecking(false));
   }, [organizationId, navigate]);
 
-  const selectPlan = async (planKey: EstatePlanKey, billingCycle: EstateBillingCycle) => {
+  const selectPlan = async (planKey: EstatePlanKey, billingCycle: EstateBillingCycle, provider: EstatePaymentProvider) => {
     if (!organizationId) return;
     setError("");
     setBusyPlan(planKey);
     try {
       const response = await api.post(
         "/estates/billing/checkout",
-        { plan_key: planKey, billing_cycle: billingCycle },
+        { plan_key: planKey, billing_cycle: billingCycle, provider },
         { params: { organization_id: organizationId } },
       );
       const checkoutUrl = response.data?.checkout_url;
@@ -73,7 +75,7 @@ export default function EstateChoosePlan() {
           Every plan includes a 3-day free trial. A refundable NGN 50 payment verifies your payment method. Card renewals are automatic; bank-transfer renewals use scheduled email reminders and a secure payment link.
         </p>
         {error && <div className="estate-auth-error" role="alert" style={{ maxWidth: 480, margin: "0 auto 24px", textAlign: "left" }}>{error}</div>}
-        <EstatePricingCards onSelectPlan={selectPlan} busyPlan={busyPlan} />
+        <EstatePricingCards onSelectPlan={selectPlan} busyPlan={busyPlan} availableProviders={availableProviders} />
       </div>
     </main>
   );

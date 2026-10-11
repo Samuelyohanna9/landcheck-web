@@ -11,6 +11,7 @@ export const ESTATE_PLANS = {
 
 export type EstatePlanKey = keyof typeof ESTATE_PLANS;
 export type EstateBillingCycle = "monthly" | "yearly";
+export type EstatePaymentProvider = "flutterwave" | "paystack";
 
 const naira = (value: number) => `₦${value.toLocaleString()}`;
 
@@ -60,17 +61,29 @@ export default function EstatePricingCards({
   ctaLabel = () => "Start free trial",
   busyPlan,
   currentPlan,
+  availableProviders,
+  provider: controlledProvider,
+  onProviderChange,
 }: {
   billingCycle?: EstateBillingCycle;
   onCycleChange?: (cycle: EstateBillingCycle) => void;
-  onSelectPlan: (plan: EstatePlanKey, cycle: EstateBillingCycle) => void;
+  onSelectPlan: (plan: EstatePlanKey, cycle: EstateBillingCycle, provider: EstatePaymentProvider) => void;
   ctaLabel?: (plan: EstatePlanKey) => string;
   busyPlan?: EstatePlanKey | null;
   currentPlan?: EstatePlanKey | null;
+  /** Which gateways this server has configured - only offer a choice once more than one is
+   * live; defaults to Flutterwave-only (today's only gateway) when not supplied. */
+  availableProviders?: Partial<Record<EstatePaymentProvider, boolean>>;
+  provider?: EstatePaymentProvider;
+  onProviderChange?: (provider: EstatePaymentProvider) => void;
 }) {
   const [internalCycle, setInternalCycle] = useState<EstateBillingCycle>("monthly");
   const billingCycle = controlledCycle ?? internalCycle;
   const setBillingCycle = onCycleChange ?? setInternalCycle;
+  const [internalProvider, setInternalProvider] = useState<EstatePaymentProvider>("flutterwave");
+  const provider = controlledProvider ?? internalProvider;
+  const setProvider = onProviderChange ?? setInternalProvider;
+  const offerProviderChoice = Boolean(availableProviders?.flutterwave && availableProviders?.paystack);
 
   return (
     <div className="estate-pricing">
@@ -78,6 +91,12 @@ export default function EstatePricingCards({
         <button type="button" className={billingCycle === "monthly" ? "active" : ""} onClick={() => setBillingCycle("monthly")}>Monthly</button>
         <button type="button" className={billingCycle === "yearly" ? "active" : ""} onClick={() => setBillingCycle("yearly")}>Yearly</button>
       </div>
+      {offerProviderChoice && (
+        <div className="estate-pricing-toggle" role="group" aria-label="Payment provider">
+          <button type="button" className={provider === "flutterwave" ? "active" : ""} onClick={() => setProvider("flutterwave")}>Pay with Flutterwave</button>
+          <button type="button" className={provider === "paystack" ? "active" : ""} onClick={() => setProvider("paystack")}>Pay with Paystack</button>
+        </div>
+      )}
       <div className="estate-pricing-grid">
         {(Object.keys(ESTATE_PLANS) as EstatePlanKey[]).map((key) => {
           const plan = ESTATE_PLANS[key];
@@ -96,7 +115,7 @@ export default function EstatePricingCards({
                 className={`estate-button${key === "pro" ? "" : " estate-button--outline"}`}
                 style={{ width: "100%", justifyContent: "center" }}
                 disabled={busyPlan === key || currentPlan === key}
-                onClick={() => onSelectPlan(key, billingCycle)}
+                onClick={() => onSelectPlan(key, billingCycle, provider)}
               >
                 {busyPlan === key ? "Starting..." : ctaLabel(key)}
               </button>
