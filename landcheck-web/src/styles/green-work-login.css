@@ -13,9 +13,14 @@
 
 .work-login-page {
   position: relative;
-  height: 100dvh;
-  min-height: 560px;
-  overflow: hidden;
+  /* Was height:100dvh + overflow:hidden, relying on .work-login-shell's own scrollbar-hidden
+     inner scroll region to reach anything below the fold - on a short-but-not-narrow viewport
+     (where the <520px width breakpoint below doesn't apply) that inner scroll wasn't reliably
+     reachable, clipping the bottom of taller content like the registration form. min-height +
+     overflow:auto here lets the whole page scroll naturally instead, which works regardless of
+     viewport width or height. */
+  min-height: 100dvh;
+  overflow-y: auto;
   display: grid;
   place-items: center;
   padding: clamp(1rem, 3vh, 2rem);
