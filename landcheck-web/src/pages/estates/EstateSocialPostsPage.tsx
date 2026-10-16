@@ -5,6 +5,7 @@ import { api, extractApiErrorMessage } from "../../api/client";
 import { getEstateAuthSession } from "../../auth/estateAuth";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
+import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import { AD_STYLES, fetchBlobUrl, formatLagos, fromLagosInput, lagosDayKey, toLagosInput } from "../../utils/estateMarketing";
 import "../../styles/estate-marketing.css";
 
@@ -155,8 +156,24 @@ export default function EstateSocialPostsPage() {
   if (!estateId) return null;
   const setFilter = (next: Scope) => { setScope(next); setOpenId(null); setDraft(null); const params = new URLSearchParams(searchParams); params.set("scope", next); params.delete("post"); setSearchParams(params, { replace: true }); };
 
+  const ribbonTabs: EstateRibbonTab[] = [
+    {
+      key: "home",
+      label: "Home",
+      groups: [
+        {
+          key: "create",
+          label: "Create",
+          buttons: [{ key: "create-posts", label: "Create Posts or Plan", icon: "megaphone", onClick: () => navigate(`/estates/${estateId}/marketing?tab=social`) }],
+        },
+        { key: "data", label: "Data", buttons: [{ key: "refresh", label: "Refresh", icon: "refresh", onClick: () => void load() }] },
+      ],
+    },
+  ];
+
   return (
     <EstateShell estateId={estateId} estateName={estateName} activeKey="marketing">
+      <EstateRibbon tabs={ribbonTabs} />
       <div className="edash-page-head">
         <div>
           <button type="button" className="edash-sp-back" onClick={() => navigate(`/estates/${estateId}/marketing?tab=social`)}><EstateIcon name="chevron-left" /> Back to Marketing</button>
@@ -164,7 +181,6 @@ export default function EstateSocialPostsPage() {
           <h1>Scheduled &amp; posted</h1>
           <p>Every post for this estate, day by day. Open any post to change its wording, time, channels or design, send it now, or cancel it. Times are Lagos time.</p>
         </div>
-        <button type="button" className="edash-btn-outline" onClick={() => navigate(`/estates/${estateId}/marketing?tab=social`)}><EstateIcon name="megaphone" /> Create posts or a plan</button>
       </div>
 
       <div className="edash-sp-tabs" role="tablist">

@@ -5,6 +5,7 @@ import { api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
 import EstatePagination from "../../components/estates/EstatePagination";
+import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import { formatLagos } from "../../utils/estateMarketing";
 import "../../styles/estate-marketing.css";
 
@@ -98,8 +99,23 @@ export default function EstateSmsPage() {
 
   if (!estateId) return null;
 
+  const ribbonTabs: EstateRibbonTab[] = [
+    {
+      key: "home",
+      label: "Home",
+      groups: [
+        {
+          key: "data",
+          label: "Data",
+          buttons: [{ key: "refresh", label: "Refresh", icon: "refresh", onClick: () => { void loadCustomers(); void loadHistory(); } }],
+        },
+      ],
+    },
+  ];
+
   return (
     <EstateShell estateId={estateId} estateName={estateName} activeKey="sms">
+      <EstateRibbon tabs={ribbonTabs} />
       <div className="edash-page-head">
         <div>
           <span className="edash-section-kicker">Customers</span>

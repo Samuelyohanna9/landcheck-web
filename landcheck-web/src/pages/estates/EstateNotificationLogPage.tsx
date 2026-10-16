@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import EstateIcon from "../../components/estates/EstateIcon";
 import EstateShell from "../../components/estates/EstateShell";
+import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import { api, extractApiErrorMessage } from "../../api/client";
 import "../../styles/estate-marketing.css";
 
@@ -79,15 +80,23 @@ export default function EstateNotificationLogPage() {
   if (!estateId) return null;
   const total = counts.sent + counts.failed + counts.skipped;
 
+  const ribbonTabs: EstateRibbonTab[] = [
+    {
+      key: "home",
+      label: "Home",
+      groups: [{ key: "data", label: "Data", buttons: [{ key: "refresh", label: "Refresh", icon: "refresh", onClick: () => void load(), disabled: busy }] }],
+    },
+  ];
+
   return (
     <EstateShell estateId={estateId} estateName={estateName} activeKey="notifications">
+      <EstateRibbon tabs={ribbonTabs} />
       <div className="edash-page-head">
         <div>
           <span className="edash-section-kicker">Communications</span>
           <h1>Message delivery</h1>
           <p>A record of everything sent from this estate: customer emails and SMS, Facebook and Instagram posts, and WhatsApp updates - sent, failed or skipped.</p>
         </div>
-        <button type="button" className="edash-btn-outline" disabled={busy} onClick={() => void load()}><EstateIcon name="activity" /> Refresh</button>
       </div>
 
       <div className="edash-mk-segment" role="group" aria-label="Message type" style={{ marginBottom: 12 }}>

@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { API_URL, api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
+import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import UpgradeNotice from "../../components/estates/UpgradeNotice";
 import { formatLagos } from "../../utils/estateMarketing";
 import "../../styles/estate-marketing.css";
@@ -234,17 +235,29 @@ export default function EstateWhatsappInboxPage() {
     );
   }
 
+  const ribbonTabs: EstateRibbonTab[] = [
+    {
+      key: "home",
+      label: "Home",
+      groups: [
+        {
+          key: "create",
+          label: "Create",
+          buttons: [{ key: "new-chat", label: newChatOpen ? "Close New Chat" : "New Chat", icon: "plus", onClick: () => setNewChatOpen((open) => !open), active: newChatOpen }],
+        },
+        { key: "data", label: "Data", buttons: [{ key: "refresh", label: "Refresh", icon: "refresh", onClick: () => void loadConversations() }] },
+      ],
+    },
+  ];
+
   return (
     <EstateShell estateId={estateId} estateName={estateName} activeKey="whatsapp">
+      <EstateRibbon tabs={ribbonTabs} />
       <div className="edash-page-head">
         <div>
           <span className="edash-section-kicker">Marketing</span>
           <h1>WhatsApp</h1>
           <p>Chats with your customers on WhatsApp. Start a new chat with any customer, or reply to someone who messaged you. Free replies only send within 24 hours of the customer's last message - that's a WhatsApp rule.</p>
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" className="edash-btn-primary" onClick={() => setNewChatOpen((open) => !open)}><EstateIcon name="plus" /> {newChatOpen ? "Close" : "New chat"}</button>
-          <button type="button" className="edash-btn-outline" onClick={() => void loadConversations()}><EstateIcon name="activity" /> Refresh</button>
         </div>
       </div>
 

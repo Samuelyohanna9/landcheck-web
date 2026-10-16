@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../../api/client";
 import { getEstateAuthSession } from "../../auth/estateAuth";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon, { type EstateIconName } from "../../components/estates/EstateIcon";
+import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import MarketingAgentsTab from "../../components/estates/marketing/MarketingAgentsTab";
 import MarketingInspectionsTab from "../../components/estates/marketing/MarketingInspectionsTab";
 import MarketingMaterialsTab from "../../components/estates/marketing/MarketingMaterialsTab";
@@ -24,6 +25,7 @@ const TABS: Array<{ key: TabKey; label: string; icon: EstateIconName }> = [
 
 export default function EstateMarketingPage() {
   const { estateId } = useParams();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const requested = searchParams.get("tab") as TabKey | null;
   const tab: TabKey = TABS.some((item) => item.key === requested) ? (requested as TabKey) : "overview";
@@ -54,8 +56,32 @@ export default function EstateMarketingPage() {
 
   if (!estateId) return null;
 
+  const ribbonTabs: EstateRibbonTab[] = [
+    {
+      key: "home",
+      label: "Home",
+      groups: [
+        {
+          key: "navigate",
+          label: "Navigate",
+          buttons: [
+            { key: "whatsapp", label: "WhatsApp", icon: "whatsapp", onClick: () => navigate(`/estates/${estateId}/marketing/whatsapp`) },
+            { key: "sms", label: "SMS", icon: "mail", onClick: () => navigate(`/estates/${estateId}/sms`) },
+            { key: "delivery", label: "Message Delivery", icon: "mail", onClick: () => navigate(`/estates/${estateId}/notifications`) },
+          ],
+        },
+        {
+          key: "publish",
+          label: "Publish",
+          buttons: [{ key: "settings", label: "Public Website Settings", icon: "globe", onClick: () => navigate(`/estates/${estateId}/settings`) }],
+        },
+      ],
+    },
+  ];
+
   return (
     <EstateShell estateId={estateId} estateName={estateName} activeKey="marketing" onEstateNameChange={setEstateName}>
+      <EstateRibbon tabs={ribbonTabs} />
       {ready && !published && (
         <div className="edash-mk-banner">
           <div><strong>Publish your public Estate page to start marketing</strong>Flyers, ads and share links all point buyers to it, and inspection bookings happen there.</div>
