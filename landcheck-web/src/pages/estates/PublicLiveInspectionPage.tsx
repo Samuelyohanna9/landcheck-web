@@ -38,7 +38,7 @@ export default function PublicLiveInspectionPage() {
     if (!token) return undefined;
     let cancelled = false;
     const load = () => {
-      api.get<Session>(`/estates/live-inspections/${token}`).then((response) => {
+      api.get<Session>(`/estates/public/live-inspections/${token}`).then((response) => {
         if (!cancelled) setSession(response.data);
       }).catch(async (requestError) => {
         if (!cancelled) setError(await extractApiErrorMessage(requestError, "This live inspection link is not valid."));
