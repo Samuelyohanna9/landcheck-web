@@ -69,7 +69,7 @@ export default function GreenWorkRegister() {
               <h1>Check your email</h1>
               <p className="work-login-card-sub">
                 We sent a verification link to <strong>{email}</strong>. Open it to verify your address, then sign in to open your
-                new workspace.
+                new workspace. Don't see it in your inbox? Check your spam/junk folder.
               </p>
               <a className="work-login-submit" href="/green-work/login" style={{ display: "block", textAlign: "center", textDecoration: "none" }}>
                 Go to sign in

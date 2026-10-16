@@ -26,6 +26,7 @@ const GreenMerchantLogin = lazyWithChunkRecovery(() => import("./pages/GreenMerc
 const GreenWork = lazyWithChunkRecovery(() => import("./pages/GreenWork"));
 const GreenWorkLogin = lazyWithChunkRecovery(() => import("./pages/GreenWorkLogin"));
 const GreenWorkRegister = lazyWithChunkRecovery(() => import("./pages/GreenWorkRegister"));
+const GreenWorkEmailVerified = lazyWithChunkRecovery(() => import("./pages/GreenWorkEmailVerified"));
 const DataDeletion = lazyWithChunkRecovery(() => import("./pages/DataDeletion"));
 const EstateSocialPostsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateSocialPostsPage"));
 const EstateWhatsappInboxPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateWhatsappInboxPage"));
@@ -370,6 +371,7 @@ export default function App() {
               <Route path="/green-merchant" element={<MerchantProtectedRoute element={<GreenMerchantDashboard />} />} />
               <Route path="/green-work/login" element={<GreenWorkLogin />} />
               <Route path="/green-work/register" element={<GreenWorkRegister />} />
+              <Route path="/green-work/email-verified" element={<GreenWorkEmailVerified />} />
               <Route path="/green-work" element={<WorkProtectedRoute element={<GreenWork />} />} />
               <Route path="/survey" element={<SurveyPlanLanding />} />
               <Route path="/survey/guides" element={<SurveyGuides />} />
