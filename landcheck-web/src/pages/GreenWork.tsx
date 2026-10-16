@@ -4242,6 +4242,7 @@ export default function GreenWork() {
   const [removeStaffTarget, setRemoveStaffTarget] = useState<GreenUser | null>(null);
   const [removeStaffConfirmName, setRemoveStaffConfirmName] = useState("");
   const [removingStaff, setRemovingStaff] = useState(false);
+  const [expandedStaffManageId, setExpandedStaffManageId] = useState<number | null>(null);
   const [alertsSummary, setAlertsSummary] = useState<{ total: number; danger: number; warning: number; info: number }>({
     total: 0,
     danger: 0,
@@ -15208,9 +15209,11 @@ export default function GreenWork() {
                 <div className="green-work-card" style={{ marginBottom: 14 }}>
                   <h3>Manage Staff</h3>
                   <p className="green-work-note">
-                    Removing a staff member revokes their access to LandCheck Work immediately - they can no
-                    longer sign in or act on the platform. Trees, tasks, and other work they already recorded stay
-                    exactly as they are and keep their name attached.
+                    Click "Manage" on a staff member to deactivate or remove them. Deactivating pauses their sign-in
+                    without changing anything else - flip it back to Activate any time, their password stays as it
+                    was. Removing also revokes access immediately, but additionally clears their password, so
+                    bringing them back later means resetting a new one for them. Either way, trees, tasks, and other
+                    work they already recorded stay exactly as they are and keep their name attached.
                   </p>
                   {adminUsersLoading ? (
                     <p className="green-work-note">Loading staff...</p>
@@ -15218,42 +15221,60 @@ export default function GreenWork() {
                     <p className="green-work-note">No staff found for your organization.</p>
                   ) : (
                     <div className="staff-list">
-                      {adminUsers.map((user) => (
-                        <div key={`org-staff-${user.id}`} className="staff-row">
-                          <div className="staff-row-head">
-                            <strong>{user.full_name}</strong>
-                            <span>
-                              {user.role_name || user.role || "-"}
-                              {user.is_active === false ? " | inactive" : ""}
-                            </span>
+                      {adminUsers.map((user) => {
+                        const userId = Number(user.id);
+                        const expanded = expandedStaffManageId === userId;
+                        return (
+                          <div key={`org-staff-${user.id}`} className="staff-row">
+                            <div className="staff-row-head">
+                              <strong>{user.full_name}</strong>
+                              <span>
+                                {user.role_name || user.role || "-"}
+                                {user.is_active === false ? " | inactive" : ""}
+                              </span>
+                            </div>
+                            <div className="staff-row-meta">
+                              {user.email || "-"} {user.phone ? `| ${user.phone}` : ""} | Login username:{" "}
+                              {user.work_username || "-"}
+                            </div>
+                            <div className="work-actions">
+                              <button
+                                type="button"
+                                onClick={() => setExpandedStaffManageId(expanded ? null : userId)}
+                              >
+                                {expanded ? "Hide actions" : "Manage"}
+                              </button>
+                            </div>
+                            {expanded && (
+                              <div className="work-actions" style={{ marginTop: 8 }}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    void api
+                                      .patch(`/green/users/${user.id}`, { is_active: user.is_active === false })
+                                      .then(async () => {
+                                        await Promise.all([loadUsers(), loadAdminUsers()]);
+                                        toast.success(user.is_active === false ? "Staff activated" : "Staff deactivated");
+                                      })
+                                      .catch((error: any) => {
+                                        toast.error(error?.response?.data?.detail || "Failed to update staff status");
+                                      });
+                                  }}
+                                >
+                                  {user.is_active === false ? "Activate" : "Deactivate"}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="green-work-danger-btn"
+                                  onClick={() => openRemoveStaffModal(user)}
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            )}
                           </div>
-                          <div className="staff-row-meta">
-                            {user.email || "-"} {user.phone ? `| ${user.phone}` : ""} | Login username:{" "}
-                            {user.work_username || "-"}
-                          </div>
-                          <div className="work-actions">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                void api
-                                  .patch(`/green/users/${user.id}`, { is_active: user.is_active === false })
-                                  .then(async () => {
-                                    await Promise.all([loadUsers(), loadAdminUsers()]);
-                                    toast.success(user.is_active === false ? "Staff activated" : "Staff deactivated");
-                                  })
-                                  .catch((error: any) => {
-                                    toast.error(error?.response?.data?.detail || "Failed to update staff status");
-                                  });
-                              }}
-                            >
-                              {user.is_active === false ? "Activate" : "Deactivate"}
-                            </button>
-                            <button type="button" className="green-work-danger-btn" onClick={() => openRemoveStaffModal(user)}>
-                              Remove
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
