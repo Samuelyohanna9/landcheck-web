@@ -14,6 +14,7 @@ import { toWGS84, COORDINATE_SYSTEM_GROUPS } from "../utils/coordinateConverter"
 import { checkPolygonClosure } from "../utils/surveyGeometry";
 import { formatArea, type UnitSystem } from "../utils/unitFormat";
 import EstateIcon from "../components/estates/EstateIcon";
+import EstateRibbon, { type EstateRibbonTab } from "../components/estates/EstateRibbon";
 import EstateModal from "../components/estates/EstateModal";
 import CoordinateSystemSelect from "../components/CoordinateSystemSelect";
 import EstateShell from "../components/estates/EstateShell";
@@ -1837,13 +1838,42 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     );
   }
 
+  function fitMapToEstate() {
+    if (!mapRef.current) return;
+    const bounds = mapPlotGeojson.features.reduce((acc: number[][] | null, feature: any) => {
+      const ring = feature.geometry?.type === "Polygon" ? feature.geometry.coordinates[0] : [];
+      return ring.reduce((box: number[][] | null, coord: number[]) => {
+        if (!box) return [[coord[0], coord[1]], [coord[0], coord[1]]];
+        box[0][0] = Math.min(box[0][0], coord[0]); box[0][1] = Math.min(box[0][1], coord[1]);
+        box[1][0] = Math.max(box[1][0], coord[0]); box[1][1] = Math.max(box[1][1], coord[1]);
+        return box;
+      }, acc);
+    }, null);
+    if (bounds) mapRef.current.fitBounds(bounds, { padding: 46, maxZoom: 17 });
+  }
+
+  function toggleMapFullscreen() {
+    const target = mapGridRef.current || mapContainer.current?.parentElement;
+    if (!target) return;
+    if (document.fullscreenElement === target) void document.exitFullscreen?.();
+    else void target.requestFullscreen?.();
+  }
+
+  function setMapStyle(mode: "map" | "satellite") {
+    setMapStyleMode(mode);
+    mapRef.current?.setStyle(
+      mode === "satellite" ? "mapbox://styles/mapbox/satellite-streets-v12" : "mapbox://styles/mapbox/light-v11",
+      { diff: false },
+    );
+  }
+
   function renderMapPanel() {
     return (
       <div className="edash-card edash-map-card">
         <div className="edash-map-toolbar">
           <div className="edash-map-mode-tabs">
-            <button type="button" className={`edash-map-mode-tab${mapStyleMode === "map" ? " active" : ""}`} onClick={() => { setMapStyleMode("map"); mapRef.current?.setStyle("mapbox://styles/mapbox/light-v11", { diff: false }); }}>Map</button>
-            <button type="button" className={`edash-map-mode-tab${mapStyleMode === "satellite" ? " active" : ""}`} onClick={() => { setMapStyleMode("satellite"); mapRef.current?.setStyle("mapbox://styles/mapbox/satellite-streets-v12", { diff: false }); }}>Satellite</button>
+            <button type="button" className={`edash-map-mode-tab${mapStyleMode === "map" ? " active" : ""}`} onClick={() => setMapStyle("map")}>Map</button>
+            <button type="button" className={`edash-map-mode-tab${mapStyleMode === "satellite" ? " active" : ""}`} onClick={() => setMapStyle("satellite")}>Satellite</button>
           </div>
           <label className="edash-map-search">
             <EstateIcon name="search" />
@@ -1897,35 +1927,13 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
               <button type="button" className="edash-map-ctrl-btn" title="Zoom in" onClick={() => mapRef.current?.zoomIn()}><EstateIcon name="zoom-in" /></button>
               <button type="button" className="edash-map-ctrl-btn" title="Zoom out" onClick={() => mapRef.current?.zoomOut()}><EstateIcon name="zoom-out" /></button>
             </div>
-            <button type="button" className="edash-map-controls-group edash-map-ctrl-btn" title="Fit to estate" onClick={() => {
-              if (!mapRef.current) return;
-              const bounds = mapPlotGeojson.features.reduce((acc: number[][] | null, feature: any) => {
-                const ring = feature.geometry?.type === "Polygon" ? feature.geometry.coordinates[0] : [];
-                return ring.reduce((box: number[][] | null, coord: number[]) => {
-                  if (!box) return [[coord[0], coord[1]], [coord[0], coord[1]]];
-                  box[0][0] = Math.min(box[0][0], coord[0]); box[0][1] = Math.min(box[0][1], coord[1]);
-                  box[1][0] = Math.max(box[1][0], coord[0]); box[1][1] = Math.max(box[1][1], coord[1]);
-                  return box;
-                }, acc);
-              }, null);
-              if (bounds) mapRef.current.fitBounds(bounds, { padding: 46, maxZoom: 17 });
-            }}>
+            <button type="button" className="edash-map-controls-group edash-map-ctrl-btn" title="Fit to estate" onClick={fitMapToEstate}>
               <EstateIcon name="locate" />
             </button>
             <button type="button" className={`edash-map-controls-group edash-map-ctrl-btn${layersVisible ? " active" : ""}`} title="Toggle roads & open space" onClick={() => setLayersVisible((value) => !value)}>
               <EstateIcon name="layers" />
             </button>
-            <button
-              type="button"
-              className="edash-map-controls-group edash-map-ctrl-btn"
-              title="Fullscreen"
-              onClick={() => {
-                const target = mapGridRef.current || mapContainer.current?.parentElement;
-                if (!target) return;
-                if (document.fullscreenElement === target) void document.exitFullscreen?.();
-                else void target.requestFullscreen?.();
-              }}
-            >
+            <button type="button" className="edash-map-controls-group edash-map-ctrl-btn" title="Fullscreen" onClick={toggleMapFullscreen}>
               <EstateIcon name="expand" />
             </button>
           </div>
@@ -2761,35 +2769,151 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     );
   }
 
-  function renderToolsBar() {
-    type ToolKey = "add-plot" | "layout" | "blocks" | "layers" | "export-layout";
+  function renderMapRibbon() {
     const hasBoundary = Boolean(estateDetail?.boundary);
     const hasPlots = plots.length > 0;
     const hasSpatialContext = hasBoundary || hasPlots;
-    const tools: Array<{ key: ToolKey; label: string; icon: import("../components/estates/EstateIcon").EstateIconName; locked?: string }> = [
-      { key: "add-plot", label: "Add Plot", icon: "plus" },
-      { key: "layout", label: "Design Layout", icon: "map", locked: hasSpatialContext ? undefined : "Add a plot or Estate boundary first, then design or subdivide a layout." },
-      { key: "blocks", label: "Blocks", icon: "grid" },
-      { key: "layers", label: "Map Layers", icon: "layers", locked: hasSpatialContext ? undefined : "Add a plot or Estate boundary before mapping roads, drainage or other layers." },
-      { key: "export-layout", label: "Export Layout", icon: "download", locked: hasPlots ? undefined : "Add at least one approved plot before exporting the whole layout." },
+    const spatialLockTitle = "Add a plot or Estate boundary first";
+    const tabs: EstateRibbonTab[] = [
+      {
+        key: "layout",
+        label: "Layout",
+        groups: [
+          {
+            key: "plots",
+            label: "Plots",
+            buttons: [
+              { key: "add-plot", label: "Add Plot", icon: "plus", onClick: () => setActiveTool("add-plot") },
+              {
+                key: "design-layout",
+                label: "Design Layout",
+                icon: "map",
+                onClick: () => setActiveTool("layout"),
+                disabled: !hasSpatialContext,
+                title: hasSpatialContext ? "Design Layout" : spatialLockTitle,
+              },
+              { key: "blocks", label: "Blocks", icon: "grid", onClick: () => setActiveTool("blocks") },
+            ],
+          },
+          {
+            key: "map-layers",
+            label: "Map Layers",
+            buttons: [
+              {
+                key: "layers",
+                label: "Roads & Layers",
+                icon: "layers",
+                onClick: () => setActiveTool("layers"),
+                disabled: !hasSpatialContext,
+                title: hasSpatialContext ? "Map Layers" : spatialLockTitle,
+              },
+            ],
+          },
+          {
+            key: "export",
+            label: "Export",
+            buttons: [
+              {
+                key: "export-layout",
+                label: "Export Layout",
+                icon: "download",
+                onClick: () => setActiveTool("export-layout"),
+                disabled: !hasPlots,
+                title: hasPlots ? "Export Layout" : "Add at least one approved plot first",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        key: "view",
+        label: "View",
+        groups: [
+          {
+            key: "base-map",
+            label: "Base Map",
+            buttons: [
+              { key: "mode-map", label: "Map", icon: "map", onClick: () => setMapStyle("map"), active: mapStyleMode === "map" },
+              { key: "mode-satellite", label: "Satellite", icon: "satellite", onClick: () => setMapStyle("satellite"), active: mapStyleMode === "satellite" },
+            ],
+          },
+          {
+            key: "navigate",
+            label: "Navigate",
+            buttons: [
+              { key: "zoom-in", label: "Zoom In", icon: "zoom-in", onClick: () => mapRef.current?.zoomIn() },
+              { key: "zoom-out", label: "Zoom Out", icon: "zoom-out", onClick: () => mapRef.current?.zoomOut() },
+              { key: "fit", label: "Fit to Estate", icon: "locate", onClick: fitMapToEstate },
+              { key: "fullscreen", label: "Fullscreen", icon: "expand", onClick: toggleMapFullscreen },
+            ],
+          },
+          {
+            key: "layer-toggle",
+            label: "Layers",
+            buttons: [
+              { key: "roads", label: "Roads & Open Space", icon: "layers", onClick: () => setLayersVisible((value) => !value), active: layersVisible },
+            ],
+          },
+        ],
+      },
+      {
+        key: "survey-staking",
+        label: "Survey & Staking",
+        groups: [
+          {
+            key: "survey",
+            label: "Survey",
+            buttons: [{ key: "open-survey", label: "Open Survey Page", icon: "survey", onClick: () => navigate(`/estates/${estateId}/survey`) }],
+          },
+          {
+            key: "staking",
+            label: "Staking",
+            buttons: [{ key: "open-staking", label: "Open Staking Page", icon: "staking", onClick: () => navigate(`/estates/${estateId}/staking`) }],
+          },
+        ],
+      },
     ];
-    return (
-      <div className="edash-tools-bar">
-        {tools.map((tool) => (
-          <button
-            key={tool.key}
-            type="button"
-            className={`edash-tool-btn${tool.locked ? " edash-tool-btn--locked" : ""}`}
-            disabled={Boolean(tool.locked)}
-            title={tool.locked}
-            onClick={() => { if (!tool.locked) setActiveTool(tool.key); }}
-          >
-            <EstateIcon name={tool.locked ? "lock" : tool.icon} />
-            {tool.label}
-          </button>
-        ))}
-      </div>
-    );
+    return <EstateRibbon tabs={tabs} />;
+  }
+
+  function renderDashboardRibbon() {
+    const tabs: EstateRibbonTab[] = [
+      {
+        key: "home",
+        label: "Home",
+        groups: [
+          {
+            key: "navigate",
+            label: "Navigate",
+            buttons: [
+              { key: "map", label: "Map & Plots", icon: "map", onClick: () => navigate(`/estates/${estateId}/map`) },
+              { key: "customers", label: "Customers", icon: "customers", onClick: () => navigate(`/estates/${estateId}/customers`) },
+              { key: "reports", label: "Reports", icon: "reports", onClick: () => navigate(`/estates/${estateId}/reports`) },
+              { key: "timeline", label: "Audit Timeline", icon: "audit", onClick: () => navigate(`/estates/${estateId}/timeline`) },
+            ],
+          },
+          {
+            key: "create",
+            label: "Create",
+            buttons: [
+              { key: "add-plot", label: "Add Plot", icon: "plus", onClick: () => navigate(`/estates/${estateId}/map`) },
+              { key: "add-customer", label: "Add Customer", icon: "customers", onClick: () => navigate(`/estates/${estateId}/customers`) },
+              { key: "record-payment", label: "Record Payment", icon: "payments", onClick: () => navigate("/estates/payments") },
+              { key: "add-document", label: "Add Document", icon: "documents", onClick: () => navigate("/estates/documents") },
+            ],
+          },
+          {
+            key: "screening",
+            label: "Screening",
+            buttons: [
+              { key: "hazards", label: "Hazard Analysis", icon: "hazard", onClick: () => navigate(`/estates/${estateId}/hazards`) },
+              { key: "soil", label: "Soil Analysis", icon: "layers", onClick: () => navigate(`/estates/${estateId}/soil-analysis`) },
+            ],
+          },
+        ],
+      },
+    ];
+    return <EstateRibbon tabs={tabs} />;
   }
 
   function renderToolModal(title: string, subtitle: string, content: ReactNode) {
@@ -3398,7 +3522,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
       onEstateNameChange={(value) => setEstateDetail((current: any) => current ? { ...current, name: value } : current)}
       recentActivity={activity}
     >
-      {isMapView && renderToolsBar()}
+      {isMapView ? renderMapRibbon() : renderDashboardRibbon()}
       {isMapView && message && <StatusBanner text={message} tone={messageTone} />}
       {renderStatsRow()}
       {isMapView ? (

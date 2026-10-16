@@ -59,7 +59,14 @@ export type EstateIconName =
   | "calendar"
   | "whatsapp"
   | "navigation"
-  | "globe";
+  | "globe"
+  | "edit"
+  | "print"
+  | "save"
+  | "table"
+  | "refresh"
+  | "link"
+  | "send";
 
 export default function EstateIcon({ name, className = "" }: { name: EstateIconName; className?: string }) {
   switch (name) {
@@ -181,6 +188,20 @@ export default function EstateIcon({ name, className = "" }: { name: EstateIconN
       return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m4 11.5 15.5-7-7 15.5-2-6.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /></svg>;
     case "globe":
       return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.5" /><path d="M3.5 12h17M12 3.5c2.4 2.3 3.7 5.3 3.7 8.5s-1.3 6.2-3.7 8.5c-2.4-2.3-3.7-5.3-3.7-8.5S9.6 5.8 12 3.5Z" stroke="currentColor" strokeWidth="1.4" /></svg>;
+    case "edit":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0 0-3l-1-1a2.1 2.1 0 0 0-3 0L4 16v4Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /><path d="m13.5 6.5 4 4" stroke="currentColor" strokeWidth="1.5" /></svg>;
+    case "print":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 8.5V4h10v4.5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /><rect x="4" y="8.5" width="16" height="8" rx="1.6" stroke="currentColor" strokeWidth="1.5" /><path d="M7 15.5h10V20H7z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /></svg>;
+    case "save":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4.5h11l3 3V18a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 3 18V6A1.5 1.5 0 0 1 4.5 4.5H5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /><path d="M7.5 4.5v5h7v-5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /><path d="M7.5 14h7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>;
+    case "table":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="1.6" stroke="currentColor" strokeWidth="1.5" /><path d="M3.5 9.5h17M3.5 14.5h17M9.5 4.5v15" stroke="currentColor" strokeWidth="1.4" /></svg>;
+    case "refresh":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 0 1 12.6-5.4L19.5 9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /><path d="M19.5 4.5V9H15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /><path d="M19.5 12a7.5 7.5 0 0 1-12.6 5.4L4.5 15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /><path d="M4.5 19.5V15H9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+    case "link":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9.5 14.5 14.5 9.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /><path d="M11 7.5 12.8 5.7a3.4 3.4 0 0 1 4.8 4.8L15.8 12.3M13 16.5l-1.8 1.8a3.4 3.4 0 0 1-4.8-4.8l1.8-1.8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+    case "send":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12 20 4l-6.5 16-2.8-6.7L4 12Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /></svg>;
     default:
       return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.6" /></svg>;
   }
