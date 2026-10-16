@@ -351,6 +351,9 @@
   .estate-public-fab { padding: 14px; }
   .estate-public-hero-actions > * { flex: 1 1 100%; }
   .estate-public-guide-live { align-items: flex-start; }
+  .estate-public-inspect-page { padding: 28px 16px 40px; }
+  .estate-public-inspect-page h1 { font-size: 1.5rem; }
+  .estate-public-live-video { aspect-ratio: 3 / 4; margin: 14px 0; border-radius: 12px; }
 }
 
 /* WhatsApp opt-in */

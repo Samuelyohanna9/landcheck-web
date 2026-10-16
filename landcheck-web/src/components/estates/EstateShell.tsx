@@ -241,6 +241,7 @@ export default function EstateShell({
     try { return window.localStorage.getItem(deliverySeenStorageKey); } catch { return null; }
   });
   const [whatsappUnreadCount, setWhatsappUnreadCount] = useState(0);
+  const [liveInspectionCount, setLiveInspectionCount] = useState(0);
   const [newReservationCount, setNewReservationCount] = useState(0);
   const [newReservationLatestId, setNewReservationLatestId] = useState<number | null>(null);
   const [showReservationNotice, setShowReservationNotice] = useState(false);
@@ -358,6 +359,25 @@ export default function EstateShell({
   useEffect(() => {
     if (activeKey === "notifications") markDeliverySeen();
   }, [activeKey, latestDeliveryTimestamp]);
+
+  // Polled on its own short interval (not just on navigation, like the counts above) so a
+  // session going live is noticed on the sidebar even while staff are elsewhere in the dashboard.
+  useEffect(() => {
+    if (!estateId || estateId === "0") return undefined;
+    let mounted = true;
+    const loadLiveCount = () => {
+      api.get(`/estates/${estateId}/marketing/live-inspections`)
+        .then((response) => {
+          if (!mounted) return;
+          const rows = Array.isArray(response.data) ? response.data : [];
+          setLiveInspectionCount(rows.filter((row: { status?: string }) => row.status === "live").length);
+        })
+        .catch(() => { if (mounted) setLiveInspectionCount(0); });
+    };
+    loadLiveCount();
+    const interval = window.setInterval(loadLiveCount, 20000);
+    return () => { mounted = false; window.clearInterval(interval); };
+  }, [estateId]);
 
   const saveEstateName = async () => {
     const nextName = renameValue.trim();
@@ -536,6 +556,7 @@ export default function EstateShell({
                   <span className="edash-nav-label">{item.label}</span>
                   {item.key === "notifications" && unreadDeliveryCount > 0 && <span className="edash-nav-badge">{unreadDeliveryCount > 99 ? "99+" : unreadDeliveryCount}</span>}
                   {item.key === "whatsapp" && whatsappUnreadCount > 0 && <span className="edash-nav-badge">{whatsappUnreadCount > 99 ? "99+" : whatsappUnreadCount}</span>}
+                  {item.key === "live_inspections" && liveInspectionCount > 0 && <span className="edash-nav-badge edash-nav-badge--live">{liveInspectionCount > 99 ? "99+" : liveInspectionCount}</span>}
                   {hasSubViews && (
                     <span
                       role="button"

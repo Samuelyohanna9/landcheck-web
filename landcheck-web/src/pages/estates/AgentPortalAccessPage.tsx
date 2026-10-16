@@ -47,6 +47,7 @@ export default function AgentPortalAccessPage() {
   const [campaignChannel, setCampaignChannel] = useState("agent");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [liveInspectionCount, setLiveInspectionCount] = useState(0);
 
   const load = async () => {
     if (!token) return;
@@ -94,7 +95,7 @@ export default function AgentPortalAccessPage() {
           <a href="#overview" onClick={() => setMenuOpen(false)}><EstateIcon name="grid" />Overview</a>
           <a href="#followups" onClick={() => setMenuOpen(false)}><EstateIcon name="whatsapp" />Follow-ups</a>
           <a href="#kit" onClick={() => setMenuOpen(false)}><EstateIcon name="megaphone" />Marketing kit</a>
-          <a href="#inspections" onClick={() => setMenuOpen(false)}><EstateIcon name="calendar" />Inspections</a>
+          <a href="#inspections" onClick={() => setMenuOpen(false)}><EstateIcon name="video" />Live inspections{liveInspectionCount > 0 && <span className="agent-public-nav-badge">{liveInspectionCount > 99 ? "99+" : liveInspectionCount}</span>}</a>
           <a href="#commission" onClick={() => setMenuOpen(false)}><EstateIcon name="wallet" />Commission</a>
           <a href="#map" onClick={() => setMenuOpen(false)}><EstateIcon name="map" />Estate map</a>
           <a href="#leads" onClick={() => setMenuOpen(false)}><EstateIcon name="customers" />My leads</a>
@@ -122,7 +123,7 @@ export default function AgentPortalAccessPage() {
 
           <AgentKitSections token={token} />
 
-          <AgentLiveInspectionsSection token={token} />
+          <AgentLiveInspectionsSection token={token} onCount={setLiveInspectionCount} />
 
           <section id="map" className="agent-public-card agent-public-map-card"><div className="agent-public-card-head"><div><span className="agent-public-kicker">Estate portfolio</span><h2>Map and plot records</h2><p>Open plots, reservations, and allocations remain visible. Plots chosen by your leads use the highlighted lead colour.</p></div><select value={selectedEstate?.id || ""} onChange={(event) => setSelectedEstateId(Number(event.target.value))}>{workspace.estates.map((estate) => <option key={estate.id} value={estate.id}>{estate.name}</option>)}</select></div>{selectedEstate && mapFeatures.length ? <><ProjectMap points={[]} features={mapFeatures} mode="estate" /><div className="agent-public-map-legend"><span><i className="is-available" />Open / available</span><span><i className="is-reserved" />Reserved</span><span><i className="is-allocated" />Allocated</span><span><i className="is-lead" />My lead</span><span><i className="is-sale" />My sale</span></div></> : <div className="agent-public-empty">No mapped plots are available for this estate yet.</div>}</section>
 

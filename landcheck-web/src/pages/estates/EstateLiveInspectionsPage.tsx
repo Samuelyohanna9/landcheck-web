@@ -22,7 +22,7 @@ type Customer = { id: number; name: string };
 type Member = { id: number; role: string; subject_id: string };
 
 const STATUS_LABEL: Record<Session["status"], string> = { scheduled: "Scheduled", live: "Live now", ended: "Ended", cancelled: "Cancelled" };
-const STATUS_TONE: Record<Session["status"], string> = { scheduled: "info", live: "good", ended: "neutral", cancelled: "danger" };
+const STATUS_TONE: Record<Session["status"], string> = { scheduled: "info", live: "live", ended: "neutral", cancelled: "danger" };
 
 export default function EstateLiveInspectionsPage() {
   const { estateId } = useParams();

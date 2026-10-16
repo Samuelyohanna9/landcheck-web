@@ -30,6 +30,28 @@
 .agent-public-nav a { display: flex; align-items: center; gap: 10px; padding: 10px 11px; border-radius: 9px; color: #445066; font-size: .78rem; font-weight: 650; text-decoration: none; }
 .agent-public-nav a:hover { background: #e6f6ec; color: var(--agent-brand-dark); }
 .agent-public-nav svg { width: 16px; height: 16px; }
+.agent-public-nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  margin-left: auto;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #e3312f;
+  color: #fff;
+  font-size: .62rem;
+  font-weight: 800;
+  animation: agent-public-live-blink 1.4s ease-in-out infinite;
+}
+@keyframes agent-public-live-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .55; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-public-nav-badge { animation: none; }
+}
 .agent-public-main { min-width: 0; min-height: 100vh; }
 .agent-public-topbar { display: flex; align-items: center; gap: 14px; min-height: 72px; padding: 14px 30px; border-bottom: 1px solid var(--agent-border); background: rgba(255,255,255,.92); }
 .agent-public-topbar h1 { margin: 2px 0 0; font-size: 1rem; letter-spacing: -.02em; }
@@ -83,6 +105,11 @@
 .agent-public-primary:disabled { cursor: not-allowed; opacity: .55; }
 .agent-public-empty { padding: 24px 10px; border: 1px dashed var(--agent-border); border-radius: 9px; color: #98a2b0; font-size: .72rem; text-align: center; }
 .agent-public-live-video { width: 100%; aspect-ratio: 16 / 10; border-radius: 12px; overflow: hidden; background: #0b1420; }
+.agent-public-live-cta { width: 100%; min-height: 44px; font-size: .78rem; }
+
+@media (max-width: 650px) {
+  .agent-public-live-video { aspect-ratio: 3 / 4; }
+}
 .agent-public-error, .agent-public-loading { display: grid; place-items: center; padding: 24px; background: var(--agent-bg); }
 .agent-public-error-card, .agent-public-loading-card { width: min(100%, 430px); padding: 24px; border: 1px solid var(--agent-border); border-radius: 15px; background: white; text-align: center; box-shadow: 0 12px 32px rgba(16,24,39,.08); }
 .agent-public-error-card strong { font-size: 1rem; }

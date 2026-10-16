@@ -25,7 +25,7 @@ const VERIFICATION_LABEL: Record<string, string> = {
 // continuous GPS watch, same navigator.geolocation.watchPosition options already used by
 // PublicPlotGuide.tsx for the buyer's own in-person guide), post a location ping every ~3s
 // so the buyer's page can show live proof the agent is really standing on the plot.
-export default function AgentLiveInspectionsSection({ token }: { token: string }) {
+export default function AgentLiveInspectionsSection({ token, onCount }: { token: string; onCount?: (count: number) => void }) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [liveStatus, setLiveStatus] = useState<{ verification: string | null; distance_m: number | null } | null>(null);
@@ -36,7 +36,10 @@ export default function AgentLiveInspectionsSection({ token }: { token: string }
   const pingTimerRef = useRef<number | null>(null);
 
   const load = () => {
-    api.get<Session[]>(`/estates/agent-portal/${token}/live-inspections`).then((response) => setSessions(response.data)).catch(() => setSessions([]));
+    api.get<Session[]>(`/estates/agent-portal/${token}/live-inspections`).then((response) => {
+      setSessions(response.data);
+      onCount?.(response.data.filter((item) => item.status === "live").length);
+    }).catch(() => setSessions([]));
   };
   useEffect(() => {
     load();
@@ -129,7 +132,7 @@ export default function AgentLiveInspectionsSection({ token }: { token: string }
               {liveStatus.distance_m != null && liveStatus.verification !== "on_plot" ? ` - ${Math.round(liveStatus.distance_m)} m from the boundary` : ""}
             </p>
           )}
-          <button type="button" className="agent-public-primary" style={{ marginTop: 10 }} disabled={busy} onClick={() => void endLive(active.id)}>
+          <button type="button" className="agent-public-primary agent-public-live-cta" style={{ marginTop: 10 }} disabled={busy} onClick={() => void endLive(active.id)}>
             {busy ? "Ending..." : "End live inspection"}
           </button>
         </div>
@@ -144,7 +147,7 @@ export default function AgentLiveInspectionsSection({ token }: { token: string }
                 <small>{session.buyer_name} - {session.estate_name}</small>
               </div>
               {session.status === "scheduled" ? (
-                <button type="button" className="agent-public-primary" disabled={busy || Boolean(activeId)} onClick={() => void goLive(session)}>
+                <button type="button" className="agent-public-primary" style={{ minHeight: 44, fontSize: ".78rem" }} disabled={busy || Boolean(activeId)} onClick={() => void goLive(session)}>
                   Go live
                 </button>
               ) : (

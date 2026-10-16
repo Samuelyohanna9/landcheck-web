@@ -1131,6 +1131,18 @@
 .edash-status-pill.tone-warn { background: var(--edash-warn-tint); color: var(--edash-warn); }
 .edash-status-pill.tone-danger { background: var(--edash-danger-tint); color: var(--edash-danger); }
 .edash-status-pill.tone-neutral { background: var(--edash-neutral-tint); color: var(--edash-neutral); }
+.edash-status-pill.tone-live { display: inline-flex; align-items: center; gap: 5px; background: #fde2e1; color: #c0292b; animation: edash-live-blink 1.4s ease-in-out infinite; }
+.edash-status-pill.tone-live::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: #e3312f; flex-shrink: 0; }
+.edash-nav-badge--live { animation: edash-live-blink 1.4s ease-in-out infinite; }
+
+@keyframes edash-live-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edash-status-pill.tone-live, .edash-nav-badge--live { animation: none; }
+}
 
 .edash-drawer-nav { display: flex; align-items: center; gap: 4px; margin-left: auto; }
 
