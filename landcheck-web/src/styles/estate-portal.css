@@ -380,18 +380,18 @@
    narrow-screen fix also lives) is what makes it actually win the cascade at every width, instead
    of silently losing to .estate-auth-shell's plain width rule up there. */
 .estate-auth-shell--login { width: min(100% - 32px, 440px); }
-.estate-auth-visual { display: none; position: relative; align-items: center; justify-content: center; width: 100%; min-height: 520px; }
+.estate-auth-visual { display: none; position: relative; align-items: center; justify-content: center; width: 100%; min-height: 620px; }
 .estate-auth-visual-box { position: absolute; border-radius: 22px; }
-/* Three blocks, not two - closer to the reference's pink/mint/blue trio - sized to clearly
-   outscale the photo on at least one side each, since "the squares are small" was the complaint:
-   the photo should look like it's resting ON a bold geometric backdrop, not the backdrop peeking
-   out from behind a dominant photo. */
-.estate-auth-visual-box--a { width: 78%; height: 62%; top: 0; right: 2%; background: var(--auth-visual-box-a, #d7ebe6); }
-.estate-auth-visual-box--b { width: 62%; height: 56%; bottom: 0; right: 0; background: var(--auth-visual-box-b, #f4e3c1); }
-.estate-auth-visual-box--c { width: 34%; height: 32%; bottom: 4%; left: 0; background: var(--auth-visual-box-c, #d9ecf4); }
+/* Sized against the Jobbnorge reference directly: there the photo is only about 60% of the whole
+   composition's width, with the pink/mint/blue blocks reading as the dominant shapes and the
+   photo resting on top of them - not the other way round. Shrinking the photo and growing the
+   blocks again (previous pass still undersized them) gets that same balance. */
+.estate-auth-visual-box--a { width: 86%; height: 66%; top: 0; right: 4%; background: var(--auth-visual-box-a, #d7ebe6); }
+.estate-auth-visual-box--b { width: 72%; height: 68%; bottom: 0; right: 0; background: var(--auth-visual-box-b, #f4e3c1); }
+.estate-auth-visual-box--c { width: 42%; height: 38%; bottom: 2%; left: 0; background: var(--auth-visual-box-c, #d9ecf4); }
 .estate-auth-visual-photo {
   position: relative;
-  width: 86%;
+  width: 76%;
   border-radius: 18px;
   overflow: hidden;
   box-shadow: 0 24px 60px rgba(16, 36, 58, .22);
