@@ -26,6 +26,12 @@ type GreenWorkLogsPanelProps = {
   updateComplianceChecklistItem: (item: any, status: "completed" | "pending") => void | Promise<void>;
   qrPrintsReport: any[];
   activityLogs: any[];
+  activityLogsTotal: number;
+  logsSourceOptions: string[];
+  logsSourceFilter: string;
+  setLogsSourceFilter: (value: string) => void;
+  logsSearchFilter: string;
+  setLogsSearchFilter: (value: string) => void;
   hasActivityLogDetails: (details: unknown) => boolean;
   summarizeActivityLogDetails: (details: unknown) => string;
   resolveActivityLogActor: (log: any) => string;
@@ -54,6 +60,12 @@ export default function GreenWorkLogsPanel({
   updateComplianceChecklistItem,
   qrPrintsReport,
   activityLogs,
+  activityLogsTotal,
+  logsSourceOptions,
+  logsSourceFilter,
+  setLogsSourceFilter,
+  logsSearchFilter,
+  setLogsSearchFilter,
   hasActivityLogDetails,
   summarizeActivityLogDetails,
   resolveActivityLogActor,
@@ -66,8 +78,9 @@ export default function GreenWorkLogsPanel({
       <div className="green-work-card">
         <h3>System Logs & Reports</h3>
         <p className="green-work-note">
-          Monitor live API activity across Survey Plan, Flood, LandCheck Work, sponsor, and field capture surfaces, plus tree tag QR
-          printing statistics.
+          Monitor live API activity across LandCheck Green (web and the installed Android field PWA), LandCheck Work, Estates, Survey
+          Plan, Flood, and sponsor surfaces - every write action, tagged by source, actor, and organization (including newly
+          registered ones) - plus tree tag QR printing statistics.
         </p>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 24 }}>
@@ -382,8 +395,32 @@ export default function GreenWorkLogsPanel({
 
           <div>
             <h4>System Activity Logs (Capped at 10,000)</h4>
-            {activityLogs.length === 0 ? (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", marginBottom: 12 }}>
+              <select
+                value={logsSourceFilter}
+                onChange={(event) => setLogsSourceFilter(event.target.value)}
+                style={{ minWidth: 200 }}
+              >
+                <option value="all">All sources</option>
+                {logsSourceOptions.map((source) => (
+                  <option key={`log-source-${source}`} value={source}>{source}</option>
+                ))}
+              </select>
+              <input
+                type="text"
+                value={logsSearchFilter}
+                onChange={(event) => setLogsSearchFilter(event.target.value)}
+                placeholder="Search organization, actor, message..."
+                style={{ flex: 1, minWidth: 220 }}
+              />
+              <span className="green-work-note" style={{ marginLeft: 0 }}>
+                Showing {activityLogs.length} of {activityLogsTotal}
+              </span>
+            </div>
+            {activityLogsTotal === 0 ? (
               <p className="green-work-note" style={{ marginLeft: 0 }}>No system activity logs recorded yet.</p>
+            ) : activityLogs.length === 0 ? (
+              <p className="green-work-note" style={{ marginLeft: 0 }}>No activity logs match this filter.</p>
             ) : (
               <div
                 style={{
@@ -400,6 +437,7 @@ export default function GreenWorkLogsPanel({
                     <tr>
                       <th>Time</th>
                       <th>Source</th>
+                      <th>Organization</th>
                       <th>Event</th>
                       <th>Actor</th>
                       <th>Message</th>
@@ -414,6 +452,7 @@ export default function GreenWorkLogsPanel({
                         <tr key={`log-${log.id}`} style={{ fontSize: 12 }}>
                           <td style={{ whiteSpace: "nowrap" }}>{new Date(log.created_at || "").toLocaleString()}</td>
                           <td style={{ textTransform: "capitalize" }}>{log.source}</td>
+                          <td>{log.organization_name || (log.organization_id ? `#${log.organization_id}` : "-")}</td>
                           <td><span className="green-work-live-pill neutral">{log.event_type}</span></td>
                           <td>{resolveActivityLogActor(log)}</td>
                           <td style={{ minWidth: 220 }}>{log.message}</td>

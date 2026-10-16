@@ -88,6 +88,8 @@ type ActivityLogEntry = {
   message?: string | null;
   details?: unknown;
   created_at?: string | null;
+  organization_id?: number | null;
+  organization_name?: string | null;
 };
 
 type ComplianceChecklistItem = {
@@ -3542,6 +3544,28 @@ export default function GreenWork() {
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsError, setLogsError] = useState<string | null>(null);
   const [selectedActivityLog, setSelectedActivityLog] = useState<ActivityLogEntry | null>(null);
+  const [logsSourceFilter, setLogsSourceFilter] = useState("all");
+  const [logsSearchFilter, setLogsSearchFilter] = useState("");
+  // Distinct sources actually present (Green web/PWA/sponsor, LandCheck Work, Estates, Survey,
+  // Flood, ...) - populates the source filter dropdown from real data rather than a hardcoded list
+  // that would drift as new client labels (see api/client.ts's resolveWebClientLabel) are added.
+  const logsSourceOptions = useMemo(() => {
+    const seen = new Set<string>();
+    for (const log of activityLogs) {
+      const source = String(log.source || "").trim();
+      if (source) seen.add(source);
+    }
+    return Array.from(seen).sort((a, b) => a.localeCompare(b));
+  }, [activityLogs]);
+  const filteredActivityLogs = useMemo(() => {
+    const search = logsSearchFilter.trim().toLowerCase();
+    return activityLogs.filter((log) => {
+      if (logsSourceFilter !== "all" && String(log.source || "") !== logsSourceFilter) return false;
+      if (!search) return true;
+      return [log.organization_name, log.organization_id, log.actor, log.message, log.event_type]
+        .some((field) => String(field ?? "").toLowerCase().includes(search));
+    });
+  }, [activityLogs, logsSourceFilter, logsSearchFilter]);
   const [qrPrintsReport, setQrPrintsReport] = useState<any[]>([]);
   const [complianceDashboard, setComplianceDashboard] = useState<ComplianceDashboard | null>(null);
   const [complianceDrafts, setComplianceDrafts] = useState<Record<number, ComplianceDraftValue>>({});
@@ -16698,7 +16722,13 @@ export default function GreenWork() {
                 getComplianceStatusStyle={getComplianceStatusStyle}
                 updateComplianceChecklistItem={updateComplianceChecklistItem}
                 qrPrintsReport={qrPrintsReport}
-                activityLogs={activityLogs}
+                activityLogs={filteredActivityLogs}
+                activityLogsTotal={activityLogs.length}
+                logsSourceOptions={logsSourceOptions}
+                logsSourceFilter={logsSourceFilter}
+                setLogsSourceFilter={setLogsSourceFilter}
+                logsSearchFilter={logsSearchFilter}
+                setLogsSearchFilter={setLogsSearchFilter}
                 hasActivityLogDetails={hasActivityLogDetails}
                 summarizeActivityLogDetails={summarizeActivityLogDetails}
                 resolveActivityLogActor={resolveActivityLogActor}
