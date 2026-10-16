@@ -11,6 +11,7 @@
   --auth-line: #d0d4e4;
   --auth-visual-box-a: #d9f0e4;
   --auth-visual-box-b: #fbead0;
+  --auth-visual-box-c: #dcedf5;
   background: #f6f7fb;
   color: var(--auth-ink);
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -21,6 +22,18 @@
    instead of estate-portal.css's more dramatic serif-era defaults. */
 .estate-auth-visual-box { border-radius: 14px; }
 .estate-auth-visual-photo { border-radius: 10px; box-shadow: 0 1px 2px rgba(50, 51, 56, .06), 0 16px 40px rgba(50, 51, 56, .12); }
+
+/* The sign-in form itself drops the white card chrome - a bordered, shadowed panel floating on
+   the page read as a box stapled onto the background rather than content that belongs there
+   (compare the Jobbnorge reference: the form is just text and buttons directly on the page, no
+   card). The inputs below still look like inputs; only the outer panel goes transparent. */
+.estate-auth-shell--login .estate-auth-card {
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
 
 .estate-auth-brand-tag { color: var(--auth-brand); font-family: inherit; font-weight: 800; letter-spacing: .12em; }
 
