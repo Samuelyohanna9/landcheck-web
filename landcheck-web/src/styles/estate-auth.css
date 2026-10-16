@@ -9,10 +9,18 @@
   --auth-ink: #323338;
   --auth-muted: #676879;
   --auth-line: #d0d4e4;
+  --auth-visual-box-a: #d9f0e4;
+  --auth-visual-box-b: #fbead0;
   background: #f6f7fb;
   color: var(--auth-ink);
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
+
+/* The login page's decorative photo + colour-block composition (see estate-portal.css for the
+   grid/visibility rules) - flattened here to match this skin's softer shadows and smaller radii
+   instead of estate-portal.css's more dramatic serif-era defaults. */
+.estate-auth-visual-box { border-radius: 14px; }
+.estate-auth-visual-photo { border-radius: 10px; box-shadow: 0 1px 2px rgba(50, 51, 56, .06), 0 16px 40px rgba(50, 51, 56, .12); }
 
 .estate-auth-brand-tag { color: var(--auth-brand); font-family: inherit; font-weight: 800; letter-spacing: .12em; }
 

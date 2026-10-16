@@ -41,7 +41,7 @@ export default function EstateLogin() {
 
   return (
     <main className="estate-auth-page">
-      <div className="estate-auth-shell">
+      <div className="estate-auth-shell estate-auth-shell--login">
         <Link to="/estates" className="estate-auth-brand" aria-label="LandCheck Estates home">
           <span className="estate-auth-brand-logo"><img src="/logo-icon-192.png" alt="LandCheck" width="40" height="40" /></span>
           <span className="estate-auth-brand-tag">Estates</span>
@@ -85,6 +85,13 @@ export default function EstateLogin() {
             Secure, encrypted connection
           </p>
           <p className="estate-auth-switch">New to LandCheck Estates? <Link to="/estates/register">Register your company</Link></p>
+        </div>
+        <div className="estate-auth-visual" aria-hidden="true">
+          <span className="estate-auth-visual-box estate-auth-visual-box--a" />
+          <span className="estate-auth-visual-box estate-auth-visual-box--b" />
+          <div className="estate-auth-visual-photo">
+            <img src="/realestate_public.jpg" alt="" />
+          </div>
         </div>
         <Link to="/" className="estate-auth-back">Return to LandCheck</Link>
       </div>

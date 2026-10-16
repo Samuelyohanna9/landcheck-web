@@ -371,3 +371,39 @@
   .estate-auth-shell--register .estate-register-intro { display: none; }
 }
 .estate-auth-shell--register .estate-auth-brand { margin-bottom: 10px; }
+
+/* Login's companion to --register: the card stays on the left (where the eye lands first on a
+   sign-in form), a photo with a couple of offset colour blocks behind it fills the right column -
+   pure decoration, so it's aria-hidden and hidden by default. This whole block is placed after
+   the unconditional "compact" rules above on purpose - same-specificity selectors resolve by
+   source order regardless of media-query nesting, so putting it here (where --register's own
+   narrow-screen fix also lives) is what makes it actually win the cascade at every width, instead
+   of silently losing to .estate-auth-shell's plain width rule up there. */
+.estate-auth-shell--login { width: min(100% - 32px, 440px); }
+.estate-auth-visual { display: none; position: relative; align-items: center; justify-content: center; min-height: 300px; }
+.estate-auth-visual-box { position: absolute; border-radius: 20px; }
+.estate-auth-visual-box--a { width: 64%; height: 60%; top: 2%; right: 4%; background: var(--auth-visual-box-a, #d7ebe6); }
+.estate-auth-visual-box--b { width: 46%; height: 42%; bottom: 0; left: 2%; background: var(--auth-visual-box-b, #f4e3c1); }
+.estate-auth-visual-photo {
+  position: relative;
+  width: 80%;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(16, 36, 58, .18);
+}
+.estate-auth-visual-photo img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; }
+
+@media (min-width: 851px) {
+  .estate-auth-shell--login {
+    display: grid;
+    grid-template-columns: minmax(340px, 440px) minmax(260px, 1fr);
+    grid-template-rows: auto auto auto;
+    gap: clamp(24px, 5vw, 64px);
+    align-items: center;
+    width: min(100% - 48px, 1080px);
+  }
+  .estate-auth-shell--login .estate-auth-brand { grid-column: 1 / -1; grid-row: 1; align-self: start; justify-self: center; }
+  .estate-auth-shell--login .estate-auth-card { grid-column: 1; grid-row: 2; }
+  .estate-auth-shell--login .estate-auth-visual { display: flex; grid-column: 2; grid-row: 2; }
+  .estate-auth-shell--login .estate-auth-back { grid-column: 1; grid-row: 3; justify-self: start; }
+}
