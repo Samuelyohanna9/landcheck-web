@@ -1156,17 +1156,6 @@ const AGRIC_HIDDEN_PROJECT_FORMS: WorkForm[] = [
   "verra_reports",
 ];
 
-// The one place in the menu drawer with a genuine parent/child relationship between items -
-// these five already render together as siblings whenever publicSponsorshipProject is true, just
-// with no label tying them together. See sponsorshipMenuExpanded.
-const SPONSORSHIP_MENU_FORMS: WorkForm[] = [
-  "sponsors",
-  "sponsorship_orders",
-  "sponsor_payouts",
-  "merchants",
-  "sponsor_feedback",
-];
-
 type StaffMenuState = { user: GreenUser; x: number; y: number } | null;
 type DrawerFrame = { top: number; left: number; width: number; height: number };
 type AgricVisitAssignmentMode = "field_capture" | "support_visit";
@@ -4184,12 +4173,6 @@ export default function GreenWork() {
     return storedForm;
   });
   const activeFormHiddenInAgric = activeForm ? isHiddenInFieldProject(activeForm) : false;
-  // Collapsible "Sponsorship" group in the menu drawer (Sponsors/Payments/Payouts/Merchants/
-  // Feedback) - starts expanded if the page you're already on belongs to it, so arriving on e.g.
-  // Sponsor Payouts directly never hides the item you're currently viewing.
-  const [sponsorshipMenuExpanded, setSponsorshipMenuExpanded] = useState(
-    () => !!activeForm && SPONSORSHIP_MENU_FORMS.includes(activeForm),
-  );
   useEffect(() => {
     // /green-work is one route with two dozen internal screens (SeoRouteMeta gives the whole
     // thing a single generic noindexed "LandCheck Workspace" title) - this keeps the browser tab
@@ -12268,74 +12251,52 @@ export default function GreenWork() {
                 {publicSponsorshipProject ? (
                   <>
                     <button
+                      className={`green-work-menu-item ${activeForm === "sponsors" ? "active" : ""}`}
                       type="button"
-                      className="green-work-menu-item green-work-menu-group-toggle"
-                      onClick={() => setSponsorshipMenuExpanded((current) => !current)}
-                      aria-expanded={sponsorshipMenuExpanded}
+                      onClick={() => openForm("sponsors")}
                     >
-                      <span className="green-work-menu-item-icon green-work-menu-group-chevron" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" focusable="false" style={{ transform: sponsorshipMenuExpanded ? "rotate(90deg)" : undefined }}>
-                          <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </span>
-                      Sponsorship
-                      {!sponsorshipMenuExpanded && assistantUnreadCount > 0 && (
+                      {renderMenuItemIcon("sponsors")}
+                      Sponsors
+                    </button>
+                    <button
+                      className={`green-work-menu-item ${activeForm === "sponsorship_orders" ? "active" : ""}`}
+                      type="button"
+                      onClick={() => openForm("sponsorship_orders")}
+                    >
+                      {renderMenuItemIcon("sponsorship_orders")}
+                      Sponsorship Payments
+                    </button>
+                    <button
+                      className={`green-work-menu-item ${activeForm === "sponsor_payouts" ? "active" : ""}`}
+                      type="button"
+                      onClick={() => openForm("sponsor_payouts")}
+                    >
+                      {renderMenuItemIcon("sponsor_payouts")}
+                      Sponsor Payouts
+                    </button>
+                    {canAccessSuperAdmin && (
+                      <button
+                        className={`green-work-menu-item ${activeForm === "merchants" ? "active" : ""}`}
+                        type="button"
+                        onClick={() => openForm("merchants")}
+                      >
+                        {renderMenuItemIcon("merchants")}
+                        Merchants
+                      </button>
+                    )}
+                    <button
+                      className={`green-work-menu-item ${activeForm === "sponsor_feedback" ? "active" : ""}`}
+                        type="button"
+                        onClick={() => openForm("sponsor_feedback")}
+                      >
+                        {renderMenuItemIcon("sponsor_feedback")}
+                        Feedback & Nominations
+                      {assistantUnreadCount > 0 && (
                         <span className="green-work-unread-badge green-work-unread-badge--inline" aria-label={`${assistantUnreadCount} new assistant question${assistantUnreadCount === 1 ? "" : "s"}`}>
                           {assistantUnreadCount > 99 ? "99+" : assistantUnreadCount}
                         </span>
                       )}
                     </button>
-                    {sponsorshipMenuExpanded && (
-                      <div className="green-work-menu-children">
-                        <button
-                          className={`green-work-menu-item ${activeForm === "sponsors" ? "active" : ""}`}
-                          type="button"
-                          onClick={() => openForm("sponsors")}
-                        >
-                          {renderMenuItemIcon("sponsors")}
-                          Sponsors
-                        </button>
-                        <button
-                          className={`green-work-menu-item ${activeForm === "sponsorship_orders" ? "active" : ""}`}
-                          type="button"
-                          onClick={() => openForm("sponsorship_orders")}
-                        >
-                          {renderMenuItemIcon("sponsorship_orders")}
-                          Sponsorship Payments
-                        </button>
-                        <button
-                          className={`green-work-menu-item ${activeForm === "sponsor_payouts" ? "active" : ""}`}
-                          type="button"
-                          onClick={() => openForm("sponsor_payouts")}
-                        >
-                          {renderMenuItemIcon("sponsor_payouts")}
-                          Sponsor Payouts
-                        </button>
-                        {canAccessSuperAdmin && (
-                          <button
-                            className={`green-work-menu-item ${activeForm === "merchants" ? "active" : ""}`}
-                            type="button"
-                            onClick={() => openForm("merchants")}
-                          >
-                            {renderMenuItemIcon("merchants")}
-                            Merchants
-                          </button>
-                        )}
-                        <button
-                          className={`green-work-menu-item ${activeForm === "sponsor_feedback" ? "active" : ""}`}
-                            type="button"
-                            onClick={() => openForm("sponsor_feedback")}
-                          >
-                            {renderMenuItemIcon("sponsor_feedback")}
-                            Feedback & Nominations
-                          {assistantUnreadCount > 0 && (
-                            <span className="green-work-unread-badge green-work-unread-badge--inline" aria-label={`${assistantUnreadCount} new assistant question${assistantUnreadCount === 1 ? "" : "s"}`}>
-                              {assistantUnreadCount > 99 ? "99+" : assistantUnreadCount}
-                            </span>
-                          )}
-                        </button>
-                      </div>
-                    )}
                   </>
                 ) : null}
               </>

@@ -173,11 +173,39 @@
   display: flex;
   flex-direction: column;
   gap: 1px;
-  padding-left: 22px;
-  border-left: 1px solid var(--edash-border);
-  margin: 1px 0 1px 23px;
+  padding-left: 20px;
+  margin: 1px 0 1px 26px;
 }
-.edash-nav-children .edash-nav-item { font-size: 0.8rem; padding: 7px 11px; }
+
+.edash-nav-children .edash-nav-item { position: relative; font-size: 0.8rem; padding: 7px 11px; }
+
+/* Curved tree-branch connector, per item, instead of one flat straight border: each row gets its
+   own rounded elbow (a vertical segment curving right into the row via border-bottom-left-radius)
+   rather than a single plain vertical line running past every item. */
+.edash-nav-children .edash-nav-item::before {
+  content: "";
+  position: absolute;
+  left: -14px;
+  top: 0;
+  width: 13px;
+  height: 50%;
+  border: 0 solid var(--edash-border);
+  border-left-width: 1.5px;
+  border-bottom-width: 1.5px;
+  border-bottom-left-radius: 8px;
+}
+
+/* The trunk line continuing down to the NEXT item's elbow - omitted on the last item so the
+   line stops at its own curve instead of overshooting past the bottom of the list. */
+.edash-nav-children .edash-nav-item:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: -14px;
+  top: 50%;
+  width: 0;
+  height: 50%;
+  border-left: 1.5px solid var(--edash-border);
+}
 
 .edash-nav-label { min-width: 0; flex: 1; }
 .edash-nav-badge {

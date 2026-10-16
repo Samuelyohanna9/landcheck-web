@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { API_URL, api, extractApiErrorMessage, setEstateReadOnly } from "../../api/client";
 import EstateIcon, { type EstateIconName } from "./EstateIcon";
@@ -17,21 +17,37 @@ export type EstateNavKey =
   | "documents" | "development" | "hazard" | "soil" | "reports" | "audit" | "public_site" | "settings" | "notifications"
   | "access";
 
-export const estateNavItems: Array<{ key: EstateNavKey; label: string; icon: EstateIconName; path: (estateId: string) => string; children?: EstateNavKey[] }> = [
+// A sub-view belonging to its parent's own page (a real tab inside that same route, reached via
+// `?tab=`) - NOT another standalone top-level tool. Only Marketing actually has these today (see
+// EstateMarketingPage.tsx's own TABS array, which this mirrors) - every other nav item is a fully
+// independent page with its own route, permission, and purpose, and must stay a flat top-level
+// item rather than being nested under a thematically-related but otherwise unconnected tool.
+type EstateNavSubView = { key: string; label: string; icon: EstateIconName; query: string };
+
+export const estateNavItems: Array<{ key: EstateNavKey; label: string; icon: EstateIconName; path: (estateId: string) => string; subViews?: EstateNavSubView[] }> = [
   { key: "dashboard", label: "Dashboard", icon: "dashboard", path: (id) => `/estates/${id}` },
-  { key: "map", label: "Map & Plots", icon: "map", path: (id) => `/estates/${id}/map`, children: ["plots"] },
+  { key: "map", label: "Map & Plots", icon: "map", path: (id) => `/estates/${id}/map` },
   { key: "plots", label: "Plots", icon: "plots", path: (id) => `/estates/${id}/plots` },
   { key: "customers", label: "Customers", icon: "customers", path: (id) => `/estates/${id}/customers` },
-  { key: "payments", label: "Sales & Payments", icon: "payments", path: () => "/estates/payments", children: ["commissions"] },
+  { key: "payments", label: "Sales & Payments", icon: "payments", path: () => "/estates/payments" },
   { key: "commissions", label: "Commissions", icon: "wallet", path: () => "/estates/commissions" },
-  { key: "marketing", label: "Marketing", icon: "megaphone", path: (id) => `/estates/${id}/marketing`, children: ["whatsapp", "sms"] },
+  {
+    key: "marketing", label: "Marketing", icon: "megaphone", path: (id) => `/estates/${id}/marketing`,
+    subViews: [
+      { key: "materials", label: "Materials & sharing", icon: "share", query: "?tab=materials" },
+      { key: "social", label: "Social posts", icon: "megaphone", query: "?tab=social" },
+      { key: "inspections", label: "Site inspections", icon: "calendar", query: "?tab=inspections" },
+      { key: "progress", label: "Site progress", icon: "camera", query: "?tab=progress" },
+      { key: "agents", label: "Agents", icon: "customers", query: "?tab=agents" },
+    ],
+  },
   { key: "whatsapp", label: "WhatsApp", icon: "whatsapp", path: (id) => `/estates/${id}/marketing/whatsapp` },
   { key: "sms", label: "SMS", icon: "mail", path: (id) => `/estates/${id}/sms` },
-  { key: "survey", label: "Survey", icon: "survey", path: (id) => `/estates/${id}/survey`, children: ["staking"] },
+  { key: "survey", label: "Survey", icon: "survey", path: (id) => `/estates/${id}/survey` },
   { key: "staking", label: "Staking", icon: "staking", path: (id) => `/estates/${id}/staking` },
   { key: "documents", label: "Documents", icon: "documents", path: () => "/estates/documents" },
   { key: "development", label: "Development", icon: "development", path: (id) => `/estates/${id}/development` },
-  { key: "hazard", label: "Hazard Analysis", icon: "hazard", path: (id) => `/estates/${id}/hazards`, children: ["soil"] },
+  { key: "hazard", label: "Hazard Analysis", icon: "hazard", path: (id) => `/estates/${id}/hazards` },
   { key: "soil", label: "Soil Analysis", icon: "layers", path: (id) => `/estates/${id}/soil-analysis` },
   { key: "reports", label: "Reports", icon: "reports", path: (id) => `/estates/${id}/reports` },
   { key: "audit", label: "Audit Timeline", icon: "audit", path: (id) => `/estates/${id}/timeline` },
@@ -40,10 +56,6 @@ export const estateNavItems: Array<{ key: EstateNavKey; label: string; icon: Est
   { key: "settings", label: "Settings", icon: "settings", path: (id) => `/estates/${id}/settings` },
   { key: "notifications", label: "Message Delivery", icon: "mail", path: (id) => `/estates/${id}/notifications` },
 ];
-
-// Keys that render inside their parent's indented sub-list instead of at the nav's top level -
-// derived from the children arrays above so there's exactly one place a key is listed as a child.
-const CHILD_NAV_KEYS = new Set<EstateNavKey>(estateNavItems.flatMap((item) => item.children ?? []));
 
 // The permission a nav item is actually gated by server-side (see
 // app/services/estates/permissions.py PERMISSION_CATALOG) - null means every active member can
@@ -152,6 +164,7 @@ export default function EstateShell({
   children: ReactNode;
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -165,12 +178,12 @@ export default function EstateShell({
   const [subscriptionStatus, setSubscriptionStatus] = useState<EstateSubscriptionStatus | null>(null);
   const [billingLoading, setBillingLoading] = useState(!skipBillingGate);
   const activeItem = estateNavItems.find((item) => item.key === activeKey);
-  // Which nav groups (Map & Plots, Marketing, ...) are expanded - starts with whichever group
-  // contains the current page already open, so arriving on a child route (e.g. /plots) never
-  // hides the page you're already on; toggling after that is manual for the rest of the visit.
+  // Which nav items with sub-views (Marketing, ...) have their sub-view list expanded - starts
+  // expanded when you're already on that item's own page, so its sub-views are visible as soon
+  // as you arrive instead of needing a manual click first; toggling after that is manual.
   const [expandedNavGroups, setExpandedNavGroups] = useState<Set<EstateNavKey>>(() => {
-    const parent = estateNavItems.find((item) => item.children?.includes(activeKey));
-    return new Set(parent ? [parent.key] : []);
+    const current = estateNavItems.find((item) => item.key === activeKey && item.subViews?.length);
+    return new Set(current ? [current.key] : []);
   });
   const toggleNavGroup = (key: EstateNavKey) => {
     setExpandedNavGroups((current) => {
@@ -495,12 +508,11 @@ export default function EstateShell({
             <span className="edash-nav-icon"><EstateIcon name="grid" /></span>
             <span className="edash-nav-label">Switch estate</span>
           </Link>
-          {estateNavItems.filter((item) => !CHILD_NAV_KEYS.has(item.key)).map((item) => {
+          {estateNavItems.map((item) => {
             const requiredPermission = NAV_PERMISSION[item.key];
             const locked = Boolean(requiredPermission) && !hasEstatePermission(estateSession?.user.permissions, requiredPermission!);
-            const childItems = item.children?.map((key) => estateNavItems.find((candidate) => candidate.key === key)).filter((candidate): candidate is typeof estateNavItems[number] => Boolean(candidate));
-            const hasChildren = Boolean(childItems?.length);
-            const expanded = hasChildren && expandedNavGroups.has(item.key);
+            const hasSubViews = Boolean(item.subViews?.length);
+            const expanded = hasSubViews && expandedNavGroups.has(item.key);
             return (
               <div key={item.key} className="edash-nav-group">
                 <Link
@@ -522,7 +534,7 @@ export default function EstateShell({
                   <span className="edash-nav-label">{item.label}</span>
                   {item.key === "notifications" && unreadDeliveryCount > 0 && <span className="edash-nav-badge">{unreadDeliveryCount > 99 ? "99+" : unreadDeliveryCount}</span>}
                   {item.key === "whatsapp" && whatsappUnreadCount > 0 && <span className="edash-nav-badge">{whatsappUnreadCount > 99 ? "99+" : whatsappUnreadCount}</span>}
-                  {hasChildren && (
+                  {hasSubViews && (
                     <span
                       role="button"
                       tabIndex={0}
@@ -546,32 +558,28 @@ export default function EstateShell({
                     </span>
                   )}
                 </Link>
-                {hasChildren && expanded && (
+                {hasSubViews && expanded && (
                   <div className="edash-nav-children">
-                    {childItems!.map((child) => {
-                      const childPermission = NAV_PERMISSION[child.key];
-                      const childLocked = Boolean(childPermission) && !hasEstatePermission(estateSession?.user.permissions, childPermission!);
+                    {item.subViews!.map((subView) => {
+                      const subViewActive = item.key === activeKey && location.search === subView.query;
                       return (
                         <Link
-                          key={child.key}
-                          className={`edash-nav-item${child.key === activeKey ? " active" : ""}${childLocked ? " is-locked" : ""}`}
-                          to={estateId || child.key === "payments" || child.key === "commissions" ? child.path(estateId) : "/estates/workspace"}
-                          aria-disabled={childLocked}
-                          title={childLocked ? "Contact your admin for access to this feature" : undefined}
+                          key={subView.key}
+                          className={`edash-nav-item${subViewActive ? " active" : ""}${locked ? " is-locked" : ""}`}
+                          to={`${item.path(estateId)}${subView.query}`}
+                          aria-disabled={locked}
+                          title={locked ? "Contact your admin for access to this feature" : undefined}
                           onClick={(event) => {
-                            if (childLocked) {
+                            if (locked) {
                               event.preventDefault();
                               toast("Contact your admin for access to this feature.", { icon: "🔒" });
                               return;
                             }
                             setSidebarOpen(false);
-                            if (child.key === "notifications") markDeliverySeen();
                           }}
                         >
-                          <span className="edash-nav-icon"><EstateIcon name={childLocked ? "lock" : child.icon} /></span>
-                          <span className="edash-nav-label">{child.label}</span>
-                          {child.key === "notifications" && unreadDeliveryCount > 0 && <span className="edash-nav-badge">{unreadDeliveryCount > 99 ? "99+" : unreadDeliveryCount}</span>}
-                          {child.key === "whatsapp" && whatsappUnreadCount > 0 && <span className="edash-nav-badge">{whatsappUnreadCount > 99 ? "99+" : whatsappUnreadCount}</span>}
+                          <span className="edash-nav-icon"><EstateIcon name={locked ? "lock" : subView.icon} /></span>
+                          <span className="edash-nav-label">{subView.label}</span>
                         </Link>
                       );
                     })}
