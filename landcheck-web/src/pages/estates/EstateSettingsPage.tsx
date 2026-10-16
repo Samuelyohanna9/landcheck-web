@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
-import EstateIcon from "../../components/estates/EstateIcon";
 import EstateModal from "../../components/estates/EstateModal";
+import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 
 export default function EstateSettingsPage() {
   const { estateId } = useParams();
+  const navigate = useNavigate();
   const [estateDetail, setEstateDetail] = useState<any>(null);
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
@@ -76,6 +77,25 @@ export default function EstateSettingsPage() {
 
   if (!estateId) return null;
 
+  const ribbonTabs: EstateRibbonTab[] = [
+    {
+      key: "home",
+      label: "Home",
+      groups: [
+        { key: "create", label: "Create", buttons: [{ key: "add-block", label: "Add Block", icon: "plus", onClick: () => setShowAddBlock(true) }] },
+        {
+          key: "navigate",
+          label: "Navigate",
+          buttons: [
+            { key: "billing", label: "Billing", icon: "wallet", onClick: () => navigate("/estates/billing") },
+            { key: "legal", label: "Legal", icon: "shield", onClick: () => navigate("/estates/legal") },
+            { key: "public-site", label: "Public Website", icon: "globe", onClick: () => navigate(`/estates/${estateId}/public-site`) },
+          ],
+        },
+      ],
+    },
+  ];
+
   return (
     <EstateShell
       estateId={estateId}
@@ -84,6 +104,7 @@ export default function EstateSettingsPage() {
       recentActivity={activity}
       onEstateNameChange={(value) => { setName(value); setEstateDetail((current: any) => current ? { ...current, name: value } : current); }}
     >
+      <EstateRibbon tabs={ribbonTabs} />
       <div className="edash-card" style={{ marginBottom: 16 }}>
         <div className="edash-card-inner">
           <div className="edash-card-head">
@@ -149,9 +170,6 @@ export default function EstateSettingsPage() {
         <div className="edash-card-inner">
           <div className="edash-card-head">
             <h3 className="edash-card-title">Blocks</h3>
-            <button type="button" className="edash-tool-btn" onClick={() => setShowAddBlock(true)}>
-              <EstateIcon name="plus" /> Add block
-            </button>
           </div>
           <div className="edash-chip-row">
             {blocks.length ? blocks.map((block) => <span key={block.id} className="edash-chip">{block.label}{block.name ? ` - ${block.name}` : ""}</span>) : <p className="edash-tab-empty" style={{ padding: 0 }}>No blocks yet.</p>}

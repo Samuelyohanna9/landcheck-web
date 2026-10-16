@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { API_URL, api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
+import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 
 /** Everything about the buyer-facing public Estate site - branding, contact details, the site
  * inspection meeting point, the payment plan shown to buyers, the development outlook (whose only
@@ -205,8 +206,28 @@ export default function EstatePublicSitePage() {
 
   if (!estateId) return null;
 
+  const ribbonTabs: EstateRibbonTab[] = [
+    {
+      key: "home",
+      label: "Home",
+      groups: [
+        {
+          key: "publish",
+          label: "Publish",
+          buttons: [{ key: "save-publish", label: "Save & Publish", icon: "save", onClick: () => void savePublicPage(), disabled: publicEnabled && !publicCanPublish }],
+        },
+        {
+          key: "forecast",
+          label: "Forecast",
+          buttons: [{ key: "run-forecast", label: developmentForecast ? "Run Forecast Again" : "Run Forecast", icon: "chart-donut", onClick: () => void runDevelopmentForecast(), disabled: forecastBusy || forecastUpgrade }],
+        },
+      ],
+    },
+  ];
+
   return (
     <EstateShell estateId={estateId} estateName={estateName} activeKey="public_site">
+      <EstateRibbon tabs={ribbonTabs} />
       <div className="edash-page-head">
         <div>
           <span className="edash-section-kicker">Public website</span>

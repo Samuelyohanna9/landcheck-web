@@ -5,6 +5,7 @@ import { api, extractApiErrorMessage } from "../../api/client";
 import { getEstateAuthSession } from "../../auth/estateAuth";
 import EstateShell from "../../components/estates/EstateShell";
 import EstatePricingCards, { ESTATE_PLANS, type EstateBillingCycle, type EstatePlanKey } from "../../components/estates/EstatePricingCards";
+import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import Spinner from "../../components/estates/EstateSpinner";
 
 type BillingStatus = {
@@ -142,8 +143,17 @@ export default function EstateBillingPage() {
 
   if (!organizationId) return null;
 
+  const ribbonTabs: EstateRibbonTab[] = [
+    {
+      key: "home",
+      label: "Home",
+      groups: [{ key: "data", label: "Data", buttons: [{ key: "refresh", label: "Refresh", icon: "refresh", onClick: () => void load() }] }],
+    },
+  ];
+
   return (
     <EstateShell estateId={sidebarEstateId} estateName={sidebarEstateName} activeKey="settings" pageTitle="Billing & plan" skipBillingGate>
+      <EstateRibbon tabs={ribbonTabs} />
       <div className="edash-card" style={{ marginBottom: 16 }}>
         <div className="edash-card-inner">
           <div className="edash-card-head"><h3 className="edash-card-title">Billing &amp; plan</h3></div>

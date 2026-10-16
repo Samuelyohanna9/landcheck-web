@@ -3,8 +3,8 @@ import { useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
-import EstateIcon from "../../components/estates/EstateIcon";
 import EstateModal from "../../components/estates/EstateModal";
+import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import { getEstateAuthSession } from "../../auth/estateAuth";
 
 type PermissionItem = { key: string; label: string };
@@ -226,8 +226,23 @@ export default function EstateStaffAccessPage() {
 
   if (!estateId) return null;
 
+  const ribbonGroups: EstateRibbonTab["groups"] = [];
+  if (isOwner) {
+    ribbonGroups.push({
+      key: "create",
+      label: "Create",
+      buttons: [
+        { key: "new-role", label: "New Role", icon: "plus", onClick: openNewRole },
+        { key: "add-staff", label: "Add Staff", icon: "plus", onClick: openNewStaff },
+      ],
+    });
+  }
+  ribbonGroups.push({ key: "data", label: "Data", buttons: [{ key: "refresh", label: "Refresh", icon: "refresh", onClick: load }] });
+  const ribbonTabs: EstateRibbonTab[] = [{ key: "home", label: "Home", groups: ribbonGroups }];
+
   return (
     <EstateShell estateId={estateId} activeKey="access" recentActivity={activity} pageTitle="Team & Access">
+      <EstateRibbon tabs={ribbonTabs} />
       {!isOwner && !loading && (
         <div className="edash-card" style={{ marginBottom: 16, borderColor: "var(--edash-warn)" }}>
           <div className="edash-card-inner">
@@ -239,7 +254,6 @@ export default function EstateStaffAccessPage() {
         <div className="edash-card-inner">
           <div className="edash-card-head">
             <h3 className="edash-card-title">Roles</h3>
-            {isOwner && <button type="button" className="edash-btn-outline" onClick={openNewRole}><EstateIcon name="plus" /> New role</button>}
           </div>
           <p className="edash-field-note" style={{ marginBottom: 14 }}>
             A role is a named checklist of dashboard sections - build one once, then assign it to any staff member below. Each staff member's actual access can still be fine-tuned individually.
@@ -275,7 +289,6 @@ export default function EstateStaffAccessPage() {
         <div className="edash-card-inner">
           <div className="edash-card-head">
             <h3 className="edash-card-title">Staff</h3>
-            {isOwner && <button type="button" className="edash-btn-primary" onClick={openNewStaff}><EstateIcon name="plus" /> Add staff</button>}
           </div>
           <p className="edash-field-note" style={{ marginBottom: 14 }}>
             Each staff member gets their own dashboard login and receives a welcome email with a temporary password - they set their own password the first time they sign in. Anything not checked below is greyed out for them in the sidebar.

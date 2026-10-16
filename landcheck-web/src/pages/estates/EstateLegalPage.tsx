@@ -5,6 +5,7 @@ import { api, extractApiErrorMessage } from "../../api/client";
 import { getEstateAuthSession } from "../../auth/estateAuth";
 import DpaDocumentText from "../../components/estates/DpaDocumentText";
 import EstateShell from "../../components/estates/EstateShell";
+import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import Spinner from "../../components/estates/EstateSpinner";
 import "../../styles/estate-legal.css";
 
@@ -68,8 +69,17 @@ export default function EstateLegalPage() {
 
   if (!organizationId) return null;
 
+  const ribbonTabs: EstateRibbonTab[] = [
+    {
+      key: "home",
+      label: "Home",
+      groups: [{ key: "data", label: "Data", buttons: [{ key: "refresh", label: "Refresh", icon: "refresh", onClick: () => void load() }] }],
+    },
+  ];
+
   return (
     <EstateShell estateId={sidebarEstateId} estateName={sidebarEstateName} activeKey="settings" pageTitle="Legal & compliance" skipBillingGate>
+      <EstateRibbon tabs={ribbonTabs} />
       <div className="edash-page-head">
         <div>
           <span className="edash-section-kicker">Settings</span>
