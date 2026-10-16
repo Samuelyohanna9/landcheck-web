@@ -382,12 +382,12 @@
 .estate-auth-shell--login { width: min(100% - 32px, 440px); }
 .estate-auth-visual { display: none; position: relative; align-items: center; justify-content: center; width: 100%; min-height: 620px; }
 .estate-auth-visual-box { position: absolute; width: 50%; height: 48%; border-radius: 22px; }
-/* Four equal blocks, one in each corner, so the top row mirrors the bottom row (bottom-left/
-   bottom-right already matched each other; top now gets a left-hand partner for top-right). */
-.estate-auth-visual-box--a { top: 0; right: 2%; background: var(--auth-visual-box-a, #d7ebe6); }
+/* Four equal blocks, one in each corner, flush to the same left/right edge so the top pair's
+   outer edges line up exactly with the bottom pair's (no 2% inset on the top row anymore). */
+.estate-auth-visual-box--a { top: 0; right: 0; background: var(--auth-visual-box-a, #d7ebe6); }
 .estate-auth-visual-box--b { bottom: 0; right: 0; background: var(--auth-visual-box-b, #f4e3c1); }
 .estate-auth-visual-box--c { bottom: 0; left: 0; background: var(--auth-visual-box-c, #d9ecf4); }
-.estate-auth-visual-box--d { top: 0; left: 2%; background: var(--auth-visual-box-d, #f7dfe6); }
+.estate-auth-visual-box--d { top: 0; left: 0; background: var(--auth-visual-box-d, #f7dfe6); }
 .estate-auth-visual-photo {
   position: relative;
   width: 76%;
