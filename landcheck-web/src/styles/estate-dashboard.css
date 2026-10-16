@@ -153,6 +153,32 @@
 .edash-nav-item.is-locked:hover { background: transparent; color: #a3acbb; }
 .edash-nav-item.is-locked .edash-nav-icon { opacity: 0.6; }
 
+.edash-nav-group { display: flex; flex-direction: column; }
+
+.edash-nav-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: inherit;
+  opacity: 0.65;
+}
+.edash-nav-group-toggle:hover { opacity: 1; background: rgba(0, 0, 0, 0.06); }
+.edash-nav-group-toggle svg { width: 14px; height: 14px; }
+
+.edash-nav-children {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 22px;
+  border-left: 1px solid var(--edash-border);
+  margin: 1px 0 1px 23px;
+}
+.edash-nav-children .edash-nav-item { font-size: 0.8rem; padding: 7px 11px; }
+
 .edash-nav-label { min-width: 0; flex: 1; }
 .edash-nav-badge {
   display: inline-flex;

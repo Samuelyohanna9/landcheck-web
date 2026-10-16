@@ -4897,6 +4897,23 @@
   border-left: 1px solid var(--gw-border);
 }
 
+/* Same indentation treatment as .green-work-sidebar-settings above, for the menu drawer's
+   collapsible "Sponsorship" group (Sponsors/Payments/Payouts/Merchants/Feedback). */
+.green-work-menu-children {
+  display: grid;
+  gap: 2px;
+  margin: -1px 0 3px 9px;
+  padding: 3px 0 3px 8px;
+  border-left: 1px solid var(--gw-border);
+}
+
+.green-work-menu-group-toggle { width: 100%; }
+.green-work-menu-group-chevron svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.15s ease;
+}
+
 .green-work-menu-item.green-work-menu-item--nested {
   min-height: 30px;
   color: #233b5a;
