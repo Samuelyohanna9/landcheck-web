@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
+import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import { money } from "../../components/estates/FinancialComponents";
 import { formatArea, type UnitSystem } from "../../utils/unitFormat";
 
@@ -68,7 +69,7 @@ export default function EstatePlotsPage() {
     }
   };
 
-  useEffect(() => {
+  const loadPlotsPageData = () => {
     if (!estateId) return;
     api.get(`/estates/${estateId}`).then((response) => {
       setEstateName(response.data.name);
@@ -82,6 +83,10 @@ export default function EstatePlotsPage() {
     }).catch(() => setPlots([]));
     api.get(`/estates/${estateId}/blocks`).then((response) => setBlocks(response.data || [])).catch(() => setBlocks([]));
     api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));
+  };
+
+  useEffect(() => {
+    loadPlotsPageData();
   }, [estateId]);
 
   const blockLabel = (blockId?: number | null) => blocks.find((block) => block.id === blockId)?.label || "--";
@@ -155,8 +160,28 @@ export default function EstatePlotsPage() {
 
   if (!estateId) return null;
 
+  const ribbonTabs: EstateRibbonTab[] = [
+    {
+      key: "home",
+      label: "Home",
+      groups: [
+        {
+          key: "navigate",
+          label: "Navigate",
+          buttons: [{ key: "open-map", label: "Map & Plots", icon: "map", onClick: () => navigate(`/estates/${estateId}/map`) }],
+        },
+        {
+          key: "data",
+          label: "Data",
+          buttons: [{ key: "refresh", label: "Refresh", icon: "refresh", onClick: loadPlotsPageData }],
+        },
+      ],
+    },
+  ];
+
   return (
     <EstateShell estateId={estateId} estateName={estateName} activeKey="plots" search={search} onSearchChange={setSearch} searchPlaceholder="Search plot number..." recentActivity={activity}>
+      <EstateRibbon tabs={ribbonTabs} />
       <div className="edash-card">
         <div className="edash-card-inner">
           <div className="edash-card-head">

@@ -4,7 +4,7 @@ import { api, createIdempotencyKey, extractApiErrorMessage } from "../api/client
 import { FinancialSummaryCards, PaymentStatusBadge, money, PAYMENT_METHODS, paymentMethodLabel } from "../components/estates/FinancialComponents";
 import EstateShell from "../components/estates/EstateShell";
 import EstateModal from "../components/estates/EstateModal";
-import EstateIcon from "../components/estates/EstateIcon";
+import EstateRibbon, { type EstateRibbonTab } from "../components/estates/EstateRibbon";
 import Spinner from "../components/estates/EstateSpinner";
 
 type Payment = { id: number; date: string; amount: string; currency: string; status: string; method: string; reference?: string; customer: { name: string }; estate: { name: string }; plot: { number: string }; can_confirm?: boolean };
@@ -293,16 +293,25 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
     );
   }
 
+  const documentsRibbonTabs: EstateRibbonTab[] = [
+    {
+      key: "home",
+      label: "Home",
+      groups: [
+        { key: "create", label: "Create", buttons: [{ key: "add-document", label: "Add Document", icon: "plus", onClick: openUpload }] },
+        { key: "data", label: "Data", buttons: [{ key: "refresh", label: "Refresh", icon: "refresh", onClick: () => void load() }] },
+      ],
+    },
+  ];
+
   if (mode === "documents") {
     return (
       <EstateShell estateId={sidebarEstateId} estateName={sidebarEstateName} activeKey="documents">
+        <EstateRibbon tabs={documentsRibbonTabs} />
         <div className="edash-card">
           <div className="edash-card-inner">
             <div className="edash-card-head">
               <h3 className="edash-card-title">Private documents ({total})</h3>
-              <button type="button" className="edash-tool-btn" onClick={openUpload}>
-                <EstateIcon name="plus" /> Add document
-              </button>
             </div>
             {documents.length ? (
               <div style={{ overflowX: "auto" }}>
@@ -350,11 +359,22 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
     );
   }
 
+  const paymentsRibbonTabs: EstateRibbonTab[] = [
+    {
+      key: "home",
+      label: "Home",
+      groups: [
+        { key: "create", label: "Create", buttons: [{ key: "record-payment", label: "Record Payment", icon: "plus", onClick: () => setRecording(true) }] },
+        { key: "data", label: "Data", buttons: [{ key: "refresh", label: "Refresh", icon: "refresh", onClick: () => void load() }] },
+      ],
+    },
+  ];
+
   return (
     <EstateShell estateId={sidebarEstateId} estateName={sidebarEstateName} activeKey="payments">
+      <EstateRibbon tabs={paymentsRibbonTabs} />
       <div className="edash-section-head" style={{ justifyContent: "space-between" }}>
         <p className="edash-status-row-desc" style={{ margin: 0 }}>Confirmed collections exclude pending and voided payments.</p>
-        <button type="button" className="edash-btn-primary" onClick={() => setRecording(true)}>Record payment</button>
       </div>
       {summary && (
         <div className="edash-overview-grid edash-overview-grid--3" style={{ margin: "16px 0" }}>

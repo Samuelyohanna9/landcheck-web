@@ -7,6 +7,7 @@ import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
 import EstateModal from "../../components/estates/EstateModal";
 import EstatePagination from "../../components/estates/EstatePagination";
+import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 
 export default function EstateCustomersPage() {
   const { estateId } = useParams();
@@ -134,16 +135,33 @@ export default function EstateCustomersPage() {
 
   if (!estateId) return null;
 
+  const ribbonTabs: EstateRibbonTab[] = [
+    {
+      key: "home",
+      label: "Home",
+      groups: [
+        {
+          key: "create",
+          label: "Create",
+          buttons: [{ key: "add-customer", label: "Add Customer", icon: "plus", onClick: () => setShowAddCustomer(true) }],
+        },
+        {
+          key: "data",
+          label: "Data",
+          buttons: [{ key: "refresh", label: "Refresh", icon: "refresh", onClick: load }],
+        },
+      ],
+    },
+  ];
+
   return (
     <EstateShell estateId={estateId} estateName={estateName} activeKey="customers" search={search} onSearchChange={(value) => { setSearch(value); setCustomerPage(1); }} searchPlaceholder="Search customers..." recentActivity={activity}>
+      <EstateRibbon tabs={ribbonTabs} />
       <div className="edash-content-row">
         <div className="edash-card">
           <div className="edash-card-inner">
             <div className="edash-card-head">
               <h3 className="edash-card-title">Customers ({customerTotal})</h3>
-              <button type="button" className="edash-tool-btn" onClick={() => setShowAddCustomer(true)}>
-                <EstateIcon name="plus" /> Add customer
-              </button>
             </div>
             {customersLoading ? <p className="edash-tab-empty">Loading customers...</p> : customers.length ? (
               <div className="edash-activity-list">

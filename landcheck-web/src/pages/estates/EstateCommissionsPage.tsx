@@ -3,10 +3,10 @@ import toast from "react-hot-toast";
 import { api, createIdempotencyKey, extractApiErrorMessage } from "../../api/client";
 import { money, PAYMENT_METHODS } from "../../components/estates/FinancialComponents";
 import EstateShell from "../../components/estates/EstateShell";
-import EstateIcon from "../../components/estates/EstateIcon";
 import EstateModal from "../../components/estates/EstateModal";
 import Spinner from "../../components/estates/EstateSpinner";
 import EstatePagination from "../../components/estates/EstatePagination";
+import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 
 async function download(path: string, name: string) {
   const response = await api.get(path, { responseType: "blob" });
@@ -225,8 +225,29 @@ export default function EstateCommissionsPage() {
     }
   };
 
+  const ribbonTabs: EstateRibbonTab[] = [
+    {
+      key: "home",
+      label: "Home",
+      groups: [
+        { key: "create", label: "Create", buttons: [{ key: "add-agent", label: "Add Agent", icon: "plus", onClick: () => setShowAddAgent(true) }] },
+        {
+          key: "data",
+          label: "Data",
+          buttons: [{
+            key: "refresh",
+            label: "Refresh",
+            icon: "refresh",
+            onClick: () => { if (organizationId) { void loadCommissionData(organizationId); void loadAgents(organizationId); } },
+          }],
+        },
+      ],
+    },
+  ];
+
   return (
     <EstateShell estateId={sidebarEstateId} estateName={sidebarEstateName} activeKey="commissions">
+      <EstateRibbon tabs={ribbonTabs} />
       <p className="edash-status-row-desc" style={{ marginBottom: 16 }}>
         A single-level, volume-tiered commission ladder - the rate an agent earns steps up automatically once their cumulative Allocated (fully paid) sales cross a threshold, applied from the next sale onward. Past commissions never get recalculated when you edit the ladder. Commission itself becomes payable the moment a sale is fully paid (Allocated) - matching standard Nigerian agency practice, where commission is earned on introduction of a buyer who completes, payable on completion, regardless of how the buyer's own payment plan is structured. Actually paying an agent is a separate step below, tracked with its own record and receipt.
       </p>
@@ -236,9 +257,6 @@ export default function EstateCommissionsPage() {
         <div className="edash-card-inner">
           <div className="edash-card-head">
             <h3 className="edash-card-title">Sales agents</h3>
-            <button type="button" className="edash-tool-btn" onClick={() => setShowAddAgent(true)}>
-              <EstateIcon name="plus" /> Add agent
-            </button>
           </div>
           <p className="edash-field-note" style={{ marginBottom: 10 }}>Add sales agents or marketers. Each agent can receive a secure workspace link for their QR leads, estate map, payment progress, and commission records.</p>
           {agents.length ? (
