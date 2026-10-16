@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
+import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import Spinner from "../../components/estates/EstateSpinner";
 
 // Soil Analysis is a standalone Estate-dashboard tool, deliberately separate from Hazard Analysis
@@ -132,8 +133,23 @@ export default function EstateSoilAnalysisPage() {
   const estateEntry = (dashboard?.assessments || []).find((item: any) => item.plot_id === null);
   const soilResult = estateEntry?.result;
 
+  const ribbonTabs: EstateRibbonTab[] = [
+    {
+      key: "home",
+      label: "Home",
+      groups: [
+        {
+          key: "analyze",
+          label: "Analyze",
+          buttons: [{ key: "run-soil", label: "Run Soil Analysis", icon: "layers", onClick: () => void runEstateSoilAnalysis(), disabled: runBusy }],
+        },
+      ],
+    },
+  ];
+
   return (
     <EstateShell estateId={estateId} estateName={estateName} activeKey="soil" recentActivity={activity}>
+      <EstateRibbon tabs={ribbonTabs} />
       <div className="edash-card" style={{ marginBottom: 16 }}>
         <div className="edash-card-inner">
           <div className="edash-card-head">

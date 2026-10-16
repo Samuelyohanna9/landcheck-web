@@ -6,6 +6,7 @@ import { claimEstateSurveyRequestSession } from "../../auth/surveyAuth";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
 import EstatePagination from "../../components/estates/EstatePagination";
+import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import { clearSurveyPlanDraft } from "../../offline/surveyPlanDraft";
 
 export default function EstateSurveyPage() {
@@ -47,8 +48,20 @@ export default function EstateSurveyPage() {
 
   if (!estateId) return null;
 
+  const ribbonTabs: EstateRibbonTab[] = [
+    {
+      key: "home",
+      label: "Home",
+      groups: [
+        { key: "navigate", label: "Navigate", buttons: [{ key: "map", label: "Map & Plots", icon: "map", onClick: () => navigate(`/estates/${estateId}/map`) }] },
+        { key: "data", label: "Data", buttons: [{ key: "refresh", label: "Refresh", icon: "refresh", onClick: load }] },
+      ],
+    },
+  ];
+
   return (
     <EstateShell estateId={estateId} estateName={estateName} activeKey="survey" recentActivity={activity}>
+      <EstateRibbon tabs={ribbonTabs} />
       <div className="edash-card">
         <div className="edash-card-inner">
           <div className="edash-card-head"><h3 className="edash-card-title">Survey requests ({requests.length})</h3></div>

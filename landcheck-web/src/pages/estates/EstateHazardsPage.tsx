@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
+import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import Spinner from "../../components/estates/EstateSpinner";
 
 type HazardJobStatus = {
@@ -141,8 +142,23 @@ export default function EstateHazardsPage() {
     );
   }
 
+  const ribbonTabs: EstateRibbonTab[] = [
+    {
+      key: "home",
+      label: "Home",
+      groups: [
+        {
+          key: "analyze",
+          label: "Analyze",
+          buttons: [{ key: "run-hazards", label: "Run Hazard Analysis", icon: "hazard", onClick: () => void runEstateHazardAnalysis(), disabled: runBusy }],
+        },
+      ],
+    },
+  ];
+
   return (
     <EstateShell estateId={estateId} estateName={estateName} activeKey="hazard" recentActivity={activity}>
+      <EstateRibbon tabs={ribbonTabs} />
       <div className="edash-card" style={{ marginBottom: 16 }}>
         <div className="edash-card-inner">
           <div className="edash-card-head">

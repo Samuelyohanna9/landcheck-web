@@ -2,22 +2,34 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
+import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 
 export default function EstateAuditPage() {
   const { estateId } = useParams();
   const [estateName, setEstateName] = useState("");
   const [activity, setActivity] = useState<any[]>([]);
 
-  useEffect(() => {
+  const load = () => {
     if (!estateId) return;
     api.get(`/estates/${estateId}`).then((response) => setEstateName(response.data.name)).catch(() => undefined);
     api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));
-  }, [estateId]);
+  };
+
+  useEffect(load, [estateId]);
 
   if (!estateId) return null;
 
+  const ribbonTabs: EstateRibbonTab[] = [
+    {
+      key: "home",
+      label: "Home",
+      groups: [{ key: "data", label: "Data", buttons: [{ key: "refresh", label: "Refresh", icon: "refresh", onClick: load }] }],
+    },
+  ];
+
   return (
     <EstateShell estateId={estateId} estateName={estateName} activeKey="audit" recentActivity={activity}>
+      <EstateRibbon tabs={ribbonTabs} />
       <div className="edash-card">
         <div className="edash-card-inner">
           <div className="edash-card-head"><h3 className="edash-card-title">Audit timeline ({activity.length})</h3></div>

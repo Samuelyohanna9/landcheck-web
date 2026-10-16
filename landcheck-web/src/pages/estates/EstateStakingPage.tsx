@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
 import EstatePagination from "../../components/estates/EstatePagination";
+import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 
 export default function EstateStakingPage() {
   const { estateId } = useParams();
+  const navigate = useNavigate();
   const [estateName, setEstateName] = useState("");
   const [tasks, setTasks] = useState<any[]>([]);
   const [activity, setActivity] = useState<any[]>([]);
@@ -42,8 +44,20 @@ export default function EstateStakingPage() {
 
   if (!estateId) return null;
 
+  const ribbonTabs: EstateRibbonTab[] = [
+    {
+      key: "home",
+      label: "Home",
+      groups: [
+        { key: "navigate", label: "Navigate", buttons: [{ key: "map", label: "Map & Plots", icon: "map", onClick: () => navigate(`/estates/${estateId}/map`) }] },
+        { key: "data", label: "Data", buttons: [{ key: "refresh", label: "Refresh", icon: "refresh", onClick: load }] },
+      ],
+    },
+  ];
+
   return (
     <EstateShell estateId={estateId} estateName={estateName} activeKey="staking" recentActivity={activity}>
+      <EstateRibbon tabs={ribbonTabs} />
       <div className="edash-card">
         <div className="edash-card-inner">
           <div className="edash-card-head"><h3 className="edash-card-title">Staking tasks ({tasks.length})</h3></div>

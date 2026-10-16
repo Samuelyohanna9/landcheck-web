@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import { money } from "../../components/estates/FinancialComponents";
 import EstateShell from "../../components/estates/EstateShell";
+import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import Spinner from "../../components/estates/EstateSpinner";
 
 export default function EstateReportsPage() {
@@ -41,8 +42,17 @@ export default function EstateReportsPage() {
 
   if (!estateId) return null;
 
+  const ribbonTabs: EstateRibbonTab[] = [
+    {
+      key: "home",
+      label: "Home",
+      groups: [{ key: "export", label: "Export", buttons: [{ key: "download-report", label: "Download Report", icon: "download", onClick: () => void downloadReport(), disabled: reportBusy }] }],
+    },
+  ];
+
   return (
     <EstateShell estateId={estateId} estateName={estateName} activeKey="reports" recentActivity={activity}>
+      <EstateRibbon tabs={ribbonTabs} />
       <div className="edash-section-head">
         <button type="button" className="edash-btn-primary" disabled={reportBusy} onClick={() => void downloadReport()}>
           {reportBusy ? <><Spinner size={13} /> Generating...</> : "Download report (PDF)"}

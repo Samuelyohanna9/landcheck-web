@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
+import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 
 const STATUS_LABELS: Record<string, string> = {
   not_started: "Not started",
@@ -44,8 +45,17 @@ export default function EstateDevelopmentPage() {
 
   if (!estateId) return null;
 
+  const ribbonTabs: EstateRibbonTab[] = [
+    {
+      key: "home",
+      label: "Home",
+      groups: [{ key: "data", label: "Data", buttons: [{ key: "refresh", label: "Refresh", icon: "refresh", onClick: load }] }],
+    },
+  ];
+
   return (
     <EstateShell estateId={estateId} estateName={estateName} activeKey="development" recentActivity={activity}>
+      <EstateRibbon tabs={ribbonTabs} />
       <div className="edash-stats-row edash-stats-row--five">
         {Object.entries(STATUS_LABELS).map(([key, label]) => (
           <div key={key} className="edash-stat-card">
