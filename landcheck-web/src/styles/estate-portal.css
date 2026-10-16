@@ -380,27 +380,32 @@
    narrow-screen fix also lives) is what makes it actually win the cascade at every width, instead
    of silently losing to .estate-auth-shell's plain width rule up there. */
 .estate-auth-shell--login { width: min(100% - 32px, 440px); }
-.estate-auth-visual { display: none; position: relative; align-items: center; justify-content: center; min-height: 300px; }
-.estate-auth-visual-box { position: absolute; border-radius: 20px; }
-.estate-auth-visual-box--a { width: 64%; height: 60%; top: 2%; right: 4%; background: var(--auth-visual-box-a, #d7ebe6); }
-.estate-auth-visual-box--b { width: 46%; height: 42%; bottom: 0; left: 2%; background: var(--auth-visual-box-b, #f4e3c1); }
+.estate-auth-visual { display: none; position: relative; align-items: center; justify-content: center; width: 100%; min-height: 440px; }
+.estate-auth-visual-box { position: absolute; border-radius: 22px; }
+.estate-auth-visual-box--a { width: 74%; height: 68%; top: 0; right: 0; background: var(--auth-visual-box-a, #d7ebe6); }
+.estate-auth-visual-box--b { width: 58%; height: 52%; bottom: 0; left: 0; background: var(--auth-visual-box-b, #f4e3c1); }
 .estate-auth-visual-photo {
   position: relative;
-  width: 80%;
-  border-radius: 16px;
+  width: 92%;
+  border-radius: 18px;
   overflow: hidden;
-  box-shadow: 0 24px 60px rgba(16, 36, 58, .18);
+  box-shadow: 0 24px 60px rgba(16, 36, 58, .2);
 }
 .estate-auth-visual-photo img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; }
 
 @media (min-width: 851px) {
   .estate-auth-shell--login {
     display: grid;
-    grid-template-columns: minmax(340px, 440px) minmax(260px, 1fr);
+    /* Both columns capped to a similar scale (not minmax(..., 1fr)) so the photo column can't
+       stretch into a lot of near-empty space on a wide monitor the way an open-ended 1fr track
+       did - that was the "doesn't feel premium" complaint: a small photo adrift in a big empty
+       cell. Keeping the whole shell narrower too (960px, down from 1080px) makes the composition
+       read as one deliberate block instead of two unrelated halves of a wide screen. */
+    grid-template-columns: minmax(340px, 420px) minmax(340px, 460px);
     grid-template-rows: auto auto auto;
-    gap: clamp(24px, 5vw, 64px);
+    gap: clamp(24px, 4vw, 56px);
     align-items: center;
-    width: min(100% - 48px, 1080px);
+    width: min(100% - 48px, 960px);
   }
   .estate-auth-shell--login .estate-auth-brand { grid-column: 1 / -1; grid-row: 1; align-self: start; justify-self: center; }
   .estate-auth-shell--login .estate-auth-card { grid-column: 1; grid-row: 2; }
