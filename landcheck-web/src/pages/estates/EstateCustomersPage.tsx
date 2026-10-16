@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import { money } from "../../components/estates/FinancialComponents";
@@ -11,6 +11,7 @@ import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/Est
 
 export default function EstateCustomersPage() {
   const { estateId } = useParams();
+  const navigate = useNavigate();
   const [estateName, setEstateName] = useState("");
   const [organizationId, setOrganizationId] = useState<number | null>(null);
   const [customers, setCustomers] = useState<Array<{ id: number; name: string }>>([]);
@@ -192,7 +193,13 @@ export default function EstateCustomersPage() {
               <p className="edash-tab-empty">Select a customer to see their financial summary and statement.</p>
             ) : (
               <>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10 }}><p className="edash-info-card-name" style={{ margin: 0 }}>{selectedCustomer.name}</p><button type="button" className="edash-btn-outline" onClick={() => void createPortalLink()}>Buyer portal link</button></div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+                  <p className="edash-info-card-name" style={{ margin: 0 }}>{selectedCustomer.name}</p>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button type="button" className="edash-btn-outline" onClick={() => void createPortalLink()}>Buyer portal link</button>
+                    <button type="button" className="edash-btn-outline" onClick={() => navigate(`/estates/${estateId}/live-inspections`)}>Schedule live inspection</button>
+                  </div>
+                </div>
                 {portalLink && <p className="edash-field-note" style={{ overflowWrap: "anywhere" }}>Copied link: {portalLink}</p>}
                 {detail ? (
                   <div className="edash-overview-grid edash-overview-grid--2">

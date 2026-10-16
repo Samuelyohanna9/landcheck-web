@@ -80,6 +80,8 @@ const BuyerPortalPage = lazyWithChunkRecovery(() => import("./pages/BuyerPortalP
 const EstateNotificationLogPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateNotificationLogPage"));
 const EstateMarketingPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateMarketingPage"));
 const PublicInspectionBookingPage = lazyWithChunkRecovery(() => import("./pages/estates/PublicInspectionBookingPage"));
+const PublicLiveInspectionPage = lazyWithChunkRecovery(() => import("./pages/estates/PublicLiveInspectionPage"));
+const EstateLiveInspectionsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateLiveInspectionsPage"));
 
 type ChunkLoadBoundaryProps = {
   children: ReactNode;
@@ -391,6 +393,7 @@ export default function App() {
               <Route path="/estates/buyer/:token" element={<BuyerPortalPage />} />
               <Route path="/estates/agent-portal/:token" element={<AgentPortalAccessPage />} />
               <Route path="/estates/inspection/:token" element={<PublicInspectionBookingPage />} />
+              <Route path="/estates/live-inspection/:token" element={<PublicLiveInspectionPage />} />
               <Route path="/estates/public/:slug/reserve/:plotId" element={<PublicEstateReservationPage />} />
               <Route path="/estates/public/:slug" element={<PublicEstatePage />} />
               <Route path="/estates/workspace" element={<EstateProtectedRoute element={<Estates />} />} />
@@ -398,6 +401,7 @@ export default function App() {
               <Route path="/estates/:estateId/map" element={<EstateProtectedRoute element={<Estates />} />} />
               <Route path="/estates/:estateId/plots" element={<EstateProtectedRoute element={<EstatePlotsPage />} />} />
               <Route path="/estates/:estateId/customers" element={<EstateProtectedRoute element={<EstateCustomersPage />} />} />
+              <Route path="/estates/:estateId/live-inspections" element={<EstateProtectedRoute element={<EstateLiveInspectionsPage />} />} />
               <Route path="/estates/:estateId/survey" element={<EstateProtectedRoute element={<EstateSurveyPage />} />} />
               <Route path="/estates/:estateId/staking" element={<EstateProtectedRoute element={<EstateStakingPage />} />} />
               <Route path="/estates/:estateId/development" element={<EstateProtectedRoute element={<EstateDevelopmentPage />} />} />

@@ -82,6 +82,7 @@
 .agent-public-primary { height: 36px; padding: 0 13px; border: none; border-radius: 8px; background: var(--agent-brand); color: white; font-size: .7rem; font-weight: 800; cursor: pointer; }
 .agent-public-primary:disabled { cursor: not-allowed; opacity: .55; }
 .agent-public-empty { padding: 24px 10px; border: 1px dashed var(--agent-border); border-radius: 9px; color: #98a2b0; font-size: .72rem; text-align: center; }
+.agent-public-live-video { width: 100%; aspect-ratio: 16 / 10; border-radius: 12px; overflow: hidden; background: #0b1420; }
 .agent-public-error, .agent-public-loading { display: grid; place-items: center; padding: 24px; background: var(--agent-bg); }
 .agent-public-error-card, .agent-public-loading-card { width: min(100%, 430px); padding: 24px; border: 1px solid var(--agent-border); border-radius: 15px; background: white; text-align: center; box-shadow: 0 12px 32px rgba(16,24,39,.08); }
 .agent-public-error-card strong { font-size: 1rem; }

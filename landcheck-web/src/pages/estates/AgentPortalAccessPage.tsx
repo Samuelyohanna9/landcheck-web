@@ -3,6 +3,7 @@ import { api, extractApiErrorMessage } from "../../api/client";
 import { ProjectMap, type ProjectMapFeature } from "../../components/ProjectMap";
 import EstateIcon from "../../components/estates/EstateIcon";
 import AgentKitSections from "../../components/estates/public/AgentKitSections";
+import AgentLiveInspectionsSection from "../../components/estates/public/AgentLiveInspectionsSection";
 import "../../styles/estate-agent-portal.css";
 
 type EstateMapRecord = {
@@ -120,6 +121,8 @@ export default function AgentPortalAccessPage() {
           </section>
 
           <AgentKitSections token={token} />
+
+          <AgentLiveInspectionsSection token={token} />
 
           <section id="map" className="agent-public-card agent-public-map-card"><div className="agent-public-card-head"><div><span className="agent-public-kicker">Estate portfolio</span><h2>Map and plot records</h2><p>Open plots, reservations, and allocations remain visible. Plots chosen by your leads use the highlighted lead colour.</p></div><select value={selectedEstate?.id || ""} onChange={(event) => setSelectedEstateId(Number(event.target.value))}>{workspace.estates.map((estate) => <option key={estate.id} value={estate.id}>{estate.name}</option>)}</select></div>{selectedEstate && mapFeatures.length ? <><ProjectMap points={[]} features={mapFeatures} mode="estate" /><div className="agent-public-map-legend"><span><i className="is-available" />Open / available</span><span><i className="is-reserved" />Reserved</span><span><i className="is-allocated" />Allocated</span><span><i className="is-lead" />My lead</span><span><i className="is-sale" />My sale</span></div></> : <div className="agent-public-empty">No mapped plots are available for this estate yet.</div>}</section>
 
