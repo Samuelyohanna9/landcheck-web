@@ -381,14 +381,13 @@
    of silently losing to .estate-auth-shell's plain width rule up there. */
 .estate-auth-shell--login { width: min(100% - 32px, 440px); }
 .estate-auth-visual { display: none; position: relative; align-items: center; justify-content: center; width: 100%; min-height: 620px; }
-.estate-auth-visual-box { position: absolute; border-radius: 22px; }
-/* Sized against the Jobbnorge reference directly: there the photo is only about 60% of the whole
-   composition's width, with the pink/mint/blue blocks reading as the dominant shapes and the
-   photo resting on top of them - not the other way round. Shrinking the photo and growing the
-   blocks again (previous pass still undersized them) gets that same balance. */
-.estate-auth-visual-box--a { width: 86%; height: 66%; top: 0; right: 4%; background: var(--auth-visual-box-a, #d7ebe6); }
-.estate-auth-visual-box--b { width: 72%; height: 68%; bottom: 0; right: 0; background: var(--auth-visual-box-b, #f4e3c1); }
-.estate-auth-visual-box--c { width: 42%; height: 38%; bottom: 2%; left: 0; background: var(--auth-visual-box-c, #d9ecf4); }
+.estate-auth-visual-box { position: absolute; width: 50%; height: 48%; border-radius: 22px; }
+/* All three blocks the same size now (marked up directly on a screenshot: equal squares, each
+   peeking out from behind the photo by about the same amount) instead of three different sizes -
+   top-right, bottom-right, bottom-left, each visible edge roughly matching the others. */
+.estate-auth-visual-box--a { top: 0; right: 2%; background: var(--auth-visual-box-a, #d7ebe6); }
+.estate-auth-visual-box--b { bottom: 0; right: 0; background: var(--auth-visual-box-b, #f4e3c1); }
+.estate-auth-visual-box--c { bottom: 0; left: 0; background: var(--auth-visual-box-c, #d9ecf4); }
 .estate-auth-visual-photo {
   position: relative;
   width: 76%;
