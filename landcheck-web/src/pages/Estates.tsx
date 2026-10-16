@@ -35,6 +35,15 @@ const STATUS_COLORS = {
   on_hold: "#667085",
 } as const;
 
+const STATUS_LEGEND_ITEMS = [
+  { key: "available", label: "Available", color: STATUS_COLORS.available },
+  { key: "allocated", label: "Allocated", color: STATUS_COLORS.allocated },
+  { key: "reserved", label: "Reserved", color: STATUS_COLORS.reserved },
+  { key: "under_survey", label: "Under Survey", color: STATUS_COLORS.under_survey },
+  { key: "under_staking", label: "Under Staking", color: STATUS_COLORS.under_staking },
+  { key: "developed", label: "Developed", color: STATUS_COLORS.developed },
+] as const;
+
 const IMPORT_CRS_OPTIONS = COORDINATE_SYSTEM_GROUPS.flatMap((group) =>
   group.systems.filter((system) => !system.epsgLabel.includes("/")).map((system) => ({ value: system.epsgLabel, label: `${system.name} (${system.epsgLabel})` }))
 );
@@ -274,7 +283,7 @@ function EstatePlotMapFallback({
             <g key={`${plotId}-${ringIndex}`}>
               <polygon
                 points={svgMapPoints(ring, bounds)}
-                fill={estatePlotColor(feature.properties?.commercial_status)}
+                fill={estatePlotColor(feature.properties?.display_status || feature.properties?.commercial_status)}
                 fillOpacity="0.62"
                 stroke="#ffffff"
                 strokeWidth="2"
@@ -385,10 +394,13 @@ function attachEstateMapLayers(map: any) {
     paint: {
       "fill-color": [
         "match",
-        ["get", "commercial_status"],
+        ["get", "display_status"],
         "available", STATUS_COLORS.available,
         "reserved", STATUS_COLORS.reserved,
         "allocated", STATUS_COLORS.allocated,
+        "under_survey", STATUS_COLORS.under_survey,
+        "under_staking", STATUS_COLORS.under_staking,
+        "developed", STATUS_COLORS.developed,
         "on_hold", STATUS_COLORS.on_hold,
         STATUS_COLORS.on_hold,
       ],
@@ -610,6 +622,11 @@ export default function Estates() {
   const [mapStyleMode, setMapStyleMode] = useState<"map" | "satellite">("satellite");
   const [blockFilterId, setBlockFilterId] = useState("all");
   const [layersVisible, setLayersVisible] = useState(true);
+  const [visibleStatuses, setVisibleStatuses] = useState<Set<string>>(
+    () => new Set(["available", "reserved", "allocated", "on_hold", "under_survey", "under_staking", "developed"]),
+  );
+  const [legendPanelExpanded, setLegendPanelExpanded] = useState(true);
+  const [legendStatusGroupExpanded, setLegendStatusGroupExpanded] = useState(true);
   const [drawerTab, setDrawerTab] = useState<"overview" | "customer" | "survey" | "staking" | "documents" | "hazards" | "soil" | "timeline">("overview");
   const [editingDevelopment, setEditingDevelopment] = useState(false);
   const [plotContextMenu, setPlotContextMenu] = useState<{ x: number; y: number; plotId: number } | null>(null);
@@ -638,18 +655,66 @@ export default function Estates() {
   const [mapError, setMapError] = useState("");
   const [mapReady, setMapReady] = useState(false);
   const [styleGeneration, setStyleGeneration] = useState(0);
+  // A plot's commercial_status alone can't tell "allocated, awaiting survey" apart from
+  // "allocated, awaiting staking" apart from "developed" - those three legend colors come from
+  // development_status plus the plot's survey request / staking task, same eligibility rules the
+  // estate dashboard's own awaiting_survey/awaiting_staking counts use (see estate_dashboard in
+  // estates.py) - so every plot still resolves to exactly one of the legend's 7 colors.
+  const plotDisplayStatusById = useMemo(() => {
+    const eligibleSurveyStatuses = new Set(["in_progress", "ready_for_review", "approved", "completed"]);
+    const stakedSurveyRequestIds = new Set(stakingTasks.map((task: any) => task.survey_request_id));
+    const map = new Map<number, string>();
+    (plotGeojson.features || []).forEach((feature: any) => {
+      const properties = feature.properties || {};
+      const plotId = Number(properties.id);
+      if (!Number.isFinite(plotId)) return;
+      if (properties.development_status === "developed") {
+        map.set(plotId, "developed");
+        return;
+      }
+      if (properties.commercial_status === "allocated") {
+        const survey = surveyRequests.find((item: any) => item.plot?.id === plotId);
+        const hasEligibleSurvey = Boolean(survey && eligibleSurveyStatuses.has(survey.status));
+        const isStaked = Boolean(survey && stakedSurveyRequestIds.has(survey.id));
+        if (hasEligibleSurvey && !isStaked) {
+          map.set(plotId, "under_staking");
+          return;
+        }
+        if (!hasEligibleSurvey) {
+          map.set(plotId, "under_survey");
+          return;
+        }
+      }
+      map.set(plotId, properties.commercial_status || "on_hold");
+    });
+    return map;
+  }, [plotGeojson, surveyRequests, stakingTasks]);
   const visiblePlotGeojson = useMemo(() => {
     const query = plotSearch.trim().toLowerCase();
     return {
       ...plotGeojson,
-      features: (plotGeojson.features || []).filter((feature: any) => {
-        const properties = feature.properties || {};
-        const plotNumber = String(properties.plot_number || properties.number || "").toLowerCase();
-        const matchesBlock = blockFilterId === "all" || String(properties.block_id ?? "") === blockFilterId;
-        return matchesBlock && (statusFilter === "all" || properties.commercial_status === statusFilter) && (!query || plotNumber.includes(query));
-      }),
+      features: (plotGeojson.features || [])
+        .filter((feature: any) => {
+          const properties = feature.properties || {};
+          const plotNumber = String(properties.plot_number || properties.number || "").toLowerCase();
+          const matchesBlock = blockFilterId === "all" || String(properties.block_id ?? "") === blockFilterId;
+          const displayStatus = plotDisplayStatusById.get(Number(properties.id)) || properties.commercial_status || "on_hold";
+          return (
+            matchesBlock &&
+            (statusFilter === "all" || properties.commercial_status === statusFilter) &&
+            visibleStatuses.has(displayStatus) &&
+            (!query || plotNumber.includes(query))
+          );
+        })
+        .map((feature: any) => ({
+          ...feature,
+          properties: {
+            ...feature.properties,
+            display_status: plotDisplayStatusById.get(Number(feature.properties?.id)) || feature.properties?.commercial_status || "on_hold",
+          },
+        })),
     };
-  }, [plotGeojson, plotSearch, statusFilter, blockFilterId]);
+  }, [plotGeojson, plotSearch, statusFilter, blockFilterId, visibleStatuses, plotDisplayStatusById]);
   const mapPlotGeojson = useMemo(() => ({
     ...visiblePlotGeojson,
     features: visiblePlotGeojson.features.map((feature: any) => ({
@@ -1298,7 +1363,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
             title.textContent = properties.plot_number || "";
             const status = document.createElement("span");
             status.className = "edash-map-popup-status";
-            status.textContent = String(properties.commercial_status || "").replaceAll("_", " ");
+            status.textContent = String(properties.display_status || properties.commercial_status || "").replaceAll("_", " ");
             const customerLine = document.createElement("p");
             customerLine.textContent = allocation ? allocation.customer_name : "No customer yet";
             container.append(title, status, customerLine);
@@ -1865,19 +1930,73 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
             </button>
           </div>
           <div className="edash-map-legend">
-            {[
-              { label: "Available", color: STATUS_COLORS.available },
-              { label: "Allocated", color: STATUS_COLORS.allocated },
-              { label: "Reserved", color: STATUS_COLORS.reserved },
-              { label: "Under Survey", color: STATUS_COLORS.under_survey },
-              { label: "Under Staking", color: STATUS_COLORS.under_staking },
-              { label: "Developed", color: STATUS_COLORS.developed },
-            ].map((item) => (
-              <span key={item.label} className="edash-map-legend-item">
-                <span className="edash-map-legend-dot" style={{ background: item.color }} />
-                {item.label}
-              </span>
-            ))}
+            <button
+              type="button"
+              className="edash-map-legend-group-toggle"
+              onClick={() => setLegendPanelExpanded((value) => !value)}
+            >
+              <EstateIcon name={legendPanelExpanded ? "chevron-down" : "chevron-right"} />
+              <EstateIcon name="layers" />
+              <span>Layers</span>
+            </button>
+            {legendPanelExpanded && (
+              <div className="edash-map-legend-children">
+                <div className="edash-map-legend-group-toggle edash-map-legend-subgroup-toggle">
+                  <input
+                    type="checkbox"
+                    checked={STATUS_LEGEND_ITEMS.every((item) => visibleStatuses.has(item.key))}
+                    ref={(el) => {
+                      if (!el) return;
+                      const checkedCount = STATUS_LEGEND_ITEMS.filter((item) => visibleStatuses.has(item.key)).length;
+                      el.indeterminate = checkedCount > 0 && checkedCount < STATUS_LEGEND_ITEMS.length;
+                    }}
+                    onChange={() =>
+                      setVisibleStatuses((prev) => {
+                        const allOn = STATUS_LEGEND_ITEMS.every((item) => prev.has(item.key));
+                        const next = new Set(prev);
+                        STATUS_LEGEND_ITEMS.forEach((item) => (allOn ? next.delete(item.key) : next.add(item.key)));
+                        return next;
+                      })
+                    }
+                  />
+                  <button
+                    type="button"
+                    className="edash-map-legend-subgroup-label"
+                    onClick={() => setLegendStatusGroupExpanded((value) => !value)}
+                  >
+                    <EstateIcon name={legendStatusGroupExpanded ? "chevron-down" : "chevron-right"} />
+                    <span>Plot status</span>
+                  </button>
+                </div>
+                {legendStatusGroupExpanded && (
+                  <div className="edash-map-legend-children">
+                    {STATUS_LEGEND_ITEMS.map((item) => (
+                      <label key={item.key} className="edash-map-legend-item">
+                        <input
+                          type="checkbox"
+                          checked={visibleStatuses.has(item.key)}
+                          onChange={() =>
+                            setVisibleStatuses((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(item.key)) next.delete(item.key);
+                              else next.add(item.key);
+                              return next;
+                            })
+                          }
+                        />
+                        <span className="edash-map-legend-dot" style={{ background: item.color }} />
+                        {item.label}
+                      </label>
+                    ))}
+                  </div>
+                )}
+                <label className="edash-map-legend-item">
+                  <input type="checkbox" checked={layersVisible} onChange={() => setLayersVisible((value) => !value)} />
+                  <span className="edash-map-legend-line" />
+                  Road
+                </label>
+              </div>
+            )}
           </div>
           <div className="edash-map-scale">
             <div className="edash-map-scale-bar"><span style={{ width: 60 }} /></div>
