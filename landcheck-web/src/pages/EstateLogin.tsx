@@ -90,6 +90,7 @@ export default function EstateLogin() {
           <span className="estate-auth-visual-box estate-auth-visual-box--a" />
           <span className="estate-auth-visual-box estate-auth-visual-box--b" />
           <span className="estate-auth-visual-box estate-auth-visual-box--c" />
+          <span className="estate-auth-visual-box estate-auth-visual-box--d" />
           <div className="estate-auth-visual-photo">
             <img src="/realestate_public.jpg" alt="" />
           </div>
