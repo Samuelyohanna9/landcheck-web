@@ -4239,6 +4239,9 @@ export default function GreenWork() {
   const [deleteProjectConfirmName, setDeleteProjectConfirmName] = useState("");
   const [deletingProject, setDeletingProject] = useState(false);
   const [showProjectDangerOptions, setShowProjectDangerOptions] = useState(false);
+  const [removeStaffTarget, setRemoveStaffTarget] = useState<GreenUser | null>(null);
+  const [removeStaffConfirmName, setRemoveStaffConfirmName] = useState("");
+  const [removingStaff, setRemovingStaff] = useState(false);
   const [alertsSummary, setAlertsSummary] = useState<{ total: number; danger: number; warning: number; info: number }>({
     total: 0,
     danger: 0,
@@ -7294,14 +7297,19 @@ export default function GreenWork() {
     if (canAccessSuperAdmin) {
       loadOrganizations().catch(() => toast.error("Failed to load organizations"));
       loadRoles().catch(() => toast.error("Failed to load roles"));
-      loadAdminUsers().catch(() => toast.error("Failed to load user directory"));
       loadAdminOverview().catch(() => toast.error("Failed to load super admin overview"));
     } else {
       setOrganizations([]);
       setAdminOverview(null);
+    }
+    if (canAddUsers) {
+      // The backend already scopes GET /green/users to the caller's own organization for
+      // non-super-admins, so an org admin loading this gets only their own staff.
+      loadAdminUsers().catch(() => toast.error("Failed to load user directory"));
+    } else {
       setAdminUsers([]);
     }
-  }, [canAccessSuperAdmin]);
+  }, [canAccessSuperAdmin, canAddUsers]);
 
   useEffect(() => {
     if (!canAccessSuperAdmin) return;
@@ -8022,6 +8030,45 @@ export default function GreenWork() {
       toast.error(error?.response?.data?.detail || "Failed to delete project");
     } finally {
       setDeletingProject(false);
+    }
+  };
+
+  const openRemoveStaffModal = (user: GreenUser) => {
+    setRemoveStaffConfirmName("");
+    setRemoveStaffTarget(user);
+  };
+
+  const closeRemoveStaffModal = () => {
+    if (removingStaff) return;
+    setRemoveStaffTarget(null);
+    setRemoveStaffConfirmName("");
+  };
+
+  const removeStaff = async () => {
+    if (!removeStaffTarget) return;
+    const userId = Number(removeStaffTarget.id);
+    const expectedName = String(removeStaffTarget.full_name || "").trim();
+    const confirmValue = removeStaffConfirmName.trim();
+    if (!confirmValue || confirmValue !== expectedName) {
+      toast.error("Type the exact staff name to confirm removal.");
+      return;
+    }
+    setRemovingStaff(true);
+    try {
+      await api.delete(`/green/users/${userId}`, {
+        data: { confirm_name: confirmValue },
+      });
+      if (Number(editingAdminUserId || 0) === userId) {
+        resetAdminUserDraft();
+      }
+      setRemoveStaffTarget(null);
+      setRemoveStaffConfirmName("");
+      await Promise.all([loadUsers(), loadAdminUsers()]);
+      toast.success("Staff access revoked");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to remove staff");
+    } finally {
+      setRemovingStaff(false);
     }
   };
 
@@ -14726,29 +14773,8 @@ export default function GreenWork() {
                           <button type="button" onClick={() => void resetAdminUserPasswordAndEmail(user)}>
                             Reset + Email
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const label = String(user.full_name || `user #${user.id}`);
-                              const confirmed = window.confirm(
-                                `Delete ${label}? This removes the user login and profile from LandCheck Work/Green.`
-                              );
-                              if (!confirmed) return;
-                              void api
-                                .delete(`/green/users/${user.id}`)
-                                .then(async () => {
-                                  if (Number(editingAdminUserId || 0) === Number(user.id)) {
-                                    resetAdminUserDraft();
-                                  }
-                                  await Promise.all([loadUsers(), loadAdminUsers(), loadAdminOverview()]);
-                                  toast.success("User deleted");
-                                })
-                                .catch((error: any) => {
-                                  toast.error(error?.response?.data?.detail || "Failed to delete user");
-                                });
-                            }}
-                          >
-                            Delete
+                          <button type="button" className="green-work-danger-btn" onClick={() => openRemoveStaffModal(user)}>
+                            Remove
                           </button>
                         </div>
                       </div>
@@ -15178,6 +15204,60 @@ export default function GreenWork() {
                   ? "This view shows the field team roster and live work status for this CSR client project."
                   : "Right-click a staff row to assign tree planting or maintenance."}
               </p>
+              {canAddUsers && !canAccessSuperAdmin ? (
+                <div className="green-work-card" style={{ marginBottom: 14 }}>
+                  <h3>Manage Staff</h3>
+                  <p className="green-work-note">
+                    Removing a staff member revokes their access to LandCheck Work immediately - they can no
+                    longer sign in or act on the platform. Trees, tasks, and other work they already recorded stay
+                    exactly as they are and keep their name attached.
+                  </p>
+                  {adminUsersLoading ? (
+                    <p className="green-work-note">Loading staff...</p>
+                  ) : adminUsers.length === 0 ? (
+                    <p className="green-work-note">No staff found for your organization.</p>
+                  ) : (
+                    <div className="staff-list">
+                      {adminUsers.map((user) => (
+                        <div key={`org-staff-${user.id}`} className="staff-row">
+                          <div className="staff-row-head">
+                            <strong>{user.full_name}</strong>
+                            <span>
+                              {user.role_name || user.role || "-"}
+                              {user.is_active === false ? " | inactive" : ""}
+                            </span>
+                          </div>
+                          <div className="staff-row-meta">
+                            {user.email || "-"} {user.phone ? `| ${user.phone}` : ""} | Login username:{" "}
+                            {user.work_username || "-"}
+                          </div>
+                          <div className="work-actions">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void api
+                                  .patch(`/green/users/${user.id}`, { is_active: user.is_active === false })
+                                  .then(async () => {
+                                    await Promise.all([loadUsers(), loadAdminUsers()]);
+                                    toast.success(user.is_active === false ? "Staff activated" : "Staff deactivated");
+                                  })
+                                  .catch((error: any) => {
+                                    toast.error(error?.response?.data?.detail || "Failed to update staff status");
+                                  });
+                              }}
+                            >
+                              {user.is_active === false ? "Activate" : "Deactivate"}
+                            </button>
+                            <button type="button" className="green-work-danger-btn" onClick={() => openRemoveStaffModal(user)}>
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : null}
               {agentRosterProject && canAccessSuperAdmin ? (
                 <div className="green-work-card" style={{ marginBottom: 14 }}>
                   <h3>{csrRouteProject ? "CSR Field Agents" : "Public Sponsor Agents"}</h3>
@@ -20160,6 +20240,50 @@ export default function GreenWork() {
                 disabled={deletingProject || !deleteProjectNameMatches}
               >
                 {deletingProject ? "Deleting..." : "Delete Permanently"}
+              </button>
+            </div>
+          </section>
+        </>
+      )}
+
+      {removeStaffTarget && (
+        <>
+          <button
+            type="button"
+            className="green-work-delete-overlay"
+            onClick={closeRemoveStaffModal}
+            aria-label="Close remove staff dialog"
+          />
+          <section className="green-work-delete-modal" role="dialog" aria-modal="true" aria-labelledby="green-work-remove-staff-title">
+            <h3 id="green-work-remove-staff-title">Remove Staff</h3>
+            <p className="green-work-delete-warning">
+              This revokes {removeStaffTarget.full_name}'s access to LandCheck Work immediately - they will no longer
+              be able to sign in or act on the platform. Trees, tasks, reports, and any other work they already
+              recorded stay exactly as they are and keep their name attached.
+            </p>
+            <p className="green-work-delete-target">
+              Type staff name exactly to confirm:
+              <strong>{removeStaffTarget.full_name}</strong>
+            </p>
+            <input
+              type="text"
+              value={removeStaffConfirmName}
+              onChange={(e) => setRemoveStaffConfirmName(e.target.value)}
+              placeholder="Type exact staff name"
+              disabled={removingStaff}
+              autoFocus
+            />
+            <div className="work-actions">
+              <button type="button" onClick={closeRemoveStaffModal} disabled={removingStaff}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="green-work-danger-btn"
+                onClick={() => void removeStaff()}
+                disabled={removingStaff || removeStaffConfirmName.trim() !== String(removeStaffTarget.full_name || "").trim()}
+              >
+                {removingStaff ? "Removing..." : "Remove Staff"}
               </button>
             </div>
           </section>
