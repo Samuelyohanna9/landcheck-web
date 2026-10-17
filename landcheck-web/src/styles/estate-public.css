@@ -65,6 +65,20 @@
 .estate-public-status-pill { display: inline-flex; align-items: center; padding: 5px 8px; border-radius: 999px; font-size: .68rem; font-weight: 800; }
 .estate-public-verified-badge { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; padding: 2px 7px; border-radius: 999px; background: #e6f6ec; color: #12703f; font-size: .64rem; font-weight: 800; vertical-align: middle; }
 .estate-public-verified-note { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 10px 0 0; color: var(--estate-public-muted); font-size: .76rem; }
+
+.estate-public-approvals { max-width: 1280px; margin: 0 auto 32px; padding: 28px clamp(18px, 4vw, 64px); border-top: 1px solid var(--estate-public-border); }
+.estate-public-approvals-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 20px 0 0; padding: 0; list-style: none; }
+.estate-public-approval-row { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border: 1px solid var(--estate-public-border); border-radius: 10px; background: var(--estate-public-surface); font-size: .82rem; font-weight: 700; }
+.estate-public-approval-row small { color: var(--estate-public-faint); font-weight: 600; font-size: .7rem; }
+.estate-public-approval-pill { display: inline-flex; align-self: flex-start; padding: 3px 9px; border-radius: 999px; background: var(--estate-public-bg); color: var(--estate-public-muted); font-size: .68rem; font-weight: 800; }
+.estate-public-approval-row.is-approved .estate-public-approval-pill { background: #e6f6ec; color: #12703f; }
+.estate-public-approval-row.is-submitted .estate-public-approval-pill, .estate-public-approval-row.is-under_review .estate-public-approval-pill { background: #eaf1ff; color: #2452b8; }
+.estate-public-approval-row.is-rejected .estate-public-approval-pill { background: #fdeceb; color: #b3281f; }
+.estate-public-plot-approvals { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
+.estate-public-approval-chip { padding: 3px 9px; border-radius: 999px; background: var(--estate-public-bg); color: var(--estate-public-muted); font-size: .66rem; font-weight: 750; }
+.estate-public-approval-chip.is-approved { background: #e6f6ec; color: #12703f; }
+.estate-public-approval-chip.is-submitted, .estate-public-approval-chip.is-under_review { background: #eaf1ff; color: #2452b8; }
+.estate-public-approval-chip.is-rejected { background: #fdeceb; color: #b3281f; }
 .estate-public-plot-detail dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 18px 0; }
 .estate-public-plot-detail dl > div { min-width: 0; }
 .estate-public-plot-detail dt { color: var(--estate-public-muted); font-size: .68rem; }
