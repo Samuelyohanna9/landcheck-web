@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import DailyIframe, { type DailyCall } from "@daily-co/daily-js";
 import { api, extractApiErrorMessage } from "../../api/client";
 import { formatDistance } from "../../utils/geoGuide";
@@ -12,9 +12,15 @@ type Session = {
   estate_name: string;
   plot_number: string;
   buyer_name: string;
+  scheduled_at: string | null;
   live: { verification: Verification; distance_m: number | null; updated_at: string | null } | null;
   room_url?: string | null;
 };
+
+function formatScheduledTime(value: string | null): string {
+  if (!value) return "";
+  return new Date(value).toLocaleString(undefined, { weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" });
+}
 
 const VERIFICATION_TEXT: Record<Exclude<Verification, null>, string> = {
   on_plot: "Your agent is standing on the plot",
@@ -84,10 +90,18 @@ export default function PublicLiveInspectionPage() {
         <h1>Plot {session.plot_number}, {session.estate_name}</h1>
 
         {session.status === "scheduled" && (
-          <p className="estate-public-guide-note">
-            Hello {session.buyer_name}, your agent hasn't started the walkthrough yet. This page updates automatically -
-            keep it open and the video will appear here the moment they go live.
-          </p>
+          <>
+            {session.scheduled_at && <p className="estate-public-guide-note"><strong>Scheduled for:</strong> {formatScheduledTime(session.scheduled_at)}</p>}
+            <p className="estate-public-guide-note">
+              Hello {session.buyer_name}, your agent hasn't started the walkthrough yet. This page updates automatically -
+              keep it open and the video will appear here the moment they go live.
+            </p>
+            {token && (
+              <p className="estate-public-guide-note">
+                Can't make that time? <Link to={`/estates/live-inspection/${token}/reschedule`}>Request a different time</Link>.
+              </p>
+            )}
+          </>
         )}
 
         {session.status === "live" && (

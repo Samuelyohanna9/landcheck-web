@@ -2106,6 +2106,7 @@
 }
 .edash-banner.tone-good { background: var(--edash-good-tint); color: var(--edash-good); }
 .edash-banner.tone-danger { background: var(--edash-danger-tint); color: var(--edash-danger); }
+.edash-banner.tone-warn { background: var(--edash-warn-tint); color: var(--edash-warn); }
 
 /* Generic field/grid used by the remaining legacy workflow forms (plot creation, layers, blocks,
    allocation lookup, survey/staking delivery) once re-skinned onto the .edash card system. */

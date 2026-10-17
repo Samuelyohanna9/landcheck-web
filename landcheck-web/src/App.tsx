@@ -81,6 +81,7 @@ const EstateNotificationLogPage = lazyWithChunkRecovery(() => import("./pages/es
 const EstateMarketingPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateMarketingPage"));
 const PublicInspectionBookingPage = lazyWithChunkRecovery(() => import("./pages/estates/PublicInspectionBookingPage"));
 const PublicLiveInspectionPage = lazyWithChunkRecovery(() => import("./pages/estates/PublicLiveInspectionPage"));
+const PublicLiveInspectionReschedulePage = lazyWithChunkRecovery(() => import("./pages/estates/PublicLiveInspectionReschedulePage"));
 const EstateLiveInspectionsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateLiveInspectionsPage"));
 
 type ChunkLoadBoundaryProps = {
@@ -394,6 +395,7 @@ export default function App() {
               <Route path="/estates/agent-portal/:token" element={<AgentPortalAccessPage />} />
               <Route path="/estates/inspection/:token" element={<PublicInspectionBookingPage />} />
               <Route path="/estates/live-inspection/:token" element={<PublicLiveInspectionPage />} />
+              <Route path="/estates/live-inspection/:token/reschedule" element={<PublicLiveInspectionReschedulePage />} />
               <Route path="/estates/public/:slug/reserve/:plotId" element={<PublicEstateReservationPage />} />
               <Route path="/estates/public/:slug" element={<PublicEstatePage />} />
               <Route path="/estates/workspace" element={<EstateProtectedRoute element={<Estates />} />} />
