@@ -62,6 +62,7 @@ const EstateLegalPage = lazyWithChunkRecovery(() => import("./pages/estates/Esta
 const PublicPlotView = lazyWithChunkRecovery(() => import("./pages/PublicPlotView"));
 const PublicEstatePage = lazyWithChunkRecovery(() => import("./pages/PublicEstatePage"));
 const PublicEstateReservationPage = lazyWithChunkRecovery(() => import("./pages/PublicEstateReservationPage"));
+const PublicEstateVerifyPage = lazyWithChunkRecovery(() => import("./pages/PublicEstateVerifyPage"));
 const EstatePlotsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstatePlotsPage"));
 const EstateCustomersPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateCustomersPage"));
 const EstateCommissionsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateCommissionsPage"));
@@ -398,6 +399,7 @@ export default function App() {
               <Route path="/estates/live-inspection/:token" element={<PublicLiveInspectionPage />} />
               <Route path="/estates/live-inspection/:token/reschedule" element={<PublicLiveInspectionReschedulePage />} />
               <Route path="/estates/public/:slug/reserve/:plotId" element={<PublicEstateReservationPage />} />
+              <Route path="/estates/public/:slug/verify" element={<PublicEstateVerifyPage />} />
               <Route path="/estates/public/:slug" element={<PublicEstatePage />} />
               <Route path="/estates/workspace" element={<EstateProtectedRoute element={<Estates />} />} />
               <Route path="/estates/:estateId" element={<EstateProtectedRoute element={<Estates />} />} />

@@ -66,11 +66,20 @@
 .estate-public-verified-badge { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; padding: 2px 7px; border-radius: 999px; background: #e6f6ec; color: #12703f; font-size: .64rem; font-weight: 800; vertical-align: middle; }
 .estate-public-verified-note { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 10px 0 0; color: var(--estate-public-muted); font-size: .76rem; }
 
-.estate-public-verify { max-width: 1280px; margin: 0 auto; padding: 0 clamp(18px, 4vw, 64px) 32px; }
-.estate-public-verify-inner { padding: clamp(20px, 3vw, 32px); border: 1px solid #f0d9a8; border-radius: 14px; background: #fdf7e9; }
-.estate-public-verify-head p.estate-public-kicker { color: #9a6a0e; }
-.estate-public-verify-head h2 { margin: 0; color: var(--estate-public-ink); font-size: clamp(1.2rem, 2.2vw, 1.65rem); letter-spacing: -.03em; }
-.estate-public-verify-head p:not(.estate-public-kicker) { max-width: 640px; margin: 8px 0 0; color: var(--estate-public-muted); line-height: 1.55; font-size: .88rem; }
+/* Note: the bare ".estate-public-verify" class name is already used (further below) for the
+   location-verification badge on progress-update photos - the verify-flow pieces here are all
+   scoped under "-cta", "-page" or "-form"/"-results"/etc. suffixes to avoid colliding with it. */
+.estate-public-verify-cta { display: flex; align-items: center; gap: 14px; max-width: 1280px; margin: 0 auto 28px; padding: 16px clamp(18px, 4vw, 64px); text-decoration: none; }
+.estate-public-verify-cta-icon { display: inline-grid; place-items: center; flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; background: #fdf7e9; border: 1px solid #f0d9a8; color: #9a6a0e; font-weight: 800; }
+.estate-public-verify-cta strong { display: block; color: var(--estate-public-ink); font-size: .9rem; }
+.estate-public-verify-cta small { display: block; margin-top: 2px; color: var(--estate-public-muted); font-size: .78rem; }
+.estate-public-verify-cta-arrow { margin-left: auto; color: var(--estate-public-faint); font-size: 1.3rem; }
+.estate-public-verify-cta:hover { background: var(--estate-public-bg); }
+.estate-public-verify-page { max-width: 560px; margin: 0 auto; padding: 56px 22px 70px; }
+.estate-public-verify-page h1 { margin: 10px 0 0; font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: -.04em; line-height: 1.1; }
+.estate-public-verify-page-intro { max-width: 520px; margin: 14px 0 0; color: var(--estate-public-muted); line-height: 1.6; }
+.estate-public-verify-page .estate-public-verify-form { flex-direction: column; align-items: stretch; }
+.estate-public-verify-page .estate-public-text-link { display: inline-block; margin-top: 24px; }
 .estate-public-verify-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin-top: 18px; }
 .estate-public-verify-form label { display: flex; flex-direction: column; gap: 5px; min-width: 160px; flex: 1; }
 .estate-public-verify-form label span { color: var(--estate-public-muted); font-size: .68rem; font-weight: 750; text-transform: uppercase; letter-spacing: .06em; }
