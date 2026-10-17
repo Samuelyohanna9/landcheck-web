@@ -66,6 +66,22 @@
 .estate-public-verified-badge { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; padding: 2px 7px; border-radius: 999px; background: #e6f6ec; color: #12703f; font-size: .64rem; font-weight: 800; vertical-align: middle; }
 .estate-public-verified-note { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 10px 0 0; color: var(--estate-public-muted); font-size: .76rem; }
 
+.estate-public-verify { max-width: 1280px; margin: 0 auto; padding: 0 clamp(18px, 4vw, 64px) 32px; }
+.estate-public-verify-inner { padding: clamp(20px, 3vw, 32px); border: 1px solid #f0d9a8; border-radius: 14px; background: #fdf7e9; }
+.estate-public-verify-head p.estate-public-kicker { color: #9a6a0e; }
+.estate-public-verify-head h2 { margin: 0; color: var(--estate-public-ink); font-size: clamp(1.2rem, 2.2vw, 1.65rem); letter-spacing: -.03em; }
+.estate-public-verify-head p:not(.estate-public-kicker) { max-width: 640px; margin: 8px 0 0; color: var(--estate-public-muted); line-height: 1.55; font-size: .88rem; }
+.estate-public-verify-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin-top: 18px; }
+.estate-public-verify-form label { display: flex; flex-direction: column; gap: 5px; min-width: 160px; flex: 1; }
+.estate-public-verify-form label span { color: var(--estate-public-muted); font-size: .68rem; font-weight: 750; text-transform: uppercase; letter-spacing: .06em; }
+.estate-public-verify-form input { height: 42px; padding: 0 12px; border: 1px solid var(--estate-public-border); border-radius: 8px; background: #fff; font-size: .88rem; }
+.estate-public-verify-form button { flex-shrink: 0; height: 42px; }
+.estate-public-verify-error { margin: 12px 0 0; color: #b3281f; font-size: .82rem; font-weight: 700; }
+.estate-public-verify-results { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.estate-public-verify-result { margin: 0; padding: 12px 14px; border-radius: 8px; font-size: .86rem; font-weight: 700; }
+.estate-public-verify-result.is-genuine { background: #e6f6ec; color: #12703f; }
+.estate-public-verify-result.is-not-found { background: #fdeceb; color: #b3281f; }
+
 .estate-public-approvals { max-width: 1280px; margin: 0 auto 32px; padding: 28px clamp(18px, 4vw, 64px); border-top: 1px solid var(--estate-public-border); }
 .estate-public-approvals-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 20px 0 0; padding: 0; list-style: none; }
 .estate-public-approval-row { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border: 1px solid var(--estate-public-border); border-radius: 10px; background: var(--estate-public-surface); font-size: .82rem; font-weight: 700; }
