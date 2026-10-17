@@ -12,6 +12,7 @@ type Session = {
   buyer_name: string;
   live: { verification: string | null; distance_m: number | null; updated_at: string | null } | null;
   room_url?: string | null;
+  directions_url?: string | null;
 };
 
 const VERIFICATION_LABEL: Record<string, string> = {
@@ -132,6 +133,11 @@ export default function AgentLiveInspectionsSection({ token, onCount }: { token:
               {liveStatus.distance_m != null && liveStatus.verification !== "on_plot" ? ` - ${Math.round(liveStatus.distance_m)} m from the boundary` : ""}
             </p>
           )}
+          {active.directions_url && (
+            <a className="agent-public-directions-cta agent-public-live-cta" style={{ marginTop: 10 }} href={active.directions_url} target="_blank" rel="noreferrer">
+              <EstateIcon name="navigation" /> Directions to the plot
+            </a>
+          )}
           <button type="button" className="agent-public-primary agent-public-live-cta" style={{ marginTop: 10 }} disabled={busy} onClick={() => void endLive(active.id)}>
             {busy ? "Ending..." : "End live inspection"}
           </button>
@@ -147,9 +153,14 @@ export default function AgentLiveInspectionsSection({ token, onCount }: { token:
                 <small>{session.buyer_name} - {session.estate_name}</small>
               </div>
               {session.status === "scheduled" ? (
-                <button type="button" className="agent-public-primary" style={{ minHeight: 44, fontSize: ".78rem" }} disabled={busy || Boolean(activeId)} onClick={() => void goLive(session)}>
-                  Go live
-                </button>
+                <div className="agent-public-row-actions">
+                  {session.directions_url && (
+                    <a href={session.directions_url} target="_blank" rel="noreferrer" title="Directions to the plot"><EstateIcon name="navigation" /></a>
+                  )}
+                  <button type="button" className="agent-public-primary" style={{ minHeight: 44, fontSize: ".78rem" }} disabled={busy || Boolean(activeId)} onClick={() => void goLive(session)}>
+                    Go live
+                  </button>
+                </div>
               ) : (
                 <b>Live now</b>
               )}

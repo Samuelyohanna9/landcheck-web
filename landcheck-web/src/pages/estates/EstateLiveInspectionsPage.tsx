@@ -77,7 +77,9 @@ export default function EstateLiveInspectionsPage() {
         agent_member_id: agentMemberId ? Number(agentMemberId) : null,
       });
       if (response.data.buyer_link && navigator.clipboard) await navigator.clipboard.writeText(response.data.buyer_link);
-      toast.success(response.data.invite_email_sent ? "Live inspection scheduled - the buyer's link was emailed and copied." : "Live inspection scheduled - the buyer's link was copied (no email on file to send it to).");
+      const buyerNote = response.data.invite_email_sent ? "the buyer's link was emailed and copied" : "the buyer's link was copied (no email on file to send it to)";
+      const agentNote = agentMemberId ? (response.data.agent_notified ? " and the agent was emailed what to do next" : " (the agent has no email on file, so they weren't notified - share the plot and buyer details with them directly)") : "";
+      toast.success(`Live inspection scheduled - ${buyerNote}${agentNote}.`);
       setShowSchedule(false);
       load();
     } catch (error) {

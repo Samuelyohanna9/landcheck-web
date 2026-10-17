@@ -106,6 +106,9 @@
 .agent-public-empty { padding: 24px 10px; border: 1px dashed var(--agent-border); border-radius: 9px; color: #98a2b0; font-size: .72rem; text-align: center; }
 .agent-public-live-video { width: 100%; aspect-ratio: 16 / 10; border-radius: 12px; overflow: hidden; background: #0b1420; }
 .agent-public-live-cta { width: 100%; min-height: 44px; font-size: .78rem; }
+.agent-public-directions-cta { display: flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid #b7e4c7; border-radius: 8px; background: #e9f8ef; color: #12703f; font-weight: 800; text-decoration: none; }
+.agent-public-directions-cta svg { width: 16px; height: 16px; }
+.agent-public-row-actions a[title] { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid #cdeedb; border-radius: 8px; background: #fff; color: var(--agent-brand-dark); }
 
 @media (max-width: 650px) {
   .agent-public-live-video { aspect-ratio: 3 / 4; }
