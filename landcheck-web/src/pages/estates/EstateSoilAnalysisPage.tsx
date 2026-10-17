@@ -6,6 +6,13 @@ import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import Spinner from "../../components/estates/EstateSpinner";
+import EstateProgressSteps, { type EstateProgressStep } from "../../components/estates/EstateProgressSteps";
+
+const SOIL_PROGRESS_STEPS: EstateProgressStep[] = [
+  { label: "Preparing the Estate boundary", match: ["preparing"] },
+  { label: "Screening soil and terrain", match: ["screening soil", "soil and terrain"] },
+  { label: "Saving results", match: ["saving"] },
+];
 
 // Soil Analysis is a standalone Estate-dashboard tool, deliberately separate from Hazard Analysis
 // (see landcheck-api/app/utils/soil_analysis.py's module docstring for the full reasoning): it
@@ -161,6 +168,7 @@ export default function EstateSoilAnalysisPage() {
           <button type="button" className="edash-btn-primary" disabled={runBusy} onClick={() => void runEstateSoilAnalysis()}>
             {runBusy ? <><Spinner size={13} /> {jobProgress?.stage || "Analyzing Estate..."}</> : "Run soil analysis for the Estate boundary"}
           </button>
+          {runBusy && <EstateProgressSteps steps={SOIL_PROGRESS_STEPS} stage={jobProgress?.stage || ""} pct={jobProgress?.pct || 0} />}
         </div>
       </div>
 

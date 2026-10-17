@@ -6,6 +6,13 @@ import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import Spinner from "../../components/estates/EstateSpinner";
+import EstateProgressSteps, { type EstateProgressStep } from "../../components/estates/EstateProgressSteps";
+
+const HAZARD_PROGRESS_STEPS: EstateProgressStep[] = [
+  { label: "Preparing the Estate boundary", match: ["preparing"] },
+  { label: "Screening flood and erosion risk", match: ["screening flood", "flood and erosion"] },
+  { label: "Saving results", match: ["saving"] },
+];
 
 type HazardJobStatus = {
   id: string;
@@ -170,6 +177,7 @@ export default function EstateHazardsPage() {
           <button type="button" className="edash-btn-primary" disabled={runBusy} onClick={() => void runEstateHazardAnalysis()}>
             {runBusy ? <><Spinner size={13} /> {jobProgress?.stage || "Analyzing Estate..."}</> : "Run hazard analysis for the Estate boundary"}
           </button>
+          {runBusy && <EstateProgressSteps steps={HAZARD_PROGRESS_STEPS} stage={jobProgress?.stage || ""} pct={jobProgress?.pct || 0} />}
         </div>
       </div>
       <div className="edash-card">

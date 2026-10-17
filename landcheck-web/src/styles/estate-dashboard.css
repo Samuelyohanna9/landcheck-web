@@ -1313,6 +1313,20 @@
 }
 .edash-loading-panel .edash-spinner { color: var(--edash-brand); }
 
+.edash-progress-steps { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; }
+.edash-progress-step { position: relative; display: flex; align-items: flex-start; gap: 10px; padding-bottom: 16px; }
+.edash-progress-step:last-child { padding-bottom: 0; }
+.edash-progress-step:not(:last-child)::before { content: ""; position: absolute; top: 19px; left: 8px; bottom: -3px; width: 2px; background: var(--edash-border); }
+.edash-progress-step--done:not(:last-child)::before { background: var(--edash-good); }
+.edash-progress-step-dot { position: relative; z-index: 1; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-top: 1px; border-radius: 50%; border: 2px solid var(--edash-border); background: var(--edash-surface); font-size: 0.6rem; font-weight: 800; color: #fff; transition: border-color .2s ease, background .2s ease, box-shadow .2s ease; }
+.edash-progress-step-label { padding-top: 1px; color: var(--edash-muted); font-size: 0.82rem; line-height: 1.4; }
+.edash-progress-step--done .edash-progress-step-dot { border-color: var(--edash-good); background: var(--edash-good); }
+.edash-progress-step--done .edash-progress-step-label { color: var(--edash-ink); }
+.edash-progress-step--active .edash-progress-step-dot { border-color: var(--edash-good); box-shadow: 0 0 0 3px rgba(30, 138, 76, 0.16); animation: edash-progress-pulse 1.4s ease-in-out infinite; }
+.edash-progress-step--active .edash-progress-step-label { color: var(--edash-ink); font-weight: 700; }
+@keyframes edash-progress-pulse { 0%, 100% { box-shadow: 0 0 0 3px rgba(30, 138, 76, 0.16); } 50% { box-shadow: 0 0 0 6px rgba(30, 138, 76, 0.1); } }
+@media (prefers-reduced-motion: reduce) { .edash-progress-step--active .edash-progress-step-dot { animation: none; } }
+
 .edash-mini-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
 .edash-mini-table th { padding: 6px 8px; text-align: left; color: var(--edash-faint); font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid var(--edash-border-soft); }
 .edash-mini-table td { padding: 8px 8px; border-bottom: 1px solid var(--edash-border-soft); color: var(--edash-ink); font-weight: 600; }

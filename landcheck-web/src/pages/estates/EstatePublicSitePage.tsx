@@ -4,6 +4,14 @@ import toast from "react-hot-toast";
 import { API_URL, api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
+import EstateProgressSteps, { type EstateProgressStep } from "../../components/estates/EstateProgressSteps";
+
+const FORECAST_PROGRESS_STEPS: EstateProgressStep[] = [
+  { label: "Screening flood and erosion risk", match: ["flood", "erosion", "starting forecast"] },
+  { label: "Reviewing built-up land history", match: ["built-up history", "measuring built-up"] },
+  { label: "Estimating growth direction", match: ["frontier", "growth direction"] },
+  { label: "Preparing your growth report", match: ["growth map"] },
+];
 
 /** Everything about the buyer-facing public Estate site - branding, contact details, the site
  * inspection meeting point, the payment plan shown to buyers, the development outlook (whose only
@@ -314,7 +322,7 @@ export default function EstatePublicSitePage() {
               <Link className="edash-btn-primary" style={{ display: "inline-flex" }} to="/estates/billing">Upgrade to Plus</Link>
             </div>
           ) : <>
-            {forecastBusy && <div style={{ margin: "12px 0", padding: 12, borderRadius: 10, background: "var(--edash-surface-muted, #f4f7f5)" }}><strong>{forecastProgress.stage || "Analysing..."}</strong><div style={{ height: 7, marginTop: 8, overflow: "hidden", borderRadius: 99, background: "#dce7e0" }}><div style={{ width: `${Math.max(4, Math.min(100, forecastProgress.progress_pct || 0))}%`, height: "100%", background: "var(--edash-brand)", transition: "width .3s ease" }} /></div></div>}
+            {forecastBusy && <div style={{ margin: "12px 0", padding: 14, borderRadius: 10, background: "var(--edash-surface-muted, #f4f7f5)" }}><EstateProgressSteps steps={FORECAST_PROGRESS_STEPS} stage={forecastProgress.stage || ""} pct={forecastProgress.progress_pct || 0} /></div>}
             {!forecastBusy && !developmentForecast && <p className="edash-field-note" style={{ marginTop: 12 }}>Run it after confirming the Estate boundary. The result will remain private until you publish it.</p>}
             {developmentForecast && developmentForecast.data_available && <>
               <div className="edash-public-settings-grid" style={{ marginTop: 14 }}>
