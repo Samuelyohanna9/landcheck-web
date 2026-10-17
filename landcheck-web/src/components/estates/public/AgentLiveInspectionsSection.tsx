@@ -31,8 +31,12 @@ export default function AgentLiveInspectionsSection({ token, onCount }: { token:
   const [activeId, setActiveId] = useState<string | null>(null);
   const [liveStatus, setLiveStatus] = useState<{ verification: string | null; distance_m: number | null } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [videoError, setVideoError] = useState("");
+  const [videoJoined, setVideoJoined] = useState(false);
+  const [gpsStatus, setGpsStatus] = useState<"idle" | "watching" | "error">("idle");
   const videoRef = useRef<HTMLDivElement | null>(null);
   const callRef = useRef<DailyCall | null>(null);
+  const joinedRoomRef = useRef<string | null>(null);
   const watchRef = useRef<number | null>(null);
   const pingTimerRef = useRef<number | null>(null);
 
@@ -56,10 +60,40 @@ export default function AgentLiveInspectionsSection({ token, onCount }: { token:
     pingTimerRef.current = null;
     callRef.current?.destroy();
     callRef.current = null;
+    joinedRoomRef.current = null;
     setLiveStatus(null);
+    setVideoError("");
+    setVideoJoined(false);
+    setGpsStatus("idle");
   };
 
   useEffect(() => () => stopTracking(), []);
+
+  const activeSession = sessions.find((item) => item.id === activeId) || null;
+
+  // Creating the Daily call frame has to happen in an effect, not inline in goLive() - the
+  // video container only exists in the DOM once `active` is truthy, and `active` depends on the
+  // activeId state set by goLive() itself, so videoRef.current was always still null when goLive
+  // checked it synchronously (React hadn't re-rendered yet). That silently skipped frame
+  // creation every time - no error, just a permanently blank box.
+  useEffect(() => {
+    if (!activeSession?.room_url || !videoRef.current) return undefined;
+    if (joinedRoomRef.current === activeSession.room_url) return undefined;
+    setVideoError("");
+    setVideoJoined(false);
+    const frame = DailyIframe.createFrame(videoRef.current, { showLeaveButton: false, iframeStyle: { width: "100%", height: "100%", border: "0" } });
+    callRef.current = frame;
+    joinedRoomRef.current = activeSession.room_url;
+    frame.on("joined-meeting", () => setVideoJoined(true));
+    frame.on("error", (event: any) => setVideoError(event?.errorMsg || "The video call hit a connection problem."));
+    frame.on("camera-error", () => setVideoError("Could not access your camera/microphone. Check this site's camera and microphone permission in your browser settings."));
+    frame.join({ url: activeSession.room_url }).catch((error: any) => setVideoError(error?.errorMsg || "Could not join the video call."));
+    return () => {
+      frame.destroy();
+      callRef.current = null;
+      joinedRoomRef.current = null;
+    };
+  }, [activeSession?.room_url]);
 
   const goLive = async (session: Session) => {
     setBusy(true);
@@ -67,15 +101,12 @@ export default function AgentLiveInspectionsSection({ token, onCount }: { token:
       const response = await api.post<Session>(`/estates/agent-portal/${token}/live-inspections/${session.id}/start`);
       setActiveId(session.id);
       setSessions((current) => current.map((item) => (item.id === session.id ? response.data : item)));
-      if (response.data.room_url && videoRef.current) {
-        const frame = DailyIframe.createFrame(videoRef.current, { showLeaveButton: false, iframeStyle: { width: "100%", height: "100%", border: "0" } });
-        callRef.current = frame;
-        void frame.join({ url: response.data.room_url });
-      }
       if (!navigator.geolocation) {
+        setGpsStatus("error");
         toast.error("This device cannot share its location - the buyer won't see live GPS verification.");
         return;
       }
+      setGpsStatus("watching");
       let lastSentAt = 0;
       watchRef.current = navigator.geolocation.watchPosition(
         (position) => {
@@ -88,7 +119,10 @@ export default function AgentLiveInspectionsSection({ token, onCount }: { token:
             accuracy_m: position.coords.accuracy,
           }).then((locationResponse) => setLiveStatus(locationResponse.data)).catch(() => undefined);
         },
-        () => toast.error("Could not read your location. Check location permission for this site."),
+        (geoError) => {
+          setGpsStatus("error");
+          toast.error(geoError?.code === 1 ? "Location permission was denied for this site - allow it in your browser settings." : "Could not read your location. Check location permission for this site.");
+        },
         { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 },
       );
     } catch (error) {
@@ -112,8 +146,6 @@ export default function AgentLiveInspectionsSection({ token, onCount }: { token:
     }
   };
 
-  const active = sessions.find((item) => item.id === activeId) || null;
-
   return (
     <section id="inspections" className="agent-public-card">
       <div className="agent-public-card-head">
@@ -124,21 +156,26 @@ export default function AgentLiveInspectionsSection({ token, onCount }: { token:
         <EstateIcon name="video" />
       </div>
 
-      {active && (
+      {activeSession && (
         <div style={{ marginBottom: 16 }}>
-          <div className="agent-public-live-video" ref={videoRef} />
-          {liveStatus && (
-            <p className="agent-public-empty" style={{ textAlign: "left", marginTop: 8 }}>
-              {liveStatus.verification ? VERIFICATION_LABEL[liveStatus.verification] || liveStatus.verification : "Finding your GPS signal..."}
-              {liveStatus.distance_m != null && liveStatus.verification !== "on_plot" ? ` - ${Math.round(liveStatus.distance_m)} m from the boundary` : ""}
-            </p>
+          {!videoJoined && !videoError && (
+            <p className="agent-public-empty" style={{ marginBottom: 8 }}>Connecting video...</p>
           )}
-          {active.directions_url && (
-            <a className="agent-public-directions-cta agent-public-live-cta" style={{ marginTop: 10 }} href={active.directions_url} target="_blank" rel="noreferrer">
+          <div className="agent-public-live-video" ref={videoRef} />
+          {videoError && (
+            <p className="agent-public-empty" style={{ textAlign: "left", marginTop: 8, borderColor: "#f3c6c6", color: "#b3302c" }}>{videoError}</p>
+          )}
+          <p className="agent-public-empty" style={{ textAlign: "left", marginTop: 8 }}>
+            {liveStatus
+              ? `${liveStatus.verification ? VERIFICATION_LABEL[liveStatus.verification] || liveStatus.verification : "Finding your GPS signal..."}${liveStatus.distance_m != null && liveStatus.verification !== "on_plot" ? ` - ${Math.round(liveStatus.distance_m)} m from the boundary` : ""}`
+              : gpsStatus === "watching" ? "Waiting for your first GPS fix..." : gpsStatus === "error" ? "Location isn't available - the buyer won't see GPS verification." : "Starting location tracking..."}
+          </p>
+          {activeSession.directions_url && (
+            <a className="agent-public-directions-cta agent-public-live-cta" style={{ marginTop: 10 }} href={activeSession.directions_url} target="_blank" rel="noreferrer">
               <EstateIcon name="navigation" /> Directions to the plot
             </a>
           )}
-          <button type="button" className="agent-public-primary agent-public-live-cta" style={{ marginTop: 10 }} disabled={busy} onClick={() => void endLive(active.id)}>
+          <button type="button" className="agent-public-primary agent-public-live-cta" style={{ marginTop: 10 }} disabled={busy} onClick={() => void endLive(activeSession.id)}>
             {busy ? "Ending..." : "End live inspection"}
           </button>
         </div>

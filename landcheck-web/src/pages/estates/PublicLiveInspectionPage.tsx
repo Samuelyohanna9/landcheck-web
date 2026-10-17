@@ -30,6 +30,7 @@ export default function PublicLiveInspectionPage() {
   const { token } = useParams();
   const [session, setSession] = useState<Session | null>(null);
   const [error, setError] = useState("");
+  const [videoError, setVideoError] = useState("");
   const videoRef = useRef<HTMLDivElement | null>(null);
   const callRef = useRef<DailyCall | null>(null);
   const joinedRoomRef = useRef<string | null>(null);
@@ -53,13 +54,16 @@ export default function PublicLiveInspectionPage() {
   useEffect(() => {
     if (session?.status !== "live" || !session.room_url || !videoRef.current) return undefined;
     if (joinedRoomRef.current === session.room_url) return undefined;
+    setVideoError("");
     const frame = DailyIframe.createFrame(videoRef.current, {
       showLeaveButton: false,
       iframeStyle: { width: "100%", height: "100%", border: "0" },
     });
     callRef.current = frame;
     joinedRoomRef.current = session.room_url;
-    void frame.join({ url: session.room_url });
+    frame.on("error", (event: any) => setVideoError(event?.errorMsg || "The video call hit a connection problem."));
+    frame.on("camera-error", () => setVideoError("Could not access your camera/microphone. Check this site's camera and microphone permission in your browser settings."));
+    frame.join({ url: session.room_url }).catch((joinError: any) => setVideoError(joinError?.errorMsg || "Could not join the video call."));
     return () => {
       frame.destroy();
       callRef.current = null;
@@ -89,6 +93,7 @@ export default function PublicLiveInspectionPage() {
         {session.status === "live" && (
           <>
             <div className="estate-public-live-video" ref={videoRef} />
+            {videoError && <p className="estate-public-guide-error">{videoError}</p>}
             {live && (
               <div className={`estate-public-guide-live${isInside ? " is-inside" : ""}`}>
                 {isInside ? <span className="estate-public-guide-check">&#10003;</span> : null}
