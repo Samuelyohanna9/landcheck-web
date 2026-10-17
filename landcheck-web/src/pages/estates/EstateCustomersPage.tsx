@@ -197,7 +197,7 @@ export default function EstateCustomersPage() {
                   <p className="edash-info-card-name" style={{ margin: 0 }}>{selectedCustomer.name}</p>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button type="button" className="edash-btn-outline" onClick={() => void createPortalLink()}>Buyer portal link</button>
-                    <button type="button" className="edash-btn-outline" onClick={() => navigate(`/estates/${estateId}/live-inspections`)}>Schedule live inspection</button>
+                    <button type="button" className="edash-btn-outline" onClick={() => navigate(`/estates/${estateId}/inspections?tab=live`)}>Schedule live inspection</button>
                   </div>
                 </div>
                 {portalLink && <p className="edash-field-note" style={{ overflowWrap: "anywhere" }}>Copied link: {portalLink}</p>}

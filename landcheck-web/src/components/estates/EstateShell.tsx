@@ -13,7 +13,7 @@ import "../../styles/estate-monday.css";
 import "../../styles/estate-legal.css";
 
 export type EstateNavKey =
-  | "dashboard" | "map" | "plots" | "customers" | "live_inspections" | "approvals" | "payments" | "commissions" | "marketing" | "whatsapp" | "sms" | "survey" | "staking"
+  | "dashboard" | "map" | "plots" | "customers" | "inspections" | "approvals" | "payments" | "commissions" | "marketing" | "whatsapp" | "sms" | "survey" | "staking"
   | "documents" | "development" | "hazard" | "soil" | "reports" | "audit" | "public_site" | "settings" | "notifications"
   | "access";
 
@@ -29,7 +29,13 @@ export const estateNavItems: Array<{ key: EstateNavKey; label: string; icon: Est
   { key: "map", label: "Map & Plots", icon: "map", path: (id) => `/estates/${id}/map` },
   { key: "plots", label: "Plots", icon: "plots", path: (id) => `/estates/${id}/plots` },
   { key: "customers", label: "Customers", icon: "customers", path: (id) => `/estates/${id}/customers` },
-  { key: "live_inspections", label: "Live Inspections", icon: "video", path: (id) => `/estates/${id}/live-inspections` },
+  {
+    key: "inspections", label: "Inspections", icon: "calendar", path: (id) => `/estates/${id}/inspections`,
+    subViews: [
+      { key: "site", label: "Site visits", icon: "calendar", query: "?tab=site" },
+      { key: "live", label: "Live video", icon: "video", query: "?tab=live" },
+    ],
+  },
   { key: "approvals", label: "Approvals", icon: "certificate", path: (id) => `/estates/${id}/approvals` },
   { key: "payments", label: "Sales & Payments", icon: "payments", path: () => "/estates/payments" },
   { key: "commissions", label: "Commissions", icon: "wallet", path: () => "/estates/commissions" },
@@ -38,7 +44,6 @@ export const estateNavItems: Array<{ key: EstateNavKey; label: string; icon: Est
     subViews: [
       { key: "materials", label: "Materials & sharing", icon: "share", query: "?tab=materials" },
       { key: "social", label: "Social posts", icon: "megaphone", query: "?tab=social" },
-      { key: "inspections", label: "Site inspections", icon: "calendar", query: "?tab=inspections" },
       { key: "progress", label: "Site progress", icon: "camera", query: "?tab=progress" },
       { key: "agents", label: "Agents", icon: "customers", query: "?tab=agents" },
     ],
@@ -69,7 +74,7 @@ const NAV_PERMISSION: Partial<Record<EstateNavKey, string>> = {
   map: "plot.read",
   plots: "plot.read",
   customers: "customer.read",
-  live_inspections: "marketing.manage",
+  inspections: "marketing.manage",
   approvals: "estate.manage",
   payments: "payment.read",
   commissions: "allocation.read",
@@ -558,7 +563,7 @@ export default function EstateShell({
                   <span className="edash-nav-label">{item.label}</span>
                   {item.key === "notifications" && unreadDeliveryCount > 0 && <span className="edash-nav-badge">{unreadDeliveryCount > 99 ? "99+" : unreadDeliveryCount}</span>}
                   {item.key === "whatsapp" && whatsappUnreadCount > 0 && <span className="edash-nav-badge">{whatsappUnreadCount > 99 ? "99+" : whatsappUnreadCount}</span>}
-                  {item.key === "live_inspections" && liveInspectionCount > 0 && <span className="edash-nav-badge edash-nav-badge--live">{liveInspectionCount > 99 ? "99+" : liveInspectionCount}</span>}
+                  {item.key === "inspections" && liveInspectionCount > 0 && <span className="edash-nav-badge edash-nav-badge--live">{liveInspectionCount > 99 ? "99+" : liveInspectionCount}</span>}
                   {hasSubViews && (
                     <span
                       role="button"

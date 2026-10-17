@@ -334,6 +334,15 @@
 .estate-public-inspect-slot strong { font-size: .95rem; }
 .estate-public-inspect-slot span { color: var(--estate-public-muted); font-size: .72rem; }
 .estate-public-inspect-slot em { color: var(--estate-public-faint); font-size: .68rem; font-style: normal; }
+.estate-public-inspect-modes { display: inline-flex; gap: 4px; margin: 2px 0 18px; padding: 4px; border-radius: 999px; background: var(--estate-public-bg); }
+.estate-public-inspect-mode { padding: 9px 16px; border: 0; border-radius: 999px; background: transparent; color: var(--estate-public-muted); font-size: .8rem; font-weight: 750; cursor: pointer; }
+.estate-public-inspect-mode.is-active { background: #fff; color: var(--estate-public-ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.estate-public-inspect-live-form { max-width: 480px; }
+.estate-public-inspect-time-label { color: var(--estate-public-muted); font-size: .7rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.estate-public-inspect-time-rows { display: grid; gap: 8px; }
+.estate-public-inspect-time-row { display: flex; align-items: center; gap: 8px; }
+.estate-public-inspect-time-row input { flex: 1; }
+.estate-public-inspect-add-time { align-self: flex-start; }
 .estate-public-inspect-form { display: flex; flex-direction: column; gap: 11px; padding: 18px; border: 1px solid var(--estate-public-border); border-radius: 18px; background: #fff; }
 .estate-public-inspect-form h3 { margin: 0; font-size: 1rem; }
 .estate-public-inspect-form label { display: flex; flex-direction: column; gap: 5px; }

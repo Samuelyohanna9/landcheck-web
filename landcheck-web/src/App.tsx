@@ -82,7 +82,7 @@ const EstateMarketingPage = lazyWithChunkRecovery(() => import("./pages/estates/
 const PublicInspectionBookingPage = lazyWithChunkRecovery(() => import("./pages/estates/PublicInspectionBookingPage"));
 const PublicLiveInspectionPage = lazyWithChunkRecovery(() => import("./pages/estates/PublicLiveInspectionPage"));
 const PublicLiveInspectionReschedulePage = lazyWithChunkRecovery(() => import("./pages/estates/PublicLiveInspectionReschedulePage"));
-const EstateLiveInspectionsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateLiveInspectionsPage"));
+const EstateInspectionsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateInspectionsPage"));
 const EstateApprovalsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateApprovalsPage"));
 
 type ChunkLoadBoundaryProps = {
@@ -404,7 +404,7 @@ export default function App() {
               <Route path="/estates/:estateId/map" element={<EstateProtectedRoute element={<Estates />} />} />
               <Route path="/estates/:estateId/plots" element={<EstateProtectedRoute element={<EstatePlotsPage />} />} />
               <Route path="/estates/:estateId/customers" element={<EstateProtectedRoute element={<EstateCustomersPage />} />} />
-              <Route path="/estates/:estateId/live-inspections" element={<EstateProtectedRoute element={<EstateLiveInspectionsPage />} />} />
+              <Route path="/estates/:estateId/inspections" element={<EstateProtectedRoute element={<EstateInspectionsPage />} />} />
               <Route path="/estates/:estateId/approvals" element={<EstateProtectedRoute element={<EstateApprovalsPage />} />} />
               <Route path="/estates/:estateId/survey" element={<EstateProtectedRoute element={<EstateSurveyPage />} />} />
               <Route path="/estates/:estateId/staking" element={<EstateProtectedRoute element={<EstateStakingPage />} />} />

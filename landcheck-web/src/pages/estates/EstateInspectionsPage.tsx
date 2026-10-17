@@ -1,17 +1,23 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
+import { getEstateAuthSession } from "../../auth/estateAuth";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateModal from "../../components/estates/EstateModal";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
+import MarketingInspectionsTab from "../../components/estates/marketing/MarketingInspectionsTab";
+
+type TabKey = "site" | "live";
 
 type Session = {
   id: string;
-  status: "scheduled" | "live" | "ended" | "cancelled";
+  status: "requested" | "scheduled" | "live" | "ended" | "cancelled";
   estate_name: string;
   plot_number: string;
   buyer_name: string;
+  buyer_phone: string | null;
+  agent_member_id: number | null;
   scheduled_at: string | null;
   proposed_times: string[] | null;
   reschedule_requested_at: string | null;
@@ -37,12 +43,23 @@ type Plot = { id: number; plot_number: string };
 type Customer = { id: number; name: string };
 type Member = { id: number; role: string; subject_id: string };
 
-const STATUS_LABEL: Record<Session["status"], string> = { scheduled: "Scheduled", live: "Live now", ended: "Ended", cancelled: "Cancelled" };
-const STATUS_TONE: Record<Session["status"], string> = { scheduled: "info", live: "live", ended: "neutral", cancelled: "danger" };
+const STATUS_LABEL: Record<Session["status"], string> = { requested: "Requested", scheduled: "Scheduled", live: "Live now", ended: "Ended", cancelled: "Cancelled" };
+const STATUS_TONE: Record<Session["status"], string> = { requested: "warn", scheduled: "info", live: "live", ended: "neutral", cancelled: "danger" };
 
-export default function EstateLiveInspectionsPage() {
+export default function EstateInspectionsPage() {
   const { estateId } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requested = searchParams.get("tab") as TabKey | null;
+  const tab: TabKey = requested === "live" ? "live" : "site";
+  const selectTab = (key: TabKey) => setSearchParams(key === "site" ? {} : { tab: key }, { replace: true });
+
+  const session = getEstateAuthSession();
+  const role = String(session?.user.role_key || "").toLowerCase();
+  const canManage = role === "owner" || role === "manager";
+
   const [estateName, setEstateName] = useState("");
+  const [published, setPublished] = useState(false);
+  const [hasMeetingPoint, setHasMeetingPoint] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [plots, setPlots] = useState<Plot[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -57,7 +74,8 @@ export default function EstateLiveInspectionsPage() {
   const [agentMemberId, setAgentMemberId] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
   const [scheduling, setScheduling] = useState(false);
-  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [approvingKey, setApprovingKey] = useState<string | null>(null);
+  const [requestAgent, setRequestAgent] = useState<Record<string, string>>({});
 
   const load = () => {
     if (!estateId) return;
@@ -70,6 +88,10 @@ export default function EstateLiveInspectionsPage() {
         .then((membersResponse) => setAgents((membersResponse.data?.items || []).filter((row: any) => row.role === "sales" || row.role === "marketer")))
         .catch(() => setAgents([]));
     }).catch(() => undefined);
+    api.get(`/estates/${estateId}/public-settings`).then((response) => {
+      setPublished(Boolean(response.data.public_enabled && response.data.public_slug));
+      setHasMeetingPoint(Boolean(response.data.public_meeting_point));
+    }).catch(() => undefined);
     api.get(`/estates/${estateId}/plots.geojson`).then((response) => setPlots((response.data?.features || []).map((feature: any) => ({ id: feature.properties.id, plot_number: feature.properties.plot_number })))).catch(() => setPlots([]));
     api.get(`/estates/${estateId}/marketing/live-inspections`).then((response) => setSessions(response.data || [])).catch(() => setSessions([]));
     api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));
@@ -81,19 +103,24 @@ export default function EstateLiveInspectionsPage() {
     setShowSchedule(true);
   };
 
-  const approveTime = async (session: Session, isoTime: string) => {
+  const approveTime = async (session: Session, isoTime: string, agentIdOverride?: string) => {
     if (!estateId) return;
-    setApprovingId(session.id);
+    const agentChoice = agentIdOverride ?? requestAgent[session.id];
+    if (session.status === "requested" && !agentChoice) { toast.error("Choose an agent for this plot visit first."); return; }
+    setApprovingKey(`${session.id}-${isoTime}`);
     try {
-      const response = await api.post(`/estates/${estateId}/marketing/live-inspections/${session.id}/approve-time`, { scheduled_at: isoTime });
+      const response = await api.post(`/estates/${estateId}/marketing/live-inspections/${session.id}/approve-time`, {
+        scheduled_at: isoTime,
+        agent_member_id: agentChoice ? Number(agentChoice) : undefined,
+      });
       const customerNote = response.data.customer_notified ? "the buyer was emailed the confirmed time" : "the buyer has no email on file, so wasn't notified directly";
-      const agentNote = response.data.agent_notified ? " and the agent was emailed the change" : "";
-      toast.success(`Time approved - ${customerNote}${agentNote}.`);
+      const agentNote = response.data.agent_notified ? " and the agent was emailed what to do" : "";
+      toast.success(`Time confirmed - ${customerNote}${agentNote}.`);
       load();
     } catch (error) {
-      toast.error(await extractApiErrorMessage(error, "The time could not be approved."));
+      toast.error(await extractApiErrorMessage(error, "The time could not be confirmed."));
     } finally {
-      setApprovingId(null);
+      setApprovingKey(null);
     }
   };
 
@@ -148,78 +175,101 @@ export default function EstateLiveInspectionsPage() {
       key: "home",
       label: "Home",
       groups: [
-        { key: "create", label: "Create", buttons: [{ key: "schedule", label: "Schedule Live Inspection", icon: "video", onClick: openSchedule }] },
+        { key: "create", label: "Create", buttons: tab === "live" ? [{ key: "schedule", label: "Schedule Live Inspection", icon: "video", onClick: openSchedule }] : [] },
         { key: "data", label: "Data", buttons: [{ key: "refresh", label: "Refresh", icon: "refresh", onClick: load }] },
       ],
     },
   ];
 
   return (
-    <EstateShell estateId={estateId} estateName={estateName} activeKey="live_inspections" recentActivity={activity}>
+    <EstateShell estateId={estateId} estateName={estateName} activeKey="inspections" recentActivity={activity}>
       <EstateRibbon tabs={ribbonTabs} />
-      <p className="edash-status-row-desc" style={{ marginBottom: 16 }}>
-        An agent visits the plot in person and opens a live video call. While live, their GPS position is checked against the
-        plot's real boundary every few seconds, so a remote buyer can see - live - whether the agent is actually standing on
-        the land being sold. Built for buyers who can't travel to inspect in person.
-      </p>
-      <div className="edash-card">
-        <div className="edash-card-inner">
-          <div className="edash-card-head"><h3 className="edash-card-title">Live inspections ({sessions.length})</h3></div>
-          {sessions.length ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {sessions.map((session) => (
-                <div key={session.id}>
-                  <div className="edash-info-card" style={{ margin: 0 }}>
-                    <div className="edash-info-card-body">
-                      <div className="edash-info-card-head">
-                        <span className="edash-status-row-title">Plot {session.plot_number} - {session.buyer_name}</span>
-                        <span className={`edash-status-pill tone-${STATUS_TONE[session.status]}`}>{STATUS_LABEL[session.status]}</span>
-                      </div>
-                      <p className="edash-status-row-desc">{formatScheduledTime(session.scheduled_at)}</p>
-                      {session.status === "live" && session.live?.verification && (
-                        <p className="edash-status-row-desc">
-                          {session.live.verification === "on_plot" ? "Agent is on the plot" : session.live.verification === "on_estate" ? "Agent is on the estate" : session.live.verification === "near_estate" ? "Agent is near the estate" : "Agent is away from the plot"}
-                          {session.live.distance_m != null && session.live.verification !== "on_plot" ? ` - ${Math.round(session.live.distance_m)} m` : ""}
-                        </p>
-                      )}
-                      {session.status === "scheduled" && <p className="edash-status-row-desc">Waiting for the agent to go live from their workspace.</p>}
-                    </div>
-                    {(session.status === "scheduled" || session.status === "live") && (
-                      <button
-                        type="button"
-                        className="edash-btn-outline"
-                        style={{ flexShrink: 0 }}
-                        disabled={cancellingId === session.id}
-                        onClick={() => void cancelSession(session)}
-                      >
-                        {cancellingId === session.id ? "..." : session.status === "live" ? "End" : "Cancel"}
-                      </button>
-                    )}
-                  </div>
-                  {session.proposed_times && session.proposed_times.length > 0 && (
-                    <div className="edash-banner tone-warn" style={{ margin: "6px 0 0" }}>
-                      <strong>{session.buyer_name} asked for a different time:</strong>
-                      <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                        {session.proposed_times.map((time) => (
+      <div className="edash-mk-tabs" role="tablist" aria-label="Inspection types" style={{ marginBottom: 16 }}>
+        <button type="button" role="tab" aria-selected={tab === "site"} className={`edash-mk-tab${tab === "site" ? " is-active" : ""}`} onClick={() => selectTab("site")}>Site visits</button>
+        <button type="button" role="tab" aria-selected={tab === "live"} className={`edash-mk-tab${tab === "live" ? " is-active" : ""}`} onClick={() => selectTab("live")}>
+          Live video{sessions.some((s) => s.status === "requested") && <span className="edash-mk-count">{sessions.filter((s) => s.status === "requested").length}</span>}
+        </button>
+      </div>
+
+      {tab === "site" && <MarketingInspectionsTab estateId={estateId} canManage={canManage} hasMeetingPoint={hasMeetingPoint} published={published} />}
+
+      {tab === "live" && (
+        <>
+          <p className="edash-status-row-desc" style={{ marginBottom: 16 }}>
+            An agent visits the plot in person and opens a live video call. While live, their GPS position is checked against the
+            plot's real boundary every few seconds, so a remote buyer can see - live - whether the agent is actually standing on
+            the land being sold. Buyers can also request one themselves from the public page when they can't visit in person.
+          </p>
+          <div className="edash-card">
+            <div className="edash-card-inner">
+              <div className="edash-card-head"><h3 className="edash-card-title">Live inspections ({sessions.length})</h3></div>
+              {sessions.length ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {sessions.map((liveSession) => (
+                    <div key={liveSession.id}>
+                      <div className="edash-info-card" style={{ margin: 0 }}>
+                        <div className="edash-info-card-body">
+                          <div className="edash-info-card-head">
+                            <span className="edash-status-row-title">Plot {liveSession.plot_number} - {liveSession.buyer_name}</span>
+                            <span className={`edash-status-pill tone-${STATUS_TONE[liveSession.status]}`}>{STATUS_LABEL[liveSession.status]}</span>
+                          </div>
+                          <p className="edash-status-row-desc">{formatScheduledTime(liveSession.scheduled_at)}{liveSession.buyer_phone ? ` · ${liveSession.buyer_phone}` : ""}</p>
+                          {liveSession.status === "live" && liveSession.live?.verification && (
+                            <p className="edash-status-row-desc">
+                              {liveSession.live.verification === "on_plot" ? "Agent is on the plot" : liveSession.live.verification === "on_estate" ? "Agent is on the estate" : liveSession.live.verification === "near_estate" ? "Agent is near the estate" : "Agent is away from the plot"}
+                              {liveSession.live.distance_m != null && liveSession.live.verification !== "on_plot" ? ` - ${Math.round(liveSession.live.distance_m)} m` : ""}
+                            </p>
+                          )}
+                          {liveSession.status === "scheduled" && <p className="edash-status-row-desc">Waiting for the agent to go live from their workspace.</p>}
+                          {liveSession.status === "requested" && <p className="edash-status-row-desc">The buyer requested this themselves - assign an agent and confirm one of their times below.</p>}
+                        </div>
+                        {(liveSession.status === "scheduled" || liveSession.status === "live") && (
                           <button
-                            key={time}
                             type="button"
                             className="edash-btn-outline"
-                            disabled={approvingId === session.id}
-                            onClick={() => void approveTime(session, time)}
+                            style={{ flexShrink: 0 }}
+                            disabled={cancellingId === liveSession.id}
+                            onClick={() => void cancelSession(liveSession)}
                           >
-                            {approvingId === session.id ? "..." : `Approve ${formatScheduledTime(time)}`}
+                            {cancellingId === liveSession.id ? "..." : liveSession.status === "live" ? "End" : "Cancel"}
                           </button>
-                        ))}
+                        )}
                       </div>
+                      {liveSession.proposed_times && liveSession.proposed_times.length > 0 && (
+                        <div className={`edash-banner tone-warn`} style={{ margin: "6px 0 0" }}>
+                          <strong>{liveSession.status === "requested" ? `${liveSession.buyer_name} can do these times:` : `${liveSession.buyer_name} asked for a different time:`}</strong>
+                          {liveSession.status === "requested" && !liveSession.agent_member_id && (
+                            <label className="edash-field" style={{ marginTop: 8, maxWidth: 240 }}>
+                              <span>Assign agent</span>
+                              <select value={requestAgent[liveSession.id] || ""} onChange={(event) => setRequestAgent((current) => ({ ...current, [liveSession.id]: event.target.value }))}>
+                                <option value="">Choose an agent</option>
+                                {agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.subject_id}</option>)}
+                              </select>
+                            </label>
+                          )}
+                          <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                            {liveSession.proposed_times.map((time) => (
+                              <button
+                                key={time}
+                                type="button"
+                                className="edash-btn-outline"
+                                disabled={approvingKey === `${liveSession.id}-${time}` || (liveSession.status === "requested" && !liveSession.agent_member_id && !requestAgent[liveSession.id])}
+                                onClick={() => void approveTime(liveSession, time)}
+                              >
+                                {approvingKey === `${liveSession.id}-${time}` ? "..." : `Confirm ${formatScheduledTime(time)}`}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  ))}
                 </div>
-              ))}
+              ) : <p className="edash-tab-empty">No live inspections yet. Use "Schedule Live Inspection" above, or a buyer can request one from the public page.</p>}
             </div>
-          ) : <p className="edash-tab-empty">No live inspections scheduled yet. Use "Schedule Live Inspection" above.</p>}
-        </div>
-      </div>
+          </div>
+        </>
+      )}
 
       {showSchedule && (
         <EstateModal title="Schedule a live inspection" subtitle="The buyer gets a link by email that lights up automatically once the agent goes live on site." onClose={() => setShowSchedule(false)}>
