@@ -132,6 +132,14 @@ export default function AgentLiveInspectionsSection({ token, onCount }: { token:
     }
   };
 
+  const flipCamera = async () => {
+    try {
+      await callRef.current?.cycleCamera();
+    } catch {
+      toast.error("Could not switch camera - this device may only have one.");
+    }
+  };
+
   const endLive = async (sessionId: string) => {
     setBusy(true);
     try {
@@ -162,6 +170,11 @@ export default function AgentLiveInspectionsSection({ token, onCount }: { token:
             <p className="agent-public-empty" style={{ marginBottom: 8 }}>Connecting video...</p>
           )}
           <div className="agent-public-live-video" ref={videoRef} />
+          {videoJoined && !videoError && (
+            <button type="button" className="agent-public-directions-cta agent-public-live-cta" style={{ marginTop: 8 }} onClick={() => void flipCamera()}>
+              <EstateIcon name="refresh" /> Flip camera
+            </button>
+          )}
           {videoError && (
             <p className="agent-public-empty" style={{ textAlign: "left", marginTop: 8, borderColor: "#f3c6c6", color: "#b3302c" }}>{videoError}</p>
           )}
