@@ -169,11 +169,12 @@ export default function EstateLanding() {
       </section>
 
       <section className="estate-centered-section" id="trust">
-        <h2>Built to stop land scams.</h2>
+        <h2>Give buyers a reason to trust you.</h2>
         <p>
-          Every plot can carry a GPS-verified boundary, a staff-checked title badge, and a live government-approvals
-          record, so a buyer can verify a plot number or agent code is genuine before paying anyone - and, on
-          Enterprise, join a GPS-verified live video inspection from anywhere in the world, no flight home required.
+          Land fraud is what makes buyers hesitate. Put a GPS-verified boundary, a staff-checked title badge, and a
+          live government-approvals record on every plot you publish, so buyers can confirm a plot or agent is
+          genuinely yours before they pay anyone - and, on Enterprise, let your agents close distant and diaspora
+          buyers with a GPS-verified live video walkthrough instead of losing the sale to "I need to see it first."
         </p>
         <Link to="/estates/register" className="estate-button">Start free trial</Link>
       </section>
