@@ -63,6 +63,22 @@ export default function EstateLiveInspectionsPage() {
     setShowSchedule(true);
   };
 
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const cancelSession = async (session: Session) => {
+    const verb = session.status === "live" ? "End" : "Cancel";
+    if (!estateId || !window.confirm(`${verb} the live inspection for Plot ${session.plot_number}?`)) return;
+    setCancellingId(session.id);
+    try {
+      await api.post(`/estates/${estateId}/marketing/live-inspections/${session.id}/cancel`);
+      toast.success(`${verb === "End" ? "Ended" : "Cancelled"}.`);
+      load();
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, `The live inspection could not be ${verb === "End" ? "ended" : "cancelled"}.`));
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
   const schedule = async () => {
     if (!estateId || !plotId) { toast.error("Choose a plot."); return; }
     if (!customerId && !buyerName.trim()) { toast.error("Pick an existing customer, or enter the buyer's name."); return; }
@@ -130,6 +146,17 @@ export default function EstateLiveInspectionsPage() {
                     )}
                     {session.status === "scheduled" && <p className="edash-status-row-desc">Waiting for the agent to go live from their workspace.</p>}
                   </div>
+                  {(session.status === "scheduled" || session.status === "live") && (
+                    <button
+                      type="button"
+                      className="edash-btn-outline"
+                      style={{ flexShrink: 0 }}
+                      disabled={cancellingId === session.id}
+                      onClick={() => void cancelSession(session)}
+                    >
+                      {cancellingId === session.id ? "..." : session.status === "live" ? "End" : "Cancel"}
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
