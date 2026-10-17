@@ -20,6 +20,8 @@ type PlotFeature = {
     area_sqm?: number;
     asking_price?: string | null;
     block_id?: number | null;
+    title_verified?: boolean;
+    title_verified_note?: string | null;
   };
 };
 
@@ -53,6 +55,9 @@ export default function EstatePlotsPage() {
   const [priceMode, setPriceMode] = useState<"uniform" | "custom">("uniform");
   const [uniformPrice, setUniformPrice] = useState("");
   const [listingDefaultsBusy, setListingDefaultsBusy] = useState<"address" | "price" | null>(null);
+  const [editingTitleId, setEditingTitleId] = useState<number | null>(null);
+  const [titleNoteDraft, setTitleNoteDraft] = useState("");
+  const [titleBusy, setTitleBusy] = useState(false);
 
   const syncListingDefaults = (rows: PlotFeature["properties"][]) => {
     const addresses = [...new Set(rows.map((plot) => plot.public_address?.trim()).filter(Boolean))] as string[];
@@ -116,6 +121,20 @@ export default function EstatePlotsPage() {
       toast.error(await extractApiErrorMessage(error, "The plot address could not be saved."));
     } finally {
       setAddressBusy(false);
+    }
+  };
+
+  const setTitleVerified = async (plotId: number, verified: boolean, note?: string) => {
+    setTitleBusy(true);
+    try {
+      const response = await api.patch(`/estates/plots/${plotId}/title-verification`, { verified, note: note || null });
+      setPlots((current) => current.map((plot) => plot.id === plotId ? { ...plot, title_verified: response.data.title_verified, title_verified_note: note || null } : plot));
+      setEditingTitleId(null);
+      toast.success(verified ? "Plot marked as title-verified - this now shows publicly." : "Verification removed.");
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "Could not update title verification."));
+    } finally {
+      setTitleBusy(false);
     }
   };
 
@@ -228,7 +247,7 @@ export default function EstatePlotsPage() {
             <div style={{ overflowX: "auto" }}>
               <table className="edash-mini-table">
                 <thead>
-                  <tr><th>Plot No.</th><th>Block</th><th>Status</th><th>Development</th><th>Area</th><th>Plot address</th><th>Public price</th><th>Geometry</th><th /></tr>
+                  <tr><th>Plot No.</th><th>Block</th><th>Status</th><th>Development</th><th>Area</th><th>Plot address</th><th>Public price</th><th>Geometry</th><th>Title</th><th /></tr>
                 </thead>
                 <tbody>
                   {filtered.map((plot) => (
@@ -253,6 +272,22 @@ export default function EstatePlotsPage() {
                         )}
                       </td>
                       <td data-label="Geometry"><span className={`edash-status-pill tone-${statusTone(plot.geometry_status)}`}>{plot.geometry_status}</span></td>
+                      <td data-label="Title">
+                        {editingTitleId === plot.id ? (
+                          <span className="edash-inline-price-editor">
+                            <input value={titleNoteDraft} onChange={(event) => setTitleNoteDraft(event.target.value)} aria-label={`Verification note for Plot ${plot.plot_number}`} placeholder="Note (optional) - which document, who checked" />
+                            <button type="button" className="edash-card-link" disabled={titleBusy} onClick={() => void setTitleVerified(plot.id, true, titleNoteDraft.trim())}>Save</button>
+                            <button type="button" className="edash-card-link" onClick={() => setEditingTitleId(null)}>Cancel</button>
+                          </span>
+                        ) : plot.title_verified ? (
+                          <span className="edash-inline-price">
+                            <span className="edash-status-pill tone-good">Verified</span>
+                            <button type="button" className="edash-card-link" disabled={titleBusy} onClick={() => void setTitleVerified(plot.id, false)}>Remove</button>
+                          </span>
+                        ) : (
+                          <button type="button" className="edash-card-link" onClick={() => { setEditingTitleId(plot.id); setTitleNoteDraft(""); }}>Mark verified</button>
+                        )}
+                      </td>
                       <td>
                         <button type="button" className="edash-btn-outline" onClick={() => navigate(`/estates/${estateId}/map?plot=${plot.id}`)}>
                           <EstateIcon name="map" /> Open

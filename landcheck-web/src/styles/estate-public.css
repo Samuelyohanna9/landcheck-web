@@ -63,6 +63,8 @@
 .estate-public-detail-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .estate-public-detail-top h3 { margin: 0; font-size: 1.35rem; letter-spacing: -.03em; }
 .estate-public-status-pill { display: inline-flex; align-items: center; padding: 5px 8px; border-radius: 999px; font-size: .68rem; font-weight: 800; }
+.estate-public-verified-badge { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; padding: 2px 7px; border-radius: 999px; background: #e6f6ec; color: #12703f; font-size: .64rem; font-weight: 800; vertical-align: middle; }
+.estate-public-verified-note { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 10px 0 0; color: var(--estate-public-muted); font-size: .76rem; }
 .estate-public-plot-detail dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 18px 0; }
 .estate-public-plot-detail dl > div { min-width: 0; }
 .estate-public-plot-detail dt { color: var(--estate-public-muted); font-size: .68rem; }
