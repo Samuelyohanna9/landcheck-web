@@ -80,3 +80,30 @@ export function formatDistance(meters: number): string {
   if (meters < 1000) return `${Math.max(1, Math.round(meters))} m`;
   return `${(meters / 1000).toFixed(meters < 10000 ? 1 : 0)} km`;
 }
+
+export type LiveApproachTone = "neutral" | "good" | "warn" | "bad";
+export type LiveVerification = "on_plot" | "on_estate" | "near_estate" | "outside" | null;
+
+/** Shared live-inspection distance/tone tiering, used by both the buyer's and the agent's live
+ * views so their colours and copy stay in sync: green+tick once the agent is actually on the
+ * plot, amber while they're closing in, red while they're still far off. distanceM is the
+ * distance to the specific PLOT (see verify_location()'s third return value), not the estate. */
+export function describeLiveApproach(verification: LiveVerification, distanceM: number | null): { tone: LiveApproachTone; buyerMessage: string; agentMessage: string } {
+  if (verification === "on_plot") {
+    return { tone: "good", buyerMessage: "Verified - your agent is on the plot", agentMessage: "You are at the correct location" };
+  }
+  if (verification === null || distanceM === null) {
+    return { tone: "neutral", buyerMessage: "Waiting for your agent's GPS signal...", agentMessage: "Finding your GPS signal..." };
+  }
+  const dist = formatDistance(distanceM);
+  if (distanceM <= 50) {
+    return { tone: "warn", buyerMessage: `Almost there - your agent is ${dist} from the plot`, agentMessage: `Almost there - keep going, ${dist} to the plot` };
+  }
+  if (distanceM <= 150) {
+    return { tone: "warn", buyerMessage: `Getting closer - your agent is ${dist} from the plot`, agentMessage: `Getting closer - ${dist} to go` };
+  }
+  if (verification === "outside") {
+    return { tone: "bad", buyerMessage: `Your agent is not at the estate yet - ${dist} from the plot`, agentMessage: `You are not at the estate yet - keep going (${dist} to the plot)` };
+  }
+  return { tone: "bad", buyerMessage: `Your agent is not on the plot yet - ${dist} away`, agentMessage: `You are not at the right location yet - keep going (${dist} to the plot)` };
+}

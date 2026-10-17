@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import DailyIframe, { type DailyCall } from "@daily-co/daily-js";
 import { api, extractApiErrorMessage } from "../../../api/client";
+import { describeLiveApproach, type LiveVerification } from "../../../utils/geoGuide";
 import EstateIcon from "../EstateIcon";
 
 type Session = {
@@ -10,16 +11,9 @@ type Session = {
   estate_name: string;
   plot_number: string;
   buyer_name: string;
-  live: { verification: string | null; distance_m: number | null; updated_at: string | null } | null;
+  live: { verification: LiveVerification; distance_m: number | null; updated_at: string | null } | null;
   room_url?: string | null;
   directions_url?: string | null;
-};
-
-const VERIFICATION_LABEL: Record<string, string> = {
-  on_plot: "You are on the plot",
-  on_estate: "You are on the estate, near the plot",
-  near_estate: "You are close to the estate",
-  outside: "You are away from the plot",
 };
 
 // The agent's side of a live inspection: go live on a scheduled session (camera/mic + a
@@ -29,7 +23,7 @@ const VERIFICATION_LABEL: Record<string, string> = {
 export default function AgentLiveInspectionsSection({ token, onCount }: { token: string; onCount?: (count: number) => void }) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [liveStatus, setLiveStatus] = useState<{ verification: string | null; distance_m: number | null } | null>(null);
+  const [liveStatus, setLiveStatus] = useState<{ verification: LiveVerification; distance_m: number | null } | null>(null);
   const [busy, setBusy] = useState(false);
   const [videoError, setVideoError] = useState("");
   const [videoJoined, setVideoJoined] = useState(false);
@@ -178,11 +172,23 @@ export default function AgentLiveInspectionsSection({ token, onCount }: { token:
           {videoError && (
             <p className="agent-public-empty" style={{ textAlign: "left", marginTop: 8, borderColor: "#f3c6c6", color: "#b3302c" }}>{videoError}</p>
           )}
-          <p className="agent-public-empty" style={{ textAlign: "left", marginTop: 8 }}>
-            {liveStatus
-              ? `${liveStatus.verification ? VERIFICATION_LABEL[liveStatus.verification] || liveStatus.verification : "Finding your GPS signal..."}${liveStatus.distance_m != null && liveStatus.verification !== "on_plot" ? ` - ${Math.round(liveStatus.distance_m)} m from the boundary` : ""}`
-              : gpsStatus === "watching" ? "Waiting for your first GPS fix..." : gpsStatus === "error" ? "Location isn't available - the buyer won't see GPS verification." : "Starting location tracking..."}
-          </p>
+          {liveStatus ? (
+            (() => {
+              const approach = describeLiveApproach(liveStatus.verification, liveStatus.distance_m);
+              return (
+                <div className={`agent-public-live-feedback agent-public-live-tone-${approach.tone}`} style={{ marginTop: 8 }}>
+                  <span className={`agent-public-live-indicator${approach.tone === "neutral" ? " is-searching" : ""}`} aria-hidden="true">
+                    {approach.tone === "good" ? <span className="agent-public-live-check">&#10003;</span> : <span className="agent-public-live-pulse" />}
+                  </span>
+                  <strong className="agent-public-live-message">{approach.agentMessage}</strong>
+                </div>
+              );
+            })()
+          ) : (
+            <p className="agent-public-empty" style={{ textAlign: "left", marginTop: 8 }}>
+              {gpsStatus === "watching" ? "Waiting for your first GPS fix..." : gpsStatus === "error" ? "Location isn't available - the buyer won't see GPS verification." : "Starting location tracking..."}
+            </p>
+          )}
           {activeSession.directions_url && (
             <a className="agent-public-directions-cta agent-public-live-cta" style={{ marginTop: 10 }} href={activeSession.directions_url} target="_blank" rel="noreferrer">
               <EstateIcon name="navigation" /> Directions to the plot

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import DailyIframe, { type DailyCall } from "@daily-co/daily-js";
 import { api, extractApiErrorMessage } from "../../api/client";
-import { formatDistance } from "../../utils/geoGuide";
+import { describeLiveApproach } from "../../utils/geoGuide";
 import "../../styles/estate-public.css";
 
 type Verification = "on_plot" | "on_estate" | "near_estate" | "outside" | null;
@@ -21,13 +21,6 @@ function formatScheduledTime(value: string | null): string {
   if (!value) return "";
   return new Date(value).toLocaleString(undefined, { weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" });
 }
-
-const VERIFICATION_TEXT: Record<Exclude<Verification, null>, string> = {
-  on_plot: "Your agent is standing on the plot",
-  on_estate: "Your agent is on the estate, near the plot",
-  near_estate: "Your agent is close to the estate",
-  outside: "Your agent is away from the plot right now",
-};
 
 // Buyer-facing live view: polls for session status (scheduled -> live -> ended) the same way
 // the estate dashboard already polls hazard/soil analysis jobs - no WebSocket in this codebase,
@@ -81,7 +74,7 @@ export default function PublicLiveInspectionPage() {
   if (!session) return <main className="estate-public-app"><div className="estate-public-loading">Loading your live inspection...</div></main>;
 
   const live = session.live;
-  const isInside = live?.verification === "on_plot" || live?.verification === "on_estate";
+  const approach = live ? describeLiveApproach(live.verification, live.distance_m) : null;
 
   return (
     <main className="estate-public-app">
@@ -108,14 +101,14 @@ export default function PublicLiveInspectionPage() {
           <>
             <div className="estate-public-live-video" ref={videoRef} />
             {videoError && <p className="estate-public-guide-error">{videoError}</p>}
-            {live && (
-              <div className={`estate-public-guide-live${isInside ? " is-inside" : ""}`}>
-                {isInside ? <span className="estate-public-guide-check">&#10003;</span> : null}
+            {live && approach && (
+              <div className={`estate-public-guide-live estate-public-live-tone-${approach.tone}`}>
+                <span className={`estate-public-live-indicator${approach.tone === "neutral" ? " is-searching" : ""}`} aria-hidden="true">
+                  {approach.tone === "good" ? <span className="estate-public-guide-check">&#10003;</span> : <span className="estate-public-live-pulse" />}
+                </span>
                 <div>
-                  <strong>{live.verification ? VERIFICATION_TEXT[live.verification] : "Waiting for a GPS signal..."}</strong>
-                  {live.distance_m != null && live.verification !== "on_plot" && (
-                    <span>{formatDistance(live.distance_m)} from the plot boundary</span>
-                  )}
+                  <strong className="estate-public-live-message">{approach.buyerMessage}</strong>
+                  {live.updated_at && <span className="estate-public-live-updated">Updated {new Date(live.updated_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" })}</span>}
                 </div>
               </div>
             )}

@@ -319,6 +319,31 @@
 .estate-public-guide-arrow { display: grid; place-items: center; flex: 0 0 56px; height: 56px; border-radius: 50%; background: #fff; color: #2a78d6; box-shadow: inset 0 0 0 1px #cfe0f7; }
 .estate-public-guide-arrow svg { width: 30px; height: 30px; transition: transform .25s ease; }
 .estate-public-guide-check { color: #1e8a4c; font-size: 1.6rem; font-weight: 800; }
+
+/* Live-inspection approach feedback (buyer and agent sides share these tone classes via
+   describeLiveApproach() in utils/geoGuide.ts) - amber while closing in, red while still far,
+   green with an animated tick once the agent is confirmed on the plot. */
+.estate-public-live-tone-neutral { border-color: var(--estate-public-border); background: var(--estate-public-bg); }
+.estate-public-live-tone-warn { border-color: #f0d9a8; background: #fdf7e9; }
+.estate-public-live-tone-bad { border-color: #f3c6c6; background: #fdeceb; }
+.estate-public-live-tone-good { border-color: #b7e4c7; background: #e9f8ef; }
+.estate-public-live-message { font-weight: 800; }
+.estate-public-live-tone-warn .estate-public-live-message { color: #a3690a; }
+.estate-public-live-tone-bad .estate-public-live-message { color: #b3302c; }
+.estate-public-live-tone-good .estate-public-live-message { color: #1e8a4c; }
+.estate-public-live-updated { color: var(--estate-public-faint) !important; font-size: .68rem !important; text-transform: uppercase; letter-spacing: .04em; }
+.estate-public-live-indicator { display: grid; place-items: center; flex: 0 0 48px; width: 48px; height: 48px; border-radius: 50%; background: #fff; }
+.estate-public-live-indicator .estate-public-guide-check { animation: estate-public-tick-pop .4s cubic-bezier(.34,1.56,.64,1); }
+.estate-public-live-pulse { width: 14px; height: 14px; border-radius: 50%; background: currentColor; }
+.estate-public-live-tone-warn .estate-public-live-pulse, .estate-public-live-tone-bad .estate-public-live-pulse { color: inherit; animation: estate-public-pulse 1.4s ease-in-out infinite; }
+.estate-public-live-tone-warn .estate-public-live-indicator { color: #c98a1a; }
+.estate-public-live-tone-bad .estate-public-live-indicator { color: #c0453f; }
+.estate-public-live-indicator.is-searching .estate-public-live-pulse { color: var(--estate-public-faint); animation: estate-public-pulse 1.4s ease-in-out infinite; }
+@keyframes estate-public-tick-pop { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.25); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes estate-public-pulse { 0%, 100% { opacity: .35; transform: scale(.85); } 50% { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .estate-public-live-indicator .estate-public-guide-check, .estate-public-live-pulse { animation: none; }
+}
 .estate-public-guide-beacons { margin-top: 14px; }
 .estate-public-guide-beacons summary { cursor: pointer; color: var(--estate-public-brand-dark); font-size: .8rem; font-weight: 750; }
 .estate-public-guide-beacon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin: 12px 0; }
