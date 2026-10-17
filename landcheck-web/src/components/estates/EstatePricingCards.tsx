@@ -3,10 +3,10 @@ import { useState } from "react";
 // Mirrors app/services/estates/billing_plans.py exactly - if the price ever changes, update both
 // (the backend is the source of truth for what's actually charged; this is display copy only).
 export const ESTATE_PLANS = {
-  basic: { label: "Basic", monthly: 19500, yearly: 220000, hazardAnalysis: false, autoPosting: false, soilAnalysis: false, smsNotifications: false, maxEstates: 1 },
-  plus: { label: "Plus", monthly: 24500, yearly: 285000, hazardAnalysis: true, autoPosting: false, soilAnalysis: false, smsNotifications: false, maxEstates: 3 },
-  pro: { label: "Pro", monthly: 48500, yearly: 533500, hazardAnalysis: true, autoPosting: true, soilAnalysis: true, smsNotifications: true, maxEstates: 6 },
-  enterprise: { label: "Enterprise", monthly: 145000, yearly: 1595000, hazardAnalysis: true, autoPosting: true, soilAnalysis: true, smsNotifications: true, maxEstates: null },
+  basic: { label: "Basic", monthly: 19500, yearly: 220000, hazardAnalysis: false, autoPosting: false, soilAnalysis: false, smsNotifications: false, liveInspections: false, maxEstates: 1 },
+  plus: { label: "Plus", monthly: 24500, yearly: 285000, hazardAnalysis: true, autoPosting: false, soilAnalysis: false, smsNotifications: false, liveInspections: false, maxEstates: 3 },
+  pro: { label: "Pro", monthly: 48500, yearly: 533500, hazardAnalysis: true, autoPosting: true, soilAnalysis: true, smsNotifications: true, liveInspections: false, maxEstates: 6 },
+  enterprise: { label: "Enterprise", monthly: 145000, yearly: 1595000, hazardAnalysis: true, autoPosting: true, soilAnalysis: true, smsNotifications: true, liveInspections: true, maxEstates: null },
 } as const;
 
 export type EstatePlanKey = keyof typeof ESTATE_PLANS;
@@ -49,6 +49,7 @@ const PLAN_FEATURES: Record<EstatePlanKey, string[]> = {
   enterprise: [
     "Unlimited estates",
     "Everything in Pro",
+    "Live video inspections - a site agent walks a remote buyer through the plot by video call, GPS-verified in real time so they can see it's the real plot - built for diaspora and out-of-town buyers",
     "Built for large developers and multi-estate portfolios",
     "Priority onboarding and support",
   ],

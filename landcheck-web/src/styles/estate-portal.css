@@ -126,6 +126,7 @@
 .estate-included-card ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 13px; }
 .estate-included-card li { position: relative; padding-left: 24px; color: var(--estate-ink); font-size: .92rem; line-height: 1.5; }
 .estate-included-card li::before { content: "\2713"; position: absolute; left: 0; color: #16816e; font-weight: 800; }
+.estate-included-tag { display: inline-block; margin-left: 2px; padding: 2px 8px; border-radius: 999px; background: var(--estate-ink); color: #fff; font: 800 .6rem Arial, sans-serif; letter-spacing: .05em; text-transform: uppercase; vertical-align: middle; }
 
 /* Public Estate website feature row: phone mockup with an auto-cycling screenshot carousel.
    (The automatic-marketing screenshot moved into .estate-screenshot-grid above, as a third card

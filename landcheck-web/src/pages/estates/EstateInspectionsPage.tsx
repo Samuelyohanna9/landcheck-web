@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import { getEstateAuthSession } from "../../auth/estateAuth";
@@ -60,6 +60,7 @@ export default function EstateInspectionsPage() {
   const [estateName, setEstateName] = useState("");
   const [published, setPublished] = useState(false);
   const [hasMeetingPoint, setHasMeetingPoint] = useState(false);
+  const [liveInspectionsEnabled, setLiveInspectionsEnabled] = useState(true);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [plots, setPlots] = useState<Plot[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -81,6 +82,7 @@ export default function EstateInspectionsPage() {
     if (!estateId) return;
     api.get(`/estates/${estateId}`).then((response) => {
       setEstateName(response.data.name);
+      setLiveInspectionsEnabled(Boolean(response.data.live_inspections_enabled));
       void api.get(`/estates/organizations/${response.data.organization_id}/customers`, { params: { page: 1, page_size: 100 } })
         .then((customersResponse) => setCustomers((customersResponse.data?.items || []).map((row: any) => ({ id: row.id, name: row.name }))))
         .catch(() => setCustomers([]));
@@ -175,7 +177,7 @@ export default function EstateInspectionsPage() {
       key: "home",
       label: "Home",
       groups: [
-        { key: "create", label: "Create", buttons: tab === "live" ? [{ key: "schedule", label: "Schedule Live Inspection", icon: "video", onClick: openSchedule }] : [] },
+        { key: "create", label: "Create", buttons: tab === "live" && liveInspectionsEnabled ? [{ key: "schedule", label: "Schedule Live Inspection", icon: "video", onClick: openSchedule }] : [] },
         { key: "data", label: "Data", buttons: [{ key: "refresh", label: "Refresh", icon: "refresh", onClick: load }] },
       ],
     },
@@ -193,7 +195,20 @@ export default function EstateInspectionsPage() {
 
       {tab === "site" && <MarketingInspectionsTab estateId={estateId} canManage={canManage} hasMeetingPoint={hasMeetingPoint} published={published} />}
 
-      {tab === "live" && (
+      {tab === "live" && !liveInspectionsEnabled && (
+        <div className="edash-card">
+          <div className="edash-card-inner" style={{ textAlign: "center", padding: "48px 24px" }}>
+            <h3 className="edash-card-title" style={{ fontSize: "1.1rem", marginBottom: 8 }}>Live video inspections are an Enterprise plan feature</h3>
+            <p className="edash-status-row-desc" style={{ maxWidth: 440, margin: "0 auto 18px" }}>
+              Let a remote buyer watch an agent walk the plot on video, with their GPS position verified live against the plot's
+              real boundary - built for diaspora and out-of-town buyers who can't visit in person. Available on Enterprise.
+            </p>
+            <Link className="edash-btn-primary" style={{ display: "inline-flex" }} to="/estates/billing">Upgrade to Enterprise</Link>
+          </div>
+        </div>
+      )}
+
+      {tab === "live" && liveInspectionsEnabled && (
         <>
           <p className="edash-status-row-desc" style={{ marginBottom: 16 }}>
             An agent visits the plot in person and opens a live video call. While live, their GPS position is checked against the

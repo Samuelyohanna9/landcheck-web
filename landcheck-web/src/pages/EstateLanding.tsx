@@ -7,7 +7,9 @@ import "../styles/public-landing.css";
 
 const DEMO_MAILTO = "mailto:admin@landcheck.online?subject=LandCheck%20Estates%20demo%20request";
 
-const includedGroups = [
+type IncludedItem = string | { text: string; tag: string };
+
+const includedGroups: Array<{ title: string; items: IncludedItem[] }> = [
   {
     title: "Plan and build",
     items: [
@@ -32,6 +34,10 @@ const includedGroups = [
       "WhatsApp inbox for buyer and lead chats",
       "Facebook and Instagram auto-posting with comments and likes",
       "QR-coded marketing campaigns by channel",
+      "“Verified by LandCheck” title badges buyers can trust",
+      "Government approvals tracker - Survey Plan, Layout, Governor's Consent, C of O",
+      "Plot and agent fraud checks, right on your public page",
+      { text: "Live video inspections for diaspora and out-of-town buyers, GPS-verified in real time", tag: "Enterprise" },
     ],
   },
 ];
@@ -153,7 +159,9 @@ export default function EstateLanding() {
             <div className="estate-included-card" key={group.title}>
               <h3>{group.title}</h3>
               <ul>
-                {group.items.map((item) => <li key={item}>{item}</li>)}
+                {group.items.map((item) => typeof item === "string"
+                  ? <li key={item}>{item}</li>
+                  : <li key={item.text}>{item.text} <span className="estate-included-tag">{item.tag}</span></li>)}
               </ul>
             </div>
           ))}

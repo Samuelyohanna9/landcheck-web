@@ -13,13 +13,14 @@ function dayKey(value: string) {
 }
 
 export default function PublicInspectionSection({
-  slug, source, plotOptions, selectedPlotId, agentName, onLoaded,
+  slug, source, plotOptions, selectedPlotId, agentName, liveInspectionsEnabled, onLoaded,
 }: {
   slug: string;
   source: string;
   plotOptions: Array<{ id: number; plot_number: string }>;
   selectedPlotId: number | null;
   agentName?: string | null;
+  liveInspectionsEnabled: boolean;
   onLoaded?: (count: number) => void;
 }) {
   const [mode, setMode] = useState<"physical" | "live">("physical");
@@ -63,7 +64,7 @@ export default function PublicInspectionSection({
     setLivePlotId(selectedPlotId ? String(selectedPlotId) : "");
   }, [selectedPlotId]);
 
-  useEffect(() => { if (!slots.length && plotOptions.length) setMode("live"); }, [slots.length, plotOptions.length]);
+  useEffect(() => { if (!slots.length && liveInspectionsEnabled && plotOptions.length) setMode("live"); }, [slots.length, liveInspectionsEnabled, plotOptions.length]);
 
   const grouped = useMemo(() => {
     const groups: Array<{ day: string; slots: Slot[] }> = [];
@@ -127,7 +128,7 @@ export default function PublicInspectionSection({
 
   if (loading) return null;
   const hasPhysical = slots.length > 0;
-  const hasLive = plotOptions.length > 0;
+  const hasLive = liveInspectionsEnabled && plotOptions.length > 0;
   if (!hasPhysical && !hasLive && !done && !liveDone) return null;
 
   const manageUrl = done ? `${window.location.origin}/estates/inspection/${done.manage_token}` : "";
