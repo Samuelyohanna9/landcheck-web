@@ -168,6 +168,16 @@ export default function EstateLanding() {
         </div>
       </section>
 
+      <section className="estate-centered-section" id="trust">
+        <h2>Built to stop land scams.</h2>
+        <p>
+          Every plot can carry a GPS-verified boundary, a staff-checked title badge, and a live government-approvals
+          record, so a buyer can verify a plot number or agent code is genuine before paying anyone - and, on
+          Enterprise, join a GPS-verified live video inspection from anywhere in the world, no flight home required.
+        </p>
+        <Link to="/estates/register" className="estate-button">Start free trial</Link>
+      </section>
+
       <section className="estate-content-section estate-feature-section" id="public-site">
         <div className="estate-feature-row estate-feature-row--phone">
           <div className="estate-feature-text">

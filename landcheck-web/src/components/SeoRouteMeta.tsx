@@ -89,9 +89,9 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
   "/estates": {
     title: "LandCheck Estates | Estate Management, Sales & Marketing Software Nigeria",
     description:
-      "Plan and manage property developments in Nigeria with LandCheck Estates. Import estate layouts from CSV, GIS, CAD, or scanned plans, digitize plots, manage buyers and payments, message leads over WhatsApp, and auto-post listings to Facebook and Instagram - all from one dashboard.",
+      "Plan and manage property developments in Nigeria with LandCheck Estates - GPS-verified plots, staff-checked title badges, and a government approvals tracker that help prevent land scams. Buyers can verify a plot or agent before paying, join a GPS-verified live video inspection from abroad, reserve online, and get WhatsApp, SMS and Facebook/Instagram marketing - all from one dashboard.",
     keywords:
-      "estate management software Nigeria, real estate development software Nigeria, estate layout design Nigeria, plot management software, estate plot sales, land development platform Nigeria, estate mapping, georeference estate layout, scanned survey plan digitizing, CAD DXF estate import, estate road and open space mapping, UTM coordinate system Nigeria, customer allocation, plot payment tracking, survey plan software, DGPS staking coordinates, estate development tracking, estate audit trail, estate WhatsApp inbox, Facebook Instagram posting software Nigeria, real estate social media automation, SMS notifications real estate Nigeria, estate marketing software Nigeria, QR code lead tracking real estate, soil analysis Nigeria, bearing capacity estimate Nigeria, water table tendency Nigeria, geotechnical survey request Nigeria",
+      "estate management software Nigeria, real estate development software Nigeria, estate layout design Nigeria, plot management software, estate plot sales, land development platform Nigeria, estate mapping, georeference estate layout, scanned survey plan digitizing, CAD DXF estate import, estate road and open space mapping, UTM coordinate system Nigeria, customer allocation, plot payment tracking, survey plan software, DGPS staking coordinates, estate development tracking, estate audit trail, estate WhatsApp inbox, Facebook Instagram posting software Nigeria, real estate social media automation, SMS notifications real estate Nigeria, estate marketing software Nigeria, QR code lead tracking real estate, soil analysis Nigeria, bearing capacity estimate Nigeria, water table tendency Nigeria, geotechnical survey request Nigeria, prevent land scams Nigeria, avoid land fraud Nigeria, Omo-Onile fraud prevention, verify land agent Nigeria, verify plot before payment, land title verification Nigeria, GPS verified plot inspection, live video land inspection Nigeria, GPS verified land purchase, diaspora land buying Nigeria, buy land safely Nigeria, government approval tracker real estate, Certificate of Occupancy tracker, Governor's Consent tracker Nigeria, survey plan approval tracker",
     canonicalPath: "/estates",
     ogType: "website",
     ogImage: `${SITE_ORIGIN}/estates.jpg`,
@@ -125,6 +125,10 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
             "Automatic Facebook and Instagram post scheduling with in-dashboard comment replies and likes",
             "SMS and email customer notifications",
             "QR-coded marketing campaigns to track leads by channel",
+            "\"Verified by LandCheck\" staff-checked title badges to help buyers trust a plot",
+            "Government approvals tracker covering Survey Plan approval, Layout approval, Governor's Consent, and Certificate of Occupancy",
+            "Public plot and agent verification check so buyers can confirm a listing is genuine before paying",
+            "GPS-verified live video site inspections for diaspora and remote buyers (Enterprise plan)",
           ],
         },
         {
@@ -161,6 +165,22 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
               "acceptedAnswer": {
                 "@type": "Answer",
                 "text": "Yes. Every estate and plot can be screened for flood and erosion risk, plus an indicative soil analysis covering a presumptive bearing-capacity range, a water-table tendency, and a 0-2m soil texture profile - with a one-click option to request a licensed geotechnical survey for any foundation decision.",
+              },
+            },
+            {
+              "@type": "Question",
+              "name": "How does LandCheck Estates help prevent land scams?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "A buyer can check any plot number or agent code against the developer's own public Estate page before paying anyone, staff can mark a plot's title as verified once they've reviewed the documents, and every estate can show live progress on its government approvals - Survey Plan, Layout, Governor's Consent, and Certificate of Occupancy - so nothing is taken on trust.",
+              },
+            },
+            {
+              "@type": "Question",
+              "name": "Can intending buyers verify a plot's GPS location remotely?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. On the Enterprise plan, a site agent opens a live video call with a remote buyer and shares their GPS position in real time, verified against the plot's actual boundary, so diaspora and out-of-town buyers can confirm the agent is really standing on the right plot without travelling.",
               },
             },
           ],
