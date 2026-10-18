@@ -190,7 +190,11 @@
 .estate-site-footer { padding: 60px 0 0; background: #091929; color: #fff; }
 .estate-site-footer-inner { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; max-width: 1200px; margin: auto; padding: 0 64px 52px; }
 .estate-site-footer-brand .estate-brand { gap: 8px; margin-bottom: 16px; }
-.estate-site-footer-brand .estate-brand img { display: block; width: auto; height: 34px; margin: 0; filter: brightness(0) invert(1); opacity: .85; }
+/* A white backing plate keeps the real logo colors visible on this dark footer, instead of the
+   flat white silhouette a brightness(0)/invert(1) filter produces - matches every other public
+   landing page's footer (landing.css, survey-plan-landing.css, flood-landing.css, green-partners.css). */
+.estate-site-footer-logo-plate { display: inline-flex; align-items: center; justify-content: center; padding: 8px 12px; border-radius: 8px; background: #ffffff; }
+.estate-site-footer-logo-plate img { display: block; height: 30px; width: auto; margin: 0; }
 .estate-site-footer-brand > ul, .estate-site-footer-col ul { margin: 0; padding: 0; list-style: none; }
 .estate-site-footer-brand > ul li { color: rgba(255, 255, 255, .42); font-size: .82rem; line-height: 1.85; }
 .estate-site-footer-brand > ul a { color: rgba(255, 255, 255, .58); text-decoration: none; transition: color .2s ease; }

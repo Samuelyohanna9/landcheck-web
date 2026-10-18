@@ -239,7 +239,7 @@ export default function EstateLanding() {
         <div className="estate-site-footer-inner">
           <div className="estate-site-footer-brand">
             <Link to="/estates" className="estate-brand" aria-label="LandCheck Estates home">
-              <img src="/logo-icon-192.png" alt="LandCheck" width="100" height="34" loading="lazy" />
+              <span className="estate-site-footer-logo-plate"><img src="/logo-wordmark-web.png" alt="LandCheck" width="140" height="44" loading="lazy" /></span>
               <span>ESTATES</span>
             </Link>
             <ul>
