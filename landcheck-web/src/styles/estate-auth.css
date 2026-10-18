@@ -10,12 +10,13 @@
   --auth-muted: #676879;
   --auth-line: #d0d4e4;
   /* Tints of the actual Estates logo's two colours (bright green + dark navy facets, see
-     public/logo-icon-192.png) instead of unrelated pastel pink/gold - green pair on the right,
-     navy pair on the left, so the accent colours read as this brand's, not a generic palette. */
+     public/logo-icon-192.png) instead of unrelated pastel pink/gold - the two colours sit on
+     opposite diagonals (top-right/bottom-left share one, top-left/bottom-right share the other),
+     like the logo mark's own facets, instead of a plain left/right split. */
   --auth-visual-box-a: #d7f0e0;
-  --auth-visual-box-b: #b3e0c5;
-  --auth-visual-box-c: #dbe3ea;
-  --auth-visual-box-d: #c1cfd9;
+  --auth-visual-box-b: #c1cedb;
+  --auth-visual-box-c: #d7f0e0;
+  --auth-visual-box-d: #c1cedb;
   background: #f6f7fb;
   color: var(--auth-ink);
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -166,3 +167,42 @@
 }
 .estate-verified-icon svg { width: 26px; height: 26px; }
 .estate-verified-card .estate-button { width: 100%; margin-top: 14px; }
+
+/* Login's two-column desktop layout (card + photo) must fit one viewport with no vertical
+   scroll. estate-portal.css sizes the photo from its own WIDTH (76% of the visual column) with a
+   fixed aspect-ratio, so it never responds to how TALL the viewport actually is - on a shorter
+   desktop window the shell grows past 100dvh and the page scrolls. Re-driving the photo from the
+   visual column's HEIGHT instead (itself a viewport-relative clamp()) makes the photo and the
+   colour blocks behind it shrink together, and the whole shell is clipped to the viewport so it
+   can never grow taller than it. */
+@media (min-width: 851px) {
+  .estate-auth-page:has(.estate-auth-shell--login) {
+    height: 100dvh;
+    overflow: hidden;
+  }
+  .estate-auth-shell--login {
+    min-height: 0;
+    height: min(100dvh, 760px);
+    padding: 16px 0;
+  }
+  .estate-auth-visual {
+    min-height: 0;
+    height: clamp(300px, 56dvh, 560px);
+  }
+  .estate-auth-visual-photo {
+    width: auto;
+    height: 76%;
+    aspect-ratio: 4 / 3;
+  }
+  .estate-auth-visual-photo img {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: auto;
+  }
+}
+@media (min-width: 851px) and (max-height: 720px) {
+  .estate-auth-card { padding: 16px 22px 14px; }
+  .estate-auth-card h1, .estate-auth-card h2 { font-size: 1.3rem; margin: 4px 0 2px; }
+  .estate-auth-card > p:not(.estate-kicker) { display: none; }
+  .estate-auth-trust { display: none; }
+}
