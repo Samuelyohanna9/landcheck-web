@@ -1540,34 +1540,63 @@
 
 .green-work-remote-progress-steps {
   display: grid;
-  gap: 0.42rem;
+  gap: 0;
 }
 
+/* Connected checklist, matching LandCheck Estate's job-progress stepper: a line runs through
+   every dot, each done step gets a checkmark, the active step pulses - instead of plain numbered
+   circles that never visually connected into a sequence. */
 .green-work-remote-progress-step {
+  position: relative;
   display: grid;
   grid-template-columns: 22px minmax(0, 1fr);
-  align-items: center;
+  align-items: flex-start;
   gap: 0.48rem;
+  padding-bottom: 0.6rem;
   color: var(--gw-subtext);
 }
 
+.green-work-remote-progress-step:last-child {
+  padding-bottom: 0;
+}
+
+.green-work-remote-progress-step:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  top: 24px;
+  left: 10px;
+  bottom: -2px;
+  width: 2px;
+  background: rgba(23, 83, 45, 0.16);
+}
+
+.green-work-remote-progress-step.is-done:not(:last-child)::before {
+  background: var(--green-500);
+}
+
 .green-work-remote-progress-step span {
+  position: relative;
+  z-index: 1;
   width: 22px;
   height: 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  font-size: 0.68rem;
+  margin-top: 1px;
+  font-size: 0.72rem;
   font-weight: 800;
-  border: 1px solid rgba(23, 83, 45, 0.16);
+  border: 1.5px solid rgba(23, 83, 45, 0.18);
   background: rgba(255, 255, 255, 0.92);
+  color: transparent;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
 .green-work-remote-progress-step strong {
   font-size: 0.78rem;
   font-weight: 700;
   line-height: 1.35;
+  padding-top: 1px;
 }
 
 .green-work-remote-progress-step.is-active {
@@ -1575,9 +1604,9 @@
 }
 
 .green-work-remote-progress-step.is-active span {
-  border-color: rgba(42, 168, 82, 0.35);
-  background: rgba(42, 168, 82, 0.12);
-  color: var(--green-800);
+  border-color: var(--green-500);
+  box-shadow: 0 0 0 3px rgba(42, 168, 82, 0.18);
+  animation: greenWorkRemoteStepPulse 1.4s ease-in-out infinite;
 }
 
 .green-work-remote-progress-step.is-done {
@@ -1585,9 +1614,20 @@
 }
 
 .green-work-remote-progress-step.is-done span {
-  border-color: rgba(42, 168, 82, 0.26);
-  background: rgba(42, 168, 82, 0.16);
-  color: var(--green-800);
+  border-color: var(--green-500);
+  background: var(--green-500);
+  color: #fff;
+}
+
+@keyframes greenWorkRemoteStepPulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(42, 168, 82, 0.18); }
+  50% { box-shadow: 0 0 0 6px rgba(42, 168, 82, 0.1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .green-work-remote-progress-step.is-active span {
+    animation: none;
+  }
 }
 
 .green-work-remote-summary-note {
@@ -9194,9 +9234,28 @@
   background: #314252 !important;
 }
 
+:root[data-workspace-theme="dark"] .green-work-remote-card .green-work-remote-progress-step span,
 :root[data-workspace-theme="dark"] .green-work-remote-report-card .green-work-remote-progress-step span {
   background: #22384a !important;
   border-color: #66839a !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-remote-card .green-work-remote-progress-step:not(:last-child)::before,
+:root[data-workspace-theme="dark"] .green-work-remote-report-card .green-work-remote-progress-step:not(:last-child)::before {
+  background: #4b6072 !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-remote-card .green-work-remote-progress-step.is-done:not(:last-child)::before,
+:root[data-workspace-theme="dark"] .green-work-remote-report-card .green-work-remote-progress-step.is-done:not(:last-child)::before,
+:root[data-workspace-theme="dark"] .green-work-remote-card .green-work-remote-progress-step.is-done span,
+:root[data-workspace-theme="dark"] .green-work-remote-report-card .green-work-remote-progress-step.is-done span {
+  background: var(--green-500) !important;
+  border-color: var(--green-500) !important;
+}
+
+:root[data-workspace-theme="dark"] .green-work-remote-card .green-work-remote-progress-step.is-active span,
+:root[data-workspace-theme="dark"] .green-work-remote-report-card .green-work-remote-progress-step.is-active span {
+  border-color: var(--green-500) !important;
 }
 
 :root[data-workspace-theme="dark"] .green-work-remote-report-card :where(

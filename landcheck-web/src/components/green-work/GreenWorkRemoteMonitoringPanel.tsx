@@ -388,7 +388,7 @@ export default function GreenWorkRemoteMonitoringPanel(props: GreenWorkRemoteMon
                         key={`remote-progress-step-${label}`}
                         className={`green-work-remote-progress-step ${isDone ? "is-done" : ""} ${isActive ? "is-active" : ""}`}
                       >
-                        <span>{index + 1}</span>
+                        <span aria-hidden="true">{isDone ? "✓" : ""}</span>
                         <strong>{label}</strong>
                       </div>
                     );
@@ -486,7 +486,7 @@ export default function GreenWorkRemoteMonitoringPanel(props: GreenWorkRemoteMon
                       key={`remote-report-progress-step-${label}`}
                       className={`green-work-remote-progress-step ${isDone ? "is-done" : ""} ${isActive ? "is-active" : ""}`}
                     >
-                      <span>{index + 1}</span>
+                      <span aria-hidden="true">{isDone ? "✓" : ""}</span>
                       <strong>{label}</strong>
                     </div>
                   );
