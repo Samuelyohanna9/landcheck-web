@@ -21,6 +21,7 @@ import EstateShell from "../components/estates/EstateShell";
 import EstateReservationRequests from "../components/estates/EstateReservationRequests";
 import EstateOperationsSummary from "../components/estates/EstateOperationsSummary";
 import Spinner, { LoadingPanel } from "../components/estates/EstateSpinner";
+import PlotHistoryList from "../components/estates/PlotHistoryList";
 import { clearSurveyPlanDraft } from "../offline/surveyPlanDraft";
 import "../styles/estates.css";
 import "../styles/estate-dashboard.css";
@@ -2132,7 +2133,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
               <div className="edash-drawer-tabs">
                 {([
                   ["overview", "Overview"], ["customer", "Customer"], ["survey", "Survey"], ["staking", "Staking"],
-                  ["documents", "Documents"], ["hazards", "Hazards"], ["soil", "Soil"], ["timeline", "Timeline"],
+                  ["documents", "Documents"], ["hazards", "Hazards"], ["soil", "Soil"], ["timeline", "History"],
                 ] as Array<[typeof drawerTab, string]>).map(([key, label]) => (
                   <button key={key} type="button" className={`edash-drawer-tab${drawerTab === key ? " active" : ""}`} onClick={() => openTab(key)}>{label}</button>
                 ))}
@@ -2621,24 +2622,8 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
 
               {drawerTab === "timeline" && (
                 <div className="edash-tab-panel">
-                  {plotTimeline.length ? (
-                    <div className="edash-timeline-list">
-                      {plotTimeline.map((event: any) => (
-                        <div key={event.id} className="edash-timeline-item">
-                          <span className="edash-timeline-dot" />
-                          <div>
-                            <strong>{String(event.action || "").replaceAll("_", " ")}</strong>
-                            <small>{new Date(event.created_at).toLocaleString()}</small>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="edash-tab-empty">
-                      <EstateIcon name="audit" />
-                      <span>No recorded activity for this plot yet.</span>
-                    </div>
-                  )}
+                  <Link className="edash-card-link" to={`/estates/${estateId}/plots/${selectedPlot.id}/history`} style={{ display: "inline-block", marginBottom: 10 }}>Open full Plot History</Link>
+                  <PlotHistoryList events={plotTimeline} />
                 </div>
               )}
             </div>

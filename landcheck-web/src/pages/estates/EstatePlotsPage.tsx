@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
@@ -247,7 +247,7 @@ export default function EstatePlotsPage() {
             <div style={{ overflowX: "auto" }}>
               <table className="edash-mini-table">
                 <thead>
-                  <tr><th>Plot No.</th><th>Block</th><th>Status</th><th>Development</th><th>Area</th><th>Plot address</th><th>Public price</th><th>Geometry</th><th>Title</th><th /></tr>
+                  <tr><th>Plot No.</th><th>Block</th><th>Status</th><th>Development</th><th>Area</th><th>Plot address</th><th>Public price</th><th>Geometry</th><th>Title</th><th>History</th><th /></tr>
                 </thead>
                 <tbody>
                   {filtered.map((plot) => (
@@ -287,6 +287,9 @@ export default function EstatePlotsPage() {
                         ) : (
                           <button type="button" className="edash-card-link" onClick={() => { setEditingTitleId(plot.id); setTitleNoteDraft(""); }}>Mark verified</button>
                         )}
+                      </td>
+                      <td data-label="History">
+                        <Link className="edash-card-link" to={`/estates/${estateId}/plots/${plot.id}/history`}>View</Link>
                       </td>
                       <td>
                         <button type="button" className="edash-btn-outline" onClick={() => navigate(`/estates/${estateId}/map?plot=${plot.id}`)}>

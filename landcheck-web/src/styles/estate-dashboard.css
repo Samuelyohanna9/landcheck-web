@@ -1327,6 +1327,12 @@
 @keyframes edash-progress-pulse { 0%, 100% { box-shadow: 0 0 0 3px rgba(30, 138, 76, 0.16); } 50% { box-shadow: 0 0 0 6px rgba(30, 138, 76, 0.1); } }
 @media (prefers-reduced-motion: reduce) { .edash-progress-step--active .edash-progress-step-dot { animation: none; } }
 
+.edash-plot-history-list .edash-progress-step { padding-bottom: 18px; }
+.edash-plot-history-list .edash-progress-step-label { display: flex; flex-direction: column; gap: 2px; }
+.edash-plot-history-list .edash-progress-step-label strong { font-size: 0.84rem; font-weight: 700; }
+.edash-plot-history-list .edash-progress-step-label small { color: var(--edash-faint); font-size: 0.7rem; }
+.edash-plot-history-detail { color: var(--edash-muted); font-size: 0.76rem; }
+
 .edash-mini-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
 .edash-mini-table th { padding: 6px 8px; text-align: left; color: var(--edash-faint); font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid var(--edash-border-soft); }
 .edash-mini-table td { padding: 8px 8px; border-bottom: 1px solid var(--edash-border-soft); color: var(--edash-ink); font-weight: 600; }
