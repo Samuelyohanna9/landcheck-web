@@ -329,23 +329,15 @@
 .fal-risk-levels {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 2px;
-  border-radius: 10px;
-  overflow: hidden;
+  gap: 36px;
 }
 
 .fal-risk-level {
-  padding: 28px 20px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   text-align: left;
 }
-
-.fal-risk-low    { background: rgba(34, 197, 94, 0.15); border-top: 3px solid #22c55e; }
-.fal-risk-moderate { background: rgba(234, 179, 8, 0.15); border-top: 3px solid #eab308; }
-.fal-risk-high   { background: rgba(249, 115, 22, 0.15); border-top: 3px solid #f97316; }
-.fal-risk-severe { background: rgba(239, 68, 68, 0.15); border-top: 3px solid #ef4444; }
 
 .fal-risk-label {
   font-size: 0.8rem;
@@ -449,18 +441,18 @@
 .fal-audience-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 14px 32px;
   justify-content: center;
   margin-bottom: 44px;
 }
 
 .fal-audience-tag {
-  background: rgba(224, 123, 0, 0.12);
-  color: #e07b00;
-  border: 1.5px solid rgba(224, 123, 0, 0.28);
-  border-radius: 100px;
-  padding: 8px 20px;
-  font-size: 0.88rem;
+  background: none;
+  color: rgba(255, 255, 255, 0.86);
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  font-size: 0.95rem;
   font-weight: 600;
 }
 
@@ -613,6 +605,7 @@
 
   .fal-risk-levels {
     grid-template-columns: 1fr 1fr;
+    gap: 28px 24px;
   }
 
   .fal-steps-grid { grid-template-columns: 1fr; gap: 16px; }
@@ -650,10 +643,7 @@
 
   .fal-risk-levels {
     grid-template-columns: repeat(2, 1fr) !important;
-    gap: 2px !important;
-  }
-  .fal-risk-level {
-    padding: 16px 12px !important;
+    gap: 22px !important;
   }
   .fal-risk-level p {
     font-size: 0.75rem !important;
