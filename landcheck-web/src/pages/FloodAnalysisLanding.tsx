@@ -298,6 +298,7 @@ export default function FloodAnalysisLanding() {
       <footer className="fal-footer">
         <div className="fal-footer-inner">
           <div className="fal-footer-copy">
+            <span className="fal-footer-logo-plate"><img src="/logo-wordmark-web.png" alt="LandCheck" width="140" height="44" loading="lazy" /></span>
             <h2>Screen Any Land Parcel for Flood Risk</h2>
             <p>Instant results. No sign-up required. Works for any location in Nigeria.</p>
           </div>

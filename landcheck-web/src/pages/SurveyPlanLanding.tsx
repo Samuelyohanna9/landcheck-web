@@ -393,7 +393,7 @@ export default function SurveyPlanLanding() {
         <div className="spl-footer-main">
           <div className="spl-footer-brand">
             <Link to="/" className="spl-brand">
-              <img src="/logo-icon-192.png" alt="LandCheck" width="100" height="34" loading="lazy" />
+              <span className="spl-footer-logo-plate"><img src="/logo-wordmark-web.png" alt="LandCheck" width="140" height="44" loading="lazy" /></span>
               <span className="spl-brand-product">Survey</span>
             </Link>
             <a href="mailto:admin@landcheck.online">admin@landcheck.online</a>

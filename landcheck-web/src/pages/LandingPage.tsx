@@ -509,7 +509,7 @@ export default function LandingPage() {
       <footer className="lp-footer">
         <div className="lp-footer-inner">
           <div className="lp-footer-brand">
-            <img src="/logo-icon-192.png" alt="LandCheck" className="lp-footer-logo" width="100" height="34" loading="lazy" />
+            <span className="lp-footer-logo-plate"><img src="/logo-wordmark-web.png" alt="LandCheck" width="140" height="44" loading="lazy" /></span>
             <ul>
               <li>
                 <a href="mailto:admin@landcheck.online">admin@landcheck.online</a>

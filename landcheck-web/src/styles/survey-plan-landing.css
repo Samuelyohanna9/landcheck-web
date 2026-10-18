@@ -748,10 +748,22 @@
   margin-bottom: 8px;
 }
 
-.spl-footer-brand .spl-brand img {
+/* A white backing plate keeps the real logo colors visible on this dark footer, instead of the
+   flat white silhouette a brightness(0)/invert(1) filter would produce - same approach as the
+   GreenPublicSponsor topbar badge (see green-public-sponsor.css). */
+.spl-footer-logo-plate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.spl-footer-logo-plate img {
+  display: block;
+  height: 30px;
   width: auto;
-  filter: brightness(0) invert(1);
-  opacity: 0.85;
 }
 
 .spl-footer-brand > a:not(.spl-brand),

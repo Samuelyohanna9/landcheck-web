@@ -1008,10 +1008,21 @@
   gap: 1.2rem;
 }
 
-.gp-footer-logo {
-  height: 34px;
-  width: auto;
+/* A white backing plate keeps the real logo colors visible on this dark footer, matching
+   GreenPublicSponsor's topbar badge treatment of the same logo file. */
+.gp-footer-logo-plate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.gp-footer-logo-plate img {
   display: block;
+  height: 30px;
+  width: auto;
 }
 
 .gp-footer-brand-text {

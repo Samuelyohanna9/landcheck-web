@@ -509,7 +509,7 @@ export default function GreenPartnersLanding() {
         <div className="gp-shell">
           <div className="gp-global-footer__top">
             <div className="gp-footer-brand">
-              <img src="/logo-icon-192.png" alt="LandCheck Green" className="gp-footer-logo" loading="lazy" decoding="async" />
+              <span className="gp-footer-logo-plate"><img src="/logo-wordmark-web.png" alt="LandCheck Green" loading="lazy" decoding="async" /></span>
               <p className="gp-footer-brand-text">
                 Verifiably restoring forests through cryptographic site evidence, real-time tracking, and board-ready reporting.
               </p>

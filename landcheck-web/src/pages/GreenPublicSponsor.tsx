@@ -921,6 +921,7 @@ export default function GreenPublicSponsor() {
       <footer className="gps-footer">
         <div className="gps-footer-inner">
           <div className="gps-footer-col gps-footer-brand">
+            <span className="gps-topbar-logo-badge gps-footer-logo-badge"><img src="/logo-icon-192.png" alt="LandCheck" width="33" height="33" decoding="async" /></span>
             <span className="gps-footer-brand-name">LandCheck Green</span>
             <p>GPS-verified tree sponsorship in Nigeria. No account is required to get started.</p>
             <SocialLinks className="gps-footer-social" />

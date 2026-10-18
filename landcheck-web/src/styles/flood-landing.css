@@ -499,6 +499,24 @@
   flex-wrap: wrap;
 }
 
+/* A white backing plate keeps the real logo colors visible on this dark footer, instead of a flat
+   white silhouette - same approach as the GreenPublicSponsor topbar badge. */
+.fal-footer-logo-plate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  margin-bottom: 18px;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.fal-footer-logo-plate img {
+  display: block;
+  height: 30px;
+  width: auto;
+}
+
 .fal-footer-copy h2 {
   font-size: clamp(1.3rem, 3vw, 1.9rem);
   font-weight: 800;
