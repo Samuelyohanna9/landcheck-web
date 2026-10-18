@@ -25,6 +25,7 @@ const GreenMerchantDashboard = lazyWithChunkRecovery(() => import("./pages/Green
 const GreenMerchantLogin = lazyWithChunkRecovery(() => import("./pages/GreenMerchantLogin"));
 const GreenWork = lazyWithChunkRecovery(() => import("./pages/GreenWork"));
 const GreenWorkLogin = lazyWithChunkRecovery(() => import("./pages/GreenWorkLogin"));
+const GreenWorkForgotPassword = lazyWithChunkRecovery(() => import("./pages/GreenWorkForgotPassword"));
 const GreenWorkRegister = lazyWithChunkRecovery(() => import("./pages/GreenWorkRegister"));
 const GreenWorkEmailVerified = lazyWithChunkRecovery(() => import("./pages/GreenWorkEmailVerified"));
 const DataDeletion = lazyWithChunkRecovery(() => import("./pages/DataDeletion"));
@@ -376,6 +377,7 @@ export default function App() {
               <Route path="/green-merchant/login" element={<GreenMerchantLogin />} />
               <Route path="/green-merchant" element={<MerchantProtectedRoute element={<GreenMerchantDashboard />} />} />
               <Route path="/green-work/login" element={<GreenWorkLogin />} />
+              <Route path="/green-work/forgot-password" element={<GreenWorkForgotPassword />} />
               <Route path="/green-work/register" element={<GreenWorkRegister />} />
               <Route path="/green-work/email-verified" element={<GreenWorkEmailVerified />} />
               <Route path="/green-work" element={<WorkProtectedRoute element={<GreenWork />} />} />

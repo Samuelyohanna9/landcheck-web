@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { isWorkAuthed, loginWork, requestWorkPasswordReset } from "../auth/workAuth";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { isWorkAuthed, loginWork } from "../auth/workAuth";
 import GreenLoadingAnimation from "../components/GreenLoadingAnimation";
 import "../styles/green-work-login.css";
 import "../styles/green-work-login-dashboard.css";
@@ -96,11 +96,6 @@ export default function GreenWorkLogin() {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
-  const [resetSending, setResetSending] = useState(false);
-  const [resetMessage, setResetMessage] = useState("");
-  const [resetError, setResetError] = useState("");
 
   const redirectTo = useMemo(() => {
     const state = (location.state || {}) as { from?: string };
@@ -142,24 +137,6 @@ export default function GreenWorkLogin() {
       setError(detail || message || "Invalid username or password.");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const onRequestPasswordReset = async (event: FormEvent) => {
-    event.preventDefault();
-    setResetSending(true);
-    setResetError("");
-    setResetMessage("");
-    try {
-      const message = await requestWorkPasswordReset(resetEmail);
-      setResetMessage(message);
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: unknown } }; message?: unknown };
-      const detail = typeof error.response?.data?.detail === "string" ? error.response.data.detail : "";
-      const message = typeof error.message === "string" ? error.message : "";
-      setResetError(detail || message || "Unable to send reset email.");
-    } finally {
-      setResetSending(false);
     }
   };
 
@@ -227,17 +204,9 @@ export default function GreenWorkLogin() {
                 />
                 <span>Remember me</span>
               </label>
-              <button
-                type="button"
-                className="work-login-forgot"
-                onClick={() => {
-                  setShowForgotPassword((prev) => !prev);
-                  setResetMessage("");
-                  setResetError("");
-                }}
-              >
+              <Link className="work-login-forgot" to="/green-work/forgot-password">
                 Forgot password?
-              </button>
+              </Link>
             </div>
 
             {error ? <p className="work-login-error">{error}</p> : null}
@@ -247,32 +216,6 @@ export default function GreenWorkLogin() {
             </button>
             {loading && <GreenLoadingAnimation size="small" className="work-login-loading" />}
           </form>
-
-          {showForgotPassword && (
-            <form className="work-login-form work-login-reset-panel" onSubmit={onRequestPasswordReset}>
-              {resetMessage ? (
-                <p className="work-login-reset-success">{resetMessage}</p>
-              ) : (
-                <>
-                  <label htmlFor="work-login-reset-email">Account email</label>
-                  <p className="work-login-reset-hint">We'll email a secure link to set a new password - it expires automatically.</p>
-                  <input
-                    id="work-login-reset-email"
-                    type="email"
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                    placeholder="you@organisation.com"
-                    autoComplete="email"
-                    required
-                  />
-                  {resetError ? <p className="work-login-error">{resetError}</p> : null}
-                  <button type="submit" className="work-login-outline-btn" disabled={resetSending}>
-                    {resetSending ? "Sending reset email..." : "Send reset email"}
-                  </button>
-                </>
-              )}
-            </form>
-          )}
 
           <div className="work-login-divider">
             <span>New to LandCheck?</span>
