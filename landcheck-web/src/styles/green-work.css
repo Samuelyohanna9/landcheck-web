@@ -7098,7 +7098,7 @@
 }
 .green-work-card .btn-primary,
 .green-work-secondary-btn,
-.work-actions button:not(.green-work-danger-btn) {
+.work-actions button:not(.green-work-danger-btn):not(.btn-primary) {
   border: 1px solid var(--gw-brand);
   border-radius: 8px;
   background: var(--gw-surface);
@@ -7111,7 +7111,7 @@
 }
 .green-work-card .btn-primary:hover { background: var(--gw-brand-dark); color: #fff; }
 .green-work-secondary-btn:hover,
-.work-actions button:not(.green-work-danger-btn):hover { background: var(--gw-brand-tint); }
+.work-actions button:not(.green-work-danger-btn):not(.btn-primary):hover { background: var(--gw-brand-tint); }
 .green-work-secondary-btn {
   min-height: 34px;
   padding: 0 12px;
@@ -7961,7 +7961,7 @@
 :root[data-workspace-theme="dark"] .green-work-live-scope-tab,
 :root[data-workspace-theme="dark"] .green-work-live-maturity-chip,
 :root[data-workspace-theme="dark"] .green-work-live-pill,
-:root[data-workspace-theme="dark"] .work-actions button:not(.green-work-danger-btn) {
+:root[data-workspace-theme="dark"] .work-actions button:not(.green-work-danger-btn):not(.btn-primary) {
   border-color: var(--gw-border-strong);
   background: var(--gw-surface-muted);
   color: var(--gw-text);
@@ -7972,7 +7972,7 @@
 :root[data-workspace-theme="dark"] .green-work-header-btn:hover,
 :root[data-workspace-theme="dark"] .green-work-tree-photo-upload-btn:hover,
 :root[data-workspace-theme="dark"] .green-work-live-scope-tab:hover,
-:root[data-workspace-theme="dark"] .work-actions button:not(.green-work-danger-btn):hover {
+:root[data-workspace-theme="dark"] .work-actions button:not(.green-work-danger-btn):not(.btn-primary):hover {
   border-color: var(--gw-brand);
   background: var(--gw-brand-tint);
   color: var(--gw-brand-dark);
