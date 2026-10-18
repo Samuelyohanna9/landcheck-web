@@ -228,3 +228,18 @@ export const registerWork = async (params: {
   setWorkAuthed(session);
   return session;
 };
+
+// Work accounts sign in with a username, but the account record only stores an email to send a
+// reset link to - so this takes an email, not the username, same as the sponsor-facing
+// requestGreenSponsorPasswordReset() in greenAuth.ts. The backend (/green/green-auth/forgot-password)
+// always reports success either way, so this never reveals whether an email is registered.
+export const requestWorkPasswordReset = async (email: string) => {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail) {
+    throw new Error("Email is required");
+  }
+  const res = await api.post<{ ok?: boolean; message?: string }>("/green/green-auth/forgot-password", {
+    email: normalizedEmail,
+  });
+  return String(res.data?.message || "If that email exists on a field account, a reset link has been sent.");
+};
