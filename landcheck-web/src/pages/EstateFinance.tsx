@@ -109,7 +109,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
   const [duePayments, setDuePayments] = useState<DuePayments | null>(null);
   const [reminderRow, setReminderRow] = useState<DuePaymentRow | null>(null);
   const [reminderChannel, setReminderChannel] = useState<"sms" | "whatsapp" | "email">("sms");
-  const [reminderMethod, setReminderMethod] = useState<"online_link" | "bank_details">("online_link");
+  const [reminderMethod, setReminderMethod] = useState<"online_link" | "bank_details" | "both">("online_link");
   const [sendingReminder, setSendingReminder] = useState(false);
   const [reminderError, setReminderError] = useState("");
   const duePaymentsPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -765,9 +765,10 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
           </label>
           <label className="edash-field" style={{ marginBottom: 12 }}>
             <span>Payment method to include</span>
-            <select value={reminderMethod} onChange={(event) => setReminderMethod(event.target.value as "online_link" | "bank_details")}>
+            <select value={reminderMethod} onChange={(event) => setReminderMethod(event.target.value as "online_link" | "bank_details" | "both")}>
               <option value="online_link">Online payment link</option>
               <option value="bank_details">Bank transfer details</option>
+              <option value="both">Both</option>
             </select>
           </label>
           {reminderChannel === "whatsapp" && <p className="edash-field-note" style={{ marginBottom: 12 }}>WhatsApp can only be delivered within 24 hours of the customer's last message to you. If it fails, try SMS or email instead.</p>}
