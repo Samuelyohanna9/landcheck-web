@@ -7,6 +7,8 @@ export const PAYMENT_METHODS: { value: string; label: string }[] = [
   { value: "ussd", label: "USSD" },
   { value: "mobile_money", label: "Mobile Money" },
   { value: "escrow", label: "Company Escrow Account" },
+  { value: "online_paystack", label: "Online - Paystack" },
+  { value: "online_flutterwave", label: "Online - Flutterwave" },
   { value: "other", label: "Other" },
 ];
 export const paymentMethodLabel = (value: string) => PAYMENT_METHODS.find((item) => item.value === value)?.label || value.replaceAll("_", " ");

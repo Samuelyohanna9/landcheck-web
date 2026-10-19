@@ -1,11 +1,26 @@
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { api, createIdempotencyKey, extractApiErrorMessage } from "../api/client";
+import { getEstateAuthSession } from "../auth/estateAuth";
 import { FinancialSummaryCards, PaymentStatusBadge, money, PAYMENT_METHODS, paymentMethodLabel } from "../components/estates/FinancialComponents";
 import EstateShell from "../components/estates/EstateShell";
 import EstateModal from "../components/estates/EstateModal";
 import EstateRibbon, { type EstateRibbonTab } from "../components/estates/EstateRibbon";
 import Spinner from "../components/estates/EstateSpinner";
+
+type Bank = { code: string; name: string };
+type PayoutAccountStatus = {
+  configured: boolean;
+  bank_code?: string;
+  bank_name?: string | null;
+  account_number?: string;
+  account_name?: string;
+  paystack_linked?: boolean;
+  flutterwave_linked?: boolean;
+};
+type AccountingSummary = { by_method: { method: string; amount: string; count: number }[]; online_total: string; manual_total: string; total_confirmed: string };
+type AgedDebtorRow = { allocation_id: number; customer_name: string; estate_name: string; plot_number: string; outstanding: string; days_outstanding: number; bucket: string; bucket_label: string };
+type AgedDebtors = { rows: AgedDebtorRow[]; bucket_totals: Record<string, string>; bucket_labels: Record<string, string> };
 
 type Payment = { id: number; date: string; amount: string; currency: string; status: string; method: string; reference?: string; customer: { name: string }; estate: { name: string }; plot: { number: string }; can_confirm?: boolean };
 type Allocation = { id: number; estate_id: number; plot_id: number; customer_id: number; estate_name: string; plot_number: string; customer_name: string };
@@ -71,6 +86,24 @@ async function download(path: string, name: string) {
 }
 
 export default function EstateFinance({ mode }: { mode: "payments" | "documents" }) {
+  const session = getEstateAuthSession();
+  const organizationId = session?.user.organization_id;
+  const isOwner = session?.user.role_key === "owner";
+
+  const [view, setView] = useState<"payments" | "accounting">("payments");
+  const [accountingLoaded, setAccountingLoaded] = useState(false);
+  const [accountingSummary, setAccountingSummary] = useState<AccountingSummary | null>(null);
+  const [agedDebtors, setAgedDebtors] = useState<AgedDebtors | null>(null);
+  const [payoutAccount, setPayoutAccount] = useState<PayoutAccountStatus | null>(null);
+  const [banks, setBanks] = useState<Bank[]>([]);
+  const [bankCode, setBankCode] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [resolvedName, setResolvedName] = useState("");
+  const [resolving, setResolving] = useState(false);
+  const [savingPayout, setSavingPayout] = useState(false);
+  const [payoutError, setPayoutError] = useState("");
+  const [exportingCsv, setExportingCsv] = useState(false);
+
   const [sidebarEstateId, setSidebarEstateId] = useState("");
   const [sidebarEstateName, setSidebarEstateName] = useState("");
   const [estatesState, setEstatesState] = useState<"loading" | "failed" | "empty" | "ready">("loading");
@@ -150,6 +183,83 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
     } finally { setLoadBusy(false); }
   };
   useEffect(() => { void load(); }, [mode, page]);
+
+  const loadAccounting = async () => {
+    try {
+      const [summaryResponse, debtorsResponse] = await Promise.all([
+        api.get<AccountingSummary>("/estates/accounting/summary"),
+        api.get<AgedDebtors>("/estates/accounting/aged-debtors"),
+      ]);
+      setAccountingSummary(summaryResponse.data);
+      setAgedDebtors(debtorsResponse.data);
+    } catch (error) {
+      await fail(error, "Accounting totals could not be loaded.");
+    }
+    if (isOwner && organizationId) {
+      try {
+        const [statusResponse, banksResponse] = await Promise.all([
+          api.get<PayoutAccountStatus>(`/estates/payout-accounts/${organizationId}`),
+          api.get<{ banks: Bank[] }>("/estates/payout-accounts/banks"),
+        ]);
+        setPayoutAccount(statusResponse.data);
+        setBanks(banksResponse.data?.banks || []);
+      } catch { /* payout setup is optional - silently leave the section showing its empty state */ }
+    }
+    setAccountingLoaded(true);
+  };
+
+  const openAccounting = () => {
+    setView("accounting");
+    if (!accountingLoaded) void loadAccounting();
+  };
+
+  const resolvePayoutAccount = async () => {
+    if (!organizationId || !bankCode || !accountNumber) return;
+    setResolving(true);
+    setPayoutError("");
+    setResolvedName("");
+    try {
+      const response = await api.post<{ account_name: string }>(`/estates/payout-accounts/${organizationId}/resolve`, { bank_code: bankCode, account_number: accountNumber });
+      setResolvedName(response.data.account_name);
+    } catch (error) {
+      setPayoutError(await extractApiErrorMessage(error, "Could not verify this account."));
+    } finally {
+      setResolving(false);
+    }
+  };
+
+  const savePayoutAccount = async () => {
+    if (!organizationId || !resolvedName) return;
+    setSavingPayout(true);
+    setPayoutError("");
+    try {
+      const bankName = banks.find((bank) => bank.code === bankCode)?.name;
+      await api.put(`/estates/payout-accounts/${organizationId}`, { bank_code: bankCode, bank_name: bankName, account_number: accountNumber });
+      toast.success("Payout account saved. Buyer plot payments will now settle to this account.");
+      setAccountNumber("");
+      setBankCode("");
+      setResolvedName("");
+      await loadAccounting();
+    } catch (error) {
+      setPayoutError(await extractApiErrorMessage(error, "Could not save this payout account."));
+    } finally {
+      setSavingPayout(false);
+    }
+  };
+
+  const exportLedgerCsv = async () => {
+    setExportingCsv(true);
+    try {
+      await download(
+        `/estates/payments/export.csv?${new URLSearchParams({ search: search || "", status: status || "", method: method || "", date_from: dateFrom || "", date_to: dateTo || "" })}`,
+        "payments-ledger.csv",
+      );
+    } catch (error) {
+      await fail(error, "The ledger CSV could not be downloaded.");
+    } finally {
+      setExportingCsv(false);
+    }
+  };
   const loadSidebarEstate = () => {
     setEstatesState("loading");
     api.get("/estates").then((response) => {
@@ -373,6 +483,118 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
   return (
     <EstateShell estateId={sidebarEstateId} estateName={sidebarEstateName} activeKey="payments">
       <EstateRibbon tabs={paymentsRibbonTabs} />
+      <div className="edash-view-toggle" style={{ display: "flex", gap: 8, margin: "0 0 16px" }}>
+        <button type="button" className={view === "payments" ? "edash-btn-primary" : "edash-btn-outline"} onClick={() => setView("payments")}>Payments</button>
+        <button type="button" className={view === "accounting" ? "edash-btn-primary" : "edash-btn-outline"} onClick={openAccounting}>Accounting</button>
+      </div>
+
+      {view === "accounting" ? (
+        <>
+          {isOwner && (
+            <div className="edash-card" style={{ marginBottom: 16 }}>
+              <div className="edash-card-inner">
+                <div className="edash-card-head"><h3 className="edash-card-title">Payout account</h3></div>
+                <p className="edash-field-note" style={{ marginBottom: 16 }}>
+                  The bank account your buyers' online plot payments settle into directly. LandCheck takes no fee - 100% goes to this account.
+                </p>
+                {payoutAccount?.configured ? (
+                  <div className="edash-overview-grid edash-overview-grid--3">
+                    <div className="edash-overview-field"><span>Bank</span><strong>{payoutAccount.bank_name || payoutAccount.bank_code}</strong></div>
+                    <div className="edash-overview-field"><span>Account</span><strong>{payoutAccount.account_name} ({payoutAccount.account_number})</strong></div>
+                    <div className="edash-overview-field"><span>Linked gateways</span><strong>{[payoutAccount.paystack_linked && "Paystack", payoutAccount.flutterwave_linked && "Flutterwave"].filter(Boolean).join(", ") || "None"}</strong></div>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+                    <label className="edash-field" style={{ minWidth: 200 }}>
+                      <span>Bank</span>
+                      <select value={bankCode} onChange={(event) => { setBankCode(event.target.value); setResolvedName(""); }}>
+                        <option value="">Select a bank</option>
+                        {banks.map((bank) => <option key={bank.code} value={bank.code}>{bank.name}</option>)}
+                      </select>
+                    </label>
+                    <label className="edash-field" style={{ minWidth: 180 }}>
+                      <span>Account number</span>
+                      <input value={accountNumber} onChange={(event) => { setAccountNumber(event.target.value); setResolvedName(""); }} placeholder="0123456789" />
+                    </label>
+                    <button type="button" className="edash-btn-outline" disabled={!bankCode || !accountNumber || resolving} onClick={() => void resolvePayoutAccount()}>{resolving ? "Verifying..." : "Verify account"}</button>
+                    {resolvedName && <button type="button" className="edash-btn-primary" disabled={savingPayout} onClick={() => void savePayoutAccount()}>{savingPayout ? "Saving..." : `Save - ${resolvedName}`}</button>}
+                  </div>
+                )}
+                {payoutError && <div className="edash-field-note" style={{ marginTop: 10, color: "var(--edash-danger, #b3261e)" }}>{payoutError}</div>}
+              </div>
+            </div>
+          )}
+
+          <div className="edash-card" style={{ marginBottom: 16 }}>
+            <div className="edash-card-inner">
+              <div className="edash-card-head" style={{ justifyContent: "space-between" }}>
+                <h3 className="edash-card-title">Collections by method</h3>
+                <button type="button" className="edash-btn-outline" disabled={exportingCsv} onClick={() => void exportLedgerCsv()}>{exportingCsv ? "Preparing..." : "Export ledger (CSV)"}</button>
+              </div>
+              {accountingSummary ? (
+                <>
+                  <div className="edash-overview-grid edash-overview-grid--3" style={{ marginBottom: 14 }}>
+                    <div className="edash-overview-field"><span>Online</span><strong>{money(accountingSummary.online_total)}</strong></div>
+                    <div className="edash-overview-field"><span>Manual</span><strong>{money(accountingSummary.manual_total)}</strong></div>
+                    <div className="edash-overview-field"><span>Total confirmed</span><strong>{money(accountingSummary.total_confirmed)}</strong></div>
+                  </div>
+                  {accountingSummary.by_method.length ? (
+                    <table className="edash-mini-table">
+                      <thead><tr><th>Method</th><th>Amount</th><th>Count</th></tr></thead>
+                      <tbody>
+                        {accountingSummary.by_method.map((row) => (
+                          <tr key={row.method}>
+                            <td data-label="Method">{paymentMethodLabel(row.method)}</td>
+                            <td data-label="Amount">{money(row.amount)}</td>
+                            <td data-label="Count">{row.count}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : <p className="edash-tab-empty">No confirmed collections yet.</p>}
+                </>
+              ) : <p className="edash-tab-empty"><Spinner size={13} /> Loading...</p>}
+            </div>
+          </div>
+
+          <div className="edash-card">
+            <div className="edash-card-inner">
+              <div className="edash-card-head"><h3 className="edash-card-title">Aged debtors</h3></div>
+              {agedDebtors ? (
+                <>
+                  <div className="edash-overview-grid edash-overview-grid--3" style={{ marginBottom: 14 }}>
+                    {Object.entries(agedDebtors.bucket_labels).map(([key, label]) => (
+                      <div className="edash-overview-field" key={key}>
+                        <span>{label}</span>
+                        <strong style={key === "90_plus" || key === "61_90" ? { color: "var(--edash-danger, #b3261e)" } : undefined}>{money(agedDebtors.bucket_totals[key])}</strong>
+                      </div>
+                    ))}
+                  </div>
+                  {agedDebtors.rows.length ? (
+                    <div style={{ overflowX: "auto" }}>
+                      <table className="edash-mini-table">
+                        <thead><tr><th>Customer</th><th>Estate / Plot</th><th>Outstanding</th><th>Days</th><th>Bucket</th></tr></thead>
+                        <tbody>
+                          {agedDebtors.rows.map((row) => (
+                            <tr key={row.allocation_id}>
+                              <td data-label="Customer">{row.customer_name}</td>
+                              <td data-label="Estate / Plot">{row.estate_name} / {row.plot_number}</td>
+                              <td data-label="Outstanding">{money(row.outstanding)}</td>
+                              <td data-label="Days">{row.days_outstanding}</td>
+                              <td data-label="Bucket"><span className={`edash-status-pill tone-${row.bucket === "current" ? "good" : row.bucket === "31_60" ? "neutral" : "danger"}`}>{row.bucket_label}</span></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : <p className="edash-tab-empty">No outstanding balances - everyone's fully paid or current.</p>}
+                </>
+              ) : <p className="edash-tab-empty"><Spinner size={13} /> Loading...</p>}
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
       <div className="edash-section-head" style={{ justifyContent: "space-between" }}>
         <p className="edash-status-row-desc" style={{ margin: 0 }}>Confirmed collections exclude pending and voided payments.</p>
       </div>
@@ -430,7 +652,9 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
           <PaymentTable rows={payments} open={async (id) => { try { setDetail((await api.get(`/estates/payments/${id}`)).data); } catch (error) { await fail(error, "Payment detail could not be loaded."); } }} onConfirm={quickConfirm} confirmingId={paymentActionBusy} />
           <Pager page={page} total={total} change={setPage} />
         </div>
-      </div>
+        </div>
+        </>
+      )}
 
       {recording && (
         <EstateModal title="Record payment" onClose={() => setRecording(false)}>
@@ -447,7 +671,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
           <label className="edash-field" style={{ marginBottom: 12 }}>
             <span>Method</span>
             <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}>
-              {PAYMENT_METHODS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              {PAYMENT_METHODS.filter((item) => !item.value.startsWith("online_")).map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
           </label>
           {paymentMethod === "other" && (
