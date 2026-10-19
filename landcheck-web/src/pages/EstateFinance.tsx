@@ -21,6 +21,8 @@ type PayoutAccountStatus = {
 type AccountingSummary = { by_method: { method: string; amount: string; count: number }[]; online_total: string; manual_total: string; total_confirmed: string };
 type AgedDebtorRow = { allocation_id: number; customer_name: string; estate_name: string; plot_number: string; outstanding: string; days_outstanding: number; bucket: string; bucket_label: string };
 type AgedDebtors = { rows: AgedDebtorRow[]; bucket_totals: Record<string, string>; bucket_labels: Record<string, string> };
+type DuePaymentRow = { allocation_id: number; customer_name: string; customer_phone?: string | null; customer_email?: string | null; estate_name: string; plot_number: string; outstanding: string; due_at: string; bucket: string; bucket_label: string; reminder_sent: boolean };
+type DuePayments = { rows: DuePaymentRow[]; bucket_labels: Record<string, string> };
 
 type Payment = { id: number; date: string; amount: string; currency: string; status: string; method: string; reference?: string; customer: { name: string }; estate: { name: string }; plot: { number: string }; can_confirm?: boolean };
 type Allocation = { id: number; estate_id: number; plot_id: number; customer_id: number; estate_name: string; plot_number: string; customer_name: string };
@@ -90,7 +92,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
   const organizationId = session?.user.organization_id;
   const isOwner = session?.user.role_key === "owner";
 
-  const [view, setView] = useState<"payments" | "accounting">("payments");
+  const [view, setView] = useState<"payments" | "accounting" | "due_payments">("payments");
   const [accountingLoaded, setAccountingLoaded] = useState(false);
   const [accountingSummary, setAccountingSummary] = useState<AccountingSummary | null>(null);
   const [agedDebtors, setAgedDebtors] = useState<AgedDebtors | null>(null);
@@ -103,6 +105,14 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
   const [savingPayout, setSavingPayout] = useState(false);
   const [payoutError, setPayoutError] = useState("");
   const [exportingCsv, setExportingCsv] = useState(false);
+
+  const [duePayments, setDuePayments] = useState<DuePayments | null>(null);
+  const [reminderRow, setReminderRow] = useState<DuePaymentRow | null>(null);
+  const [reminderChannel, setReminderChannel] = useState<"sms" | "whatsapp" | "email">("sms");
+  const [reminderMethod, setReminderMethod] = useState<"online_link" | "bank_details">("online_link");
+  const [sendingReminder, setSendingReminder] = useState(false);
+  const [reminderError, setReminderError] = useState("");
+  const duePaymentsPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [sidebarEstateId, setSidebarEstateId] = useState("");
   const [sidebarEstateName, setSidebarEstateName] = useState("");
@@ -184,6 +194,22 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
   };
   useEffect(() => { void load(); }, [mode, page]);
 
+  const loadPayoutAccountStatus = async () => {
+    // The payout-account endpoints are owner-only (see require_estate_owner on the backend) -
+    // a non-owner would just get a 403 here, so there's nothing to fetch for them. The Due
+    // Payments "Bank details" reminder option stays available regardless; the backend validates
+    // whether a payout account actually exists when the reminder is sent.
+    if (!organizationId || !isOwner) return;
+    try {
+      const [statusResponse, banksResponse] = await Promise.all([
+        api.get<PayoutAccountStatus>(`/estates/payout-accounts/${organizationId}`),
+        api.get<{ banks: Bank[] }>("/estates/payout-accounts/banks"),
+      ]);
+      setPayoutAccount(statusResponse.data);
+      setBanks(banksResponse.data?.banks || []);
+    } catch { /* payout setup is optional - silently leave the section showing its empty state */ }
+  };
+
   const loadAccounting = async () => {
     try {
       const [summaryResponse, debtorsResponse] = await Promise.all([
@@ -195,22 +221,61 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
     } catch (error) {
       await fail(error, "Accounting totals could not be loaded.");
     }
-    if (isOwner && organizationId) {
-      try {
-        const [statusResponse, banksResponse] = await Promise.all([
-          api.get<PayoutAccountStatus>(`/estates/payout-accounts/${organizationId}`),
-          api.get<{ banks: Bank[] }>("/estates/payout-accounts/banks"),
-        ]);
-        setPayoutAccount(statusResponse.data);
-        setBanks(banksResponse.data?.banks || []);
-      } catch { /* payout setup is optional - silently leave the section showing its empty state */ }
-    }
+    if (isOwner) await loadPayoutAccountStatus();
     setAccountingLoaded(true);
   };
 
   const openAccounting = () => {
     setView("accounting");
     if (!accountingLoaded) void loadAccounting();
+  };
+
+  const loadDuePayments = async () => {
+    try {
+      const response = await api.get<DuePayments>("/estates/accounting/due-payments");
+      setDuePayments(response.data);
+    } catch (error) {
+      await fail(error, "Due payments could not be loaded.");
+    }
+  };
+
+  const openDuePayments = () => {
+    setView("due_payments");
+    void loadDuePayments();
+    if (!payoutAccount) void loadPayoutAccountStatus();
+  };
+
+  useEffect(() => {
+    if (view !== "due_payments") {
+      if (duePaymentsPollRef.current) { clearInterval(duePaymentsPollRef.current); duePaymentsPollRef.current = null; }
+      return;
+    }
+    duePaymentsPollRef.current = setInterval(() => { void loadDuePayments(); }, 45000);
+    return () => { if (duePaymentsPollRef.current) { clearInterval(duePaymentsPollRef.current); duePaymentsPollRef.current = null; } };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view]);
+
+  const openReminder = (row: DuePaymentRow) => {
+    setReminderRow(row);
+    setReminderChannel("sms");
+    setReminderMethod("online_link");
+    setReminderError("");
+  };
+
+  const sendReminder = async () => {
+    if (!reminderRow) return;
+    setSendingReminder(true);
+    setReminderError("");
+    try {
+      await api.post(`/estates/accounting/due-payments/${reminderRow.allocation_id}/remind`, { channel: reminderChannel, method: reminderMethod });
+      toast.success("Reminder sent.");
+      setReminderRow(null);
+      await loadDuePayments();
+    } catch (error) {
+      setReminderError(await extractApiErrorMessage(error, "The reminder could not be sent."));
+    } finally {
+      setSendingReminder(false);
+    }
   };
 
   const resolvePayoutAccount = async () => {
@@ -486,9 +551,41 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
       <div className="edash-view-toggle" style={{ display: "flex", gap: 8, margin: "0 0 16px" }}>
         <button type="button" className={view === "payments" ? "edash-btn-primary" : "edash-btn-outline"} onClick={() => setView("payments")}>Payments</button>
         <button type="button" className={view === "accounting" ? "edash-btn-primary" : "edash-btn-outline"} onClick={openAccounting}>Accounting</button>
+        <button type="button" className={view === "due_payments" ? "edash-btn-primary" : "edash-btn-outline"} onClick={openDuePayments}>Due Payments</button>
       </div>
 
-      {view === "accounting" ? (
+      {view === "due_payments" ? (
+        <div className="edash-card">
+          <div className="edash-card-inner">
+            <div className="edash-card-head" style={{ justifyContent: "space-between" }}>
+              <h3 className="edash-card-title">Installment payments ({duePayments?.rows.length ?? 0})</h3>
+              <p className="edash-status-row-desc" style={{ margin: 0 }}>Updates automatically every 45 seconds, and whenever a payment is recorded.</p>
+            </div>
+            {duePayments ? (
+              duePayments.rows.length ? (
+                <div style={{ overflowX: "auto" }}>
+                  <table className="edash-mini-table">
+                    <thead><tr><th>Customer</th><th>Estate / Plot</th><th>Outstanding</th><th>Due date</th><th>Status</th><th>Reminder</th><th /></tr></thead>
+                    <tbody>
+                      {duePayments.rows.map((row) => (
+                        <tr key={row.allocation_id}>
+                          <td data-label="Customer">{row.customer_name}</td>
+                          <td data-label="Estate / Plot">{row.estate_name} / {row.plot_number}</td>
+                          <td data-label="Outstanding">{money(row.outstanding)}</td>
+                          <td data-label="Due date">{new Date(row.due_at).toLocaleDateString()}</td>
+                          <td data-label="Status"><span className={`edash-status-pill tone-${row.bucket === "overdue" ? "danger" : row.bucket === "due_soon" ? "neutral" : "good"}`}>{row.bucket_label}</span></td>
+                          <td data-label="Reminder">{row.reminder_sent ? "Sent" : "Not sent"}</td>
+                          <td><button type="button" className="edash-btn-outline" onClick={() => openReminder(row)}>Send reminder</button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : <p className="edash-tab-empty">No installment payments are currently due - everyone's either fully paid or not yet on a schedule.</p>
+            ) : <p className="edash-tab-empty"><Spinner size={13} /> Loading...</p>}
+          </div>
+        </div>
+      ) : view === "accounting" ? (
         <>
           {isOwner && (
             <div className="edash-card" style={{ marginBottom: 16 }}>
@@ -654,6 +751,31 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
         </div>
         </div>
         </>
+      )}
+
+      {reminderRow && (
+        <EstateModal title="Send payment reminder" subtitle={`${reminderRow.customer_name} - ${reminderRow.estate_name} / ${reminderRow.plot_number}`} onClose={() => setReminderRow(null)}>
+          <label className="edash-field" style={{ marginBottom: 12 }}>
+            <span>Channel</span>
+            <select value={reminderChannel} onChange={(event) => setReminderChannel(event.target.value as "sms" | "whatsapp" | "email")}>
+              <option value="sms">SMS</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="email">Email</option>
+            </select>
+          </label>
+          <label className="edash-field" style={{ marginBottom: 12 }}>
+            <span>Payment method to include</span>
+            <select value={reminderMethod} onChange={(event) => setReminderMethod(event.target.value as "online_link" | "bank_details")}>
+              <option value="online_link">Online payment link</option>
+              <option value="bank_details">Bank transfer details</option>
+            </select>
+          </label>
+          {reminderChannel === "whatsapp" && <p className="edash-field-note" style={{ marginBottom: 12 }}>WhatsApp can only be delivered within 24 hours of the customer's last message to you. If it fails, try SMS or email instead.</p>}
+          {reminderError && <p className="edash-field-note" style={{ marginBottom: 12, color: "var(--edash-danger, #b3261e)" }}>{reminderError}</p>}
+          <button type="button" className="edash-btn-primary" disabled={sendingReminder} onClick={() => void sendReminder()}>
+            {sendingReminder ? <><Spinner size={14} /> Sending...</> : "Send reminder"}
+          </button>
+        </EstateModal>
       )}
 
       {recording && (
