@@ -53,6 +53,7 @@ export default function EstateBillingPage() {
   const navigate = useNavigate();
   const session = getEstateAuthSession();
   const organizationId = session?.user.organization_id;
+  const isOwner = session?.user.role_key === "owner";
 
   const [sidebarEstateId, setSidebarEstateId] = useState("");
   const [sidebarEstateName, setSidebarEstateName] = useState("");
@@ -104,7 +105,7 @@ export default function EstateBillingPage() {
   useEffect(() => { void load(); }, [organizationId]);
 
   const loadPayoutAccount = async () => {
-    if (!organizationId) return;
+    if (!organizationId || !isOwner) return;
     try {
       const [statusResponse, banksResponse] = await Promise.all([
         api.get<PayoutAccountStatus>(`/estates/payout-accounts/${organizationId}`),
@@ -289,7 +290,9 @@ export default function EstateBillingPage() {
           <p className="edash-field-note" style={{ marginBottom: 16 }}>
             The bank account your buyers' online plot payments settle into directly. LandCheck takes no fee - 100% goes to this account.
           </p>
-          {payoutAccount?.configured ? (
+          {!isOwner ? (
+            <p className="edash-field-note">Only the organization owner can view or change the payout account - this protects buyer payments from being redirected by a team member's billing access.</p>
+          ) : payoutAccount?.configured ? (
             <div className="edash-overview-grid edash-overview-grid--3">
               <div className="edash-overview-field"><span>Bank</span><strong>{payoutAccount.bank_name || payoutAccount.bank_code}</strong></div>
               <div className="edash-overview-field"><span>Account</span><strong>{payoutAccount.account_name} ({payoutAccount.account_number})</strong></div>

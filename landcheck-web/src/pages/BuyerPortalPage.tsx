@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../api/client";
 
@@ -56,6 +56,14 @@ export default function BuyerPortalPage() {
   const [payingId, setPayingId] = useState<number | null>(null);
   const [payErrors, setPayErrors] = useState<Record<number, string>>({});
   const paymentResult = searchParams.get("payment_result");
+  // Refs, not state: a double-click fires both click handlers before React re-renders the
+  // `disabled` prop from state, so the guard against sending two requests has to be checked and
+  // set synchronously. The idempotency key is kept per-allocation across retries of the SAME
+  // click (e.g. the request is still in flight) and only cleared once that attempt resolves, so
+  // a genuine resubmission of an in-flight payment reuses the same server-side key instead of
+  // opening a second checkout.
+  const payInFlightRef = useRef<Set<number>>(new Set());
+  const payIdempotencyKeysRef = useRef<Record<number, string>>({});
 
   const loadPortal = () => {
     if (!token) return;
@@ -76,24 +84,35 @@ export default function BuyerPortalPage() {
   }, []);
 
   const payOutstanding = (allocation: PortalAllocation) => {
+    const allocationId = allocation.allocation_id;
+    if (payInFlightRef.current.has(allocationId)) return; // synchronous double-click guard
     const outstanding = Number(allocation.financial.outstanding);
-    const raw = payAmounts[allocation.allocation_id];
+    const raw = payAmounts[allocationId];
     const amount = raw ? Number(raw) : outstanding;
     if (!amount || amount <= 0) {
-      setPayErrors((prev) => ({ ...prev, [allocation.allocation_id]: "Enter a valid amount." }));
+      setPayErrors((prev) => ({ ...prev, [allocationId]: "Enter a valid amount." }));
       return;
     }
     if (amount > outstanding + 0.01) {
-      setPayErrors((prev) => ({ ...prev, [allocation.allocation_id]: "Amount cannot exceed the outstanding balance." }));
+      setPayErrors((prev) => ({ ...prev, [allocationId]: "Amount cannot exceed the outstanding balance." }));
       return;
     }
-    setPayErrors((prev) => ({ ...prev, [allocation.allocation_id]: "" }));
-    setPayingId(allocation.allocation_id);
-    api.post(`/estates/buyer/${token}/allocations/${allocation.allocation_id}/pay`, raw ? { amount } : {})
+    setPayErrors((prev) => ({ ...prev, [allocationId]: "" }));
+    payInFlightRef.current.add(allocationId);
+    if (!payIdempotencyKeysRef.current[allocationId]) {
+      payIdempotencyKeysRef.current[allocationId] = crypto.randomUUID();
+    }
+    const idempotencyKey = payIdempotencyKeysRef.current[allocationId];
+    setPayingId(allocationId);
+    api.post(`/estates/buyer/${token}/allocations/${allocationId}/pay`, raw ? { amount } : {}, { headers: { "X-Idempotency-Key": idempotencyKey } })
       .then((response) => { window.location.href = response.data.checkout_url; })
       .catch(async (reason) => {
         const message = await extractApiErrorMessage(reason, "Could not start checkout. Please try again.");
-        setPayErrors((prev) => ({ ...prev, [allocation.allocation_id]: message }));
+        setPayErrors((prev) => ({ ...prev, [allocationId]: message }));
+        // The attempt behind this key is now resolved (failed) server-side too - a retry click
+        // should open a genuinely new attempt, not resubmit a key the server already rejected.
+        delete payIdempotencyKeysRef.current[allocationId];
+        payInFlightRef.current.delete(allocationId);
         setPayingId(null);
       });
   };
