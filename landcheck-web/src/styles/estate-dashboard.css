@@ -1731,6 +1731,15 @@
 .estate-buyer-progress strong, .estate-buyer-money strong { color: #087942; }
 .estate-buyer-progress-track { height: 9px; margin: 10px 0; overflow: hidden; border-radius: 999px; background: #dce9e2; }
 .estate-buyer-progress-track span { display: block; height: 100%; border-radius: inherit; background: #159957; }
+.estate-buyer-pay-row { display: flex; gap: 8px; margin-top: 12px; }
+.estate-buyer-pay-row input { flex: 1; min-width: 0; padding: 9px 10px; border: 1px solid #b9ddc7; border-radius: 9px; background: #fff; font: inherit; font-size: .78rem; }
+.estate-buyer-pay-row input:focus { outline: none; border-color: #159957; box-shadow: 0 0 0 1px #159957; }
+.estate-buyer-pay-row button { white-space: nowrap; }
+.estate-buyer-pay-error { margin: 8px 0 0; color: #b3261e; font-size: .74rem; }
+.estate-buyer-payment-banner { max-width: 980px; margin: 0 auto 16px; padding: 12px 16px; border-radius: 12px; font-size: .85rem; font-weight: 600; }
+.estate-buyer-payment-banner.is-success { background: #e2f8e9; color: #087942; }
+.estate-buyer-payment-banner.is-failed { background: #fbeaea; color: #b3261e; }
+.estate-buyer-payment-banner.is-pending { background: #fff4e0; color: #93650f; }
 .estate-buyer-status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .estate-buyer-status-grid div { padding: 10px; border: 1px solid #e0ebe5; border-radius: 10px; }
 .estate-buyer-status-grid span, .estate-buyer-status-grid strong { display: block; }
