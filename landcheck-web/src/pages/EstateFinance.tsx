@@ -21,7 +21,7 @@ type PayoutAccountStatus = {
 type AccountingSummary = { by_method: { method: string; amount: string; count: number }[]; online_total: string; manual_total: string; total_confirmed: string };
 type AgedDebtorRow = { allocation_id: number; customer_name: string; estate_name: string; plot_number: string; outstanding: string; days_outstanding: number; bucket: string; bucket_label: string };
 type AgedDebtors = { rows: AgedDebtorRow[]; bucket_totals: Record<string, string>; bucket_labels: Record<string, string> };
-type DuePaymentRow = { allocation_id: number; customer_name: string; customer_phone?: string | null; customer_email?: string | null; estate_name: string; plot_number: string; outstanding: string; due_at: string; bucket: string; bucket_label: string; reminder_sent: boolean };
+type DuePaymentRow = { allocation_id: number; customer_name: string; customer_phone?: string | null; customer_email?: string | null; estate_name: string; plot_number: string; outstanding: string; due_at: string | null; bucket: string; bucket_label: string; reminder_sent: boolean };
 type DuePayments = { rows: DuePaymentRow[]; bucket_labels: Record<string, string> };
 
 type Payment = { id: number; date: string; amount: string; currency: string; status: string; method: string; reference?: string; customer: { name: string }; estate: { name: string }; plot: { number: string }; can_confirm?: boolean };
@@ -572,8 +572,8 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
                           <td data-label="Customer">{row.customer_name}</td>
                           <td data-label="Estate / Plot">{row.estate_name} / {row.plot_number}</td>
                           <td data-label="Outstanding">{money(row.outstanding)}</td>
-                          <td data-label="Due date">{new Date(row.due_at).toLocaleDateString()}</td>
-                          <td data-label="Status"><span className={`edash-status-pill tone-${row.bucket === "overdue" ? "danger" : row.bucket === "due_soon" ? "neutral" : "good"}`}>{row.bucket_label}</span></td>
+                          <td data-label="Due date">{row.due_at ? new Date(row.due_at).toLocaleDateString() : "Not scheduled"}</td>
+                          <td data-label="Status"><span className={`edash-status-pill tone-${row.bucket === "overdue" ? "danger" : row.bucket === "due_soon" ? "neutral" : row.bucket === "no_schedule" ? "neutral" : "good"}`}>{row.bucket_label}</span></td>
                           <td data-label="Reminder">{row.reminder_sent ? "Sent" : "Not sent"}</td>
                           <td><button type="button" className="edash-btn-outline" onClick={() => openReminder(row)}>Send reminder</button></td>
                         </tr>
