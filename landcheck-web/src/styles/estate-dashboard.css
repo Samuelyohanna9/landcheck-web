@@ -1716,51 +1716,211 @@
 .edash-dashboard-qr-row strong { color: var(--edash-ink); font-size: .72rem; }
 .edash-dashboard-qr-row small { color: var(--edash-muted); font-size: .64rem; }
 .edash-dashboard-qr-row > div:last-child { display: flex; gap: 6px; }
-.estate-buyer-portal { min-height: 100vh; padding: 32px 18px; background: #f3f6f5; color: #16352a; font-family: inherit; }
-.estate-buyer-header, .estate-buyer-panel { max-width: 980px; margin: 0 auto 16px; border: 1px solid #d8e6df; border-radius: 18px; background: #fff; box-shadow: 0 8px 24px rgba(19, 55, 42, .07); }
-.estate-buyer-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 26px; background: linear-gradient(135deg, #fff, #eefaf3); }
-.estate-buyer-header h1, .estate-buyer-panel h2 { margin: 5px 0; color: #102d21; }
-.estate-buyer-header p, .estate-buyer-panel p { margin: 6px 0; color: #60776b; font-size: .9rem; }
-.estate-buyer-secure { padding: 7px 10px; border-radius: 999px; background: #d9f7e5; color: #087942; font-size: .7rem; font-weight: 800; white-space: nowrap; }
-.estate-buyer-grid { max-width: 980px; margin: 0 auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.estate-buyer-panel { padding: 22px; }
-.estate-buyer-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
-.estate-buyer-panel-head h2 { font-size: 1.35rem; }
-.estate-buyer-progress { margin: 20px 0; padding: 14px; border-radius: 12px; background: #f2fbf5; }
-.estate-buyer-progress > div:first-child, .estate-buyer-money { display: flex; justify-content: space-between; gap: 10px; color: #5f776b; font-size: .75rem; }
-.estate-buyer-progress strong, .estate-buyer-money strong { color: #087942; }
-.estate-buyer-progress-track { height: 9px; margin: 10px 0; overflow: hidden; border-radius: 999px; background: #dce9e2; }
-.estate-buyer-progress-track span { display: block; height: 100%; border-radius: inherit; background: #159957; }
-.estate-buyer-pay-row { display: flex; gap: 8px; margin-top: 12px; }
-.estate-buyer-pay-row input { flex: 1; min-width: 0; padding: 9px 10px; border: 1px solid #b9ddc7; border-radius: 9px; background: #fff; font: inherit; font-size: .78rem; }
-.estate-buyer-pay-row input:focus { outline: none; border-color: #159957; box-shadow: 0 0 0 1px #159957; }
-.estate-buyer-pay-row button { white-space: nowrap; }
-.estate-buyer-pay-error { margin: 8px 0 0; color: #b3261e; font-size: .74rem; }
-.estate-buyer-payment-banner { max-width: 980px; margin: 0 auto 16px; padding: 12px 16px; border-radius: 12px; font-size: .85rem; font-weight: 600; }
-.estate-buyer-payment-banner.is-success { background: #e2f8e9; color: #087942; }
-.estate-buyer-payment-banner.is-failed { background: #fbeaea; color: #b3261e; }
-.estate-buyer-payment-banner.is-pending { background: #fff4e0; color: #93650f; }
-.estate-buyer-status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.estate-buyer-status-grid div { padding: 10px; border: 1px solid #e0ebe5; border-radius: 10px; }
-.estate-buyer-status-grid span, .estate-buyer-status-grid strong { display: block; }
-.estate-buyer-status-grid span, .estate-buyer-checklist span { color: #71867a; font-size: .68rem; }
-.estate-buyer-status-grid strong { margin-top: 4px; font-size: .78rem; text-transform: capitalize; }
-.estate-buyer-panel h3 { margin: 18px 0 8px; font-size: .82rem; }
+@media (max-width: 700px) {
+  .edash-dashboard-qr-form { grid-template-columns: 1fr; }
+  .edash-dashboard-qr-row { align-items: stretch; flex-direction: column; }
+  .edash-dashboard-qr-row > div:last-child { display: flex; }
+  .edash-dashboard-qr-row > div:last-child > * { flex: 1; }
+}
+/* ─── Buyer Portal: mobile-first, premium ────────────────────────────────────────────────────
+   Rules are written base-first for phones, then enhanced at the 720px (tablet) and 1040px
+   (desktop) breakpoints below - rather than the older "design for desktop, squash for mobile"
+   pattern - since this page's primary audience opens it from an SMS/WhatsApp link on a phone. */
+:root {
+  --buyer-ink: #0c261d;
+  --buyer-muted: #5c7368;
+  --buyer-faint: #93a89d;
+  --buyer-line: #dde8e2;
+  --buyer-line-soft: #eef4f1;
+  --buyer-paper: #eef5f1;
+  --buyer-surface: #ffffff;
+  --buyer-tint: #f2faf6;
+  --buyer-brand: #159957;
+  --buyer-brand-dark: #0f6e44;
+  --buyer-brand-tint: #e2f8e9;
+  --buyer-warn: #a3690a;
+  --buyer-warn-tint: #fff4e0;
+  --buyer-danger: #b3261e;
+  --buyer-danger-tint: #fbeaea;
+  --buyer-radius-lg: 20px;
+  --buyer-radius-md: 14px;
+  --buyer-shadow: 0 1px 2px rgba(12, 38, 29, .04), 0 12px 32px -12px rgba(12, 38, 29, .16);
+}
+
+.estate-buyer-portal {
+  min-height: 100vh;
+  padding: 20px 16px calc(40px + env(safe-area-inset-bottom, 0px));
+  background:
+    radial-gradient(1100px 520px at 12% -8%, rgba(21, 153, 87, .08), transparent 60%),
+    radial-gradient(900px 480px at 100% 0%, rgba(15, 110, 68, .06), transparent 55%),
+    var(--buyer-paper);
+  color: var(--buyer-ink);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-feature-settings: "tnum" 1;
+  -webkit-font-smoothing: antialiased;
+}
+.estate-buyer-portal--centered { display: flex; align-items: center; justify-content: center; }
+.estate-buyer-state-card { max-width: 420px; width: 100%; text-align: center; padding: 36px 24px; }
+.estate-buyer-state-icon { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; margin-bottom: 14px; border-radius: 50%; background: var(--buyer-danger-tint); color: var(--buyer-danger); }
+.estate-buyer-state-icon svg { width: 24px; height: 24px; }
+.estate-buyer-spinner { display: inline-block; width: 28px; height: 28px; margin-bottom: 14px; border: 3px solid var(--buyer-line); border-top-color: var(--buyer-brand); border-radius: 50%; animation: estate-buyer-spin .7s linear infinite; }
+@keyframes estate-buyer-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .estate-buyer-spinner { animation-duration: 1.6s; } }
+
+.estate-buyer-header, .estate-buyer-panel { max-width: 1040px; margin: 0 auto 14px; border: 1px solid var(--buyer-line); border-radius: var(--buyer-radius-lg); background: var(--buyer-surface); box-shadow: var(--buyer-shadow); }
+.estate-buyer-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 22px 20px;
+  background: linear-gradient(135deg, #fff, var(--buyer-tint));
+}
+.estate-buyer-header-text { min-width: 0; }
+.estate-buyer-kicker { display: block; margin: 0 0 6px; color: var(--buyer-brand); font-size: .68rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.estate-buyer-header h1, .estate-buyer-panel h2 { margin: 4px 0; color: var(--buyer-ink); letter-spacing: -.01em; }
+.estate-buyer-header h1 { font-size: clamp(1.3rem, 4.5vw, 1.7rem); font-weight: 700; line-height: 1.2; }
+.estate-buyer-header p, .estate-buyer-panel > p { margin: 4px 0 0; color: var(--buyer-muted); font-size: .88rem; line-height: 1.5; }
+.estate-buyer-secure { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; background: var(--buyer-brand-tint); color: var(--buyer-brand-dark); font-size: .7rem; font-weight: 800; letter-spacing: .02em; white-space: nowrap; }
+.estate-buyer-secure svg { width: 13px; height: 13px; }
+
+.estate-buyer-grid { max-width: 1040px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: 14px; }
+.estate-buyer-panel { padding: 18px; }
+.estate-buyer-panel-head { display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
+.estate-buyer-panel-head h2 { font-size: 1.25rem; font-weight: 700; }
+.estate-buyer-panel-head p { display: flex; align-items: center; color: var(--buyer-muted); font-size: .82rem; text-transform: capitalize; }
+.estate-buyer-status-dot { display: inline-block; width: 4px; height: 4px; margin: 0 7px; border-radius: 50%; background: var(--buyer-faint); }
+
+.estate-buyer-ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid var(--buyer-line);
+  border-radius: 10px;
+  background: var(--buyer-surface);
+  color: var(--buyer-brand-dark);
+  font: inherit;
+  font-size: .82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+.estate-buyer-ghost-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+.estate-buyer-ghost-btn:hover { background: var(--buyer-tint); border-color: var(--buyer-brand); }
+
+.estate-buyer-progress { margin: 18px 0; padding: 16px; border-radius: var(--buyer-radius-md); background: var(--buyer-tint); border: 1px solid var(--buyer-line-soft); }
+.estate-buyer-progress-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; color: var(--buyer-muted); font-size: .76rem; font-weight: 600; }
+.estate-buyer-progress-head strong { color: var(--buyer-brand-dark); font-size: 1.05rem; font-weight: 800; }
+.estate-buyer-progress-track { height: 10px; margin: 12px 0 14px; overflow: hidden; border-radius: 999px; background: var(--buyer-line); }
+.estate-buyer-progress-track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--buyer-brand-dark), var(--buyer-brand)); transition: width .5s cubic-bezier(.4, 0, .2, 1); }
+@media (prefers-reduced-motion: reduce) { .estate-buyer-progress-track span { transition: none; } }
+.estate-buyer-money { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.estate-buyer-money > div { display: flex; flex-direction: column; gap: 3px; }
+.estate-buyer-money span { color: var(--buyer-muted); font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.estate-buyer-money strong { color: var(--buyer-ink); font-size: 1.05rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.estate-buyer-money strong.is-outstanding { color: var(--buyer-warn); }
+
+.estate-buyer-pay-row { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.estate-buyer-pay-row input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--buyer-line);
+  border-radius: 10px;
+  background: var(--buyer-surface);
+  font: inherit;
+  font-size: .9rem;
+  font-variant-numeric: tabular-nums;
+}
+.estate-buyer-pay-row input:focus { outline: none; border-color: var(--buyer-brand); box-shadow: 0 0 0 3px var(--buyer-brand-tint); }
+.estate-buyer-pay-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 46px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--buyer-brand);
+  color: #fff;
+  font: inherit;
+  font-size: .88rem;
+  font-weight: 800;
+  letter-spacing: .01em;
+  cursor: pointer;
+  box-shadow: 0 6px 16px -6px rgba(21, 153, 87, .55);
+  transition: background .15s ease, transform .1s ease;
+}
+.estate-buyer-pay-btn:hover:not(:disabled) { background: var(--buyer-brand-dark); }
+.estate-buyer-pay-btn:active:not(:disabled) { transform: translateY(1px); }
+.estate-buyer-pay-btn:disabled { opacity: .6; cursor: wait; box-shadow: none; }
+.estate-buyer-pay-error { margin: 8px 0 0; color: var(--buyer-danger); font-size: .78rem; font-weight: 600; }
+
+.estate-buyer-payment-banner { display: flex; align-items: center; gap: 10px; max-width: 1040px; margin: 0 auto 14px; padding: 13px 16px; border-radius: var(--buyer-radius-md); font-size: .85rem; font-weight: 600; line-height: 1.4; }
+.estate-buyer-payment-banner svg { width: 18px; height: 18px; flex-shrink: 0; }
+.estate-buyer-payment-banner.is-success { background: var(--buyer-brand-tint); color: var(--buyer-brand-dark); }
+.estate-buyer-payment-banner.is-failed { background: var(--buyer-danger-tint); color: var(--buyer-danger); }
+.estate-buyer-payment-banner.is-pending { background: var(--buyer-warn-tint); color: var(--buyer-warn); }
+
+.estate-buyer-status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.estate-buyer-stat-tile { display: flex; align-items: flex-start; gap: 9px; padding: 11px; border: 1px solid var(--buyer-line-soft); border-radius: 12px; background: var(--buyer-surface); }
+.estate-buyer-stat-tile svg { flex-shrink: 0; width: 16px; height: 16px; margin-top: 1px; color: var(--buyer-brand); }
+.estate-buyer-stat-tile > div { min-width: 0; }
+.estate-buyer-stat-tile span, .estate-buyer-stat-tile strong { display: block; }
+.estate-buyer-stat-tile span { color: var(--buyer-muted); font-size: .66rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+.estate-buyer-stat-tile strong { margin-top: 3px; color: var(--buyer-ink); font-size: .8rem; font-weight: 700; text-transform: capitalize; overflow-wrap: anywhere; }
+.estate-buyer-stat-tile small { display: block; margin-top: 3px; color: var(--buyer-faint); font-size: .66rem; line-height: 1.4; }
+.estate-buyer-stat-tile--wide { grid-column: 1 / -1; }
+
+.estate-buyer-panel h3 { margin: 20px 0 9px; color: var(--buyer-ink); font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
 .estate-buyer-checklist { display: grid; gap: 6px; }
-.estate-buyer-checklist span { padding: 7px 9px; border-radius: 8px; background: #fff4ee; color: #a45d29; }
-.estate-buyer-checklist span.is-ready { background: #e2f8e9; color: #087942; }
+.estate-buyer-checklist span { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border-radius: 10px; background: var(--buyer-warn-tint); color: var(--buyer-warn); font-size: .8rem; font-weight: 600; }
+.estate-buyer-checklist span svg { width: 15px; height: 15px; flex-shrink: 0; opacity: .55; }
+.estate-buyer-checklist span.is-ready { background: var(--buyer-brand-tint); color: var(--buyer-brand-dark); }
+.estate-buyer-checklist span.is-ready svg { opacity: 1; }
 .estate-buyer-documents { display: grid; gap: 6px; }
-.estate-buyer-documents button { width: 100%; padding: 9px 10px; border: 1px solid #b9ddc7; border-radius: 9px; background: #f4fcf6; color: #087942; font: inherit; font-size: .75rem; font-weight: 700; text-align: left; cursor: pointer; }
-.estate-buyer-documents button:hover { border-color: #159957; background: #e2f8e9; }
+.estate-buyer-documents button { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 42px; padding: 0 12px; border: 1px solid var(--buyer-line); border-radius: 10px; background: var(--buyer-tint); color: var(--buyer-brand-dark); font: inherit; font-size: .8rem; font-weight: 700; text-align: left; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
+.estate-buyer-documents button svg { width: 15px; height: 15px; flex-shrink: 0; }
+.estate-buyer-documents button:hover { border-color: var(--buyer-brand); background: var(--buyer-brand-tint); }
+.estate-buyer-empty-note { color: var(--buyer-muted); font-size: .84rem; }
 .edash-allocation-record { display: grid; gap: 14px; }
 .edash-allocation-record-section { padding-top: 12px; border-top: 1px solid var(--edash-border-soft); }
 .edash-allocation-record-section h4 { margin: 0 0 8px; color: var(--edash-ink); font-size: .82rem; }
 .edash-allocation-record-section .edash-mini-table { min-width: 620px; }
-.estate-buyer-payments { display: grid; gap: 6px; }
-.estate-buyer-payments div { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; padding: 8px 0; border-bottom: 1px solid #edf1ee; font-size: .74rem; }
-.estate-buyer-payments small { grid-column: 1 / -1; color: #71867a; }
-.estate-buyer-portal footer { max-width: 980px; margin: 20px auto; color: #71867a; text-align: center; font-size: .72rem; }
-@media (max-width: 700px) { .edash-dashboard-qr-form, .estate-buyer-grid { grid-template-columns: 1fr; } .edash-dashboard-qr-row, .estate-buyer-header, .estate-buyer-panel-head { align-items: stretch; flex-direction: column; } .edash-dashboard-qr-row > div:last-child { display: flex; } .edash-dashboard-qr-row > div:last-child > * { flex: 1; } .estate-buyer-status-grid { grid-template-columns: 1fr 1fr; } .estate-buyer-header, .estate-buyer-panel { padding: 16px; } }
+.estate-buyer-payments { display: grid; gap: 8px; }
+.estate-buyer-payments > div { display: grid; grid-template-columns: 1fr auto; column-gap: 10px; row-gap: 4px; padding: 12px 13px; border: 1px solid var(--buyer-line-soft); border-radius: 10px; background: var(--buyer-surface); }
+.estate-buyer-payments-date { grid-column: 1; grid-row: 1; color: var(--buyer-muted); font-size: .72rem; font-weight: 600; }
+.estate-buyer-payments-amount { grid-column: 2; grid-row: 1; color: var(--buyer-ink); font-size: .92rem; font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; }
+.estate-buyer-payments-status { grid-column: 1; grid-row: 2; font-size: .72rem; font-weight: 700; text-transform: capitalize; }
+.estate-buyer-payments-status.status-confirmed { color: var(--buyer-brand-dark); }
+.estate-buyer-payments-status.status-pending_confirmation, .estate-buyer-payments-status.status-recorded { color: var(--buyer-warn); }
+.estate-buyer-payments-status.status-voided, .estate-buyer-payments-status.status-reversed { color: var(--buyer-danger); }
+.estate-buyer-payments-receipt { grid-column: 2; grid-row: 2; color: var(--buyer-faint); font-size: .7rem; text-align: right; overflow-wrap: anywhere; }
+
+.estate-buyer-portal footer { max-width: 1040px; margin: 22px auto 0; padding: 0 4px; color: var(--buyer-faint); text-align: center; font-size: .72rem; line-height: 1.6; }
+
+@media (min-width: 560px) {
+  .estate-buyer-panel-head { flex-direction: row; align-items: flex-start; justify-content: space-between; }
+  .estate-buyer-ghost-btn { width: auto; }
+  .estate-buyer-pay-row { flex-direction: row; }
+  .estate-buyer-pay-row input { flex: 1; min-width: 0; }
+  .estate-buyer-pay-btn { width: auto; white-space: nowrap; }
+  .estate-buyer-status-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 720px) {
+  .estate-buyer-portal { padding: 36px 24px calc(48px + env(safe-area-inset-bottom, 0px)); }
+  .estate-buyer-header { flex-direction: row; align-items: center; justify-content: space-between; padding: 28px 30px; }
+  .estate-buyer-panel { padding: 26px; }
+  .estate-buyer-panel-head h2 { font-size: 1.4rem; }
+}
+@media (min-width: 1040px) {
+  .estate-buyer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
 /* ─── Estate onboarding: pick or create an estate (no sidebar - nothing to navigate to yet) ─── */
 .edash-onboard {

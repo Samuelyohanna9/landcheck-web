@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../api/client";
+import EstateIcon from "../components/estates/EstateIcon";
+// Buyers open this page directly from an SMS/WhatsApp/email link - never via in-app navigation
+// from the staff dashboard - so estate-dashboard.css (home of every .estate-buyer-* rule below)
+// must be imported here explicitly. It was previously only ever loaded as a side effect of
+// EstateShell.tsx/Estates.tsx, which meant a genuinely fresh page load rendered completely
+// unstyled for real buyers.
+import "../styles/estate-dashboard.css";
 
 type PortalDocument = { id: number; filename: string; type: string };
 type PortalAllocation = {
@@ -117,35 +124,56 @@ export default function BuyerPortalPage() {
       });
   };
 
-  if (error) return <main className="estate-buyer-portal"><section className="estate-buyer-panel"><h1>Buyer portal unavailable</h1><p>{error}</p></section></main>;
-  if (!portal) return <main className="estate-buyer-portal"><section className="estate-buyer-panel"><p>Loading your LandCheck buyer portal...</p></section></main>;
+  if (error) return (
+    <main className="estate-buyer-portal estate-buyer-portal--centered">
+      <section className="estate-buyer-panel estate-buyer-state-card">
+        <span className="estate-buyer-state-icon is-danger"><EstateIcon name="alert-triangle" /></span>
+        <h1>Buyer portal unavailable</h1>
+        <p>{error}</p>
+      </section>
+    </main>
+  );
+  if (!portal) return (
+    <main className="estate-buyer-portal estate-buyer-portal--centered">
+      <section className="estate-buyer-panel estate-buyer-state-card">
+        <span className="estate-buyer-spinner" aria-hidden="true" />
+        <p>Loading your LandCheck buyer portal...</p>
+      </section>
+    </main>
+  );
 
   return <main className="estate-buyer-portal">
     <header className="estate-buyer-header">
-      <div>
-        <span className="estate-public-kicker">LandCheck Estates</span>
+      <div className="estate-buyer-header-text">
+        <span className="estate-buyer-kicker">LandCheck Estates</span>
         <h1>Welcome, {portal.customer?.name || "buyer"}</h1>
         <p>Your plot, payments, documents, and next steps in one place.</p>
       </div>
-      <span className="estate-buyer-secure">Private access</span>
+      <span className="estate-buyer-secure"><EstateIcon name="lock" /> Private access</span>
     </header>
-    {paymentResult === "success" && <div className="estate-buyer-payment-banner is-success">Payment received - thank you. Your balance below has been updated.</div>}
-    {paymentResult === "failed" && <div className="estate-buyer-payment-banner is-failed">That payment did not go through. You can try again below.</div>}
-    {paymentResult === "pending" && <div className="estate-buyer-payment-banner is-pending">Your payment is still being confirmed. This usually updates within a few minutes.</div>}
+    {paymentResult === "success" && <div className="estate-buyer-payment-banner is-success"><EstateIcon name="check-circle" /><span>Payment received - thank you. Your balance below has been updated.</span></div>}
+    {paymentResult === "failed" && <div className="estate-buyer-payment-banner is-failed"><EstateIcon name="alert-triangle" /><span>That payment did not go through. You can try again below.</span></div>}
+    {paymentResult === "pending" && <div className="estate-buyer-payment-banner is-pending"><EstateIcon name="clock" /><span>Your payment is still being confirmed. This usually updates within a few minutes.</span></div>}
     <div className="estate-buyer-grid">
       {portal.allocations.map((allocation) => <section className="estate-buyer-panel" key={allocation.allocation_id}>
         <div className="estate-buyer-panel-head">
           <div>
-            <span className="estate-public-kicker">{allocation.estate?.name || "Estate"}</span>
+            <span className="estate-buyer-kicker">{allocation.estate?.name || "Estate"}</span>
             <h2>Plot {allocation.plot?.number || "-"}</h2>
-            <p>{allocation.plot?.area_sqm ? `${allocation.plot.area_sqm.toLocaleString()} m2` : "Area pending"} - {allocation.status}</p>
+            <p>{allocation.plot?.area_sqm ? `${allocation.plot.area_sqm.toLocaleString()} m2` : "Area pending"} <span className="estate-buyer-status-dot" aria-hidden="true" />{allocation.status.replaceAll("_", " ")}</p>
           </div>
-          <button type="button" className="estate-public-primary" onClick={() => void download(`/estates/buyer/${token}/packet/${allocation.allocation_id}.pdf`, `plot-${allocation.plot?.number || allocation.allocation_id}-buyer-packet.pdf`)}>Download buyer packet</button>
+          <button type="button" className="estate-buyer-ghost-btn" onClick={() => void download(`/estates/buyer/${token}/packet/${allocation.allocation_id}.pdf`, `plot-${allocation.plot?.number || allocation.allocation_id}-buyer-packet.pdf`)}>
+            <EstateIcon name="download" /> Buyer packet
+          </button>
         </div>
+
         <div className="estate-buyer-progress">
-          <div><span>Payment progress</span><strong>{Number(allocation.financial.percentage).toFixed(0)}%</strong></div>
+          <div className="estate-buyer-progress-head"><span>Payment progress</span><strong>{Number(allocation.financial.percentage).toFixed(0)}%</strong></div>
           <div className="estate-buyer-progress-track"><span style={{ width: `${Math.min(100, Math.max(0, Number(allocation.financial.percentage)))}%` }} /></div>
-          <div className="estate-buyer-money"><span>Confirmed {money(allocation.financial.confirmed_paid)}</span><strong>Outstanding {money(allocation.financial.outstanding)}</strong></div>
+          <div className="estate-buyer-money">
+            <div><span>Confirmed</span><strong>{money(allocation.financial.confirmed_paid)}</strong></div>
+            <div><span>Outstanding</span><strong className={Number(allocation.financial.outstanding) > 0 ? "is-outstanding" : undefined}>{money(allocation.financial.outstanding)}</strong></div>
+          </div>
           {allocation.online_payments_enabled && Number(allocation.financial.outstanding) > 0 && <div className="estate-buyer-pay-row">
             <input
               type="number"
@@ -156,35 +184,65 @@ export default function BuyerPortalPage() {
             />
             <button
               type="button"
-              className="estate-public-primary"
+              className="estate-buyer-pay-btn"
               disabled={payingId === allocation.allocation_id}
               onClick={() => payOutstanding(allocation)}
             >{payingId === allocation.allocation_id ? "Opening checkout..." : "Pay online"}</button>
           </div>}
           {payErrors[allocation.allocation_id] && <p className="estate-buyer-pay-error">{payErrors[allocation.allocation_id]}</p>}
         </div>
+
         <div className="estate-buyer-status-grid">
-          <div><span>Survey</span><strong>{allocation.survey_status.replaceAll("_", " ")}</strong></div>
-          <div><span>Documents</span><strong>{allocation.document_readiness.complete ? "Ready" : "In progress"}</strong></div>
-          {allocation.reservation_expires_at && <div><span>Reservation deadline</span><strong>{new Date(allocation.reservation_expires_at).toLocaleDateString()}</strong></div>}
-          {allocation.next_payment_due_at && <div><span>Next payment due</span><strong>{new Date(allocation.next_payment_due_at).toLocaleDateString()}</strong></div>}
-          {paymentScheduleLabel(allocation.payment_plan) && <div><span>Instalment schedule</span><strong>{paymentScheduleLabel(allocation.payment_plan)}</strong><small>One reminder is sent up to 7 days before each next due date.</small></div>}
+          <div className="estate-buyer-stat-tile">
+            <EstateIcon name="survey" />
+            <div><span>Survey</span><strong>{allocation.survey_status.replaceAll("_", " ")}</strong></div>
+          </div>
+          <div className="estate-buyer-stat-tile">
+            <EstateIcon name="documents" />
+            <div><span>Documents</span><strong>{allocation.document_readiness.complete ? "Ready" : "In progress"}</strong></div>
+          </div>
+          {allocation.reservation_expires_at && <div className="estate-buyer-stat-tile">
+            <EstateIcon name="clock" />
+            <div><span>Reservation deadline</span><strong>{new Date(allocation.reservation_expires_at).toLocaleDateString()}</strong></div>
+          </div>}
+          {allocation.next_payment_due_at && <div className="estate-buyer-stat-tile">
+            <EstateIcon name="clock" />
+            <div><span>Next payment due</span><strong>{new Date(allocation.next_payment_due_at).toLocaleDateString()}</strong></div>
+          </div>}
+          {paymentScheduleLabel(allocation.payment_plan) && <div className="estate-buyer-stat-tile estate-buyer-stat-tile--wide">
+            <EstateIcon name="payments" />
+            <div><span>Instalment schedule</span><strong>{paymentScheduleLabel(allocation.payment_plan)}</strong><small>One reminder is sent up to 7 days before each next due date.</small></div>
+          </div>}
         </div>
+
         <h3>Document readiness</h3>
         <div className="estate-buyer-checklist">
-          {allocation.document_readiness.stages.map((item) => <span className={item.status === "ready" ? "is-ready" : ""} key={item.label}>{item.status === "ready" ? "Ready" : "Missing"} - {item.label}</span>)}
+          {allocation.document_readiness.stages.map((item) => <span className={item.status === "ready" ? "is-ready" : ""} key={item.label}><EstateIcon name="check-circle" />{item.label}</span>)}
         </div>
+
         {allocation.documents.length > 0 && <>
           <h3>Available documents</h3>
           <div className="estate-buyer-documents">
-            {allocation.documents.map((document) => <button type="button" key={document.id} onClick={() => void download(`/estates/buyer/${token}/documents/${document.id}/download`, document.filename)}>{document.filename}</button>)}
+            {allocation.documents.map((document) => <button type="button" key={document.id} onClick={() => void download(`/estates/buyer/${token}/documents/${document.id}/download`, document.filename)}><EstateIcon name="download" />{document.filename}</button>)}
           </div>
         </>}
+
         <h3>Payment receipts</h3>
-        {allocation.payments.length ? <div className="estate-buyer-payments">{allocation.payments.map((payment, index) => <div key={`${payment.date}-${index}`}><span>{new Date(payment.date).toLocaleDateString()}</span><strong>{money(payment.amount)}</strong><small>{payment.status.replaceAll("_", " ")} - {payment.receipt_number || "Receipt pending"}</small></div>)}</div> : <p>No payment has been recorded yet.</p>}
+        {allocation.payments.length ? (
+          <div className="estate-buyer-payments">
+            {allocation.payments.map((payment, index) => (
+              <div key={`${payment.date}-${index}`}>
+                <div className="estate-buyer-payments-date">{new Date(payment.date).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}</div>
+                <div className="estate-buyer-payments-amount">{money(payment.amount)}</div>
+                <div className={`estate-buyer-payments-status status-${payment.status}`}>{payment.status.replaceAll("_", " ")}</div>
+                <div className="estate-buyer-payments-receipt">{payment.receipt_number || "Receipt pending"}</div>
+              </div>
+            ))}
+          </div>
+        ) : <p className="estate-buyer-empty-note">No payment has been recorded yet.</p>}
       </section>)}
     </div>
-    {!portal.allocations.length && <section className="estate-buyer-panel"><h2>No active plot record yet</h2><p>Your Estate team has not linked an active reservation or allocation to this portal.</p></section>}
+    {!portal.allocations.length && <section className="estate-buyer-panel estate-buyer-state-card"><h2>No active plot record yet</h2><p>Your Estate team has not linked an active reservation or allocation to this portal.</p></section>}
     <footer>For account questions, contact the Estate company that issued this link. This link expires {new Date(portal.expires_at).toLocaleDateString()}.</footer>
   </main>;
 }
