@@ -27,6 +27,16 @@ type BillingStatus = {
 
 type Charge = { id: number; charge_type: string; amount: string; currency: string; status: string; failure_reason?: string | null; attempted_at: string };
 type PlanChangeResponse = BillingStatus & { plan_change_status?: string; plan_change_amount?: string };
+type Bank = { code: string; name: string };
+type PayoutAccountStatus = {
+  configured: boolean;
+  bank_code?: string;
+  bank_name?: string | null;
+  account_number?: string;
+  account_name?: string;
+  paystack_linked?: boolean;
+  flutterwave_linked?: boolean;
+};
 
 const STATUS_LABEL: Record<string, string> = {
   trialing: "Free trial",
@@ -51,6 +61,15 @@ export default function EstateBillingPage() {
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [busy, setBusy] = useState(false);
   const [busyPlan, setBusyPlan] = useState<EstatePlanKey | null>(null);
+
+  const [payoutAccount, setPayoutAccount] = useState<PayoutAccountStatus | null>(null);
+  const [banks, setBanks] = useState<Bank[]>([]);
+  const [bankCode, setBankCode] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [resolvedName, setResolvedName] = useState("");
+  const [resolving, setResolving] = useState(false);
+  const [savingPayout, setSavingPayout] = useState(false);
+  const [payoutError, setPayoutError] = useState("");
 
   useEffect(() => {
     const result = new URLSearchParams(window.location.search).get("payment_result");
@@ -83,6 +102,54 @@ export default function EstateBillingPage() {
   };
 
   useEffect(() => { void load(); }, [organizationId]);
+
+  const loadPayoutAccount = async () => {
+    if (!organizationId) return;
+    try {
+      const [statusResponse, banksResponse] = await Promise.all([
+        api.get<PayoutAccountStatus>(`/estates/payout-accounts/${organizationId}`),
+        api.get<{ banks: Bank[] }>("/estates/payout-accounts/banks"),
+      ]);
+      setPayoutAccount(statusResponse.data);
+      setBanks(banksResponse.data?.banks || []);
+    } catch { /* payout setup is optional - silently leave the section showing its empty state */ }
+  };
+
+  useEffect(() => { void loadPayoutAccount(); }, [organizationId]);
+
+  const resolvePayoutAccount = async () => {
+    if (!organizationId || !bankCode || !accountNumber) return;
+    setResolving(true);
+    setPayoutError("");
+    setResolvedName("");
+    try {
+      const response = await api.post<{ account_name: string }>(`/estates/payout-accounts/${organizationId}/resolve`, { bank_code: bankCode, account_number: accountNumber });
+      setResolvedName(response.data.account_name);
+    } catch (err) {
+      setPayoutError(await extractApiErrorMessage(err, "Could not verify this account."));
+    } finally {
+      setResolving(false);
+    }
+  };
+
+  const savePayoutAccount = async () => {
+    if (!organizationId || !resolvedName) return;
+    setSavingPayout(true);
+    setPayoutError("");
+    try {
+      const bankName = banks.find((bank) => bank.code === bankCode)?.name;
+      await api.put(`/estates/payout-accounts/${organizationId}`, { bank_code: bankCode, bank_name: bankName, account_number: accountNumber });
+      toast.success("Payout account saved. Buyer plot payments will now settle to this account.");
+      setAccountNumber("");
+      setBankCode("");
+      setResolvedName("");
+      await loadPayoutAccount();
+    } catch (err) {
+      setPayoutError(await extractApiErrorMessage(err, "Could not save this payout account."));
+    } finally {
+      setSavingPayout(false);
+    }
+  };
 
   const upgrade = async (planKey: EstatePlanKey) => {
     if (!organizationId) return;
@@ -213,6 +280,39 @@ export default function EstateBillingPage() {
               )}
             </>
           )}
+        </div>
+      </div>
+
+      <div className="edash-card" style={{ marginBottom: 16 }}>
+        <div className="edash-card-inner">
+          <div className="edash-card-head"><h3 className="edash-card-title">Payout account</h3></div>
+          <p className="edash-field-note" style={{ marginBottom: 16 }}>
+            The bank account your buyers' online plot payments settle into directly. LandCheck takes no fee - 100% goes to this account.
+          </p>
+          {payoutAccount?.configured ? (
+            <div className="edash-overview-grid edash-overview-grid--3">
+              <div className="edash-overview-field"><span>Bank</span><strong>{payoutAccount.bank_name || payoutAccount.bank_code}</strong></div>
+              <div className="edash-overview-field"><span>Account</span><strong>{payoutAccount.account_name} ({payoutAccount.account_number})</strong></div>
+              <div className="edash-overview-field"><span>Linked gateways</span><strong>{[payoutAccount.paystack_linked && "Paystack", payoutAccount.flutterwave_linked && "Flutterwave"].filter(Boolean).join(", ") || "None"}</strong></div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+              <label className="edash-field" style={{ minWidth: 200 }}>
+                <span>Bank</span>
+                <select value={bankCode} onChange={(event) => { setBankCode(event.target.value); setResolvedName(""); }}>
+                  <option value="">Select a bank</option>
+                  {banks.map((bank) => <option key={bank.code} value={bank.code}>{bank.name}</option>)}
+                </select>
+              </label>
+              <label className="edash-field" style={{ minWidth: 180 }}>
+                <span>Account number</span>
+                <input value={accountNumber} onChange={(event) => { setAccountNumber(event.target.value); setResolvedName(""); }} placeholder="0123456789" />
+              </label>
+              <button type="button" className="edash-btn-outline" disabled={!bankCode || !accountNumber || resolving} onClick={() => void resolvePayoutAccount()}>{resolving ? "Verifying..." : "Verify account"}</button>
+              {resolvedName && <button type="button" className="edash-btn-primary" disabled={savingPayout} onClick={() => void savePayoutAccount()}>{savingPayout ? "Saving..." : `Save - ${resolvedName}`}</button>}
+            </div>
+          )}
+          {payoutError && <div className="edash-field-note" style={{ marginTop: 10, color: "var(--edash-danger, #b3261e)" }}>{payoutError}</div>}
         </div>
       </div>
 

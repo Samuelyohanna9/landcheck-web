@@ -11,6 +11,7 @@ type PortalAllocation = {
   financial: { agreed_price: string; confirmed_paid: string; outstanding: string; percentage: string };
   payment_plan?: string | null;
   next_payment_due_at?: string | null;
+  online_payments_enabled: boolean;
   survey_status: string;
   reservation_expires_at?: string | null;
   document_readiness: { complete: boolean; stages: Array<{ label: string; status: string }> };
@@ -126,7 +127,7 @@ export default function BuyerPortalPage() {
           <div><span>Payment progress</span><strong>{Number(allocation.financial.percentage).toFixed(0)}%</strong></div>
           <div className="estate-buyer-progress-track"><span style={{ width: `${Math.min(100, Math.max(0, Number(allocation.financial.percentage)))}%` }} /></div>
           <div className="estate-buyer-money"><span>Confirmed {money(allocation.financial.confirmed_paid)}</span><strong>Outstanding {money(allocation.financial.outstanding)}</strong></div>
-          {Number(allocation.financial.outstanding) > 0 && <div className="estate-buyer-pay-row">
+          {allocation.online_payments_enabled && Number(allocation.financial.outstanding) > 0 && <div className="estate-buyer-pay-row">
             <input
               type="number"
               min={1}
