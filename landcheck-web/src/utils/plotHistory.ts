@@ -31,6 +31,7 @@ const TEMPLATES: Record<string, (details: Record<string, any>) => { title: strin
   "allocation.allocated": () => ({ title: "Plot allocated to buyer" }),
   "allocation.released": () => ({ title: "Allocation released" }),
   "allocation.reservation_protected_by_payment": () => ({ title: "Reservation protected by a payment" }),
+  "allocation.payment_reminder_sent": (d) => ({ title: "Payment reminder sent", detail: [d.channel, d.method].filter(Boolean).map(titleCaseStatus).join(" - ") || undefined }),
 
   "customer.created": (d) => ({ title: "Customer added", detail: d.name || undefined }),
   "customer.sms_sent": (d) => ({ title: "SMS sent to customers", detail: d.sent != null ? `${d.sent} sent` : undefined }),
