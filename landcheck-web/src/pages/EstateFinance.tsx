@@ -24,6 +24,9 @@ type AgedDebtorRow = { allocation_id: number; customer_name: string; estate_name
 type AgedDebtors = { rows: AgedDebtorRow[]; bucket_totals: Record<string, string>; bucket_labels: Record<string, string> };
 type DuePaymentRow = { allocation_id: number; estate_id: number; plot_id: number; customer_name: string; customer_phone?: string | null; customer_email?: string | null; estate_name: string; plot_number: string; outstanding: string; due_at: string | null; bucket: string; bucket_label: string; reminder_sent: boolean };
 type DuePayments = { rows: DuePaymentRow[]; bucket_labels: Record<string, string> };
+type LedgerRow = { allocation_id: number; customer_name: string; estate_name: string; plot_number: string; agreed_price: string; confirmed_paid: string; outstanding: string; percentage: string };
+type OnlinePaymentRow = { id: number; customer_name: string; estate_name: string; plot_number: string; amount: string; provider: string; tx_ref: string; captured_at: string | null; settlement_status: "pending" | "settled" | "not_tracked"; settled_at: string | null; settlement_checked_at: string | null };
+type IssueReport = { id: number; customer_name?: string | null; plot_number?: string | null; message: string; status: "open" | "resolved"; created_at: string; resolved_at?: string | null };
 
 type Payment = { id: number; date: string; amount: string; currency: string; status: string; method: string; reference?: string; customer: { name: string }; estate: { name: string }; plot: { number: string }; can_confirm?: boolean };
 type Allocation = { id: number; estate_id: number; plot_id: number; customer_id: number; estate_name: string; plot_number: string; customer_name: string };
@@ -106,6 +109,16 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
   const [savingPayout, setSavingPayout] = useState(false);
   const [payoutError, setPayoutError] = useState("");
   const [exportingCsv, setExportingCsv] = useState(false);
+
+  const [ledger, setLedger] = useState<LedgerRow[] | null>(null);
+  const [onlinePayments, setOnlinePayments] = useState<OnlinePaymentRow[] | null>(null);
+  const [refreshingSettlement, setRefreshingSettlement] = useState(false);
+  const [issueReports, setIssueReports] = useState<IssueReport[] | null>(null);
+  const [showIssueModal, setShowIssueModal] = useState(false);
+  const [issueTarget, setIssueTarget] = useState<OnlinePaymentRow | null>(null);
+  const [issueMessage, setIssueMessage] = useState("");
+  const [submittingIssue, setSubmittingIssue] = useState(false);
+  const [issueError, setIssueError] = useState("");
 
   const [duePayments, setDuePayments] = useState<DuePayments | null>(null);
   const [reminderRow, setReminderRow] = useState<DuePaymentRow | null>(null);
@@ -211,24 +224,78 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
     } catch { /* payout setup is optional - silently leave the section showing its empty state */ }
   };
 
+  const loadIssueReports = async () => {
+    if (!organizationId) return;
+    try {
+      const response = await api.get<{ rows: IssueReport[] }>("/estates/accounting/payment-issues", { params: { organization_id: organizationId } });
+      setIssueReports(response.data.rows || []);
+    } catch { /* non-critical - leave the list empty rather than blocking the rest of the page */ }
+  };
+
   const loadAccounting = async () => {
     try {
-      const [summaryResponse, debtorsResponse] = await Promise.all([
+      const [summaryResponse, debtorsResponse, ledgerResponse, onlineResponse] = await Promise.all([
         api.get<AccountingSummary>("/estates/accounting/summary"),
         api.get<AgedDebtors>("/estates/accounting/aged-debtors"),
+        api.get<{ rows: LedgerRow[] }>("/estates/accounting/ledger"),
+        api.get<{ rows: OnlinePaymentRow[] }>("/estates/accounting/online-payments"),
       ]);
       setAccountingSummary(summaryResponse.data);
       setAgedDebtors(debtorsResponse.data);
+      setLedger(ledgerResponse.data.rows || []);
+      setOnlinePayments(onlineResponse.data.rows || []);
     } catch (error) {
       await fail(error, "Accounting totals could not be loaded.");
     }
     if (isOwner) await loadPayoutAccountStatus();
+    await loadIssueReports();
     setAccountingLoaded(true);
   };
 
   const openAccounting = () => {
     setView("accounting");
     if (!accountingLoaded) void loadAccounting();
+  };
+
+  const refreshSettlement = async () => {
+    if (!organizationId) return;
+    setRefreshingSettlement(true);
+    try {
+      const response = await api.post<{ settled_count: number }>("/estates/accounting/online-payments/refresh-settlement", {}, { params: { organization_id: organizationId } });
+      const count = response.data.settled_count || 0;
+      toast.success(count > 0 ? `${count} payment${count === 1 ? "" : "s"} confirmed as settled.` : "No new settlements found yet - Flutterwave may still be processing.");
+      const onlineResponse = await api.get<{ rows: OnlinePaymentRow[] }>("/estates/accounting/online-payments");
+      setOnlinePayments(onlineResponse.data.rows || []);
+    } catch (error) {
+      await fail(error, "Could not check settlement status right now.");
+    } finally {
+      setRefreshingSettlement(false);
+    }
+  };
+
+  const openIssueForm = (row: OnlinePaymentRow | null) => {
+    setIssueTarget(row);
+    setIssueMessage("");
+    setIssueError("");
+    setShowIssueModal(true);
+  };
+
+  const submitIssueReport = async () => {
+    if (!organizationId || !issueMessage.trim()) return;
+    setSubmittingIssue(true);
+    setIssueError("");
+    try {
+      await api.post("/estates/accounting/payment-issues", { organization_id: organizationId, charge_attempt_id: issueTarget?.id, message: issueMessage.trim() });
+      toast.success("Issue reported - our team will follow up.");
+      setShowIssueModal(false);
+      setIssueTarget(null);
+      setIssueMessage("");
+      await loadIssueReports();
+    } catch (error) {
+      setIssueError(await extractApiErrorMessage(error, "Could not submit this report. Please try again."));
+    } finally {
+      setSubmittingIssue(false);
+    }
   };
 
   const loadDuePayments = async () => {
@@ -626,6 +693,34 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
 
           <div className="edash-card" style={{ marginBottom: 16 }}>
             <div className="edash-card-inner">
+              <div className="edash-card-head"><h3 className="edash-card-title">Plot ledger ({ledger?.length ?? 0})</h3></div>
+              <p className="edash-field-note" style={{ marginBottom: 14 }}>Every active plot allocation - who's paid, for which plot, and what's left.</p>
+              {ledger ? (
+                ledger.length ? (
+                  <div style={{ overflowX: "auto" }}>
+                    <table className="edash-mini-table">
+                      <thead><tr><th>Customer</th><th>Estate / Plot</th><th>Agreed</th><th>Paid</th><th>Remaining</th><th>Progress</th></tr></thead>
+                      <tbody>
+                        {ledger.map((row) => (
+                          <tr key={row.allocation_id}>
+                            <td data-label="Customer">{row.customer_name}</td>
+                            <td data-label="Estate / Plot">{row.estate_name} / {row.plot_number}</td>
+                            <td data-label="Agreed">{money(row.agreed_price)}</td>
+                            <td data-label="Paid">{money(row.confirmed_paid)}</td>
+                            <td data-label="Remaining">{Number(row.outstanding) > 0 ? money(row.outstanding) : <span style={{ color: "var(--edash-good, #16a34a)" }}>Fully paid</span>}</td>
+                            <td data-label="Progress">{Number(row.percentage).toFixed(0)}%</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : <p className="edash-tab-empty">No active allocations yet.</p>
+              ) : <p className="edash-tab-empty"><Spinner size={13} /> Loading...</p>}
+            </div>
+          </div>
+
+          <div className="edash-card" style={{ marginBottom: 16 }}>
+            <div className="edash-card-inner">
               <div className="edash-card-head" style={{ justifyContent: "space-between" }}>
                 <h3 className="edash-card-title">Collections by method</h3>
                 <button type="button" className="edash-btn-outline" disabled={exportingCsv} onClick={() => void exportLedgerCsv()}>{exportingCsv ? "Preparing..." : "Export ledger (CSV)"}</button>
@@ -691,6 +786,71 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
               ) : <p className="edash-tab-empty"><Spinner size={13} /> Loading...</p>}
             </div>
           </div>
+
+          <div className="edash-card" style={{ marginTop: 16 }}>
+            <div className="edash-card-inner">
+              <div className="edash-card-head" style={{ justifyContent: "space-between" }}>
+                <h3 className="edash-card-title">Online payments &amp; settlement</h3>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button type="button" className="edash-btn-outline" onClick={() => openIssueForm(null)}>Report an issue</button>
+                  <button type="button" className="edash-btn-outline" disabled={refreshingSettlement} onClick={() => void refreshSettlement()}>{refreshingSettlement ? "Checking..." : "Refresh settlement status"}</button>
+                </div>
+              </div>
+              <p className="edash-field-note" style={{ marginBottom: 14 }}>
+                Flutterwave settles online payments to your bank account on its own schedule - typically within 1 business day, not instantly. A payment shows "Captured" as soon as the buyer pays, and "Settled" once the money has actually landed in your account.
+              </p>
+              {onlinePayments ? (
+                onlinePayments.length ? (
+                  <div style={{ overflowX: "auto" }}>
+                    <table className="edash-mini-table">
+                      <thead><tr><th>Date</th><th>Customer</th><th>Estate / Plot</th><th>Amount</th><th>Gateway</th><th>Status</th><th /></tr></thead>
+                      <tbody>
+                        {onlinePayments.map((row) => (
+                          <tr key={row.id}>
+                            <td data-label="Date">{row.captured_at ? new Date(row.captured_at).toLocaleDateString() : "-"}</td>
+                            <td data-label="Customer">{row.customer_name}</td>
+                            <td data-label="Estate / Plot">{row.estate_name} / {row.plot_number}</td>
+                            <td data-label="Amount">{money(row.amount)}</td>
+                            <td data-label="Gateway" style={{ textTransform: "capitalize" }}>{row.provider}</td>
+                            <td data-label="Status">
+                              {row.settlement_status === "settled" ? (
+                                <span className="edash-status-pill tone-good">Settled{row.settled_at ? ` ${new Date(row.settled_at).toLocaleDateString()}` : ""}</span>
+                              ) : row.settlement_status === "not_tracked" ? (
+                                <span className="edash-status-pill tone-neutral">Captured</span>
+                              ) : (
+                                <span className="edash-status-pill tone-neutral">Captured - awaiting settlement</span>
+                              )}
+                            </td>
+                            <td><button type="button" className="edash-card-link" onClick={() => openIssueForm(row)}>Report issue</button></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : <p className="edash-tab-empty">No online payments yet.</p>
+              ) : <p className="edash-tab-empty"><Spinner size={13} /> Loading...</p>}
+            </div>
+          </div>
+
+          <div className="edash-card" style={{ marginTop: 16 }}>
+            <div className="edash-card-inner">
+              <div className="edash-card-head"><h3 className="edash-card-title">Reported issues ({issueReports?.length ?? 0})</h3></div>
+              {issueReports && issueReports.length ? (
+                <div className="edash-notification-log-list">
+                  {issueReports.map((report) => (
+                    <article key={report.id} style={{ padding: "10px 0", borderBottom: "1px solid var(--edash-border-soft)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                        <strong style={{ fontSize: ".82rem" }}>{report.customer_name || report.plot_number ? `${report.customer_name || ""} ${report.plot_number ? `- Plot ${report.plot_number}` : ""}`.trim() : "General report"}</strong>
+                        <span className={`edash-status-pill tone-${report.status === "resolved" ? "good" : "neutral"}`}>{report.status}</span>
+                      </div>
+                      <p className="edash-status-row-desc" style={{ margin: "4px 0 0" }}>{report.message}</p>
+                      <small className="edash-status-row-desc">{new Date(report.created_at).toLocaleString()}</small>
+                    </article>
+                  ))}
+                </div>
+              ) : <p className="edash-tab-empty">No issues reported yet.</p>}
+            </div>
+          </div>
         </>
       ) : (
         <>
@@ -753,6 +913,19 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
         </div>
         </div>
         </>
+      )}
+
+      {showIssueModal && (
+        <EstateModal title="Report a payment issue" subtitle={issueTarget ? `${issueTarget.customer_name} - ${issueTarget.estate_name} / ${issueTarget.plot_number} - ${money(issueTarget.amount)}` : "General report, not tied to a specific payment"} onClose={() => setShowIssueModal(false)}>
+          <label className="edash-field" style={{ marginBottom: 12 }}>
+            <span>What's wrong?</span>
+            <textarea value={issueMessage} onChange={(event) => setIssueMessage(event.target.value)} placeholder="e.g. This payment was captured 5 days ago and still hasn't settled to my bank account." rows={4} />
+          </label>
+          {issueError && <p className="edash-field-note" style={{ marginBottom: 12, color: "var(--edash-danger, #b3261e)" }}>{issueError}</p>}
+          <button type="button" className="edash-btn-primary" disabled={submittingIssue || !issueMessage.trim()} onClick={() => void submitIssueReport()}>
+            {submittingIssue ? <><Spinner size={14} /> Sending...</> : "Report issue"}
+          </button>
+        </EstateModal>
       )}
 
       {reminderRow && (
