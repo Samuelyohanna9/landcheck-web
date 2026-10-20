@@ -5,6 +5,7 @@ import { getEstateAuthSession } from "../../auth/estateAuth";
 import { PAYMENT_METHODS } from "./FinancialComponents";
 import EstatePagination from "./EstatePagination";
 import { whatsappHref } from "../../utils/estateMarketing";
+import { findDuplicateCustomers, DuplicateCustomerModal, type DuplicateCustomerMatch } from "./CustomerDuplicateCheck";
 
 type ReservationRequest = {
   id: number;
@@ -80,6 +81,8 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
   const [installmentIntervalMonths, setInstallmentIntervalMonths] = useState("3");
   const [nextPaymentDueDate, setNextPaymentDueDate] = useState("");
   const conversionRequestRef = useRef<{ fingerprint: string; key: string } | null>(null);
+  const [duplicateMatches, setDuplicateMatches] = useState<DuplicateCustomerMatch[] | null>(null);
+  const [pendingRequestId, setPendingRequestId] = useState<number | null>(null);
   const role = getEstateAuthSession()?.user.role_key;
   const canUpdate = role === "owner" || role === "manager" || role === "sales" || role === "marketer";
 
@@ -124,18 +127,9 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
     }
   };
 
-  const migrateToCustomer = async (requestId: number) => {
-    if (migratingId === requestId) return;
-    if (!initialPaymentAmount || Number(initialPaymentAmount) <= 0) {
-      toast.error("Enter the customer's first payment before creating the reservation.");
-      return;
-    }
-    if (paymentScheduleEnabled && (!installmentAmount || Number(installmentAmount) <= 0 || !nextPaymentDueDate || !Number.isInteger(Number(installmentIntervalMonths)) || Number(installmentIntervalMonths) < 1)) {
-      toast.error("Enter the instalment amount, repeat interval in months, and next payment due date.");
-      return;
-    }
+  const performConvert = async (requestId: number, customerIdOverride: number | null) => {
     setMigratingId(requestId);
-    const fingerprint = JSON.stringify({ requestId, initialPaymentAmount, initialPaymentMethod, paymentScheduleEnabled, installmentAmount, installmentIntervalMonths, nextPaymentDueDate });
+    const fingerprint = JSON.stringify({ requestId, initialPaymentAmount, initialPaymentMethod, paymentScheduleEnabled, installmentAmount, installmentIntervalMonths, nextPaymentDueDate, customerIdOverride });
     if (!conversionRequestRef.current || conversionRequestRef.current.fingerprint !== fingerprint) {
       conversionRequestRef.current = { fingerprint, key: createIdempotencyKey("estate-public-reservation") };
     }
@@ -149,16 +143,44 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
           interval_months: Number(installmentIntervalMonths),
           next_due_at: `${nextPaymentDueDate}T00:00:00Z`,
         } : null,
+        customer_id: customerIdOverride || undefined,
       }, { headers: { "X-Idempotency-Key": idempotencyKey } });
       setRequests((current) => current.map((item) => item.id === requestId ? response.data : item));
-      toast.success("Customer created and plot reserved.");
+      toast.success(customerIdOverride ? "Reservation created for the existing customer." : "Customer created and plot reserved.");
       conversionRequestRef.current = null;
       resetConversionPaymentForm();
+      setDuplicateMatches(null);
+      setPendingRequestId(null);
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "The request could not be added to customers."));
     } finally {
       setMigratingId(null);
     }
+  };
+
+  const migrateToCustomer = async (requestId: number) => {
+    if (migratingId === requestId) return;
+    if (!initialPaymentAmount || Number(initialPaymentAmount) <= 0) {
+      toast.error("Enter the customer's first payment before creating the reservation.");
+      return;
+    }
+    if (paymentScheduleEnabled && (!installmentAmount || Number(installmentAmount) <= 0 || !nextPaymentDueDate || !Number.isInteger(Number(installmentIntervalMonths)) || Number(installmentIntervalMonths) < 1)) {
+      toast.error("Enter the instalment amount, repeat interval in months, and next payment due date.");
+      return;
+    }
+    const item = requests.find((row) => row.id === requestId);
+    const organizationId = getEstateAuthSession()?.user.organization_id;
+    setMigratingId(requestId);
+    if (item && organizationId) {
+      const matches = await findDuplicateCustomers(organizationId, { full_name: item.full_name, phone: item.phone || undefined, email: item.email || undefined });
+      if (matches.length) {
+        setMigratingId(null);
+        setPendingRequestId(requestId);
+        setDuplicateMatches(matches);
+        return;
+      }
+    }
+    await performConvert(requestId, null);
   };
 
   return (
@@ -211,6 +233,14 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
         )}
         <EstatePagination page={page} pageSize={8} total={total} onChange={setPage} />
       </div>
+      {duplicateMatches && pendingRequestId !== null && (
+        <DuplicateCustomerModal
+          matches={duplicateMatches}
+          onUseExisting={(match) => void performConvert(pendingRequestId, match.id)}
+          onCreateNew={() => void performConvert(pendingRequestId, null)}
+          onClose={() => { setDuplicateMatches(null); setPendingRequestId(null); }}
+        />
+      )}
     </section>
   );
 }

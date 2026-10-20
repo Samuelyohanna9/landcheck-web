@@ -16,6 +16,7 @@ import { formatArea, type UnitSystem } from "../utils/unitFormat";
 import EstateIcon from "../components/estates/EstateIcon";
 import EstateRibbon, { type EstateRibbonTab } from "../components/estates/EstateRibbon";
 import EstateModal from "../components/estates/EstateModal";
+import { findDuplicateCustomers, DuplicateCustomerModal, type DuplicateCustomerMatch } from "../components/estates/CustomerDuplicateCheck";
 import CoordinateSystemSelect from "../components/CoordinateSystemSelect";
 import EstateShell from "../components/estates/EstateShell";
 import EstateReservationRequests from "../components/estates/EstateReservationRequests";
@@ -509,6 +510,7 @@ export default function Estates() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [duplicateCustomerMatches, setDuplicateCustomerMatches] = useState<DuplicateCustomerMatch[] | null>(null);
   const [agreedPrice, setAgreedPrice] = useState("");
   const [paymentScheduleEnabled, setPaymentScheduleEnabled] = useState(false);
   const [installmentAmount, setInstallmentAmount] = useState("");
@@ -975,18 +977,33 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
       setSubdivisionBusy(false);
     }
   };
-  const createCustomer = async () => {
-    const estate = estates.find((item) => item.id === Number(estateId));
-    if (!estate || !customerName.trim()) { toast.error("Enter the customer name."); return; }
-    setCustomerBusy(true);
-    const fingerprint = JSON.stringify({ organizationId: estate.organization_id, fullName: customerName.trim(), phone: customerPhone.trim(), email: customerEmail.trim() });
+  const actuallyCreateCustomer = async (organizationId: number) => {
+    const fingerprint = JSON.stringify({ organizationId, fullName: customerName.trim(), phone: customerPhone.trim(), email: customerEmail.trim() });
     if (!customerRequestRef.current || customerRequestRef.current.fingerprint !== fingerprint) {
       customerRequestRef.current = { fingerprint, key: createIdempotencyKey("estate-customer") };
     }
     const idempotencyKey = customerRequestRef.current.key;
-    try { const response = await api.post(`/estates/organizations/${estate.organization_id}/customers`, { full_name: customerName.trim(), phone: customerPhone.trim() || null, email: customerEmail.trim() || null }, { headers: { "X-Idempotency-Key": idempotencyKey } }); setSelectedCustomerId(String(response.data.id)); setCustomerName(""); setCustomerPhone(""); setCustomerEmail(""); customerRequestRef.current = null; stashPendingNotice("Customer added."); window.location.reload(); }
+    try { const response = await api.post(`/estates/organizations/${organizationId}/customers`, { full_name: customerName.trim(), phone: customerPhone.trim() || null, email: customerEmail.trim() || null }, { headers: { "X-Idempotency-Key": idempotencyKey } }); setSelectedCustomerId(String(response.data.id)); setCustomerName(""); setCustomerPhone(""); setCustomerEmail(""); customerRequestRef.current = null; stashPendingNotice("Customer added."); window.location.reload(); }
     catch (error) { toast.error(await extractApiErrorMessage(error, "Customer could not be created.")); }
-    finally { setCustomerBusy(false); }
+  };
+  const createCustomer = async () => {
+    const estate = estates.find((item) => item.id === Number(estateId));
+    if (!estate || !customerName.trim()) { toast.error("Enter the customer name."); return; }
+    setCustomerBusy(true);
+    try {
+      const matches = await findDuplicateCustomers(estate.organization_id, { full_name: customerName.trim(), phone: customerPhone.trim() || undefined, email: customerEmail.trim() || undefined });
+      if (matches.length) { setDuplicateCustomerMatches(matches); return; }
+      await actuallyCreateCustomer(estate.organization_id);
+    } finally {
+      setCustomerBusy(false);
+    }
+  };
+  const useExistingCustomerForPlot = (match: DuplicateCustomerMatch) => {
+    setDuplicateCustomerMatches(null);
+    setShowAddCustomer(false);
+    setSelectedCustomerId(String(match.id));
+    setCustomerName(""); setCustomerPhone(""); setCustomerEmail("");
+    toast.success(`Using existing customer ${match.name} for this plot.`);
   };
   const assignCustomer = async (allocate: boolean) => {
     if (assignmentBusy) return;
@@ -3558,6 +3575,14 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
             {customerBusy ? <><Spinner size={14} /> Adding...</> : "Add customer"}
           </button>
         </EstateModal>
+      )}
+      {duplicateCustomerMatches && (
+        <DuplicateCustomerModal
+          matches={duplicateCustomerMatches}
+          onUseExisting={useExistingCustomerForPlot}
+          onCreateNew={() => { setDuplicateCustomerMatches(null); const estate = estates.find((item) => item.id === Number(estateId)); if (estate) void actuallyCreateCustomer(estate.organization_id); }}
+          onClose={() => setDuplicateCustomerMatches(null)}
+        />
       )}
       {showEditPlotBoundary && selectedPlot && (
         <EstateModal title={`Edit boundary - ${selectedPlot.plot_number}`} subtitle="Drag a vertex to reshape it, or click along an edge to add a new point. The area recalculates automatically when you save." onClose={() => setShowEditPlotBoundary(false)}>

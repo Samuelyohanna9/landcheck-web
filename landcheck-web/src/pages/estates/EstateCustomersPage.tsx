@@ -8,6 +8,7 @@ import EstateIcon from "../../components/estates/EstateIcon";
 import EstateModal from "../../components/estates/EstateModal";
 import EstatePagination from "../../components/estates/EstatePagination";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
+import { findDuplicateCustomers, DuplicateCustomerModal, type DuplicateCustomerMatch } from "../../components/estates/CustomerDuplicateCheck";
 
 export default function EstateCustomersPage() {
   const { estateId } = useParams();
@@ -36,6 +37,7 @@ export default function EstateCustomersPage() {
   const [waSending, setWaSending] = useState(false);
   const [planEditorAllocationId, setPlanEditorAllocationId] = useState<number | null>(null);
   const [expandedAllocationId, setExpandedAllocationId] = useState<number | null>(null);
+  const [duplicateMatches, setDuplicateMatches] = useState<DuplicateCustomerMatch[] | null>(null);
 
   const load = () => {
     if (!estateId) return;
@@ -126,16 +128,33 @@ export default function EstateCustomersPage() {
     }
   };
 
-  const createCustomer = async () => {
+  const actuallyCreateCustomer = async () => {
     if (!organizationId || !newName.trim()) { toast.error("Enter the customer name."); return; }
     try {
-      await api.post(`/estates/organizations/${organizationId}/customers`, { full_name: newName.trim(), phone: newPhone.trim() || null, email: newEmail.trim() || null });
-      setNewName(""); setNewPhone(""); setNewEmail(""); setShowAddCustomer(false);
+      const response = await api.post(`/estates/organizations/${organizationId}/customers`, { full_name: newName.trim(), phone: newPhone.trim() || null, email: newEmail.trim() || null });
+      setNewName(""); setNewPhone(""); setNewEmail(""); setShowAddCustomer(false); setDuplicateMatches(null);
       toast.success("Customer added.");
       load();
+      void chooseCustomer(String(response.data.id));
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "Customer could not be created."));
     }
+  };
+
+  const createCustomer = async () => {
+    if (!organizationId || !newName.trim()) { toast.error("Enter the customer name."); return; }
+    const matches = await findDuplicateCustomers(organizationId, { full_name: newName.trim(), phone: newPhone.trim() || undefined, email: newEmail.trim() || undefined });
+    if (matches.length) { setDuplicateMatches(matches); return; }
+    await actuallyCreateCustomer();
+  };
+
+  const useExistingCustomer = (match: DuplicateCustomerMatch) => {
+    setDuplicateMatches(null);
+    setShowAddCustomer(false);
+    setNewName(""); setNewPhone(""); setNewEmail("");
+    setCustomers((prev) => (prev.some((customer) => customer.id === match.id) ? prev : [{ id: match.id, name: match.name }, ...prev]));
+    void chooseCustomer(String(match.id));
+    toast.success(`Using existing customer ${match.name}.`);
   };
 
   if (!estateId) return null;
@@ -296,6 +315,15 @@ export default function EstateCustomersPage() {
           <label className="edash-field" style={{ marginBottom: 12 }}><span>Email (optional)</span><input type="email" value={newEmail} onChange={(event) => setNewEmail(event.target.value)} placeholder="Lifecycle updates are sent here" /></label>
           <button type="button" className="edash-btn-primary" onClick={() => void createCustomer()}>Add customer</button>
         </EstateModal>
+      )}
+
+      {duplicateMatches && (
+        <DuplicateCustomerModal
+          matches={duplicateMatches}
+          onUseExisting={useExistingCustomer}
+          onCreateNew={() => { setDuplicateMatches(null); void actuallyCreateCustomer(); }}
+          onClose={() => setDuplicateMatches(null)}
+        />
       )}
     </EstateShell>
   );

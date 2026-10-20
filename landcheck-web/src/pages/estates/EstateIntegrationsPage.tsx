@@ -533,7 +533,13 @@ function ImportWizard({ estates, onDone, onCancel }: { estates: EstateOption[]; 
                               </div>
                             )}
                           </td>
-                          <td data-label="Issues">{row.issues?.length ? row.issues.join("; ") : "-"}</td>
+                          <td data-label="Issues">
+                            {row.issues?.length ? (
+                              <ul className="edash-integrations-issues">
+                                {row.issues.map((issue, index) => <li key={index}>{issue}</li>)}
+                              </ul>
+                            ) : "-"}
+                          </td>
                           <td data-label="Resolution">
                             <select value={row.resolution} onChange={(event) => void overrideRow(row.id, event.target.value)}>
                               <option value="create">Create</option>

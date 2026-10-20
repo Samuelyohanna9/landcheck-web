@@ -37,6 +37,9 @@
 .edash-integrations-checkbox { display: flex; align-items: flex-start; gap: 8px; margin: 10px 0 0; font-size: .8rem; color: var(--edash-muted); cursor: pointer; }
 .edash-integrations-checkbox input { margin-top: 2px; accent-color: var(--edash-brand); }
 
+.edash-integrations-issues { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.edash-integrations-issues li { color: var(--edash-danger, #b3261e); font-size: .82rem; line-height: 1.4; }
+
 .edash-integrations-plot-linked { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; color: var(--edash-good, #1e8a4c); }
 .edash-integrations-plot-linked svg { width: 15px; height: 15px; }
 
