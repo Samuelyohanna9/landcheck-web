@@ -82,7 +82,7 @@ export default function EstateIntegrationsPage() {
   }
 
   return (
-    <EstateShell estateId={sidebarEstateId} estateName={sidebarEstateName} activeKey="integrations" pageTitle="Integrations">
+    <EstateShell estateId={sidebarEstateId} estateName={sidebarEstateName} activeKey="integrations" pageTitle="Data Import">
       <EstateRibbon tabs={ribbonTabs} />
       {view === "home" && <IntegrationsHome onStartImport={() => setView("wizard")} />}
       {view === "wizard" && <ImportWizard estates={estates} onDone={() => setView("history")} onCancel={() => setView("home")} />}
