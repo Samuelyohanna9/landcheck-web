@@ -4,21 +4,23 @@ import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import { money, formatPaymentPlan, PaymentPlanEditor, PaymentStatusBadge } from "../../components/estates/FinancialComponents";
 import EstateShell from "../../components/estates/EstateShell";
-import EstateIcon from "../../components/estates/EstateIcon";
 import EstateModal from "../../components/estates/EstateModal";
 import EstatePagination from "../../components/estates/EstatePagination";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import { findDuplicateCustomers, DuplicateCustomerModal, type DuplicateCustomerMatch } from "../../components/estates/CustomerDuplicateCheck";
+
+type CustomerRow = { id: number; name: string; reference?: string | null; phone?: string | null; email?: string | null; plot_count?: number; agreed_price?: string; outstanding?: string };
 
 export default function EstateCustomersPage() {
   const { estateId } = useParams();
   const navigate = useNavigate();
   const [estateName, setEstateName] = useState("");
   const [organizationId, setOrganizationId] = useState<number | null>(null);
-  const [customers, setCustomers] = useState<Array<{ id: number; name: string }>>([]);
+  const [customers, setCustomers] = useState<CustomerRow[]>([]);
   const [customerPage, setCustomerPage] = useState(1);
   const [customerTotal, setCustomerTotal] = useState(0);
   const [customersLoading, setCustomersLoading] = useState(false);
+  const [plotFilter, setPlotFilter] = useState<"all" | "multiple_plots" | "no_plots">("all");
   const [activity, setActivity] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState("");
@@ -45,14 +47,14 @@ export default function EstateCustomersPage() {
     api.get(`/estates/${estateId}`).then((response) => {
       setEstateName(response.data.name);
       setOrganizationId(response.data.organization_id);
-      return api.get(`/estates/organizations/${response.data.organization_id}/customers`, { params: { page: customerPage, page_size: 25, search: search.trim() || undefined } });
+      return api.get(`/estates/organizations/${response.data.organization_id}/customers`, { params: { page: customerPage, page_size: 25, search: search.trim() || undefined, plot_filter: plotFilter !== "all" ? plotFilter : undefined } });
     }).then((response) => {
       setCustomers(response.data.items || []);
       setCustomerTotal(Number(response.data.total || 0));
     }).catch(() => { setCustomers([]); setCustomerTotal(0); }).finally(() => setCustomersLoading(false));
     api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));
   };
-  useEffect(load, [estateId, customerPage, search]);
+  useEffect(load, [estateId, customerPage, search, plotFilter]);
   useEffect(() => {
     if (!estateId) return;
     api.get(`/estates/${estateId}/marketing/social/optins`).then((response) => {
@@ -186,24 +188,36 @@ export default function EstateCustomersPage() {
           <div className="edash-card-inner">
             <div className="edash-card-head">
               <h3 className="edash-card-title">Customers ({customerTotal})</h3>
+              <select className="edash-map-select" value={plotFilter} onChange={(event) => { setPlotFilter(event.target.value as typeof plotFilter); setCustomerPage(1); }}>
+                <option value="all">All customers</option>
+                <option value="multiple_plots">Multiple plots</option>
+                <option value="no_plots">No active plot</option>
+              </select>
             </div>
             {customersLoading ? <p className="edash-tab-empty">Loading customers...</p> : customers.length ? (
-              <div className="edash-activity-list">
-                {customers.map((customer) => (
-                  <div
-                    key={customer.id}
-                    className="edash-info-card"
-                    style={{ cursor: "pointer", margin: 0, marginBottom: 8, borderColor: selectedId === String(customer.id) ? "var(--edash-brand)" : undefined }}
-                    onClick={() => void chooseCustomer(String(customer.id))}
-                  >
-                    <span className="edash-info-card-icon"><EstateIcon name="customers" /></span>
-                    <div className="edash-info-card-body"><p className="edash-info-card-name">{customer.name}</p></div>
-                    <button type="button" className="edash-btn-outline edash-info-card-action">View</button>
-                  </div>
-                ))}
+              <div style={{ overflowX: "auto" }}>
+                <table className="edash-mini-table">
+                  <thead><tr><th>Name</th><th>Phone</th><th>Plots</th><th>Agreed</th><th>Outstanding</th><th /></tr></thead>
+                  <tbody>
+                    {customers.map((customer) => (
+                      <tr
+                        key={customer.id}
+                        style={{ cursor: "pointer", background: selectedId === String(customer.id) ? "var(--edash-brand-tint)" : undefined }}
+                        onClick={() => void chooseCustomer(String(customer.id))}
+                      >
+                        <td data-label="Name"><strong>{customer.name}</strong></td>
+                        <td data-label="Phone">{customer.phone || customer.email || "-"}</td>
+                        <td data-label="Plots">{customer.plot_count ?? 0}{(customer.plot_count ?? 0) > 1 && <span className="edash-status-pill tone-info" style={{ marginLeft: 6 }}>Multiple</span>}</td>
+                        <td data-label="Agreed">{customer.agreed_price !== undefined ? money(customer.agreed_price) : "-"}</td>
+                        <td data-label="Outstanding">{customer.outstanding !== undefined ? money(customer.outstanding) : "-"}</td>
+                        <td><button type="button" className="edash-btn-outline" onClick={(event) => { event.stopPropagation(); void chooseCustomer(String(customer.id)); }}>View</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             ) : (
-              <p className="edash-tab-empty">No customers yet. Use "Add customer" to create your first one.</p>
+              <p className="edash-tab-empty">No customers match this filter yet{plotFilter === "all" && !search ? ". Use \"Add customer\" to create your first one." : "."}</p>
             )}
             <EstatePagination page={customerPage} pageSize={25} total={customerTotal} onChange={setCustomerPage} />
           </div>
