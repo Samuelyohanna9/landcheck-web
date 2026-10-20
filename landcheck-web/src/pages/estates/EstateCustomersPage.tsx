@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
-import { money } from "../../components/estates/FinancialComponents";
+import { money, formatPaymentPlan, PaymentPlanEditor, PaymentStatusBadge } from "../../components/estates/FinancialComponents";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
 import EstateModal from "../../components/estates/EstateModal";
@@ -34,6 +34,8 @@ export default function EstateCustomersPage() {
   const [waPreset, setWaPreset] = useState("");
   const [waDetail, setWaDetail] = useState("");
   const [waSending, setWaSending] = useState(false);
+  const [planEditorAllocationId, setPlanEditorAllocationId] = useState<number | null>(null);
+  const [expandedAllocationId, setExpandedAllocationId] = useState<number | null>(null);
 
   const load = () => {
     if (!estateId) return;
@@ -65,6 +67,8 @@ export default function EstateCustomersPage() {
     setDetail(null);
     setStatement(null);
     setPortalLink("");
+    setPlanEditorAllocationId(null);
+    setExpandedAllocationId(null);
     if (!id) return;
     try {
       const [financial, statementResponse] = await Promise.all([
@@ -202,14 +206,70 @@ export default function EstateCustomersPage() {
                 </div>
                 {portalLink && <p className="edash-field-note" style={{ overflowWrap: "anywhere" }}>Copied link: {portalLink}</p>}
                 {detail ? (
-                  <div className="edash-overview-grid edash-overview-grid--2">
-                    <div className="edash-overview-field"><span>Agreed</span><strong>{money(detail.totals?.agreed_price ?? detail.financial?.agreed_price ?? 0)}</strong></div>
-                    <div className="edash-overview-field"><span>Outstanding</span><strong>{money(detail.totals?.outstanding ?? detail.financial?.outstanding ?? 0)}</strong></div>
-                  </div>
+                  <>
+                    <div className="edash-overview-grid edash-overview-grid--2">
+                      <div className="edash-overview-field"><span>Agreed</span><strong>{money(detail.totals?.agreed_price ?? detail.financial?.agreed_price ?? 0)}</strong></div>
+                      <div className="edash-overview-field"><span>Outstanding</span><strong>{money(detail.totals?.outstanding ?? detail.financial?.outstanding ?? 0)}</strong></div>
+                    </div>
+                    {statement && (
+                      <button type="button" className="edash-btn-outline" style={{ marginTop: 12, marginBottom: 14 }} disabled={packetBusy} onClick={() => void downloadCustomerPacket()}>{packetBusy ? "Preparing..." : "Download customer packet"}</button>
+                    )}
+                    {detail.allocations?.length > 0 && (
+                      <div>
+                        <p className="edash-field-note" style={{ margin: "0 0 8px", fontWeight: 700 }}>Plots &amp; payment plans</p>
+                        {detail.allocations.map((row: any) => {
+                          const transactions = statement?.allocations?.find((a: any) => a.allocation_id === row.allocation_id)?.transactions || [];
+                          const isActive = row.status === "reserved" || row.status === "allocated";
+                          return (
+                            <div key={row.allocation_id} className="edash-info-card" style={{ marginBottom: 8, flexDirection: "column", alignItems: "stretch", gap: 4 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+                                <strong>{row.estate?.name} - Plot {row.plot?.number}</strong>
+                                {row.is_overdue && <span className="edash-status-pill tone-danger">Payment overdue</span>}
+                              </div>
+                              <p className="edash-field-note" style={{ margin: 0 }}>
+                                Agreed {money(row.agreed_price)} &middot; Paid {money(row.confirmed)} &middot; Outstanding {money(row.outstanding)} ({row.percentage}%)
+                              </p>
+                              <p className="edash-field-note" style={{ margin: 0 }}>{formatPaymentPlan(row.payment_plan)}</p>
+                              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                                {isActive && (
+                                  <button type="button" className="edash-card-link" onClick={() => setPlanEditorAllocationId(planEditorAllocationId === row.allocation_id ? null : row.allocation_id)}>
+                                    {row.payment_plan ? "Edit payment plan" : "Set up payment plan"}
+                                  </button>
+                                )}
+                                {transactions.length > 0 && (
+                                  <button type="button" className="edash-card-link" onClick={() => setExpandedAllocationId(expandedAllocationId === row.allocation_id ? null : row.allocation_id)}>
+                                    {expandedAllocationId === row.allocation_id ? "Hide payments" : `View payments (${transactions.length})`}
+                                  </button>
+                                )}
+                              </div>
+                              {planEditorAllocationId === row.allocation_id && (
+                                <PaymentPlanEditor allocationId={row.allocation_id} currentPlan={row.payment_plan} onSaved={() => { setPlanEditorAllocationId(null); void chooseCustomer(selectedId); }} />
+                              )}
+                              {expandedAllocationId === row.allocation_id && (
+                                <div style={{ overflowX: "auto", marginTop: 6 }}>
+                                  <table className="edash-mini-table">
+                                    <thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Status</th><th>Reference</th></tr></thead>
+                                    <tbody>
+                                      {transactions.map((payment: any) => (
+                                        <tr key={payment.id}>
+                                          <td data-label="Date">{new Date(payment.date).toLocaleDateString()}</td>
+                                          <td data-label="Amount">{money(payment.amount)}</td>
+                                          <td data-label="Method">{payment.method}</td>
+                                          <td data-label="Status"><PaymentStatusBadge status={payment.status} /></td>
+                                          <td data-label="Reference">{payment.reference || "-"}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
                 ) : <p className="edash-tab-empty">Loading...</p>}
-                {statement && (
-                  <button type="button" className="edash-btn-outline" style={{ marginTop: 12 }} disabled={packetBusy} onClick={() => void downloadCustomerPacket()}>{packetBusy ? "Preparing..." : "Download customer packet"}</button>
-                )}
                 {waPresets.length > 0 && (
                   <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid var(--edash-border-soft)" }}>
                     <p className="edash-field-note" style={{ margin: "0 0 8px" }}>Message this customer on WhatsApp</p>

@@ -37,7 +37,26 @@
 .edash-integrations-checkbox { display: flex; align-items: flex-start; gap: 8px; margin: 10px 0 0; font-size: .8rem; color: var(--edash-muted); cursor: pointer; }
 .edash-integrations-checkbox input { margin-top: 2px; accent-color: var(--edash-brand); }
 
-.edash-integrations-plot-linked { font-weight: 700; color: var(--edash-good, #1e8a4c); }
+.edash-integrations-plot-linked { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; color: var(--edash-good, #1e8a4c); }
+.edash-integrations-plot-linked svg { width: 15px; height: 15px; }
+
+.edash-integrations-map-picker { position: relative; }
+.edash-integrations-map-picker-canvas { width: 100%; height: 440px; border-radius: 10px; overflow: hidden; background: var(--edash-neutral-tint); }
+.edash-integrations-map-picker-loading {
+  position: absolute;
+  z-index: 2;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--edash-surface);
+  box-shadow: var(--edash-shadow-sm, 0 1px 2px rgba(16, 42, 33, .05));
+  font-size: .78rem;
+  color: var(--edash-muted);
+}
 .edash-integrations-plot-picker {
   position: absolute;
   z-index: 20;

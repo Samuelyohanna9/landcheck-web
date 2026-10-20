@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
+import EstateModal from "../../components/estates/EstateModal";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import Spinner from "../../components/estates/EstateSpinner";
+import { loadMapboxGl, loadMapboxGlCss } from "../../utils/mapboxLoader";
 import "../../styles/estate-integrations.css";
 
 type EstateOption = { id: number; name: string };
@@ -34,6 +36,9 @@ const ENTITY_FIELDS: Record<EntityType, { field: string; label: string }[]> = {
     { field: "agent", label: "Agent" },
     { field: "status", label: "Status" },
     { field: "outstanding", label: "Outstanding balance (as supplied)" },
+    { field: "installment_amount", label: "Installment amount (if still on a payment plan)" },
+    { field: "interval_months", label: "Installment interval (months)" },
+    { field: "next_due_date", label: "Next installment due date" },
   ],
   payment: [
     { field: "reference_no", label: "Reference / transaction ID" },
@@ -199,6 +204,7 @@ function ImportWizard({ estates, onDone, onCancel }: { estates: EstateOption[]; 
   const [plotQuery, setPlotQuery] = useState("");
   const [plotOptions, setPlotOptions] = useState<PlotOption[]>([]);
   const [searchingPlots, setSearchingPlots] = useState(false);
+  const [mapPickerRowId, setMapPickerRowId] = useState<number | null>(null);
 
   const downloadTemplate = async () => {
     const response = await api.get("/estates/import-batches/field-templates", { responseType: "blob" });
@@ -324,11 +330,13 @@ function ImportWizard({ estates, onDone, onCancel }: { estates: EstateOption[]; 
     void searchPlots("");
   };
 
-  const linkPlot = async (rowId: number, plotId: number) => {
+  const linkPlot = async (rowId: number, plot: PlotOption) => {
     if (!batchId) return;
     try {
-      await api.patch(`/estates/import-batches/${batchId}/rows/${rowId}`, { plot_id: plotId, resolution: "create" });
+      await api.patch(`/estates/import-batches/${batchId}/rows/${rowId}`, { plot_id: plot.id, resolution: "create" });
       setPlotPickerRowId(null);
+      setMapPickerRowId(null);
+      toast.success(`Linked to plot ${plot.plot_number}.`);
       await loadPreview(batchId, previewTab);
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "Could not link this plot."));
@@ -487,13 +495,17 @@ function ImportWizard({ estates, onDone, onCancel }: { estates: EstateOption[]; 
                           <td data-label="Plot" style={{ position: "relative" }}>
                             {row.manual_plot_number ? (
                               <>
-                                <span className="edash-integrations-plot-linked">{row.manual_plot_number}</span>{" "}
+                                <span className="edash-integrations-plot-linked"><EstateIcon name="check-circle" /> Linked to {row.manual_plot_number}</span>{" "}
                                 <button type="button" className="edash-card-link" onClick={() => openPlotPicker(row.id)}>Change</button>
+                                {" "}
+                                <button type="button" className="edash-card-link" onClick={() => setMapPickerRowId(row.id)}>Map</button>
                               </>
                             ) : row.source_data?.plot?.plot_number ? (
                               <>
                                 <span>{row.source_data.plot.plot_number}</span>{" "}
                                 <button type="button" className="edash-card-link" onClick={() => openPlotPicker(row.id)}>Link existing plot</button>
+                                {" "}
+                                <button type="button" className="edash-card-link" onClick={() => setMapPickerRowId(row.id)}>Pick on map</button>
                               </>
                             ) : "-"}
                             {plotPickerRowId === row.id && (
@@ -509,7 +521,7 @@ function ImportWizard({ estates, onDone, onCancel }: { estates: EstateOption[]; 
                                     <span className="edash-field-note"><Spinner size={12} /> Searching...</span>
                                   ) : plotOptions.length ? (
                                     plotOptions.map((plot) => (
-                                      <button type="button" key={plot.id} className="edash-integrations-plot-option" onClick={() => void linkPlot(row.id, plot.id)}>
+                                      <button type="button" key={plot.id} className="edash-integrations-plot-option" onClick={() => void linkPlot(row.id, plot)}>
                                         {plot.plot_number} <span className="edash-field-note">({plot.commercial_status})</span>
                                       </button>
                                     ))
@@ -551,19 +563,103 @@ function ImportWizard({ estates, onDone, onCancel }: { estates: EstateOption[]; 
               <div className="edash-overview-field"><span>Updated</span><strong>{result.updated}</strong></div>
               <div className="edash-overview-field"><span>Skipped</span><strong>{result.skipped}</strong></div>
             </div>
-            {result.errors.length > 0 && (
+            {result.errors.length > 0 ? (
               <div style={{ marginBottom: 14 }}>
                 <h4>Rows that could not be imported</h4>
                 <ul>{result.errors.map((e, i) => <li key={i} className="edash-field-note">Row {e.row + 1}: {e.reason}</li>)}</ul>
               </div>
+            ) : (
+              <p className="edash-integrations-plot-linked" style={{ marginBottom: 14 }}><EstateIcon name="check-circle" /> Import complete - every row was processed with no errors.</p>
             )}
             <div style={{ display: "flex", gap: 8 }}>
-              {batchId && <button type="button" className="edash-btn-outline" onClick={() => void api.get(`/estates/import-batches/${batchId}/errors.csv`, { responseType: "blob" }).then((r) => { const url = URL.createObjectURL(r.data as Blob); const link = document.createElement("a"); link.href = url; link.download = `import-batch-${batchId}-errors.csv`; link.click(); URL.revokeObjectURL(url); })}>Download error file</button>}
+              {batchId && result.errors.length > 0 && <button type="button" className="edash-btn-outline" onClick={() => void api.get(`/estates/import-batches/${batchId}/errors.csv`, { responseType: "blob" }).then((r) => { const url = URL.createObjectURL(r.data as Blob); const link = document.createElement("a"); link.href = url; link.download = `import-batch-${batchId}-errors.csv`; link.click(); URL.revokeObjectURL(url); })}>Download error file</button>}
               <button type="button" className="edash-btn-primary" onClick={onDone}>Done</button>
             </div>
           </div>
         )}
       </div>
+      {mapPickerRowId !== null && (
+        <PlotMapPickerModal
+          estateId={estateId}
+          onSelect={(plot) => void linkPlot(mapPickerRowId, plot)}
+          onClose={() => setMapPickerRowId(null)}
+        />
+      )}
     </div>
+  );
+}
+
+function PlotMapPickerModal({ estateId, onSelect, onClose }: { estateId: string; onSelect: (plot: PlotOption) => void; onClose: () => void }) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [mapboxgl] = await Promise.all([loadMapboxGl(), loadMapboxGlCss()]);
+        const response = await api.get(`/estates/${estateId}/plots.geojson`);
+        if (cancelled || !containerRef.current) return;
+        const geojson = response.data;
+        if (!geojson?.features?.length) {
+          setLoadError("No mapped plots were found in this estate - use the list instead.");
+          setLoading(false);
+          return;
+        }
+        const map = new mapboxgl.Map({ container: containerRef.current, style: "mapbox://styles/mapbox/light-v11", center: [3.3792, 6.5244], zoom: 14 });
+        mapRef.current = map;
+        map.on("load", () => {
+          if (cancelled) return;
+          map.addSource("import-plots", { type: "geojson", data: geojson });
+          map.addLayer({
+            id: "import-plots-fill",
+            type: "fill",
+            source: "import-plots",
+            paint: { "fill-color": ["match", ["get", "commercial_status"], "available", "#4c9a5a", "reserved", "#d9a441", "sold", "#9a5a4c", "#8891a3"], "fill-opacity": 0.45 },
+          });
+          map.addLayer({ id: "import-plots-outline", type: "line", source: "import-plots", paint: { "line-color": "#ffffff", "line-width": 1.2 } });
+          const bounds = new mapboxgl.LngLatBounds();
+          for (const feature of geojson.features) {
+            if (feature.geometry?.type === "Polygon") {
+              for (const [lng, lat] of feature.geometry.coordinates.flat(1)) bounds.extend([lng, lat]);
+            }
+          }
+          if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 32, maxZoom: 18 });
+          map.on("click", "import-plots-fill", (event: any) => {
+            const feature = event.features?.[0];
+            if (!feature) return;
+            onSelect({ id: feature.properties.id, plot_number: feature.properties.plot_number, commercial_status: feature.properties.commercial_status, geometry_status: feature.properties.geometry_status });
+          });
+          map.on("mouseenter", "import-plots-fill", () => { map.getCanvas().style.cursor = "pointer"; });
+          map.on("mouseleave", "import-plots-fill", () => { map.getCanvas().style.cursor = ""; });
+          setLoading(false);
+        });
+      } catch {
+        if (!cancelled) {
+          setLoadError("Could not load the map - use the list instead.");
+          setLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+      mapRef.current?.remove();
+      mapRef.current = null;
+    };
+  }, [estateId]);
+
+  return (
+    <EstateModal title="Select a plot on the map" subtitle="Click any plot to link this row to it." onClose={onClose}>
+      {loadError ? (
+        <p className="edash-field-note">{loadError}</p>
+      ) : (
+        <div className="edash-integrations-map-picker">
+          {loading && <div className="edash-integrations-map-picker-loading"><Spinner size={16} /> Loading map...</div>}
+          <div ref={containerRef} className="edash-integrations-map-picker-canvas" />
+        </div>
+      )}
+    </EstateModal>
   );
 }

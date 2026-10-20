@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, createIdempotencyKey, extractApiErrorMessage } from "../api/client";
 import { getEstateAuthSession } from "../auth/estateAuth";
-import { FinancialSummaryCards, PaymentStatusBadge, money, PAYMENT_METHODS, paymentMethodLabel } from "../components/estates/FinancialComponents";
+import { FinancialSummaryCards, PaymentStatusBadge, PaymentPlanEditor, formatPaymentPlan, money, PAYMENT_METHODS, paymentMethodLabel } from "../components/estates/FinancialComponents";
 import EstateShell from "../components/estates/EstateShell";
 import EstateModal from "../components/estates/EstateModal";
 import EstateRibbon, { type EstateRibbonTab } from "../components/estates/EstateRibbon";
@@ -60,26 +60,6 @@ const DOCUMENT_TYPES = [
 ] as const;
 
 const today = () => new Date().toISOString().slice(0, 10);
-
-function formatPaymentPlan(value: unknown) {
-  if (!value) return "Not specified";
-  const raw = String(value).trim();
-  if (!raw) return "Not specified";
-  try {
-    const plan = JSON.parse(raw) as Record<string, unknown>;
-    if (plan.type === "installment") {
-      const amount = Number(plan.installment_amount || 0);
-      const interval = Number(plan.interval_months || 0);
-      const dueDate = plan.next_due_at ? new Date(String(plan.next_due_at)) : null;
-      const due = dueDate && !Number.isNaN(dueDate.getTime()) ? dueDate.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "not set";
-      const repeat = interval === 1 ? "every month" : `every ${interval} months`;
-      return `Installment of ${money(amount)} ${repeat}; next payment due ${due}.`;
-    }
-    return "Payment plan configured";
-  } catch {
-    return raw;
-  }
-}
 
 async function download(path: string, name: string) {
   const response = await api.get(path, { responseType: "blob" });
@@ -633,7 +613,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
               duePayments.rows.length ? (
                 <div style={{ overflowX: "auto" }}>
                   <table className="edash-mini-table">
-                    <thead><tr><th>Customer</th><th>Estate / Plot</th><th>Outstanding</th><th>Due date</th><th>Status</th><th>Reminder</th><th /><th /></tr></thead>
+                    <thead><tr><th>Customer</th><th>Estate / Plot</th><th>Outstanding</th><th>Due date</th><th>Status</th><th>Reminder</th><th /><th /><th /></tr></thead>
                     <tbody>
                       {duePayments.rows.map((row) => (
                         <tr key={row.allocation_id}>
@@ -644,6 +624,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
                           <td data-label="Status"><span className={`edash-status-pill tone-${row.bucket === "overdue" ? "danger" : row.bucket === "due_soon" ? "neutral" : row.bucket === "no_schedule" ? "neutral" : "good"}`}>{row.bucket_label}</span></td>
                           <td data-label="Reminder">{row.reminder_sent ? "Sent" : "Not sent"}</td>
                           <td><button type="button" className="edash-btn-outline" onClick={() => openReminder(row)}>Send reminder</button></td>
+                          <td><button type="button" className="edash-btn-outline" onClick={() => void viewAllocation(row.allocation_id)}>{row.bucket === "no_schedule" ? "Set up plan" : "View / edit plan"}</button></td>
                           <td><Link className="edash-btn-outline" to={`/estates/${row.estate_id}/plots/${row.plot_id}/history`}>View history</Link></td>
                         </tr>
                       ))}
@@ -1015,7 +996,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
 
       {recordDetail && (
         <EstateModal title={`Plot ${recordDetail.plot?.number || "record"}`} subtitle={`${recordDetail.customer?.name || "Customer"} - ${recordDetail.estate?.name || "Estate"}`} onClose={() => setRecordDetail(null)}>
-          <AllocationRecordView record={recordDetail} onPrint={() => void printAllocation(recordDetail.allocation.id)} />
+          <AllocationRecordView record={recordDetail} onPrint={() => void printAllocation(recordDetail.allocation.id)} onPlanChanged={() => void viewAllocation(recordDetail.allocation.id)} />
         </EstateModal>
       )}
     </EstateShell>
@@ -1073,7 +1054,9 @@ function CustomerAllocations({ detail, onView, onPrint }: { detail: any; onView:
   );
 }
 
-function AllocationRecordView({ record, onPrint }: { record: any; onPrint: () => void }) {
+function AllocationRecordView({ record, onPrint, onPlanChanged }: { record: any; onPrint: () => void; onPlanChanged: () => void }) {
+  const [editingPlan, setEditingPlan] = useState(false);
+  const isActive = record.allocation.status === "reserved" || record.allocation.status === "allocated";
   const downloadDocument = async (documentId: number, filename: string) => {
     try { await download(`/estates/documents/${documentId}/download`, filename); }
     catch { window.alert("Document could not be downloaded."); }
@@ -1087,7 +1070,18 @@ function AllocationRecordView({ record, onPrint }: { record: any; onPrint: () =>
         <div className="edash-overview-field"><span>Allocation status</span><strong>{String(record.allocation.status || "").replaceAll("_", " ")}</strong><small>{record.allocation.allocation_date ? new Date(record.allocation.allocation_date).toLocaleDateString() : "Not allocated"}</small></div>
         <div className="edash-overview-field"><span>Outstanding</span><strong>{money(record.financial.outstanding)}</strong><small>{Number(record.financial.percentage || 0).toFixed(0)}% paid</small></div>
       </div>
-      <div className="edash-allocation-record-section"><h4>Plot and workflow</h4><p className="edash-status-row-desc">{record.estate?.name || "Estate"} {record.plot?.public_address ? `- ${record.plot.public_address}` : ""} {record.plot?.land_use ? `- ${record.plot.land_use}` : ""}</p><p className="edash-status-row-desc">Survey: <strong>{record.survey?.status || "Not started"}</strong> - Staking: <strong>{record.staking?.status || "Not started"}</strong></p><p className="edash-status-row-desc">Payment plan: {formatPaymentPlan(record.allocation.payment_plan)}</p></div>
+      <div className="edash-allocation-record-section">
+        <h4>Plot and workflow</h4>
+        <p className="edash-status-row-desc">{record.estate?.name || "Estate"} {record.plot?.public_address ? `- ${record.plot.public_address}` : ""} {record.plot?.land_use ? `- ${record.plot.land_use}` : ""}</p>
+        <p className="edash-status-row-desc">Survey: <strong>{record.survey?.status || "Not started"}</strong> - Staking: <strong>{record.staking?.status || "Not started"}</strong></p>
+        <p className="edash-status-row-desc" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          Payment plan: {formatPaymentPlan(record.allocation.payment_plan)}
+          {isActive && !editingPlan && <button type="button" className="edash-card-link" onClick={() => setEditingPlan(true)}>{record.allocation.payment_plan ? "Edit" : "Set up a plan"}</button>}
+        </p>
+        {isActive && editingPlan && (
+          <PaymentPlanEditor allocationId={record.allocation.id} currentPlan={record.allocation.payment_plan} onSaved={() => { setEditingPlan(false); onPlanChanged(); }} />
+        )}
+      </div>
       <div className="edash-allocation-record-section"><h4>Documents</h4><div className="edash-chip-row">{record.documents?.length ? record.documents.map((document: any) => <button type="button" className="edash-chip" key={document.id} onClick={() => void downloadDocument(document.id, document.filename)}>{document.filename}</button>) : <span className="edash-status-row-desc">No documents uploaded.</span>}</div></div>
       <div className="edash-allocation-record-section"><h4>Payment receipts and transactions</h4>{record.payments?.length ? <div style={{ overflowX: "auto" }}><table className="edash-mini-table"><thead><tr><th>Date</th><th>Amount</th><th>Status</th><th>Reference</th><th>Receipt</th></tr></thead><tbody>{record.payments.map((payment: any) => <tr key={payment.id}><td data-label="Date">{new Date(payment.date).toLocaleDateString()}</td><td data-label="Amount">{money(payment.amount)}</td><td data-label="Status"><PaymentStatusBadge status={payment.status} /></td><td data-label="Reference">{payment.reference || "-"}</td><td data-label="Receipt"><div>{payment.receipt_number || payment.evidence?.[0]?.filename || "Pending"}</div><button type="button" className="edash-card-link" onClick={() => void download(`/estates/payments/${payment.id}/receipt.pdf`, `payment-${payment.id}-receipt.pdf`)}>Receipt PDF</button></td></tr>)}</tbody></table></div> : <p className="edash-status-row-desc">No payments recorded.</p>}<p className="edash-status-row-desc" style={{ marginTop: 8 }}>Agreed: {money(record.financial.agreed_price)}. Confirmed: {money(record.financial.confirmed_paid)}. Pending: {money(record.financial.pending_paid)}. Outstanding: {money(record.financial.outstanding)}.</p></div>
     </div>
