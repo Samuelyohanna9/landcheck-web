@@ -200,7 +200,7 @@ function ImportWizard({ estates, onDone, onCancel }: { estates: EstateOption[]; 
     const url = URL.createObjectURL(response.data as Blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "landcheck-import-template.csv";
+    link.download = "landcheck-import-template.xlsx";
     link.click();
     URL.revokeObjectURL(url);
   };
