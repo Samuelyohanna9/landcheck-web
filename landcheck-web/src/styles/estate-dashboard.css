@@ -568,6 +568,12 @@
 }
 .edash-body--fill > .edash-tools-bar { flex-shrink: 0; padding: 1px 0; }
 .edash-body--fill > .edash-stats-row { flex-shrink: 0; gap: 10px; }
+/* .edash-ribbon sets overflow:hidden on itself (estate-ribbon.css), which per the flexbox spec
+   changes a flex item's AUTOMATIC minimum size from its content size down to 0 - meaning on a
+   short/wide viewport, where .edash-body--fill's "fill the viewport" flex layout runs out of
+   vertical room, the ribbon (first child, otherwise unprotected) was the one getting crushed to
+   nothing while its siblings above held their size. Same explicit protection as them fixes it. */
+.edash-body--fill > .edash-ribbon { flex-shrink: 0; }
 .edash-body--fill > .edash-stats-row .edash-stat-card { padding: 7px 10px; }
 
 /* The map+drawer row and the Recent Activity/Estate Progress row are combined into one grid:
