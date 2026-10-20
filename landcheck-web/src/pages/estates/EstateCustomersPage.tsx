@@ -37,6 +37,7 @@ export default function EstateCustomersPage() {
   const [waPreset, setWaPreset] = useState("");
   const [waDetail, setWaDetail] = useState("");
   const [waSending, setWaSending] = useState(false);
+  const [waChannel, setWaChannel] = useState<"whatsapp" | "sms">("whatsapp");
   const [planEditorAllocationId, setPlanEditorAllocationId] = useState<number | null>(null);
   const [expandedAllocationId, setExpandedAllocationId] = useState<number | null>(null);
   const [duplicateMatches, setDuplicateMatches] = useState<DuplicateCustomerMatch[] | null>(null);
@@ -102,11 +103,11 @@ export default function EstateCustomersPage() {
     if (!selectedCustomer || !waPreset) return;
     setWaSending(true);
     try {
-      await api.post(`/estates/customers/${selectedCustomer.id}/whatsapp-message`, { preset: waPreset, detail: waDetail.trim() || undefined });
-      toast.success("Message sent.");
+      await api.post(`/estates/customers/${selectedCustomer.id}/whatsapp-message`, { preset: waPreset, detail: waDetail.trim() || undefined, channel: waChannel });
+      toast.success(waChannel === "sms" ? "SMS sent." : "Message sent.");
       setWaDetail("");
     } catch (error) {
-      toast.error(await extractApiErrorMessage(error, "The message could not be sent."));
+      toast.error(await extractApiErrorMessage(error, waChannel === "sms" ? "The SMS could not be sent." : "The message could not be sent."));
     } finally {
       setWaSending(false);
     }
@@ -207,7 +208,13 @@ export default function EstateCustomersPage() {
                       >
                         <td data-label="Name"><strong>{customer.name}</strong></td>
                         <td data-label="Phone">{customer.phone || customer.email || "-"}</td>
-                        <td data-label="Plots">{customer.plot_count ?? 0}{(customer.plot_count ?? 0) > 1 && <span className="edash-status-pill tone-info" style={{ marginLeft: 6 }}>Multiple</span>}</td>
+                        <td data-label="Plots">
+                          {(customer.plot_count ?? 0) > 1 ? (
+                            <span className="edash-status-pill tone-info">{customer.plot_count} plots</span>
+                          ) : (
+                            customer.plot_count ?? 0
+                          )}
+                        </td>
                         <td data-label="Agreed">{customer.agreed_price !== undefined ? money(customer.agreed_price) : "-"}</td>
                         <td data-label="Outstanding">{customer.outstanding !== undefined ? money(customer.outstanding) : "-"}</td>
                         <td><button type="button" className="edash-btn-outline" onClick={(event) => { event.stopPropagation(); void chooseCustomer(String(customer.id)); }}>View</button></td>
@@ -305,14 +312,20 @@ export default function EstateCustomersPage() {
                 ) : <p className="edash-tab-empty">Loading...</p>}
                 {waPresets.length > 0 && (
                   <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid var(--edash-border-soft)" }}>
-                    <p className="edash-field-note" style={{ margin: "0 0 8px" }}>Message this customer on WhatsApp</p>
+                    <p className="edash-field-note" style={{ margin: "0 0 8px" }}>Message this customer</p>
                     <div className="edash-mk-form-grid">
+                      <label className="edash-field"><span>Send via</span>
+                        <select value={waChannel} onChange={(event) => setWaChannel(event.target.value as "whatsapp" | "sms")}>
+                          <option value="whatsapp">WhatsApp</option>
+                          <option value="sms">SMS</option>
+                        </select>
+                      </label>
                       <label className="edash-field"><span>Message</span>
                         <select value={waPreset} onChange={(event) => setWaPreset(event.target.value)}>{waPresets.map((preset) => <option key={preset.key} value={preset.key}>{preset.label}</option>)}</select>
                       </label>
                       <label className="edash-field is-wide"><span>Detail (optional)</span><input value={waDetail} maxLength={200} onChange={(event) => setWaDetail(event.target.value)} placeholder="e.g. your next payment is due Friday" /></label>
                     </div>
-                    <button type="button" className="edash-btn-primary" style={{ marginTop: 8 }} disabled={waSending} onClick={() => void sendWhatsappMessage()}>{waSending ? "Sending..." : "Send WhatsApp message"}</button>
+                    <button type="button" className="edash-btn-primary" style={{ marginTop: 8 }} disabled={waSending} onClick={() => void sendWhatsappMessage()}>{waSending ? "Sending..." : waChannel === "sms" ? "Send SMS" : "Send WhatsApp message"}</button>
                   </div>
                 )}
               </>
