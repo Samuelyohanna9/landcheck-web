@@ -22,47 +22,49 @@ export type EstateNavKey =
 // EstateMarketingPage.tsx's own TABS array, which this mirrors) - every other nav item is a fully
 // independent page with its own route, permission, and purpose, and must stay a flat top-level
 // item rather than being nested under a thematically-related but otherwise unconnected tool.
-type EstateNavSubView = { key: string; label: string; icon: EstateIconName; query: string };
+type EstateNavSubView = { key: string; label: string; icon: EstateIconName; query: string; description: string };
 
-export const estateNavItems: Array<{ key: EstateNavKey; label: string; icon: EstateIconName; path: (estateId: string) => string; subViews?: EstateNavSubView[] }> = [
-  { key: "dashboard", label: "Dashboard", icon: "dashboard", path: (id) => `/estates/${id}` },
-  { key: "map", label: "Map & Plots", icon: "map", path: (id) => `/estates/${id}/map` },
-  { key: "plots", label: "Plots", icon: "plots", path: (id) => `/estates/${id}/plots` },
-  { key: "customers", label: "Customers", icon: "customers", path: (id) => `/estates/${id}/customers` },
+export const estateNavItems: Array<{ key: EstateNavKey; label: string; icon: EstateIconName; path: (estateId: string) => string; description: string; subViews?: EstateNavSubView[] }> = [
+  { key: "dashboard", label: "Dashboard", icon: "dashboard", path: (id) => `/estates/${id}`, description: "See an overview of this estate's plots, sales and recent activity" },
+  { key: "map", label: "Map & Plots", icon: "map", path: (id) => `/estates/${id}/map`, description: "View the plot map, design layouts and manage individual plots" },
+  { key: "plots", label: "Plots", icon: "plots", path: (id) => `/estates/${id}/plots`, description: "Browse every plot's status, price and details in a list" },
+  { key: "customers", label: "Customers", icon: "customers", path: (id) => `/estates/${id}/customers`, description: "Manage buyer records, contact details and their allocations" },
   {
     key: "inspections", label: "Inspections", icon: "calendar", path: (id) => `/estates/${id}/inspections`,
+    description: "Schedule site visits and run live video inspections with buyers",
     subViews: [
-      { key: "site", label: "Site visits", icon: "calendar", query: "?tab=site" },
-      { key: "live", label: "Live video", icon: "video", query: "?tab=live" },
+      { key: "site", label: "Site visits", icon: "calendar", query: "?tab=site", description: "Book and track in-person site visit appointments" },
+      { key: "live", label: "Live video", icon: "video", query: "?tab=live", description: "Start or join a live video site inspection" },
     ],
   },
-  { key: "approvals", label: "Approvals", icon: "certificate", path: (id) => `/estates/${id}/approvals` },
-  { key: "payments", label: "Sales & Payments", icon: "payments", path: () => "/estates/payments" },
-  { key: "commissions", label: "Commissions", icon: "wallet", path: () => "/estates/commissions" },
+  { key: "approvals", label: "Approvals", icon: "certificate", path: (id) => `/estates/${id}/approvals`, description: "Review and approve pending allocations and requests" },
+  { key: "payments", label: "Sales & Payments", icon: "payments", path: () => "/estates/payments", description: "Record sales, track payments and outstanding balances" },
+  { key: "commissions", label: "Commissions", icon: "wallet", path: () => "/estates/commissions", description: "Track and pay out agent commissions on completed sales" },
   {
     key: "marketing", label: "Marketing", icon: "megaphone", path: (id) => `/estates/${id}/marketing`,
+    description: "Share marketing materials, post to social media and manage agents",
     subViews: [
-      { key: "materials", label: "Materials & sharing", icon: "share", query: "?tab=materials" },
-      { key: "social", label: "Social posts", icon: "megaphone", query: "?tab=social" },
-      { key: "progress", label: "Site progress", icon: "camera", query: "?tab=progress" },
-      { key: "agents", label: "Agents", icon: "customers", query: "?tab=agents" },
+      { key: "materials", label: "Materials & sharing", icon: "share", query: "?tab=materials", description: "Download and share flyers, brochures and sales materials" },
+      { key: "social", label: "Social posts", icon: "megaphone", query: "?tab=social", description: "Post estate updates to Facebook and Instagram" },
+      { key: "progress", label: "Site progress", icon: "camera", query: "?tab=progress", description: "Share site development photos and progress updates" },
+      { key: "agents", label: "Agents", icon: "customers", query: "?tab=agents", description: "Manage the agents marketing this estate" },
     ],
   },
-  { key: "whatsapp", label: "WhatsApp", icon: "whatsapp", path: (id) => `/estates/${id}/marketing/whatsapp` },
-  { key: "sms", label: "SMS", icon: "mail", path: (id) => `/estates/${id}/sms` },
-  { key: "survey", label: "Survey Plan", icon: "survey", path: (id) => `/estates/${id}/survey` },
-  { key: "staking", label: "Staking", icon: "staking", path: (id) => `/estates/${id}/staking` },
-  { key: "documents", label: "Documents", icon: "documents", path: () => "/estates/documents" },
-  { key: "integrations", label: "Data Connect", icon: "upload", path: () => "/estates/integrations" },
-  { key: "development", label: "Development", icon: "development", path: (id) => `/estates/${id}/development` },
-  { key: "hazard", label: "Hazard Analysis", icon: "hazard", path: (id) => `/estates/${id}/hazards` },
-  { key: "soil", label: "Soil Analysis", icon: "layers", path: (id) => `/estates/${id}/soil-analysis` },
-  { key: "reports", label: "Reports", icon: "reports", path: (id) => `/estates/${id}/reports` },
-  { key: "audit", label: "Audit Timeline", icon: "audit", path: (id) => `/estates/${id}/timeline` },
-  { key: "public_site", label: "Public website", icon: "globe", path: (id) => `/estates/${id}/public-site` },
-  { key: "access", label: "Team & Access", icon: "shield", path: (id) => `/estates/${id}/access` },
-  { key: "settings", label: "Settings", icon: "settings", path: (id) => `/estates/${id}/settings` },
-  { key: "notifications", label: "Message Delivery", icon: "mail", path: (id) => `/estates/${id}/notifications` },
+  { key: "whatsapp", label: "WhatsApp", icon: "whatsapp", path: (id) => `/estates/${id}/marketing/whatsapp`, description: "Chat with customers and leads directly on WhatsApp" },
+  { key: "sms", label: "SMS", icon: "mail", path: (id) => `/estates/${id}/sms`, description: "Send SMS updates and reminders to customers" },
+  { key: "survey", label: "Survey Plan", icon: "survey", path: (id) => `/estates/${id}/survey`, description: "Upload and view the estate's survey plan and coordinates" },
+  { key: "staking", label: "Staking", icon: "staking", path: (id) => `/estates/${id}/staking`, description: "Record plot staking and beacon placement in the field" },
+  { key: "documents", label: "Documents", icon: "documents", path: () => "/estates/documents", description: "Store and share estate documents like titles and agreements" },
+  { key: "integrations", label: "Data Connect", icon: "upload", path: () => "/estates/integrations", description: "Import customers, plots, sales and payments from a spreadsheet" },
+  { key: "development", label: "Development", icon: "development", path: (id) => `/estates/${id}/development`, description: "Track construction and infrastructure progress on site" },
+  { key: "hazard", label: "Hazard Analysis", icon: "hazard", path: (id) => `/estates/${id}/hazards`, description: "Check flood, erosion and other environmental risks for this estate" },
+  { key: "soil", label: "Soil Analysis", icon: "layers", path: (id) => `/estates/${id}/soil-analysis`, description: "Review soil composition and suitability for this estate" },
+  { key: "reports", label: "Reports", icon: "reports", path: (id) => `/estates/${id}/reports`, description: "Generate sales, financial and activity reports" },
+  { key: "audit", label: "Audit Timeline", icon: "audit", path: (id) => `/estates/${id}/timeline`, description: "See a full timeline of every action taken on this estate" },
+  { key: "public_site", label: "Public website", icon: "globe", path: (id) => `/estates/${id}/public-site`, description: "Manage the public website buyers see for this estate" },
+  { key: "access", label: "Team & Access", icon: "shield", path: (id) => `/estates/${id}/access`, description: "Manage staff, agents and their access permissions" },
+  { key: "settings", label: "Settings", icon: "settings", path: (id) => `/estates/${id}/settings`, description: "Configure estate name, branding and general settings" },
+  { key: "notifications", label: "Message Delivery", icon: "mail", path: (id) => `/estates/${id}/notifications`, description: "Track delivery status of SMS, WhatsApp and email messages sent" },
 ];
 
 // The permission a nav item is actually gated by server-side (see
@@ -550,7 +552,7 @@ export default function EstateShell({
                   className={`edash-nav-item${item.key === activeKey ? " active" : ""}${locked ? " is-locked" : ""}`}
                   to={estateId || item.key === "payments" || item.key === "commissions" ? item.path(estateId) : "/estates/workspace"}
                   aria-disabled={locked}
-                  title={locked ? "Contact your admin for access to this feature" : undefined}
+                  title={locked ? "Contact your admin for access to this feature" : item.description}
                   onClick={(event) => {
                     if (locked) {
                       event.preventDefault();
@@ -600,7 +602,7 @@ export default function EstateShell({
                           className={`edash-nav-item${subViewActive ? " active" : ""}${locked ? " is-locked" : ""}`}
                           to={`${item.path(estateId)}${subView.query}`}
                           aria-disabled={locked}
-                          title={locked ? "Contact your admin for access to this feature" : undefined}
+                          title={locked ? "Contact your admin for access to this feature" : subView.description}
                           onClick={(event) => {
                             if (locked) {
                               event.preventDefault();
