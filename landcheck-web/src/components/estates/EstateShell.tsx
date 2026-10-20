@@ -14,7 +14,7 @@ import "../../styles/estate-legal.css";
 
 export type EstateNavKey =
   | "dashboard" | "map" | "plots" | "customers" | "inspections" | "approvals" | "payments" | "commissions" | "marketing" | "whatsapp" | "sms" | "survey" | "staking"
-  | "documents" | "development" | "hazard" | "soil" | "reports" | "audit" | "public_site" | "settings" | "notifications"
+  | "documents" | "development" | "hazard" | "soil" | "reports" | "audit" | "public_site" | "settings" | "notifications" | "integrations"
   | "access";
 
 // A sub-view belonging to its parent's own page (a real tab inside that same route, reached via
@@ -53,6 +53,7 @@ export const estateNavItems: Array<{ key: EstateNavKey; label: string; icon: Est
   { key: "survey", label: "Survey", icon: "survey", path: (id) => `/estates/${id}/survey` },
   { key: "staking", label: "Staking", icon: "staking", path: (id) => `/estates/${id}/staking` },
   { key: "documents", label: "Documents", icon: "documents", path: () => "/estates/documents" },
+  { key: "integrations", label: "Integrations", icon: "upload", path: () => "/estates/integrations" },
   { key: "development", label: "Development", icon: "development", path: (id) => `/estates/${id}/development` },
   { key: "hazard", label: "Hazard Analysis", icon: "hazard", path: (id) => `/estates/${id}/hazards` },
   { key: "soil", label: "Soil Analysis", icon: "layers", path: (id) => `/estates/${id}/soil-analysis` },
@@ -84,6 +85,7 @@ const NAV_PERMISSION: Partial<Record<EstateNavKey, string>> = {
   survey: "survey.read",
   staking: "staking.read",
   documents: "document.read",
+  integrations: "integration.read",
   development: "infrastructure.read",
   hazard: "plot.read",
   soil: "plot.read",

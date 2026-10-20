@@ -1,0 +1,38 @@
+/* ─── Integrations: home tiles, import wizard ─────────────────────────────────────────────── */
+
+.edash-integrations-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.edash-integrations-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 22px;
+  border: 1px solid var(--edash-border-soft);
+  border-radius: var(--edash-radius-md, 14px);
+  background: var(--edash-surface);
+  box-shadow: var(--edash-shadow-sm, 0 1px 2px rgba(16, 42, 33, .05));
+}
+.edash-integrations-tile.is-disabled { opacity: .6; }
+.edash-integrations-tile-icon { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: var(--edash-brand-tint); color: var(--edash-brand); }
+.edash-integrations-tile-icon svg { width: 20px; height: 20px; }
+.edash-integrations-tile h3 { margin: 4px 0 0; font-size: 1.05rem; color: var(--edash-ink); }
+.edash-integrations-tile p { margin: 0; color: var(--edash-muted); font-size: .84rem; line-height: 1.5; flex: 1; }
+.edash-integrations-badge { padding: 4px 10px; border-radius: 999px; background: var(--edash-neutral-tint); color: var(--edash-muted); font-size: .7rem; font-weight: 700; }
+
+.edash-integrations-wizard-steps { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.edash-integrations-wizard-step { display: flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 999px; background: var(--edash-neutral-tint); color: var(--edash-muted); font-size: .78rem; font-weight: 700; }
+.edash-integrations-wizard-step span { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: var(--edash-border); color: #fff; font-size: .68rem; }
+.edash-integrations-wizard-step.is-active { background: var(--edash-brand-tint); color: var(--edash-brand-dark); }
+.edash-integrations-wizard-step.is-active span { background: var(--edash-brand); }
+.edash-integrations-wizard-step.is-done span { background: var(--edash-good, #1e8a4c); }
+
+.edash-integrations-step { display: flex; flex-direction: column; }
+.edash-integrations-sheet-card { margin-bottom: 18px; padding: 14px; border: 1px solid var(--edash-border-soft); border-radius: 10px; background: var(--edash-neutral-tint); }
+.edash-integrations-sheet-card h4 { margin: 0 0 10px; font-size: .9rem; color: var(--edash-ink); display: flex; align-items: baseline; gap: 6px; }
+
+.edash-integrations-step button.edash-chip { cursor: pointer; border: 1px solid transparent; transition: background .15s ease, border-color .15s ease; }
+.edash-integrations-step button.edash-chip.is-active { background: var(--edash-brand); color: #fff; }
+.edash-integrations-step button.edash-chip:not(.is-active):hover { border-color: var(--edash-brand); }
+
+.edash-integrations-checkbox { display: flex; align-items: flex-start; gap: 8px; margin: 10px 0 0; font-size: .8rem; color: var(--edash-muted); cursor: pointer; }
+.edash-integrations-checkbox input { margin-top: 2px; accent-color: var(--edash-brand); }
