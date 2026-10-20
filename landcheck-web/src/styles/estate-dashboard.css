@@ -1390,6 +1390,8 @@
 .edash-timeline-item { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--edash-border-soft); }
 .edash-timeline-item:last-child { border-bottom: none; }
 .edash-timeline-dot { width: 7px; height: 7px; margin-top: 5px; border-radius: 999px; background: var(--edash-brand); flex-shrink: 0; }
+.edash-timeline-dot.is-good { background: var(--edash-good, #1e8a4c); }
+.edash-timeline-dot.is-danger { background: var(--edash-danger, #b3261e); }
 .edash-timeline-item strong { display: block; font-size: 0.8rem; font-weight: 700; color: var(--edash-ink); }
 .edash-timeline-item small { color: var(--edash-faint); font-size: 0.71rem; }
 

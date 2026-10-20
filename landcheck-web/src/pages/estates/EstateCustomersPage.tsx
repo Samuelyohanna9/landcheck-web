@@ -7,9 +7,27 @@ import EstateShell from "../../components/estates/EstateShell";
 import EstateModal from "../../components/estates/EstateModal";
 import EstatePagination from "../../components/estates/EstatePagination";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
+import Spinner from "../../components/estates/EstateSpinner";
 import { findDuplicateCustomers, DuplicateCustomerModal, type DuplicateCustomerMatch } from "../../components/estates/CustomerDuplicateCheck";
 
 type CustomerRow = { id: number; name: string; reference?: string | null; phone?: string | null; email?: string | null; plot_count?: number; agreed_price?: string; outstanding?: string };
+type TimelineEvent = {
+  id: string;
+  kind: "audit" | "chat" | "notification";
+  created_at: string;
+  action?: string;
+  entity_type?: string;
+  actor?: string;
+  details?: unknown;
+  direction?: "in" | "out";
+  body?: string;
+  status?: string;
+  message_type?: string;
+  channel?: string;
+  event_key?: string;
+  subject?: string;
+  error_message?: string | null;
+};
 
 export default function EstateCustomersPage() {
   const { estateId } = useParams();
@@ -42,6 +60,8 @@ export default function EstateCustomersPage() {
   const [planEditorAllocationId, setPlanEditorAllocationId] = useState<number | null>(null);
   const [expandedAllocationId, setExpandedAllocationId] = useState<number | null>(null);
   const [duplicateMatches, setDuplicateMatches] = useState<DuplicateCustomerMatch[] | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyEvents, setHistoryEvents] = useState<TimelineEvent[] | null>(null);
 
   const load = () => {
     if (!estateId) return;
@@ -90,6 +110,8 @@ export default function EstateCustomersPage() {
     setPlanEditorAllocationId(null);
     setExpandedAllocationId(null);
     setWaResult(null);
+    setShowHistory(false);
+    setHistoryEvents(null);
     if (!id) return;
     try {
       const [financial, statementResponse] = await Promise.all([
@@ -112,6 +134,18 @@ export default function EstateCustomersPage() {
       toast.success("Buyer portal link created and copied.");
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "Buyer portal link could not be created."));
+    }
+  };
+
+  const openHistory = async () => {
+    if (!selectedCustomer) return;
+    setShowHistory(true);
+    setHistoryEvents(null);
+    try {
+      const response = await api.get<{ events: TimelineEvent[] }>(`/estates/customers/${selectedCustomer.id}/timeline`);
+      setHistoryEvents(response.data.events || []);
+    } catch {
+      setHistoryEvents([]);
     }
   };
 
@@ -261,6 +295,7 @@ export default function EstateCustomersPage() {
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
                   <p className="edash-info-card-name" style={{ margin: 0 }}>{selectedCustomer.name}</p>
                   <div style={{ display: "flex", gap: 8 }}>
+                    <button type="button" className="edash-btn-outline" onClick={() => void openHistory()}>View history</button>
                     <button type="button" className="edash-btn-outline" onClick={() => void createPortalLink()}>Buyer portal link</button>
                     <button type="button" className="edash-btn-outline" onClick={() => navigate(`/estates/${estateId}/inspections?tab=live`)}>Schedule live inspection</button>
                   </div>
@@ -383,6 +418,47 @@ export default function EstateCustomersPage() {
           onCreateNew={() => { setDuplicateMatches(null); void actuallyCreateCustomer(); }}
           onClose={() => setDuplicateMatches(null)}
         />
+      )}
+
+      {showHistory && selectedCustomer && (
+        <EstateModal title={`${selectedCustomer.name} - full history`} subtitle="Every record change, payment, and message - WhatsApp, SMS and email - for this customer, newest first." onClose={() => setShowHistory(false)}>
+          {historyEvents === null ? (
+            <p className="edash-tab-empty"><Spinner size={13} /> Loading...</p>
+          ) : historyEvents.length === 0 ? (
+            <p className="edash-tab-empty">No recorded history for this customer yet.</p>
+          ) : (
+            <div className="edash-timeline-list">
+              {historyEvents.map((event) => (
+                <div key={event.id} className="edash-timeline-item">
+                  <span className={`edash-timeline-dot ${event.kind === "chat" ? (event.status === "failed" ? "is-danger" : "is-good") : event.kind === "notification" && event.status === "failed" ? "is-danger" : ""}`} />
+                  <div>
+                    {event.kind === "audit" && (
+                      <>
+                        <strong>{String(event.action || "").replaceAll("_", " ")}</strong>
+                        <small>{event.entity_type ? `${event.entity_type.replace("estate_", "")} · ` : ""}{new Date(event.created_at).toLocaleString()}</small>
+                      </>
+                    )}
+                    {event.kind === "chat" && (
+                      <>
+                        <strong>{event.direction === "in" ? "Customer replied" : "Sent to customer"} ({event.message_type || "text"}){event.status === "failed" ? " - failed" : ""}</strong>
+                        {event.body && <p className="edash-field-note" style={{ margin: "2px 0 0" }}>{event.body}</p>}
+                        <small>{new Date(event.created_at).toLocaleString()}</small>
+                      </>
+                    )}
+                    {event.kind === "notification" && (
+                      <>
+                        <strong>{(event.channel || "").toUpperCase()}: {String(event.event_key || "").replaceAll("_", " ")}{event.status === "failed" ? " - failed" : ""}</strong>
+                        {event.subject && <p className="edash-field-note" style={{ margin: "2px 0 0" }}>{event.subject}</p>}
+                        {event.status === "failed" && event.error_message && <p className="edash-field-note" style={{ margin: "2px 0 0", color: "var(--edash-danger, #b3261e)" }}>{event.error_message}</p>}
+                        <small>{new Date(event.created_at).toLocaleString()}</small>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </EstateModal>
       )}
     </EstateShell>
   );
