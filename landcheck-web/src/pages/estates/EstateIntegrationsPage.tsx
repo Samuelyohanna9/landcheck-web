@@ -46,7 +46,8 @@ const ENTITY_FIELDS: Record<EntityType, { field: string; label: string }[]> = {
 };
 
 type SheetConfig = { entityTypes: EntityType[]; mapping: Record<string, string | null>; openingBalance: boolean };
-type PreviewRow = { id: number; row_index: number; source_data: any; match_status: string; resolution: string; issues: string[] };
+type PreviewRow = { id: number; row_index: number; source_data: any; match_status: string; resolution: string; issues: string[]; manual_plot_id: number | null; manual_plot_number: string | null };
+type PlotOption = { id: number; plot_number: string; commercial_status: string; geometry_status: string };
 type CommitResult = { created: number; updated: number; skipped: number; errors: { row: number; reason: string }[] };
 type BatchHistoryRow = { id: number; estate_name: string; source_filename: string; status: string; row_counts: Record<string, number> | null; created_at: string; committed_at: string | null };
 
@@ -194,6 +195,10 @@ function ImportWizard({ estates, onDone, onCancel }: { estates: EstateOption[]; 
   const [previewRows, setPreviewRows] = useState<PreviewRow[] | null>(null);
   const [committing, setCommitting] = useState(false);
   const [result, setResult] = useState<CommitResult | null>(null);
+  const [plotPickerRowId, setPlotPickerRowId] = useState<number | null>(null);
+  const [plotQuery, setPlotQuery] = useState("");
+  const [plotOptions, setPlotOptions] = useState<PlotOption[]>([]);
+  const [searchingPlots, setSearchingPlots] = useState(false);
 
   const downloadTemplate = async () => {
     const response = await api.get("/estates/import-batches/field-templates", { responseType: "blob" });
@@ -297,6 +302,36 @@ function ImportWizard({ estates, onDone, onCancel }: { estates: EstateOption[]; 
       await loadPreview(batchId, previewTab);
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "Could not update this row."));
+    }
+  };
+
+  const searchPlots = async (query: string) => {
+    if (!batchId) return;
+    setSearchingPlots(true);
+    try {
+      const response = await api.get<{ rows: PlotOption[] }>(`/estates/import-batches/${batchId}/plot-options`, { params: { q: query } });
+      setPlotOptions(response.data.rows || []);
+    } catch {
+      setPlotOptions([]);
+    } finally {
+      setSearchingPlots(false);
+    }
+  };
+
+  const openPlotPicker = (rowId: number) => {
+    setPlotPickerRowId(rowId);
+    setPlotQuery("");
+    void searchPlots("");
+  };
+
+  const linkPlot = async (rowId: number, plotId: number) => {
+    if (!batchId) return;
+    try {
+      await api.patch(`/estates/import-batches/${batchId}/rows/${rowId}`, { plot_id: plotId, resolution: "create" });
+      setPlotPickerRowId(null);
+      await loadPreview(batchId, previewTab);
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "Could not link this plot."));
     }
   };
 
@@ -443,12 +478,49 @@ function ImportWizard({ estates, onDone, onCancel }: { estates: EstateOption[]; 
               previewRows.length ? (
                 <div style={{ overflowX: "auto" }}>
                   <table className="edash-mini-table">
-                    <thead><tr><th>Row</th><th>Summary</th><th>Issues</th><th>Resolution</th></tr></thead>
+                    <thead><tr><th>Row</th><th>Summary</th><th>Plot</th><th>Issues</th><th>Resolution</th></tr></thead>
                     <tbody>
                       {previewRows.map((row) => (
                         <tr key={row.id}>
                           <td data-label="Row">{row.row_index + 1}</td>
                           <td data-label="Summary">{row.source_data?.customer?.full_name || row.source_data?.plot?.plot_number || row.source_data?.payment?.reference_no || "-"}</td>
+                          <td data-label="Plot" style={{ position: "relative" }}>
+                            {row.manual_plot_number ? (
+                              <>
+                                <span className="edash-integrations-plot-linked">{row.manual_plot_number}</span>{" "}
+                                <button type="button" className="edash-card-link" onClick={() => openPlotPicker(row.id)}>Change</button>
+                              </>
+                            ) : row.source_data?.plot?.plot_number ? (
+                              <>
+                                <span>{row.source_data.plot.plot_number}</span>{" "}
+                                <button type="button" className="edash-card-link" onClick={() => openPlotPicker(row.id)}>Link existing plot</button>
+                              </>
+                            ) : "-"}
+                            {plotPickerRowId === row.id && (
+                              <div className="edash-integrations-plot-picker">
+                                <input
+                                  autoFocus
+                                  placeholder="Search plot number..."
+                                  value={plotQuery}
+                                  onChange={(event) => { setPlotQuery(event.target.value); void searchPlots(event.target.value); }}
+                                />
+                                <div className="edash-integrations-plot-picker-results">
+                                  {searchingPlots ? (
+                                    <span className="edash-field-note"><Spinner size={12} /> Searching...</span>
+                                  ) : plotOptions.length ? (
+                                    plotOptions.map((plot) => (
+                                      <button type="button" key={plot.id} className="edash-integrations-plot-option" onClick={() => void linkPlot(row.id, plot.id)}>
+                                        {plot.plot_number} <span className="edash-field-note">({plot.commercial_status})</span>
+                                      </button>
+                                    ))
+                                  ) : (
+                                    <span className="edash-field-note">No matching plots in this estate</span>
+                                  )}
+                                </div>
+                                <button type="button" className="edash-card-link" onClick={() => setPlotPickerRowId(null)}>Cancel</button>
+                              </div>
+                            )}
+                          </td>
                           <td data-label="Issues">{row.issues?.length ? row.issues.join("; ") : "-"}</td>
                           <td data-label="Resolution">
                             <select value={row.resolution} onChange={(event) => void overrideRow(row.id, event.target.value)}>
