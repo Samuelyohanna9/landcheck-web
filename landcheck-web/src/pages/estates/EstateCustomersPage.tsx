@@ -33,11 +33,12 @@ export default function EstateCustomersPage() {
   const [message, setMessage] = useState("");
   const [portalLink, setPortalLink] = useState("");
   const [packetBusy, setPacketBusy] = useState(false);
-  const [waPresets, setWaPresets] = useState<Array<{ key: string; label: string }>>([]);
+  const [waPresets, setWaPresets] = useState<Array<{ key: string; label: string; sample?: string }>>([]);
   const [waPreset, setWaPreset] = useState("");
   const [waDetail, setWaDetail] = useState("");
   const [waSending, setWaSending] = useState(false);
   const [waChannel, setWaChannel] = useState<"whatsapp" | "sms">("whatsapp");
+  const [waResult, setWaResult] = useState<{ ok: boolean; message: string; at: string } | null>(null);
   const [planEditorAllocationId, setPlanEditorAllocationId] = useState<number | null>(null);
   const [expandedAllocationId, setExpandedAllocationId] = useState<number | null>(null);
   const [duplicateMatches, setDuplicateMatches] = useState<DuplicateCustomerMatch[] | null>(null);
@@ -59,13 +60,27 @@ export default function EstateCustomersPage() {
   useEffect(() => {
     if (!estateId) return;
     api.get(`/estates/${estateId}/marketing/social/optins`).then((response) => {
-      const presets = (response.data?.presets || []) as Array<{ key: string; label: string }>;
+      const presets = (response.data?.presets || []) as Array<{ key: string; label: string; sample?: string }>;
       setWaPresets(presets);
       if (presets[0]) setWaPreset((current) => current || presets[0].key);
     }).catch(() => setWaPresets([]));
   }, [estateId]);
 
   const selectedCustomer = customers.find((customer) => String(customer.id) === selectedId);
+
+  // Mirrors the server's own params order (name, estate, detail, link) so what staff see here is
+  // what actually gets sent - catches a badly-worded detail or the wrong preset before it reaches
+  // Meta, rather than after a failed send.
+  const waPreview = (() => {
+    const spec = waPresets.find((preset) => preset.key === waPreset);
+    if (!spec?.sample || !selectedCustomer) return null;
+    const firstName = selectedCustomer.name?.split(" ")[0] || "there";
+    return spec.sample
+      .replaceAll("{{1}}", firstName)
+      .replaceAll("{{2}}", estateName || "your estate")
+      .replaceAll("{{3}}", waDetail.trim() || "an update on your plot")
+      .replaceAll("{{4}}", "[link to your estate page]");
+  })();
 
   const chooseCustomer = async (id: string) => {
     setSelectedId(id);
@@ -74,6 +89,7 @@ export default function EstateCustomersPage() {
     setPortalLink("");
     setPlanEditorAllocationId(null);
     setExpandedAllocationId(null);
+    setWaResult(null);
     if (!id) return;
     try {
       const [financial, statementResponse] = await Promise.all([
@@ -102,12 +118,17 @@ export default function EstateCustomersPage() {
   const sendWhatsappMessage = async () => {
     if (!selectedCustomer || !waPreset) return;
     setWaSending(true);
+    setWaResult(null);
     try {
       await api.post(`/estates/customers/${selectedCustomer.id}/whatsapp-message`, { preset: waPreset, detail: waDetail.trim() || undefined, channel: waChannel });
-      toast.success(waChannel === "sms" ? "SMS sent." : "Message sent.");
+      const okMessage = waChannel === "sms" ? "SMS sent." : "Message sent.";
+      toast.success(okMessage);
+      setWaResult({ ok: true, message: okMessage, at: new Date().toLocaleTimeString() });
       setWaDetail("");
     } catch (error) {
-      toast.error(await extractApiErrorMessage(error, waChannel === "sms" ? "The SMS could not be sent." : "The message could not be sent."));
+      const failMessage = await extractApiErrorMessage(error, waChannel === "sms" ? "The SMS could not be sent." : "The message could not be sent.");
+      toast.error(failMessage);
+      setWaResult({ ok: false, message: failMessage, at: new Date().toLocaleTimeString() });
     } finally {
       setWaSending(false);
     }
@@ -323,9 +344,20 @@ export default function EstateCustomersPage() {
                       <label className="edash-field"><span>Message</span>
                         <select value={waPreset} onChange={(event) => setWaPreset(event.target.value)}>{waPresets.map((preset) => <option key={preset.key} value={preset.key}>{preset.label}</option>)}</select>
                       </label>
-                      <label className="edash-field is-wide"><span>Detail (optional)</span><input value={waDetail} maxLength={200} onChange={(event) => setWaDetail(event.target.value)} placeholder="e.g. your next payment is due Friday" /></label>
+                      <label className="edash-field is-wide"><span>Detail (optional)</span><input value={waDetail} maxLength={200} onChange={(event) => { setWaDetail(event.target.value); setWaResult(null); }} placeholder="e.g. your next payment is due Friday" /></label>
                     </div>
+                    {waPreview && (
+                      <div className="edash-wa-preview">
+                        <span className="edash-wa-preview-label">Preview - exactly what will be sent</span>
+                        <p>{waPreview}</p>
+                      </div>
+                    )}
                     <button type="button" className="edash-btn-primary" style={{ marginTop: 8 }} disabled={waSending} onClick={() => void sendWhatsappMessage()}>{waSending ? "Sending..." : waChannel === "sms" ? "Send SMS" : "Send WhatsApp message"}</button>
+                    {waResult && (
+                      <p className={`edash-wa-result ${waResult.ok ? "is-ok" : "is-error"}`}>
+                        <strong>{waResult.ok ? "Sent" : "Failed"}</strong> at {waResult.at}: {waResult.message}
+                      </p>
+                    )}
                   </div>
                 )}
               </>

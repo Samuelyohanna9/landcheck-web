@@ -2365,6 +2365,13 @@
 .edash-field input:disabled,
 .edash-field select:disabled { background: var(--edash-neutral-tint); color: var(--edash-faint); cursor: not-allowed; }
 .edash-field-note { margin: 0; color: var(--edash-faint); font-size: 0.76rem; line-height: 1.4; }
+
+.edash-wa-preview { margin-top: 10px; padding: 10px 12px; border: 1px dashed var(--edash-border); border-radius: 10px; background: var(--edash-neutral-tint); }
+.edash-wa-preview-label { display: block; margin-bottom: 4px; color: var(--edash-muted); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+.edash-wa-preview p { margin: 0; color: var(--edash-ink); font-size: 0.84rem; line-height: 1.5; white-space: pre-wrap; }
+.edash-wa-result { margin: 10px 0 0; padding: 8px 10px; border-radius: 8px; font-size: 0.8rem; line-height: 1.45; }
+.edash-wa-result.is-ok { background: var(--edash-good-tint, #e5f5ea); color: var(--edash-good, #1e8a4c); }
+.edash-wa-result.is-error { background: var(--edash-danger-tint, #fbe9e7); color: var(--edash-danger, #b3261e); }
 /* A "what this means for you" callout - plain-language explanations sit next to (not instead of)
    the technical reading above them, e.g. on Soil Analysis, so a non-technical reader never has to
    guess what a kPa range or a risk-tier badge implies for their own decision. */
