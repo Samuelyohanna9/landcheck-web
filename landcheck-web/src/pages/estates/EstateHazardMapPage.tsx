@@ -93,6 +93,13 @@ export default function EstateHazardMapPage() {
 
   const floodResult = result?.flood;
   const erosionResult = result?.erosion;
+
+  useEffect(() => {
+    if (!result) return;
+    if (hazardType === "flood" && !floodResult && erosionResult) setHazardType("erosion");
+    else if (hazardType === "erosion" && !erosionResult && floodResult) setHazardType("flood");
+  }, [result, floodResult, erosionResult, hazardType]);
+
   const activeFloodEngine = floodResult ? (floodEngine === "rainfall" ? floodResult.rainfall : floodEngine === "floodplain" ? floodResult.floodplain : floodResult.river) : null;
   const displayOverlay = hazardType === "flood" ? activeFloodEngine?.overlay ?? null : erosionResult?.overlay ?? null;
   const displayInteractive = hazardType === "flood" ? activeFloodEngine?.interactive ?? null : erosionResult?.interactive ?? null;
@@ -138,16 +145,21 @@ export default function EstateHazardMapPage() {
             <p className="edash-tab-empty">No hazard result available to map yet. Run hazard analysis first.</p>
           ) : (
             <>
-              <div className="edash-chip-row" style={{ marginBottom: 12 }}>
-                {floodResult && <button type="button" className={`edash-chip ${hazardType === "flood" ? "is-active" : ""}`} onClick={() => setHazardType("flood")}>Flood</button>}
-                {erosionResult && <button type="button" className={`edash-chip ${hazardType === "erosion" ? "is-active" : ""}`} onClick={() => setHazardType("erosion")}>Erosion</button>}
-              </div>
+              {(floodResult || erosionResult) && (
+                <label className="edash-field" style={{ maxWidth: 220, marginBottom: 14 }}>
+                  <span>Hazard</span>
+                  <select value={hazardType} onChange={(event) => setHazardType(event.target.value as "flood" | "erosion")}>
+                    {floodResult && <option value="flood">Flood</option>}
+                    {erosionResult && <option value="erosion">Erosion</option>}
+                  </select>
+                </label>
+              )}
               {hazardType === "flood" && floodResult && (
-                <div className="edash-chip-row" style={{ marginBottom: 12 }}>
-                  <button type="button" className={`edash-chip ${floodEngine === "river" ? "is-active" : ""}`} onClick={() => { setFloodEngine("river"); setShow3D(false); }}>River</button>
-                  <button type="button" className={`edash-chip ${floodEngine === "floodplain" ? "is-active" : ""}`} onClick={() => { setFloodEngine("floodplain"); setShow3D(false); }}>Floodplain</button>
-                  <button type="button" className={`edash-chip ${floodEngine === "rainfall" ? "is-active" : ""}`} onClick={() => { setFloodEngine("rainfall"); setShow3D(false); }}>Rainfall</button>
-                  <button type="button" className={`edash-chip ${show3D ? "is-active" : ""}`} onClick={() => setShow3D((v) => !v)}>3D View</button>
+                <div className="edash-underline-tabs">
+                  <button type="button" className={`edash-underline-tab ${floodEngine === "river" && !show3D ? "is-active" : ""}`} onClick={() => { setFloodEngine("river"); setShow3D(false); }}>River</button>
+                  <button type="button" className={`edash-underline-tab ${floodEngine === "floodplain" && !show3D ? "is-active" : ""}`} onClick={() => { setFloodEngine("floodplain"); setShow3D(false); }}>Floodplain</button>
+                  <button type="button" className={`edash-underline-tab ${floodEngine === "rainfall" && !show3D ? "is-active" : ""}`} onClick={() => { setFloodEngine("rainfall"); setShow3D(false); }}>Rainfall</button>
+                  <button type="button" className={`edash-underline-tab ${show3D ? "is-active" : ""}`} onClick={() => setShow3D((v) => !v)}>3D View</button>
                 </div>
               )}
               {hazardType === "flood" && floodResult && show3D ? (

@@ -17,6 +17,7 @@ import EstateIcon from "../components/estates/EstateIcon";
 import EstateRibbon, { type EstateRibbonTab } from "../components/estates/EstateRibbon";
 import EstateModal from "../components/estates/EstateModal";
 import { findDuplicateCustomers, DuplicateCustomerModal, type DuplicateCustomerMatch } from "../components/estates/CustomerDuplicateCheck";
+import { PLOT_STATUS_COLORS as STATUS_COLORS } from "../components/estates/plotStatusColors";
 import CoordinateSystemSelect from "../components/CoordinateSystemSelect";
 import EstateShell from "../components/estates/EstateShell";
 import EstateReservationRequests from "../components/estates/EstateReservationRequests";
@@ -27,16 +28,6 @@ import { clearSurveyPlanDraft } from "../offline/surveyPlanDraft";
 import "../styles/estates.css";
 import "../styles/estate-dashboard.css";
 import "../styles/estate-monday.css";
-
-const STATUS_COLORS = {
-  available: "#1e8a4c",
-  allocated: "#2a78d6",
-  reserved: "#d69100",
-  under_survey: "#d9622a",
-  under_staking: "#6046a8",
-  developed: "#0f8b8d",
-  on_hold: "#667085",
-} as const;
 
 const STATUS_LEGEND_ITEMS = [
   { key: "available", label: "Available", color: STATUS_COLORS.available },

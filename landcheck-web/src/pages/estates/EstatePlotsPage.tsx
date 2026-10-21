@@ -6,6 +6,7 @@ import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import { money } from "../../components/estates/FinancialComponents";
+import { PlotStatusBadge } from "../../components/estates/plotStatusColors";
 import { formatArea, type UnitSystem } from "../../utils/unitFormat";
 
 type PlotFeature = {
@@ -254,7 +255,7 @@ export default function EstatePlotsPage() {
                     <tr key={plot.id}>
                       <td data-label="Plot No.">{plot.plot_number}</td>
                       <td data-label="Block">{blockLabel(plot.block_id)}</td>
-                      <td data-label="Status"><span className={`edash-status-pill tone-${statusTone(plot.commercial_status)}`}>{plot.commercial_status.replaceAll("_", " ")}</span></td>
+                      <td data-label="Status"><PlotStatusBadge status={plot.commercial_status} /></td>
                       <td data-label="Development"><span className={`edash-status-pill tone-${statusTone(plot.development_status || "not_started")}`}>{(plot.development_status || "not_started").replaceAll("_", " ")}</span></td>
                       <td data-label="Area">{formatArea(Number(plot.area_sqm || 0), unitSystem)}</td>
                       <td data-label="Plot address">

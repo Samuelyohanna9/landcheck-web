@@ -5,13 +5,9 @@ import EstateShell from "../../components/estates/EstateShell";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import PlotHistoryList from "../../components/estates/PlotHistoryList";
 import type { PlotHistoryEvent } from "../../utils/plotHistory";
+import { PlotStatusBadge } from "../../components/estates/plotStatusColors";
 
 type PlotSummary = { id: number; plot_number: string; commercial_status: string; area_sqm: number; public_address: string | null };
-
-const STATUS_LABEL: Record<string, string> = {
-  available: "Available", reserved: "Reserved", allocated: "Allocated", on_hold: "On hold",
-  under_survey: "Under survey", under_staking: "Under staking", developed: "Developed",
-};
 
 export default function EstatePlotHistoryPage() {
   const { estateId, plotId } = useParams();
@@ -57,7 +53,7 @@ export default function EstatePlotHistoryPage() {
                 Everything recorded for this plot - allocation, payments, commission payouts, customer contact, documents, survey, staking, hazard/soil screening, site updates and approval progress - newest first.
               </p>
             </div>
-            {plot && <span className="edash-status-pill tone-good">{STATUS_LABEL[plot.commercial_status] || plot.commercial_status}</span>}
+            {plot && <PlotStatusBadge status={plot.commercial_status} />}
           </div>
           {plot && (
             <p className="edash-status-row-desc" style={{ marginBottom: 4 }}>

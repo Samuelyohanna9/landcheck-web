@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import "../styles/green-impact.css";
 import { buildStaticProjectMapPreview } from "../utils/staticProjectMap";
 import { loadMapboxGl, loadMapboxGlCss, MAPBOX_TOKEN, prefetchMapboxCore } from "../utils/mapboxLoader";
+import { PLOT_STATUS_COLORS } from "./estates/plotStatusColors";
 
 export type ProjectMapFeature = {
   type: "Feature";
@@ -30,13 +31,13 @@ export function ProjectMap({
     ["==", ["get", "agent_lead"], true], "#e11d48",
     ["==", ["get", "agent_sale"], true], "#7c3aed",
     ["match", ["get", "commercial_status"],
-      "available", "#16a34a",
-      "reserved", "#d97706",
-      "allocated", "#2563eb",
-      "on_hold", "#64748b",
-      "under_survey", "#ea580c",
-      "under_staking", "#7c3aed",
-      "developed", "#0f766e",
+      "available", PLOT_STATUS_COLORS.available,
+      "reserved", PLOT_STATUS_COLORS.reserved,
+      "allocated", PLOT_STATUS_COLORS.allocated,
+      "on_hold", PLOT_STATUS_COLORS.on_hold,
+      "under_survey", PLOT_STATUS_COLORS.under_survey,
+      "under_staking", PLOT_STATUS_COLORS.under_staking,
+      "developed", PLOT_STATUS_COLORS.developed,
       "#94a3b8",
     ],
   ] : accentColor;

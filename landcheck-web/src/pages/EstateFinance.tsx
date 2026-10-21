@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { api, createIdempotencyKey, extractApiErrorMessage } from "../api/client";
 import { getEstateAuthSession } from "../auth/estateAuth";
 import { FinancialSummaryCards, PaymentStatusBadge, PaymentPlanEditor, formatPaymentPlan, money, PAYMENT_METHODS, paymentMethodLabel } from "../components/estates/FinancialComponents";
+import { PlotStatusBadge } from "../components/estates/plotStatusColors";
 import EstateShell from "../components/estates/EstateShell";
 import EstateModal from "../components/estates/EstateModal";
 import EstateRibbon, { type EstateRibbonTab } from "../components/estates/EstateRibbon";
@@ -27,6 +28,7 @@ type DuePayments = { rows: DuePaymentRow[]; bucket_labels: Record<string, string
 type LedgerRow = { allocation_id: number; customer_name: string; estate_name: string; plot_number: string; agreed_price: string; confirmed_paid: string; outstanding: string; percentage: string };
 type OnlinePaymentRow = { id: number; customer_name: string; estate_name: string; plot_number: string; amount: string; provider: string; tx_ref: string; captured_at: string | null; settlement_status: "pending" | "settled" | "not_tracked"; settled_at: string | null; settlement_checked_at: string | null };
 type IssueReport = { id: number; customer_name?: string | null; plot_number?: string | null; message: string; status: "open" | "resolved"; created_at: string; resolved_at?: string | null };
+type SettlementRequestRow = { id: number; charge_attempt_id: number | null; amount: string | null; note: string | null; status: "requested" | "in_review" | "settled" | "declined"; created_at: string; settled_at: string | null };
 
 type Payment = { id: number; date: string; amount: string; currency: string; status: string; method: string; reference?: string; customer: { name: string }; estate: { name: string }; plot: { number: string }; can_confirm?: boolean };
 type Allocation = { id: number; estate_id: number; plot_id: number; customer_id: number; estate_name: string; plot_number: string; customer_name: string };
@@ -94,6 +96,8 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
   const [onlinePayments, setOnlinePayments] = useState<OnlinePaymentRow[] | null>(null);
   const [refreshingSettlement, setRefreshingSettlement] = useState(false);
   const [issueReports, setIssueReports] = useState<IssueReport[] | null>(null);
+  const [settlementRequests, setSettlementRequests] = useState<SettlementRequestRow[] | null>(null);
+  const [requestingSettlementId, setRequestingSettlementId] = useState<number | null>(null);
   const [showIssueModal, setShowIssueModal] = useState(false);
   const [issueTarget, setIssueTarget] = useState<OnlinePaymentRow | null>(null);
   const [issueMessage, setIssueMessage] = useState("");
@@ -212,6 +216,28 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
     } catch { /* non-critical - leave the list empty rather than blocking the rest of the page */ }
   };
 
+  const loadSettlementRequests = async () => {
+    if (!organizationId) return;
+    try {
+      const response = await api.get<{ rows: SettlementRequestRow[] }>("/estates/accounting/settlement-requests", { params: { organization_id: organizationId } });
+      setSettlementRequests(response.data.rows || []);
+    } catch { /* non-critical - leave the list empty rather than blocking the rest of the page */ }
+  };
+
+  const requestImmediateSettlement = async (row: OnlinePaymentRow) => {
+    if (!organizationId) return;
+    setRequestingSettlementId(row.id);
+    try {
+      await api.post("/estates/accounting/settlement-requests", { organization_id: organizationId, charge_attempt_id: row.id });
+      toast.success("Your request has been received - our team will work on it.");
+      await loadSettlementRequests();
+    } catch (error) {
+      await fail(error, "This settlement request could not be sent.");
+    } finally {
+      setRequestingSettlementId(null);
+    }
+  };
+
   const loadAccounting = async () => {
     try {
       const [summaryResponse, debtorsResponse, ledgerResponse, onlineResponse] = await Promise.all([
@@ -229,6 +255,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
     }
     if (isOwner) await loadPayoutAccountStatus();
     await loadIssueReports();
+    await loadSettlementRequests();
     setAccountingLoaded(true);
   };
 
@@ -778,7 +805,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
                 </div>
               </div>
               <p className="edash-field-note" style={{ marginBottom: 14 }}>
-                Flutterwave settles online payments to your bank account on its own schedule - typically within 1 business day, not instantly. A payment shows "Captured" as soon as the buyer pays, and "Settled" once the money has actually landed in your account.
+                Flutterwave settles online payments to your bank account on its own schedule - typically within 1 business day, not instantly. A payment shows "Captured" as soon as the buyer pays, and "Settled" once the money has actually landed in your account. If you need it sooner, use "Request immediate settlement" on a captured payment below - this notifies the LandCheck team to initiate it manually.
               </p>
               {onlinePayments ? (
                 onlinePayments.length ? (
@@ -802,7 +829,16 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
                                 <span className="edash-status-pill tone-neutral">Captured - awaiting settlement</span>
                               )}
                             </td>
-                            <td><button type="button" className="edash-card-link" onClick={() => openIssueForm(row)}>Report issue</button></td>
+                            <td>
+                              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                <button type="button" className="edash-card-link" onClick={() => openIssueForm(row)}>Report issue</button>
+                                {row.settlement_status === "pending" && (
+                                  <button type="button" className="edash-card-link" disabled={requestingSettlementId === row.id} onClick={() => void requestImmediateSettlement(row)}>
+                                    {requestingSettlementId === row.id ? "Sending..." : "Request immediate settlement"}
+                                  </button>
+                                )}
+                              </div>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -830,6 +866,26 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
                   ))}
                 </div>
               ) : <p className="edash-tab-empty">No issues reported yet.</p>}
+            </div>
+          </div>
+
+          <div className="edash-card" style={{ marginTop: 16 }}>
+            <div className="edash-card-inner">
+              <div className="edash-card-head"><h3 className="edash-card-title">Settlement requests ({settlementRequests?.length ?? 0})</h3></div>
+              {settlementRequests && settlementRequests.length ? (
+                <div className="edash-notification-log-list">
+                  {settlementRequests.map((item) => (
+                    <article key={item.id} style={{ padding: "10px 0", borderBottom: "1px solid var(--edash-border-soft)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                        <strong style={{ fontSize: ".82rem" }}>{item.amount ? money(item.amount) : "General request"}</strong>
+                        <span className={`edash-status-pill tone-${item.status === "settled" ? "good" : item.status === "declined" ? "danger" : "neutral"}`}>{item.status.replaceAll("_", " ")}</span>
+                      </div>
+                      {item.note && <p className="edash-status-row-desc" style={{ margin: "4px 0 0" }}>{item.note}</p>}
+                      <small className="edash-status-row-desc">{new Date(item.created_at).toLocaleString()}{item.settled_at ? ` · Settled ${new Date(item.settled_at).toLocaleDateString()}` : ""}</small>
+                    </article>
+                  ))}
+                </div>
+              ) : <p className="edash-tab-empty">No settlement requests yet.</p>}
             </div>
           </div>
         </>
@@ -1067,7 +1123,7 @@ function AllocationRecordView({ record, onPrint, onPlanChanged }: { record: any;
       <div className="edash-overview-grid edash-overview-grid--2">
         <div className="edash-overview-field"><span>Customer</span><strong>{record.customer?.name || "-"}</strong><small>{record.customer?.phone || record.customer?.email || "No contact details"}</small></div>
         <div className="edash-overview-field"><span>Plot</span><strong>{record.plot?.number || "-"}</strong><small>{record.plot?.area_sqm ? `${Number(record.plot.area_sqm).toLocaleString()} m2` : "Area not recorded"}</small></div>
-        <div className="edash-overview-field"><span>Allocation status</span><strong>{String(record.allocation.status || "").replaceAll("_", " ")}</strong><small>{record.allocation.allocation_date ? new Date(record.allocation.allocation_date).toLocaleDateString() : "Not allocated"}</small></div>
+        <div className="edash-overview-field"><span>Allocation status</span><div style={{ marginTop: 2 }}><PlotStatusBadge status={record.allocation.status} /></div><small>{record.allocation.allocation_date ? new Date(record.allocation.allocation_date).toLocaleDateString() : "Not allocated"}</small></div>
         <div className="edash-overview-field"><span>Outstanding</span><strong>{money(record.financial.outstanding)}</strong><small>{Number(record.financial.percentage || 0).toFixed(0)}% paid</small></div>
       </div>
       <div className="edash-allocation-record-section">

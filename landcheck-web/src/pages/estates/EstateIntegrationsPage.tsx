@@ -614,7 +614,7 @@ function PlotMapPickerModal({ estateId, onSelect, onClose }: { estateId: string;
           setLoading(false);
           return;
         }
-        const map = new mapboxgl.Map({ container: containerRef.current, style: "mapbox://styles/mapbox/light-v11", center: [3.3792, 6.5244], zoom: 14 });
+        const map = new mapboxgl.Map({ container: containerRef.current, style: "mapbox://styles/mapbox/satellite-streets-v12", center: [3.3792, 6.5244], zoom: 14 });
         mapRef.current = map;
         map.on("load", () => {
           if (cancelled) return;

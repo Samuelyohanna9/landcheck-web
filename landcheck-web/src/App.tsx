@@ -28,6 +28,7 @@ const GreenWorkLogin = lazyWithChunkRecovery(() => import("./pages/GreenWorkLogi
 const GreenWorkForgotPassword = lazyWithChunkRecovery(() => import("./pages/GreenWorkForgotPassword"));
 const GreenWorkRegister = lazyWithChunkRecovery(() => import("./pages/GreenWorkRegister"));
 const GreenWorkEmailVerified = lazyWithChunkRecovery(() => import("./pages/GreenWorkEmailVerified"));
+const EstateAdminAccountingPage = lazyWithChunkRecovery(() => import("./pages/EstateAdminAccountingPage"));
 const DataDeletion = lazyWithChunkRecovery(() => import("./pages/DataDeletion"));
 const EstateSocialPostsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateSocialPostsPage"));
 const EstateWhatsappInboxPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateWhatsappInboxPage"));
@@ -383,6 +384,7 @@ export default function App() {
               <Route path="/green-work/register" element={<GreenWorkRegister />} />
               <Route path="/green-work/email-verified" element={<GreenWorkEmailVerified />} />
               <Route path="/green-work" element={<WorkProtectedRoute element={<GreenWork />} />} />
+              <Route path="/green-work/estates-accounting" element={<WorkProtectedRoute element={<EstateAdminAccountingPage />} />} />
               <Route path="/survey" element={<SurveyPlanLanding />} />
               <Route path="/survey/guides" element={<SurveyGuides />} />
               <Route path="/survey/auth/verify" element={<SurveyAuthVerify />} />

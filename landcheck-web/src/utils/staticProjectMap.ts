@@ -1,4 +1,5 @@
 import { MAPBOX_TOKEN } from "./mapboxLoader";
+import { PLOT_STATUS_COLORS } from "../components/estates/plotStatusColors";
 
 type StaticMapPoint = { lng: number; lat: number };
 
@@ -45,16 +46,7 @@ const estateFeatureColor = (feature: StaticMapFeature) => {
   const properties = feature.properties || {};
   if (properties.agent_lead === true) return "#e11d48";
   if (properties.agent_sale === true) return "#7c3aed";
-  const statusColors: Record<string, string> = {
-    available: "#16a34a",
-    reserved: "#d97706",
-    allocated: "#2563eb",
-    on_hold: "#64748b",
-    under_survey: "#ea580c",
-    under_staking: "#7c3aed",
-    developed: "#0f766e",
-  };
-  return statusColors[String(properties.commercial_status || "")] || "#94a3b8";
+  return PLOT_STATUS_COLORS[String(properties.commercial_status || "") as keyof typeof PLOT_STATUS_COLORS] || "#94a3b8";
 };
 
 const pushCoordinatePairs = (value: unknown, bucket: number[][]) => {
