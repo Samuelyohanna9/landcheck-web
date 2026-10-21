@@ -293,9 +293,40 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
         </EstateModal>
       )}
     <div className="edash-mk-stack">
-      {overview && overview.auto_posting === false
-        ? <UpgradeNotice title="Automatic posting is on the Pro plan" message="Pro and Enterprise write a week or a month of posts for you and publish them to Facebook and Instagram on schedule. You can still prepare posts here and share them yourself." cta="Upgrade to Pro" />
-        : <MarketingAutoPlan estateId={estateId} channels={overview?.channels || []} accounts={overview?.accounts || []} metaAvailable={Boolean(overview?.meta_available)} campaigns={campaigns} canManage={canManage} onChanged={() => {}} />}
+      <div className="edash-card"><div className="edash-card-inner">
+          <div className="edash-card-head"><h3 className="edash-card-title">Facebook &amp; Instagram</h3>
+            {canManage && overview?.auto_posting !== false && <button type="button" className="edash-btn-primary" title="Sign in with Facebook and grant LandCheck access to post, read engagement, and manage comments on the Page(s) you choose" disabled={!overview?.meta_available || busy === "connect"} onClick={() => void connectMeta()}>{busy === "connect" ? "Opening Facebook..." : overview?.accounts.length ? "Connect more" : "Connect"}</button>}
+          </div>
+          {overview?.auto_posting === false && <UpgradeNotice title="Post to Facebook and Instagram automatically" message="Connecting your Pages and posting straight from LandCheck is included in the Pro and Enterprise plans." cta="Upgrade to Pro" />}
+          {overview?.auto_posting !== false && !overview?.meta_available && <p className="edash-mk-hint">Automatic posting to Facebook and Instagram is being switched on (Meta approval is in progress). Until then, use Copy caption, Download image and Share to Status.</p>}
+          {overview?.meta_available && overview.accounts.length === 0 && <p className="edash-mk-hint">Connect the Facebook Page (and the Instagram Business account linked to it) that you want to post to. You choose which Pages to share, and can disconnect any time.</p>}
+          {(facebookAccounts.length > 1 || instagramAccounts.length > 1) && (
+            <p className="edash-mk-hint">You've connected more than one {facebookAccounts.length > 1 ? "Facebook Page" : "Instagram account"} - auto-posting only sends to the one marked Default below.</p>
+          )}
+          {[...facebookAccounts, ...instagramAccounts].map((account) => {
+            const siblingCount = (account.provider === "facebook" ? facebookAccounts : instagramAccounts).length;
+            return (
+              <div key={account.id} className="edash-sp-account">
+                {account.picture_url ? (
+                  <img className="edash-sp-account-avatar" src={account.picture_url} alt="" />
+                ) : (
+                  <span className="edash-sp-account-icon"><EstateIcon name={account.provider === "facebook" ? "share" : "camera"} /></span>
+                )}
+                <div>
+                  <strong>{account.name}</strong>
+                  <small>{account.provider === "facebook" ? "Facebook Page" : `Instagram${account.username ? ` @${account.username}` : ""}`}{typeof account.followers_count === "number" ? ` · ${account.followers_count.toLocaleString()} followers` : ""}</small>
+                </div>
+                {siblingCount > 1 && (account.is_default
+                  ? <span className="edash-status-pill tone-good">Default</span>
+                  : (canManage && account.status === "active" && <button type="button" className="edash-btn-outline" onClick={() => void setDefaultAccount(account)}>Set as default</button>))}
+                <span className={`edash-status-pill tone-${account.status === "active" ? "good" : "warn"}`}>{account.status === "active" ? "Connected" : "Reconnect needed"}</span>
+                {canManage && <button type="button" className="edash-btn-outline" disabled={busy === `check-${account.id}`} onClick={() => void checkAccount(account)}>{busy === `check-${account.id}` ? "Checking..." : "Check connection"}</button>}
+                {canManage && <button type="button" className="edash-btn-outline" onClick={() => void disconnect(account)}>Disconnect</button>}
+              </div>
+            );
+          })}
+      </div></div>
+
       <div className="edash-card" ref={composerRef}><div className="edash-card-inner">
         <div className="edash-card-head">
           <h3 className="edash-card-title">{editingId !== null ? "Edit post" : "Create a post"}</h3>
@@ -427,41 +458,11 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
         </div>
       </div></div>
 
-      <div className="edash-mk-grid-2">
-        <div className="edash-card"><div className="edash-card-inner">
-          <div className="edash-card-head"><h3 className="edash-card-title">Facebook &amp; Instagram</h3>
-            {canManage && overview?.auto_posting !== false && <button type="button" className="edash-btn-primary" title="Sign in with Facebook and grant LandCheck access to post, read engagement, and manage comments on the Page(s) you choose" disabled={!overview?.meta_available || busy === "connect"} onClick={() => void connectMeta()}>{busy === "connect" ? "Opening Facebook..." : overview?.accounts.length ? "Connect more" : "Connect"}</button>}
-          </div>
-          {overview?.auto_posting === false && <UpgradeNotice title="Post to Facebook and Instagram automatically" message="Connecting your Pages and posting straight from LandCheck is included in the Pro and Enterprise plans." cta="Upgrade to Pro" />}
-          {overview?.auto_posting !== false && !overview?.meta_available && <p className="edash-mk-hint">Automatic posting to Facebook and Instagram is being switched on (Meta approval is in progress). Until then, use Copy caption, Download image and Share to Status.</p>}
-          {overview?.meta_available && overview.accounts.length === 0 && <p className="edash-mk-hint">Connect the Facebook Page (and the Instagram Business account linked to it) that you want to post to. You choose which Pages to share, and can disconnect any time.</p>}
-          {(facebookAccounts.length > 1 || instagramAccounts.length > 1) && (
-            <p className="edash-mk-hint">You've connected more than one {facebookAccounts.length > 1 ? "Facebook Page" : "Instagram account"} - auto-posting only sends to the one marked Default below.</p>
-          )}
-          {[...facebookAccounts, ...instagramAccounts].map((account) => {
-            const siblingCount = (account.provider === "facebook" ? facebookAccounts : instagramAccounts).length;
-            return (
-              <div key={account.id} className="edash-sp-account">
-                {account.picture_url ? (
-                  <img className="edash-sp-account-avatar" src={account.picture_url} alt="" />
-                ) : (
-                  <span className="edash-sp-account-icon"><EstateIcon name={account.provider === "facebook" ? "share" : "camera"} /></span>
-                )}
-                <div>
-                  <strong>{account.name}</strong>
-                  <small>{account.provider === "facebook" ? "Facebook Page" : `Instagram${account.username ? ` @${account.username}` : ""}`}{typeof account.followers_count === "number" ? ` · ${account.followers_count.toLocaleString()} followers` : ""}</small>
-                </div>
-                {siblingCount > 1 && (account.is_default
-                  ? <span className="edash-status-pill tone-good">Default</span>
-                  : (canManage && account.status === "active" && <button type="button" className="edash-btn-outline" onClick={() => void setDefaultAccount(account)}>Set as default</button>))}
-                <span className={`edash-status-pill tone-${account.status === "active" ? "good" : "warn"}`}>{account.status === "active" ? "Connected" : "Reconnect needed"}</span>
-                {canManage && <button type="button" className="edash-btn-outline" disabled={busy === `check-${account.id}`} onClick={() => void checkAccount(account)}>{busy === `check-${account.id}` ? "Checking..." : "Check connection"}</button>}
-                {canManage && <button type="button" className="edash-btn-outline" onClick={() => void disconnect(account)}>Disconnect</button>}
-              </div>
-            );
-          })}
-        </div></div>
+      {overview && overview.auto_posting === false
+        ? <UpgradeNotice title="Automatic posting is on the Pro plan" message="Pro and Enterprise write a week or a month of posts for you and publish them to Facebook and Instagram on schedule. You can still prepare posts here and share them yourself." cta="Upgrade to Pro" />
+        : <MarketingAutoPlan estateId={estateId} channels={overview?.channels || []} accounts={overview?.accounts || []} metaAvailable={Boolean(overview?.meta_available)} campaigns={campaigns} canManage={canManage} onChanged={() => {}} />}
 
+      <div className="edash-mk-grid-2">
         <div className="edash-card"><div className="edash-card-inner">
           <div className="edash-card-head"><h3 className="edash-card-title">WhatsApp updates</h3>{overview?.whatsapp_enabled !== false && <span className="edash-mk-hint" style={{ margin: 0 }}>{optins ? `${optins.active} subscribed` : ""}</span>}</div>
           {overview?.whatsapp_enabled === false ? <UpgradeNotice title="Message buyers on WhatsApp" message="WhatsApp chat, opt-in updates and the conversation inbox are included in the Pro and Enterprise plans." cta="Upgrade to Pro" /> : !optins?.whatsapp_available ? <p className="edash-mk-hint">Buyers can opt in on your public page and you can message them new plots, prices and site visits. This is being switched on with WhatsApp Business approval.</p> : (
