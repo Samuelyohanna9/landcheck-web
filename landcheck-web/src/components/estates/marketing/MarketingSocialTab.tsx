@@ -188,6 +188,20 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
     if (pick) setCaption(pick.caption);
   };
 
+  const channelLabel = useCallback((key: string) => overview?.channels.find((item) => item.key === key)?.label || key, [overview]);
+  const autoChannelKeys = useMemo(() => new Set((overview?.channels || []).filter((item) => item.automatic).map((item) => item.key)), [overview]);
+  const describePublishResult = useCallback((data: { status?: string; results?: Record<string, { status?: string; error?: string }> }, attempted: string[]) => {
+    const results = data.results || {};
+    const checked = attempted.filter((key) => autoChannelKeys.has(key));
+    const failures = checked.filter((key) => (results[key] || {}).status === "failed");
+    const oks = checked.filter((key) => (results[key] || {}).status === "ok");
+    if (!checked.length) return { ok: true, message: "Saved." };
+    if (!failures.length) return { ok: true, message: `Posted to ${oks.map(channelLabel).join(", ") || "the selected channels"}.` };
+    const failureText = failures.map((key) => `${channelLabel(key)}: ${results[key]?.error || "failed"}`).join(" ");
+    if (!oks.length) return { ok: false, message: failureText };
+    return { ok: false, message: `Posted to ${oks.map(channelLabel).join(", ")}, but failed - ${failureText}` };
+  }, [autoChannelKeys, channelLabel]);
+
   const savePost = async () => {
     if (!caption.trim()) { toast.error("Write a caption first."); return; }
     if (!channels.length) { toast.error("Choose where to post."); return; }
@@ -197,11 +211,21 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
       const iso = when === "later" ? new Date(scheduledAt).toISOString() : undefined;
       if (editingId !== null) {
         await api.patch(`/estates/marketing/social/posts/${editingId}`, { caption, channels, image_style: style, include_media: includeMedia, ...(iso ? { scheduled_at: iso } : { clear_schedule: when === "draft" }) });
-        if (when === "now") await api.post(`/estates/marketing/social/posts/${editingId}/publish`);
-        toast.success(when === "now" ? "Posted." : "Post updated.");
+        if (when === "now") {
+          const response = await api.post(`/estates/marketing/social/posts/${editingId}/publish`);
+          const outcome = describePublishResult(response.data, channels);
+          outcome.ok ? toast.success(outcome.message) : toast.error(outcome.message);
+        } else {
+          toast.success("Post updated.");
+        }
       } else {
-        await api.post(`/estates/${estateId}/marketing/social/posts`, { template_key: templateKey, caption, channels, image_style: style, include_media: includeMedia, plot_id: plotId ? Number(plotId) : null, campaign_id: campaignId ? Number(campaignId) : null, scheduled_at: iso, publish_now: when === "now" });
-        toast.success(when === "now" ? "Posted." : when === "later" ? "Scheduled." : "Saved as a draft.");
+        const response = await api.post(`/estates/${estateId}/marketing/social/posts`, { template_key: templateKey, caption, channels, image_style: style, include_media: includeMedia, plot_id: plotId ? Number(plotId) : null, campaign_id: campaignId ? Number(campaignId) : null, scheduled_at: iso, publish_now: when === "now" });
+        if (when === "now") {
+          const outcome = describePublishResult(response.data, channels);
+          outcome.ok ? toast.success(outcome.message) : toast.error(outcome.message);
+        } else {
+          toast.success(when === "later" ? "Scheduled." : "Saved as a draft.");
+        }
       }
       resetComposer();
     } catch (error) { toast.error(await extractApiErrorMessage(error, "The post could not be saved.")); } finally { setBusy(null); }
@@ -244,8 +268,9 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
       form.append("file", customFile);
       form.append("caption", customCaption.trim());
       form.append("channels", customChannels.join(","));
-      await api.post(`/estates/${estateId}/marketing/social/custom-post`, form);
-      toast.success("Posted.");
+      const response = await api.post(`/estates/${estateId}/marketing/social/custom-post`, form);
+      const outcome = describePublishResult(response.data, customChannels);
+      outcome.ok ? toast.success(outcome.message) : toast.error(outcome.message);
       setCustomFile(null);
       setCustomCaption("");
       if (customFileInputRef.current) customFileInputRef.current.value = "";
