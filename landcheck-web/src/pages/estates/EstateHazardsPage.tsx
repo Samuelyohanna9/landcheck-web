@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
@@ -80,6 +80,7 @@ function floodSignalSummary(assessments: any[]) {
 
 export default function EstateHazardsPage() {
   const { estateId } = useParams();
+  const navigate = useNavigate();
   const [estateName, setEstateName] = useState("");
   const [dashboard, setDashboard] = useState<any>(null);
   const [activity, setActivity] = useState<any[]>([]);
@@ -174,9 +175,12 @@ export default function EstateHazardsPage() {
           <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>
             Runs flood and erosion screening once for the Estate boundary. Results below - and the Risk Overview on the Dashboard - update as soon as it finishes. For a single plot, run screening from its drawer on Map & Plots.
           </p>
-          <button type="button" className="edash-btn-primary" disabled={runBusy} onClick={() => void runEstateHazardAnalysis()}>
-            {runBusy ? <><Spinner size={13} /> {jobProgress?.stage || "Analyzing Estate..."}</> : "Run hazard analysis for the Estate boundary"}
-          </button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" className="edash-btn-primary" disabled={runBusy} onClick={() => void runEstateHazardAnalysis()}>
+              {runBusy ? <><Spinner size={13} /> {jobProgress?.stage || "Analyzing Estate..."}</> : "Run hazard analysis for the Estate boundary"}
+            </button>
+            {dashboard && <button type="button" className="edash-btn-outline" onClick={() => navigate(`/estates/${estateId}/hazards/map`)}>Show result on map</button>}
+          </div>
           {runBusy && <EstateProgressSteps steps={HAZARD_PROGRESS_STEPS} stage={jobProgress?.stage || ""} pct={jobProgress?.pct || 0} />}
         </div>
       </div>
@@ -216,7 +220,7 @@ export default function EstateHazardsPage() {
               <div className="edash-card-head"><h3 className="edash-card-title">Results</h3></div>
               {(dashboard.assessments || []).length ? (
                 <table className="edash-mini-table">
-                  <thead><tr><th>Plot</th><th>River</th><th>Floodplain</th><th>Rainfall (exp.)</th><th>Erosion</th></tr></thead>
+                  <thead><tr><th>Plot</th><th>River</th><th>Floodplain</th><th>Rainfall (exp.)</th><th>Erosion</th><th /></tr></thead>
                   <tbody>
                     {dashboard.assessments.map((item: any) => {
                       const floodResult = item.hazards?.flood?.result;
@@ -228,6 +232,9 @@ export default function EstateHazardsPage() {
                       const floodplainPct = percentOf(floodResult?.floodplain?.risk_score);
                       const rainfallAvailable = floodResult?.rainfall?.data_available !== false;
                       const rainfallPct = rainfallAvailable ? percentOf(floodResult?.rainfall?.risk_score) : null;
+                      const mapUrl = item.plot_id
+                        ? `/estates/${estateId}/hazards/map?plot_id=${item.plot_id}`
+                        : `/estates/${estateId}/hazards/map`;
                       return (
                         <tr key={item.plot_id || "estate"}>
                           <td data-label="Plot">{item.plot_id ? `Plot ${item.plot_id}` : "Estate"}</td>
@@ -235,6 +242,7 @@ export default function EstateHazardsPage() {
                           <td data-label="Floodplain"><span className={`edash-status-pill tone-${riskTone(floodplainClass)}`}>{floodplainPct !== null ? `${floodplainPct}%` : (floodplainClass || "unavailable")}</span></td>
                           <td data-label="Rainfall (exp.)"><span className="edash-status-pill tone-neutral">{rainfallPct !== null ? `${rainfallPct}%` : "unavailable"}</span></td>
                           <td data-label="Erosion"><span className={`edash-status-pill tone-${riskTone(item.hazards?.erosion?.risk_class)}`}>{item.hazards?.erosion?.risk_class || "unavailable"}</span></td>
+                          <td><Link className="edash-btn-outline" to={mapUrl}>Map</Link></td>
                         </tr>
                       );
                     })}
