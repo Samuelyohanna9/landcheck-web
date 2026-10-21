@@ -420,7 +420,10 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
             <h3 className="edash-card-title">All scheduled &amp; posted</h3>
             <p className="edash-mk-hint" style={{ margin: "4px 0 0" }}>Every post you create here, day by day - open one to change its wording, time, channels or design, send it now, or cancel it.</p>
           </div>
-          <Link className="edash-btn-primary" to={`/estates/${estateId}/marketing/posts`}>See and edit all posts</Link>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Link className="edash-btn-outline" to={`/estates/${estateId}/marketing/posts?view=feed`}>View Facebook &amp; Instagram Feed</Link>
+            <Link className="edash-btn-primary" to={`/estates/${estateId}/marketing/posts`}>See and edit all posts</Link>
+          </div>
         </div>
       </div></div>
 

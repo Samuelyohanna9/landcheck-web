@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
@@ -69,7 +69,7 @@ export default function EstateSocialPostsPage() {
   const canManage = ["owner", "manager", "marketer"].includes(role);
 
   const [estateName, setEstateName] = useState("");
-  const [scope, setScope] = useState<Scope>((searchParams.get("scope") as Scope) || "upcoming");
+  const [scope, setScope] = useState<Scope>((searchParams.get("scope") as Scope) || (searchParams.get("view") === "feed" ? "posted" : "upcoming"));
   const [planId, setPlanId] = useState(searchParams.get("plan") || "");
   const [posts, setPosts] = useState<Post[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -80,6 +80,8 @@ export default function EstateSocialPostsPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [commentDraft, setCommentDraft] = useState<Record<string, string>>({});
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"manage" | "feed">((searchParams.get("view") as "manage" | "feed") || "manage");
+  const previousScopeRef = useRef<Scope>(scope);
 
   const load = useCallback(async () => {
     if (!estateId) return;
@@ -156,6 +158,30 @@ export default function EstateSocialPostsPage() {
   if (!estateId) return null;
   const setFilter = (next: Scope) => { setScope(next); setOpenId(null); setDraft(null); const params = new URLSearchParams(searchParams); params.set("scope", next); params.delete("post"); setSearchParams(params, { replace: true }); };
 
+  // Published posts on Facebook/Instagram, one feed card per platform per post - the "Posted"
+  // scope's own data, just surfaced as its own prominent tab instead of being one filter chip
+  // among drafts/scheduled/cancelled, and laid out like a real social feed rather than an
+  // administrative row list.
+  const feedItems = useMemo(() => {
+    const items: Array<{ post: Post; channel: string; result: Result }> = [];
+    for (const post of posts) {
+      for (const channel of post.channels) {
+        const result = post.results?.[channel];
+        if ((channel === "facebook" || channel === "instagram") && result?.status === "ok") items.push({ post, channel, result });
+      }
+    }
+    return items.sort((a, b) => new Date(b.post.published_at || b.post.created_at).getTime() - new Date(a.post.published_at || a.post.created_at).getTime());
+  }, [posts]);
+
+  const setView = (mode: "manage" | "feed") => {
+    if (mode === "feed" && viewMode !== "feed") { previousScopeRef.current = scope; setFilter("posted"); }
+    else if (mode === "manage" && viewMode !== "manage") setFilter(previousScopeRef.current === "posted" ? "upcoming" : previousScopeRef.current);
+    setViewMode(mode);
+    const params = new URLSearchParams(searchParams);
+    params.set("view", mode);
+    setSearchParams(params, { replace: true });
+  };
+
   const ribbonTabs: EstateRibbonTab[] = [
     {
       key: "home",
@@ -183,17 +209,92 @@ export default function EstateSocialPostsPage() {
         </div>
       </div>
 
-      <div className="edash-sp-tabs" role="tablist">
-        {SCOPES.map((item) => <button key={item.key} type="button" role="tab" aria-selected={scope === item.key} className={scope === item.key ? "is-active" : ""} onClick={() => setFilter(item.key)}>{item.label}<b>{counts[item.key] ?? 0}</b></button>)}
-        {plans.length > 0 && (
-          <select value={planId} onChange={(event) => { setPlanId(event.target.value); setOpenId(null); setDraft(null); }} aria-label="Filter by plan">
-            <option value="">All plans</option>
-            {plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name}{plan.status === "paused" ? " (paused)" : ""}</option>)}
-          </select>
-        )}
+      <div className="edash-view-toggle" style={{ display: "flex", gap: 8, margin: "0 0 14px" }}>
+        <button type="button" className={viewMode === "manage" ? "edash-btn-primary" : "edash-btn-outline"} onClick={() => setView("manage")}>Manage posts</button>
+        <button type="button" className={viewMode === "feed" ? "edash-btn-primary" : "edash-btn-outline"} onClick={() => setView("feed")}>Facebook &amp; Instagram Feed</button>
       </div>
 
-      {loading ? <div className="edash-card"><div className="edash-card-inner"><p className="edash-mk-empty">Loading posts...</p></div></div> : posts.length === 0 ? (
+      {viewMode === "manage" && (
+        <div className="edash-sp-tabs" role="tablist">
+          {SCOPES.map((item) => <button key={item.key} type="button" role="tab" aria-selected={scope === item.key} className={scope === item.key ? "is-active" : ""} onClick={() => setFilter(item.key)}>{item.label}<b>{counts[item.key] ?? 0}</b></button>)}
+          {plans.length > 0 && (
+            <select value={planId} onChange={(event) => { setPlanId(event.target.value); setOpenId(null); setDraft(null); }} aria-label="Filter by plan">
+              <option value="">All plans</option>
+              {plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name}{plan.status === "paused" ? " (paused)" : ""}</option>)}
+            </select>
+          )}
+        </div>
+      )}
+
+      {viewMode === "feed" ? (
+        loading ? (
+          <div className="edash-card"><div className="edash-card-inner"><p className="edash-mk-empty">Loading feed...</p></div></div>
+        ) : feedItems.length === 0 ? (
+          <div className="edash-card"><div className="edash-card-inner"><p className="edash-mk-empty">Nothing published yet. Posts you send to Facebook or Instagram will appear here like a real feed.</p></div></div>
+        ) : (
+          <div className="edash-sp-feed">
+            {feedItems.map(({ post, channel, result }) => {
+              const stats = result.stats;
+              const draftKey = `${post.id}-${channel}-post`;
+              return (
+                <article key={`${post.id}-${channel}`} className="edash-sp-feed-card">
+                  <header className="edash-sp-feed-head">
+                    <span className={`edash-sp-feed-avatar is-${channel}`}>{channel === "facebook" ? "f" : "IG"}</span>
+                    <div>
+                      <strong>{CHANNEL_SHORT[channel]}</strong>
+                      <small>{post.published_at ? formatLagos(post.published_at, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : ""}</small>
+                    </div>
+                  </header>
+                  <Thumb estateId={estateId} post={post} channels={[channel]} />
+                  <p className="edash-sp-feed-caption">{post.caption}</p>
+                  <div className="edash-sp-feed-statline">
+                    <button type="button" className="edash-card-link" title={`Fetch the latest likes, comments and shares for this post from your live ${CHANNEL_SHORT[channel]} account`} disabled={busy === `stats-${post.id}-${channel}`} onClick={() => void refreshStats(post, channel)}>
+                      {busy === `stats-${post.id}-${channel}` ? "Loading..." : stats ? "Refresh" : "Load stats"}
+                    </button>
+                    {stats && <span>{stats.likes ?? 0} likes · {stats.comments ?? 0} comments{stats.shares !== undefined ? ` · ${stats.shares} shares` : ""}</span>}
+                  </div>
+                  {canManage && (
+                    <div className="edash-sp-feed-actions">
+                      {channel === "facebook" && <button type="button" className="edash-btn-outline" title="Like this post on your live Facebook Page" disabled={busy === `like-${post.id}-${channel}-post`} onClick={() => void likeTarget(post, channel)}>Like</button>}
+                      <button type="button" className="edash-btn-outline is-danger" title={`Remove this post from your live ${CHANNEL_SHORT[channel]} account - this can't be undone`} disabled={busy === `delete-${post.id}-${channel}`} onClick={() => void deleteFromChannel(post, channel)}>{busy === `delete-${post.id}-${channel}` ? "Deleting..." : "Delete"}</button>
+                    </div>
+                  )}
+                  {stats?.comment_list && stats.comment_list.length > 0 && (
+                    <div className="edash-sp-feed-comments">
+                      {stats.comment_list.map((comment, index) => {
+                        const replyKey = `${post.id}-${channel}-${comment.id}`;
+                        return (
+                          <div key={index} className="edash-sp-feed-comment">
+                            <strong>{comment.name}</strong> <span>{comment.message}</span>
+                            {comment.id && canManage && (
+                              <div className="edash-sp-feed-comment-actions">
+                                {channel === "facebook" && <button type="button" className="edash-sp-link-btn" title="Like this commenter's comment on your live Facebook Page" onClick={() => void likeTarget(post, channel, comment.id)}>Like</button>}
+                                <button type="button" className="edash-sp-link-btn" title={`Write and publish a reply to ${comment.name}'s comment on your live ${CHANNEL_SHORT[channel]} post`} onClick={() => setReplyingTo(replyingTo === replyKey ? null : replyKey)}>Reply</button>
+                              </div>
+                            )}
+                            {comment.id && replyingTo === replyKey && (
+                              <div className="edash-sp-comment-box edash-sp-reply-box">
+                                <textarea rows={2} maxLength={2200} placeholder={`Reply to ${comment.name}...`} value={commentDraft[replyKey] || ""} onChange={(event) => setCommentDraft((current) => ({ ...current, [replyKey]: event.target.value }))} />
+                                <button type="button" className="edash-btn-outline" title={`Publish this reply to ${comment.name}'s comment on your live ${CHANNEL_SHORT[channel]} account`} disabled={!(commentDraft[replyKey] || "").trim()} onClick={() => void postComment(post, channel, (commentDraft[replyKey] || "").trim(), comment.id)}>Send reply</button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {canManage && (
+                    <div className="edash-sp-comment-box">
+                      <textarea rows={2} maxLength={2200} placeholder="Write a comment on this post..." value={commentDraft[draftKey] || ""} onChange={(event) => setCommentDraft((current) => ({ ...current, [draftKey]: event.target.value }))} />
+                      <button type="button" className="edash-btn-outline" title={`Publish this comment on your live ${CHANNEL_SHORT[channel]} post`} disabled={busy === `comment-${post.id}-${channel}-post` || !(commentDraft[draftKey] || "").trim()} onClick={() => void postComment(post, channel, (commentDraft[draftKey] || "").trim())}>Post comment</button>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        )
+      ) : loading ? <div className="edash-card"><div className="edash-card-inner"><p className="edash-mk-empty">Loading posts...</p></div></div> : posts.length === 0 ? (
         <div className="edash-card"><div className="edash-card-inner"><p className="edash-mk-empty">{scope === "upcoming" ? "Nothing is scheduled. " : "No posts in this view. "}<Link to={`/estates/${estateId}/marketing?tab=social`}>Set up an automatic posting plan</Link></p></div></div>
       ) : groups.map(([day, dayPosts]) => (
         <section key={day} className="edash-sp-day">
