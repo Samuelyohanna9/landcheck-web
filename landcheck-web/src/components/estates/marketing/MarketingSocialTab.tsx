@@ -295,7 +295,10 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
     <div className="edash-mk-stack">
       <div className="edash-card"><div className="edash-card-inner">
           <div className="edash-card-head"><h3 className="edash-card-title">Facebook &amp; Instagram</h3>
-            {canManage && overview?.auto_posting !== false && <button type="button" className="edash-btn-primary" title="Sign in with Facebook and grant LandCheck access to post, read engagement, and manage comments on the Page(s) you choose" disabled={!overview?.meta_available || busy === "connect"} onClick={() => void connectMeta()}>{busy === "connect" ? "Opening Facebook..." : overview?.accounts.length ? "Connect more" : "Connect"}</button>}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <Link className="edash-btn-outline" to={`/estates/${estateId}/marketing/posts?view=feed`}>View Facebook &amp; Instagram Feed</Link>
+              {canManage && overview?.auto_posting !== false && <button type="button" className="edash-btn-primary" title="Sign in with Facebook and grant LandCheck access to post, read engagement, and manage comments on the Page(s) you choose" disabled={!overview?.meta_available || busy === "connect"} onClick={() => void connectMeta()}>{busy === "connect" ? "Opening Facebook..." : overview?.accounts.length ? "Connect more" : "Connect"}</button>}
+            </div>
           </div>
           {overview?.auto_posting === false && <UpgradeNotice title="Post to Facebook and Instagram automatically" message="Connecting your Pages and posting straight from LandCheck is included in the Pro and Enterprise plans." cta="Upgrade to Pro" />}
           {overview?.auto_posting !== false && !overview?.meta_available && <p className="edash-mk-hint">Automatic posting to Facebook and Instagram is being switched on (Meta approval is in progress). Until then, use Copy caption, Download image and Share to Status.</p>}
@@ -452,7 +455,6 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
             <p className="edash-mk-hint" style={{ margin: "4px 0 0" }}>Every post you create here, day by day - open one to change its wording, time, channels or design, send it now, or cancel it.</p>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <Link className="edash-btn-outline" to={`/estates/${estateId}/marketing/posts?view=feed`}>View Facebook &amp; Instagram Feed</Link>
             <Link className="edash-btn-primary" to={`/estates/${estateId}/marketing/posts`}>See and edit all posts</Link>
           </div>
         </div>
