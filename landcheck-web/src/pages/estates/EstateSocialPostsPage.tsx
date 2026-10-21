@@ -264,12 +264,12 @@ export default function EstateSocialPostsPage() {
                                           {result.stats.comment_list?.map((comment, index) => (
                                             <div key={index}>
                                               <div className="edash-sp-engagement-row"><strong>{comment.name}</strong><span>{comment.message}</span>{comment.created_time && <small>{formatLagos(comment.created_time, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</small>}{comment.id && (key === "facebook" || key === "instagram") && (<>
-{key === "facebook" && <button type="button" className="edash-sp-link-btn" onClick={() => void likeTarget(post, key, comment.id)}>Like</button>}<button type="button" className="edash-sp-link-btn" onClick={() => setReplyingTo(replyingTo === `${post.id}-${key}-${comment.id}` ? null : `${post.id}-${key}-${comment.id}`)}>Reply</button>
+{key === "facebook" && <button type="button" className="edash-sp-link-btn" title="Like this commenter's comment on your live Facebook Page" onClick={() => void likeTarget(post, key, comment.id)}>Like</button>}<button type="button" className="edash-sp-link-btn" title={`Write and publish a reply to ${comment.name}'s comment, visible on your live ${CHANNEL_SHORT[key] || key} post`} onClick={() => setReplyingTo(replyingTo === `${post.id}-${key}-${comment.id}` ? null : `${post.id}-${key}-${comment.id}`)}>Reply</button>
 </>)}</div>
                                               {comment.id && replyingTo === `${post.id}-${key}-${comment.id}` && (
                                                 <div className="edash-sp-comment-box edash-sp-reply-box">
                                                   <textarea rows={2} maxLength={2200} placeholder={`Reply to ${comment.name}...`} value={commentDraft[`${post.id}-${key}-${comment.id}`] || ""} onChange={(event) => setCommentDraft((current) => ({ ...current, [`${post.id}-${key}-${comment.id}`]: event.target.value }))} />
-                                                  <button type="button" className="edash-btn-outline" disabled={!(commentDraft[`${post.id}-${key}-${comment.id}`] || "").trim()} onClick={() => void postComment(post, key, (commentDraft[`${post.id}-${key}-${comment.id}`] || "").trim(), comment.id)}>Send reply</button>
+                                                  <button type="button" className="edash-btn-outline" title={`Publish this reply to ${comment.name}'s comment on your live ${CHANNEL_SHORT[key] || key} account`} disabled={!(commentDraft[`${post.id}-${key}-${comment.id}`] || "").trim()} onClick={() => void postComment(post, key, (commentDraft[`${post.id}-${key}-${comment.id}`] || "").trim(), comment.id)}>Send reply</button>
                                                 </div>
                                               )}
                                             </div>
@@ -289,14 +289,14 @@ export default function EstateSocialPostsPage() {
                             {(key === "facebook" || key === "instagram") && result.status === "ok" && canManage && (
                                   <div className="edash-sp-comment-box">
                                     <textarea rows={2} maxLength={2200} placeholder="Write a comment on this post..." value={commentDraft[`${post.id}-${key}-post`] || ""} onChange={(event) => setCommentDraft((current) => ({ ...current, [`${post.id}-${key}-post`]: event.target.value }))} />
-                                    <button type="button" className="edash-btn-outline" disabled={busy === `comment-${post.id}-${key}-post` || !(commentDraft[`${post.id}-${key}-post`] || "").trim()} onClick={() => void postComment(post, key, (commentDraft[`${post.id}-${key}-post`] || "").trim())}>Post comment</button>
+                                    <button type="button" className="edash-btn-outline" title={`Publish this comment on your live ${CHANNEL_SHORT[key] || key} post`} disabled={busy === `comment-${post.id}-${key}-post` || !(commentDraft[`${post.id}-${key}-post`] || "").trim()} onClick={() => void postComment(post, key, (commentDraft[`${post.id}-${key}-post`] || "").trim())}>Post comment</button>
                                   </div>
                                 )}
                                   {automatic && result.status === "ok" && canManage && (
                                     <span className="edash-sp-result-actions">
-                                      <button type="button" className="edash-sp-link-btn" disabled={busy === `stats-${post.id}-${key}`} onClick={() => void refreshStats(post, key)}>{busy === `stats-${post.id}-${key}` ? "Loading..." : result.stats ? "Refresh stats" : "Load stats"}</button>
-                                      {key === "facebook" && <button type="button" className="edash-sp-link-btn" disabled={busy === `like-${post.id}-${key}-post`} onClick={() => void likeTarget(post, key)}>Like post</button>}
-                                  <button type="button" className="edash-sp-link-btn is-danger" disabled={busy === `delete-${post.id}-${key}`} onClick={() => void deleteFromChannel(post, key)}>{busy === `delete-${post.id}-${key}` ? "Deleting..." : "Delete"}</button>
+                                      <button type="button" className="edash-sp-link-btn" title={`Fetch the latest likes, comments and shares for this post from your live ${CHANNEL_SHORT[key] || key} account`} disabled={busy === `stats-${post.id}-${key}`} onClick={() => void refreshStats(post, key)}>{busy === `stats-${post.id}-${key}` ? "Loading..." : result.stats ? "Refresh stats" : "Load stats"}</button>
+                                      {key === "facebook" && <button type="button" className="edash-sp-link-btn" title="Like this post on your live Facebook Page" disabled={busy === `like-${post.id}-${key}-post`} onClick={() => void likeTarget(post, key)}>Like post</button>}
+                                  <button type="button" className="edash-sp-link-btn is-danger" title={`Remove this post from your live ${CHANNEL_SHORT[key] || key} account - this can't be undone`} disabled={busy === `delete-${post.id}-${key}`} onClick={() => void deleteFromChannel(post, key)}>{busy === `delete-${post.id}-${key}` ? "Deleting..." : "Delete"}</button>
                                     </span>
                                   )}
                                 </div>
@@ -308,7 +308,7 @@ export default function EstateSocialPostsPage() {
                           <div className="edash-sp-actions">
                             {editable && <button type="button" className="edash-btn-primary" disabled={busy === `save-${post.id}`} onClick={() => void save(post)}>{["skipped", "cancelled"].includes(post.status) ? "Reschedule" : "Save changes"}</button>}
                             {EDITABLE.includes(post.status) && post.template_key !== "custom" && <button type="button" className="edash-btn-outline" disabled={busy === `rewrite-${post.id}`} onClick={() => void rewrite(post)}>Try another wording</button>}
-                            {EDITABLE.includes(post.status) && post.channels.some((key) => CHANNELS.find((item) => item.key === key)?.automatic) && <button type="button" className="edash-btn-outline" disabled={busy === `now-${post.id}`} onClick={() => void postNow(post)}>{post.status === "failed" || post.status === "partial" ? "Retry now" : "Post now"}</button>}
+                            {EDITABLE.includes(post.status) && post.channels.some((key) => CHANNELS.find((item) => item.key === key)?.automatic) && <button type="button" className="edash-btn-outline" title="Publish this post immediately to the connected Facebook Page and/or Instagram account, instead of waiting for its scheduled time" disabled={busy === `now-${post.id}`} onClick={() => void postNow(post)}>{post.status === "failed" || post.status === "partial" ? "Retry now" : "Post now"}</button>}
                             {post.channels.filter((key) => !CHANNELS.find((item) => item.key === key)?.automatic && post.results?.[key]?.status !== "ok").map((key) => <button key={key} type="button" className="edash-btn-outline" onClick={() => void markPosted(post, key)}>Mark {CHANNEL_SHORT[key]} as posted</button>)}
                             {["draft", "scheduled"].includes(post.status) && <button type="button" className="edash-btn-outline" disabled={busy === `cancel-${post.id}`} onClick={() => void cancel(post)}>Cancel post</button>}
                           </div>
