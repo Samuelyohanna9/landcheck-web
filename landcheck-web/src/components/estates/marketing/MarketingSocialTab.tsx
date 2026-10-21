@@ -4,6 +4,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../../../api/client";
 import { AD_STYLES, copyText, fetchBlobUrl, formatDateTime, type AdStyle } from "../../../utils/estateMarketing";
 import EstateIcon from "../EstateIcon";
+import EstateModal from "../EstateModal";
+import Spinner from "../EstateSpinner";
 import MarketingAutoPlan from "./MarketingAutoPlan";
 import UpgradeNotice from "../UpgradeNotice";
 
@@ -106,15 +108,25 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [estateId, plotId, campaignId, published]);
 
-  // Coming back from the Facebook login page.
+  // Coming back from the Facebook login page - a two-step confirmation (granting, then
+  // connected) instead of a toast, so what just happened with Meta's permission grant is
+  // visible on screen rather than something the user has to take on faith.
+  const [connectStep, setConnectStep] = useState<"granting" | "connected" | null>(null);
+  const [connectedNames, setConnectedNames] = useState<string[]>([]);
+
   useEffect(() => {
     const connected = searchParams.get("connected");
+    const names = searchParams.get("connected_names");
     const problem = searchParams.get("connect_error");
-    if (connected) toast.success(`Connected ${connected} account${connected === "1" ? "" : "s"}.`);
+    if (connected) {
+      setConnectedNames(names ? names.split("|").filter(Boolean) : []);
+      setConnectStep("granting");
+      window.setTimeout(() => setConnectStep("connected"), 1100);
+    }
     if (problem) toast.error(problem);
     if (connected || problem) {
       const next = new URLSearchParams(searchParams);
-      next.delete("connected"); next.delete("connect_error");
+      next.delete("connected"); next.delete("connect_error"); next.delete("connected_names");
       setSearchParams(next, { replace: true });
       void loadOverview();
     }
@@ -263,6 +275,23 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
   const instagramAccounts = overview?.accounts.filter((account) => account.provider === "instagram") || [];
 
   return (
+    <>
+      {connectStep === "granting" && (
+        <div className="edash-mk-connect-granting" role="status">
+          <Spinner size={16} />
+          <p>Granting access to {connectedNames.length ? connectedNames.join(", ") : "your page(s)"} from Meta...</p>
+        </div>
+      )}
+      {connectStep === "connected" && (
+        <EstateModal title="Your Page is now connected to LandCheck Estate" onClose={() => setConnectStep(null)}>
+          {connectedNames.length > 0 && (
+            <ul className="edash-mk-connected-list">
+              {connectedNames.map((name) => <li key={name}>{name}</li>)}
+            </ul>
+          )}
+          <button type="button" className="edash-btn-primary" onClick={() => setConnectStep(null)}>OK</button>
+        </EstateModal>
+      )}
     <div className="edash-mk-stack">
       {overview && overview.auto_posting === false
         ? <UpgradeNotice title="Automatic posting is on the Pro plan" message="Pro and Enterprise write a week or a month of posts for you and publish them to Facebook and Instagram on schedule. You can still prepare posts here and share them yourself." cta="Upgrade to Pro" />
@@ -487,5 +516,6 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
         )}
       </div>
     </div>
+    </>
   );
 }

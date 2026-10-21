@@ -53,6 +53,29 @@
 .edash-mk-form-grid .is-wide { grid-column: span 2; }
 .edash-mk-form-grid .is-full { grid-column: 1 / -1; }
 .edash-mk-hint { margin: 8px 0 0; color: var(--edash-muted); font-size: .74rem; line-height: 1.45; }
+
+/* The brief "granting access" step shown right after returning from Meta's own login/consent
+   dialog, before the "connected" confirmation modal - a real in-app status, not a toast, so the
+   permission grant is visible rather than something the user has to take on faith. */
+.edash-mk-connect-granting {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: var(--edash-surface);
+  border: 1px solid var(--edash-border-soft);
+  box-shadow: var(--edash-shadow-pop, 0 10px 30px rgba(16, 42, 33, .18));
+  font-size: .84rem;
+  color: var(--edash-ink);
+}
+.edash-mk-connected-list { margin: 0 0 16px; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.edash-mk-connected-list li { padding: 8px 12px; border-radius: 8px; background: var(--edash-brand-tint); color: var(--edash-brand-dark); font-weight: 700; font-size: .86rem; }
 .edash-mk-empty { padding: 22px 12px; color: var(--edash-faint); font-size: .8rem; text-align: center; }
 
 .edash-mk-materials { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
