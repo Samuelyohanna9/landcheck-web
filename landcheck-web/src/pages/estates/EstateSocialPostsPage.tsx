@@ -82,6 +82,8 @@ export default function EstateSocialPostsPage() {
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"manage" | "feed">((searchParams.get("view") as "manage" | "feed") || "manage");
   const previousScopeRef = useRef<Scope>(scope);
+  const [clearingAll, setClearingAll] = useState(false);
+  const [clearProgress, setClearProgress] = useState<{ done: number; total: number } | null>(null);
 
   const load = useCallback(async () => {
     if (!estateId) return;
@@ -173,6 +175,29 @@ export default function EstateSocialPostsPage() {
     return items.sort((a, b) => new Date(b.post.published_at || b.post.created_at).getTime() - new Date(a.post.published_at || a.post.created_at).getTime());
   }, [posts]);
 
+  const clearAllFeedPosts = async () => {
+    if (!feedItems.length || clearingAll) return;
+    const typed = window.prompt(`This permanently deletes all ${feedItems.length} post${feedItems.length === 1 ? "" : "s"} shown here from your live Facebook Page and Instagram account. This cannot be undone.\n\nType DELETE to confirm.`);
+    if (typed !== "DELETE") return;
+    setClearingAll(true);
+    setClearProgress({ done: 0, total: feedItems.length });
+    let failed = 0;
+    for (let index = 0; index < feedItems.length; index += 1) {
+      const { post, channel } = feedItems[index];
+      try {
+        await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/delete`);
+      } catch {
+        failed += 1;
+      }
+      setClearProgress({ done: index + 1, total: feedItems.length });
+    }
+    setClearingAll(false);
+    setClearProgress(null);
+    await load();
+    if (failed) toast.error(`${failed} post${failed === 1 ? "" : "s"} could not be deleted - they may already be removed, or need reconnecting.`);
+    else toast.success("All posts cleared.");
+  };
+
   const setView = (mode: "manage" | "feed") => {
     if (mode === "feed" && viewMode !== "feed") { previousScopeRef.current = scope; setFilter("posted"); }
     else if (mode === "manage" && viewMode !== "manage") setFilter(previousScopeRef.current === "posted" ? "upcoming" : previousScopeRef.current);
@@ -209,9 +234,14 @@ export default function EstateSocialPostsPage() {
         </div>
       </div>
 
-      <div className="edash-view-toggle" style={{ display: "flex", gap: 8, margin: "0 0 14px" }}>
+      <div className="edash-view-toggle" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", margin: "0 0 14px" }}>
         <button type="button" className={viewMode === "manage" ? "edash-btn-primary" : "edash-btn-outline"} onClick={() => setView("manage")}>Manage posts</button>
         <button type="button" className={viewMode === "feed" ? "edash-btn-primary" : "edash-btn-outline"} onClick={() => setView("feed")}>Facebook &amp; Instagram Feed</button>
+        {viewMode === "feed" && canManage && feedItems.length > 0 && (
+          <button type="button" className="edash-btn-outline" style={{ marginLeft: "auto", color: "var(--edash-danger)" }} disabled={clearingAll} onClick={() => void clearAllFeedPosts()}>
+            {clearingAll ? `Clearing ${clearProgress?.done ?? 0} of ${clearProgress?.total ?? feedItems.length}...` : `Clear all (${feedItems.length})`}
+          </button>
+        )}
       </div>
 
       {viewMode === "manage" && (
