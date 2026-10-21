@@ -294,7 +294,7 @@ export default function EstateCustomersPage() {
               <>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
                   <p className="edash-info-card-name" style={{ margin: 0 }}>{selectedCustomer.name}</p>
-                  <div style={{ display: "flex", gap: 8 }}>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <button type="button" className="edash-btn-outline" onClick={() => void openHistory()}>View history</button>
                     <button type="button" className="edash-btn-outline" onClick={() => void createPortalLink()}>Buyer portal link</button>
                     <button type="button" className="edash-btn-outline" onClick={() => navigate(`/estates/${estateId}/inspections?tab=live`)}>Schedule live inspection</button>
