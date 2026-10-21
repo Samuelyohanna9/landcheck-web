@@ -28,6 +28,10 @@ const CHANNELS: Array<{ key: string; label: string; automatic: boolean }> = [
   { key: "facebook", label: "Facebook Page", automatic: true }, { key: "instagram", label: "Instagram post", automatic: true }, { key: "instagram_story", label: "Instagram story", automatic: true },
   { key: "whatsapp_status", label: "WhatsApp Status", automatic: false }, { key: "other", label: "Other", automatic: false },
 ];
+// Instagram's publish is create-container -> poll-until-processed -> publish, which can run past the
+// api client's default 30s timeout on a cold image render - the post still goes through on Meta's
+// side even after the client times out, which would otherwise look like a failure when it wasn't.
+const PUBLISH_TIMEOUT_MS = 90000;
 const CHANNEL_SHORT: Record<string, string> = { facebook: "Facebook", instagram: "Instagram", instagram_story: "Story", whatsapp_status: "WhatsApp Status", other: "Other" };
 const STATUS_LABEL: Record<string, string> = { draft: "Draft", scheduled: "Scheduled", publishing: "Posting...", published: "Posted", partial: "Partly posted", failed: "Failed", cancelled: "Cancelled", skipped: "Skipped" };
 const STATUS_TONE: Record<string, string> = { draft: "neutral", scheduled: "info", publishing: "info", published: "good", partial: "warn", failed: "danger", cancelled: "neutral", skipped: "neutral" };
@@ -140,7 +144,7 @@ export default function EstateSocialPostsPage() {
     setDraft((current) => (current ? { ...current, caption: response.data.caption } : current));
     toast.success("Another wording, written from today's plot data.");
   }, "There is no other wording for this post.");
-  const postNow = (post: Post) => run(`now-${post.id}`, async () => { await api.post(`/estates/marketing/social/posts/${post.id}/publish`); toast.success("Sent."); }, "The post could not be sent.");
+  const postNow = (post: Post) => run(`now-${post.id}`, async () => { await api.post(`/estates/marketing/social/posts/${post.id}/publish`, undefined, { timeout: PUBLISH_TIMEOUT_MS }); toast.success("Sent."); }, "The post could not be sent.");
   const cancel = (post: Post) => window.confirm("Cancel this post? It will not be sent.") && run(`cancel-${post.id}`, async () => { await api.patch(`/estates/marketing/social/posts/${post.id}`, { cancel: true }); setOpenId(null); setDraft(null); }, "Could not cancel.");
   const markPosted = (post: Post, channel: string) => run(`mark-${post.id}`, async () => { await api.post(`/estates/marketing/social/posts/${post.id}/mark-posted`, { channel }); }, "Could not update the post.");
   const deleteFromChannel = (post: Post, channel: string) => window.confirm(`Delete this post from ${CHANNEL_SHORT[channel] || channel}? This removes it from the live Page/account - it can't be undone.`) && run(`delete-${post.id}-${channel}`, async () => {

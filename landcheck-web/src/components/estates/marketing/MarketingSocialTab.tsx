@@ -22,6 +22,12 @@ type Optins = {
 type Campaign = { id: number; name: string; channel: string };
 type PlotOption = { id: number; plot_number: string };
 
+// Instagram's publish is a create-container -> poll-until-processed -> publish round trip that can
+// legitimately take longer than the api client's default 30s timeout, especially on a cold image
+// render - the post still goes through on Meta's side even after the client times out, which reads
+// to staff as "it failed" when it didn't. A longer timeout on just these calls avoids that false alarm.
+const PUBLISH_TIMEOUT_MS = 90000;
+
 
 function PreviewImage({ estateId, params, alt }: { estateId: string; params: Record<string, unknown>; alt: string }) {
   const [url, setUrl] = useState<string | null>(null);
@@ -212,14 +218,14 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
       if (editingId !== null) {
         await api.patch(`/estates/marketing/social/posts/${editingId}`, { caption, channels, image_style: style, include_media: includeMedia, ...(iso ? { scheduled_at: iso } : { clear_schedule: when === "draft" }) });
         if (when === "now") {
-          const response = await api.post(`/estates/marketing/social/posts/${editingId}/publish`);
+          const response = await api.post(`/estates/marketing/social/posts/${editingId}/publish`, undefined, { timeout: PUBLISH_TIMEOUT_MS });
           const outcome = describePublishResult(response.data, channels);
           outcome.ok ? toast.success(outcome.message) : toast.error(outcome.message);
         } else {
           toast.success("Post updated.");
         }
       } else {
-        const response = await api.post(`/estates/${estateId}/marketing/social/posts`, { template_key: templateKey, caption, channels, image_style: style, include_media: includeMedia, plot_id: plotId ? Number(plotId) : null, campaign_id: campaignId ? Number(campaignId) : null, scheduled_at: iso, publish_now: when === "now" });
+        const response = await api.post(`/estates/${estateId}/marketing/social/posts`, { template_key: templateKey, caption, channels, image_style: style, include_media: includeMedia, plot_id: plotId ? Number(plotId) : null, campaign_id: campaignId ? Number(campaignId) : null, scheduled_at: iso, publish_now: when === "now" }, when === "now" ? { timeout: PUBLISH_TIMEOUT_MS } : undefined);
         if (when === "now") {
           const outcome = describePublishResult(response.data, channels);
           outcome.ok ? toast.success(outcome.message) : toast.error(outcome.message);
@@ -268,7 +274,7 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
       form.append("file", customFile);
       form.append("caption", customCaption.trim());
       form.append("channels", customChannels.join(","));
-      const response = await api.post(`/estates/${estateId}/marketing/social/custom-post`, form);
+      const response = await api.post(`/estates/${estateId}/marketing/social/custom-post`, form, { timeout: PUBLISH_TIMEOUT_MS });
       const outcome = describePublishResult(response.data, customChannels);
       outcome.ok ? toast.success(outcome.message) : toast.error(outcome.message);
       setCustomFile(null);
