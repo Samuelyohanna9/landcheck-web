@@ -15,7 +15,7 @@ type Result = { status: "ok" | "failed" | "pending" | "skipped" | "deleted"; err
 type Post = {
   id: number; plan_id?: number | null; plan_name?: string | null; auto_caption: boolean; strategy?: string | null; template_label?: string | null; template_key: string;
   caption: string; channels: string[]; image_style: string; include_media: boolean; status: string; scheduled_at?: string | null; published_at?: string | null; reminder_sent_at?: string | null;
-  results: Record<string, Result>; plot_id?: number | null; source_code?: string | null; created_at: string;
+  results: Record<string, Result>; plot_id?: number | null; source_code?: string | null; created_at: string; custom_image_proxy_url?: string | null;
 };
 type PlanOption = { id: number; name: string; status: string };
 type Scope = "upcoming" | "posted" | "attention" | "drafts" | "cancelled" | "all";
@@ -48,8 +48,9 @@ function Thumb({ estateId, post, channels }: { estateId: string; post: Post; cha
   const [url, setUrl] = useState<string | null>(null);
   const [errorReason, setErrorReason] = useState<string | null>(null);
   const channel = channels.find((key) => key === "instagram_story" || key === "whatsapp_status") ? "whatsapp_status" : "facebook";
+  const customUrl = post.custom_image_proxy_url || null;
   useEffect(() => {
-    if (!post.include_media) { setUrl(null); setErrorReason(null); return undefined; }
+    if (!post.include_media || customUrl) { setUrl(null); setErrorReason(null); return undefined; }
     let cancelled = false;
     let created: string | null = null;
     setUrl(null);
@@ -59,8 +60,9 @@ function Thumb({ estateId, post, channels }: { estateId: string; post: Post; cha
       created = value; setUrl(value);
     }).catch(async (error) => { if (!cancelled) setErrorReason(await extractApiErrorMessage(error, "Image could not be generated.")); });
     return () => { cancelled = true; if (created) URL.revokeObjectURL(created); };
-  }, [estateId, channel, post.image_style, post.plot_id, post.source_code, post.include_media]);
+  }, [estateId, channel, post.image_style, post.plot_id, post.source_code, post.include_media, customUrl]);
   if (!post.include_media) return <div className="edash-sp-thumb"><span>Text-only post - no image</span></div>;
+  if (customUrl) return <div className="edash-sp-thumb"><img src={customUrl} alt="Post image" /></div>;
   return <div className="edash-sp-thumb">{url ? <img src={url} alt="Post image" /> : errorReason ? <span className="edash-sp-thumb-error">{errorReason}</span> : <span>Preparing image...</span>}</div>;
 }
 
