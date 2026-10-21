@@ -143,7 +143,19 @@ export default function EstateSocialPostsPage() {
   const postNow = (post: Post) => run(`now-${post.id}`, async () => { await api.post(`/estates/marketing/social/posts/${post.id}/publish`); toast.success("Sent."); }, "The post could not be sent.");
   const cancel = (post: Post) => window.confirm("Cancel this post? It will not be sent.") && run(`cancel-${post.id}`, async () => { await api.patch(`/estates/marketing/social/posts/${post.id}`, { cancel: true }); setOpenId(null); setDraft(null); }, "Could not cancel.");
   const markPosted = (post: Post, channel: string) => run(`mark-${post.id}`, async () => { await api.post(`/estates/marketing/social/posts/${post.id}/mark-posted`, { channel }); }, "Could not update the post.");
-  const deleteFromChannel = (post: Post, channel: string) => window.confirm(`Delete this post from ${CHANNEL_SHORT[channel] || channel}? This removes it from the live Page/account - it can't be undone.`) && run(`delete-${post.id}-${channel}`, async () => { await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/delete`); toast.success(`Removed from ${CHANNEL_SHORT[channel] || channel}.`); }, "The post could not be deleted.");
+  const deleteFromChannel = (post: Post, channel: string) => window.confirm(`Delete this post from ${CHANNEL_SHORT[channel] || channel}? This removes it from the live Page/account - it can't be undone.`) && run(`delete-${post.id}-${channel}`, async () => {
+    try {
+      await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/delete`);
+      toast.success(`Removed from ${CHANNEL_SHORT[channel] || channel}.`);
+    } catch (error) {
+      const reason = await extractApiErrorMessage(error, "The post could not be deleted.");
+      if (window.confirm(`${reason}\n\nRemove it from LandCheck's dashboard anyway? The live post may still exist on ${CHANNEL_SHORT[channel] || channel} - this only clears LandCheck's own record of it.`)) {
+        await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/remove-from-dashboard`);
+        toast.success("Removed from LandCheck's dashboard.");
+      }
+    }
+  }, "The post could not be deleted.");
+  const removeFromDashboardOnly = (post: Post, channel: string) => window.confirm(`Remove this from LandCheck's dashboard? The live post is NOT deleted from ${CHANNEL_SHORT[channel] || channel} - this only clears LandCheck's own record.`) && run(`remove-${post.id}-${channel}`, async () => { await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/remove-from-dashboard`); toast.success("Removed from LandCheck's dashboard."); }, "Could not remove this from the dashboard.");
   const likeTarget = (post: Post, channel: string, targetId?: string) => run(`like-${post.id}-${channel}-${targetId || "post"}`, async () => {
     await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/like`, targetId ? { target_id: targetId } : {});
     toast.success(targetId ? "Comment liked." : "Post liked.");
@@ -177,24 +189,31 @@ export default function EstateSocialPostsPage() {
 
   const clearAllFeedPosts = async () => {
     if (!feedItems.length || clearingAll) return;
-    const typed = window.prompt(`This permanently deletes all ${feedItems.length} post${feedItems.length === 1 ? "" : "s"} shown here from your live Facebook Page and Instagram account. This cannot be undone.\n\nType DELETE to confirm.`);
+    const typed = window.prompt(`This deletes all ${feedItems.length} post${feedItems.length === 1 ? "" : "s"} shown here from your live Facebook Page and Instagram account where possible. Any that can't be deleted live (e.g. an expired connection) are removed from LandCheck's dashboard anyway, so this view ends up empty either way. This cannot be undone.\n\nType DELETE to confirm.`);
     if (typed !== "DELETE") return;
     setClearingAll(true);
     setClearProgress({ done: 0, total: feedItems.length });
-    let failed = 0;
+    let removedLocally = 0;
     for (let index = 0; index < feedItems.length; index += 1) {
       const { post, channel } = feedItems[index];
       try {
         await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/delete`);
       } catch {
-        failed += 1;
+        // Live deletion failed (stale token, already removed on the platform, etc.) - guarantee
+        // the dashboard still ends up clear, which is the whole point of "Clear all".
+        try {
+          await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/remove-from-dashboard`);
+          removedLocally += 1;
+        } catch {
+          // If even this fails, leave the item - load() below will show it still present.
+        }
       }
       setClearProgress({ done: index + 1, total: feedItems.length });
     }
     setClearingAll(false);
     setClearProgress(null);
     await load();
-    if (failed) toast.error(`${failed} post${failed === 1 ? "" : "s"} could not be deleted - they may already be removed, or need reconnecting.`);
+    if (removedLocally) toast.success(`Cleared. ${removedLocally} post${removedLocally === 1 ? "" : "s"} could not be confirmed deleted live, so ${removedLocally === 1 ? "it was" : "they were"} removed from LandCheck's dashboard only.`);
     else toast.success("All posts cleared.");
   };
 
@@ -287,6 +306,7 @@ export default function EstateSocialPostsPage() {
                     <div className="edash-sp-feed-actions">
                       {channel === "facebook" && <button type="button" className="edash-btn-outline" title="Like this post on your live Facebook Page" disabled={busy === `like-${post.id}-${channel}-post`} onClick={() => void likeTarget(post, channel)}>Like</button>}
                       <button type="button" className="edash-btn-outline is-danger" title={`Remove this post from your live ${CHANNEL_SHORT[channel]} account - this can't be undone`} disabled={busy === `delete-${post.id}-${channel}`} onClick={() => void deleteFromChannel(post, channel)}>{busy === `delete-${post.id}-${channel}` ? "Deleting..." : "Delete"}</button>
+                      <button type="button" className="edash-card-link" title={`Remove this from LandCheck's dashboard only - the live post on ${CHANNEL_SHORT[channel]} is NOT deleted`} disabled={busy === `remove-${post.id}-${channel}`} onClick={() => void removeFromDashboardOnly(post, channel)}>{busy === `remove-${post.id}-${channel}` ? "Removing..." : "Hide from dashboard"}</button>
                     </div>
                   )}
                   {stats?.comment_list && stats.comment_list.length > 0 && (
