@@ -384,7 +384,7 @@ export default function App() {
               <Route path="/green-work/register" element={<GreenWorkRegister />} />
               <Route path="/green-work/email-verified" element={<GreenWorkEmailVerified />} />
               <Route path="/green-work" element={<WorkProtectedRoute element={<GreenWork />} />} />
-              <Route path="/green-work/estates-accounting" element={<WorkProtectedRoute element={<EstateAdminAccountingPage />} />} />
+              <Route path="/estate-admin/accounting" element={<EstateAdminAccountingPage />} />
               <Route path="/survey" element={<SurveyPlanLanding />} />
               <Route path="/survey/guides" element={<SurveyGuides />} />
               <Route path="/survey/auth/verify" element={<SurveyAuthVerify />} />

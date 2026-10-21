@@ -12193,6 +12193,16 @@ export default function GreenWork() {
             Estate Admin
           </button>
         )}
+        {canAccessSuperAdmin && (
+          <button
+            className="green-work-menu-item"
+            type="button"
+            onClick={() => navigate("/estate-admin/accounting")}
+          >
+            {renderMenuItemIcon("estate_admin")}
+            Estate Accounting
+          </button>
+        )}
         <button
           className={`green-work-menu-item ${activeForm === "project_focus" ? "active" : ""}`}
           type="button"

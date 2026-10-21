@@ -238,6 +238,7 @@ export default function EstateAdminDashboard() {
         </div>
         <div className="header-right">
           <span className="last-updated">{overview?.generated_at ? `Updated: ${formatDateTime(overview.generated_at)}` : ""}</span>
+          <button className="estate-admin-refresh" type="button" onClick={() => navigate("/estate-admin/accounting")}>Accounting</button>
           <button className="logout-btn" type="button" onClick={handleLogout}>Logout</button>
         </div>
       </header>

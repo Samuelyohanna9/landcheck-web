@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../api/client";
 import { getWorkAuthSession } from "../auth/workAuth";
 import { money } from "../components/estates/FinancialComponents";
 import Spinner from "../components/estates/EstateSpinner";
 import "../styles/estate-dashboard.css";
+import "../styles/admin-dashboard.css";
 
 type PaymentRow = {
   id: number;
@@ -42,6 +43,7 @@ type SettlementRequestRow = {
 // rest of the Estates dashboard is). Gated by the same Super Admin session Green's own admin
 // payout tooling already uses - see require_super_admin_request on the backend.
 export default function EstateAdminAccountingPage() {
+  const navigate = useNavigate();
   const session = getWorkAuthSession();
   const isSuperAdmin = String(session?.user?.role_key || session?.user?.role || "").trim().toLowerCase() === "super_admin";
 
@@ -97,22 +99,13 @@ export default function EstateAdminAccountingPage() {
     }
   };
 
-  if (!session) {
+  if (!session || !isSuperAdmin) {
     return (
-      <div className="edash-onboard">
-        <div className="edash-onboard-body">
-          <div className="edash-onboard-head"><h1>Sign in required</h1><p>This page is for LandCheck staff only.</p></div>
-          <Link className="edash-btn-primary" to="/green-work/login">Go to sign in</Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isSuperAdmin) {
-    return (
-      <div className="edash-onboard">
-        <div className="edash-onboard-body">
-          <div className="edash-onboard-head"><h1>Super Admin access required</h1><p>Your account doesn't have access to Estates accounting.</p></div>
+      <div className="admin-login">
+        <div className="admin-login-card">
+          <h1>Super Admin access required</h1>
+          <p>Sign in through LandCheck Work with a Super Admin account to see Estates accounting.</p>
+          <button type="button" onClick={() => navigate("/green-work/login")}>Open LandCheck Work Login</button>
         </div>
       </div>
     );
@@ -120,8 +113,15 @@ export default function EstateAdminAccountingPage() {
 
   return (
     <div style={{ maxWidth: 1180, margin: "0 auto", padding: "24px 20px" }}>
-      <h1 style={{ fontSize: "1.3rem", marginBottom: 4 }}>Estates accounting</h1>
-      <p className="edash-field-note" style={{ marginBottom: 18 }}>Every organization's captured Flutterwave payments and settlement requests, platform-wide.</p>
+      <header className="admin-header" style={{ marginBottom: 18 }}>
+        <div className="header-left">
+          <button className="back-btn" type="button" onClick={() => navigate("/estate-admin")} aria-label="Back to Estate Admin">←</button>
+          <div>
+            <h1>Estates accounting</h1>
+            <span className="last-updated">Every organization's captured Flutterwave payments and settlement requests, platform-wide</span>
+          </div>
+        </div>
+      </header>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         <button type="button" className={view === "payments" ? "edash-btn-primary" : "edash-btn-outline"} onClick={() => setView("payments")}>Payments</button>
