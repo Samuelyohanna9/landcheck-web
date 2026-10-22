@@ -7,7 +7,9 @@
   --auth-brand: #1a8f5a;
   --auth-brand-dark: #0f6e44;
   --auth-ink: #323338;
-  --auth-muted: #676879;
+  --auth-label: #173f5f;
+  --auth-muted: #526b82;
+  --auth-trust: #7b95aa;
   --auth-line: #d0d4e4;
   /* Tints of the actual Estates logo's two colours (bright green + dark navy facets, see
      public/logo-icon-192.png) instead of unrelated pastel pink/gold - the two colours sit on
@@ -67,7 +69,7 @@
 .estate-auth-card h1, .estate-auth-card h2 { font-family: inherit; font-size: 1.5rem; font-weight: 500; letter-spacing: -.01em; color: var(--auth-ink); }
 .estate-auth-shell--login .estate-auth-card h1 { color: #0b4f78; }
 .estate-auth-card > p:not(.estate-kicker) { color: var(--auth-muted); font-family: inherit; }
-.estate-auth-card label { color: var(--auth-ink); font: 400 .82rem "Inter", sans-serif; }
+.estate-auth-card label { color: var(--auth-label); font: 400 .82rem "Inter", sans-serif; }
 .estate-auth-card label small { font-size: .74rem; }
 .estate-auth-card input {
   min-height: 38px;
@@ -75,6 +77,7 @@
   border: 1px solid #c3c6d4;
   border-radius: 4px;
   background: #fff;
+  color: var(--auth-label);
   font: 400 .9rem "Inter", sans-serif;
 }
 .estate-auth-card input:hover { border-color: var(--auth-muted); }
@@ -107,7 +110,7 @@
 .estate-auth-error { border-left: 0; border-radius: 4px; background: #fbeaea; color: #b3261e; font-family: inherit; }
 .estate-auth-success { margin: 0 0 18px; padding: 12px 14px; border: 1px solid #b8e2c7; border-radius: 8px; background: #effaf2; color: #176b3a; font-family: inherit; line-height: 1.5; }
 .estate-auth-trust, .estate-auth-switch { font-family: inherit !important; color: var(--auth-muted) !important; }
-.estate-auth-trust { color: #9699a6 !important; }
+.estate-auth-trust { color: var(--auth-trust) !important; }
 
 .estate-register-intro h1 { font-family: inherit; font-weight: 500; letter-spacing: -.02em; line-height: 1.1; color: var(--auth-ink); font-size: clamp(1.8rem, 3vw, 2.4rem); }
 .estate-register-intro > p:not(.estate-kicker) { color: var(--auth-muted); font-family: inherit; }
