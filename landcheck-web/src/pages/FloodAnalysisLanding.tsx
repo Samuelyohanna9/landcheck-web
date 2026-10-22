@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { api } from "../api/client";
 import "../styles/flood-landing.css";
 import "../styles/public-landing.css";
 import NavBar from "../components/NavBar";
@@ -116,6 +118,37 @@ const audience = [
 
 export default function FloodAnalysisLanding() {
   const navigate = useNavigate();
+  const [totalHazardScreenings, setTotalHazardScreenings] = useState<number | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const refreshHazardCount = async () => {
+      try {
+        const { data } = await api.get<{ total_hazard_screenings_completed: number }>("/analytics/public-proof", {
+          headers: { "Cache-Control": "no-cache" },
+        });
+        const count = Number(data.total_hazard_screenings_completed);
+        if (active && Number.isSafeInteger(count) && count >= 0) {
+          setTotalHazardScreenings(count);
+        }
+      } catch {
+        if (active) setTotalHazardScreenings(null);
+      }
+    };
+
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void refreshHazardCount();
+    };
+
+    void refreshHazardCount();
+    const interval = window.setInterval(() => void refreshHazardCount(), 60_000);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, []);
 
   return (
     <div className="fal-page public-landing">
@@ -179,6 +212,13 @@ export default function FloodAnalysisLanding() {
               See Features
             </a>
           </div>
+          {totalHazardScreenings !== null && (
+            <div className="fal-hero-proof" aria-label="Live LandCheck hazard screening count">
+              <span className="fal-hero-proof-dot" aria-hidden="true" />
+              <strong>{totalHazardScreenings.toLocaleString("en-NG")}</strong>
+              <span>land hazard screenings completed</span>
+            </div>
+          )}
         </div>
         <a href="#features" className="fal-scroll-indicator" aria-label="Scroll to features">
           <svg viewBox="0 0 24 24" fill="none" width="38" height="38">

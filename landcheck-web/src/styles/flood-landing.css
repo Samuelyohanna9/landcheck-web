@@ -187,6 +187,31 @@
 
 .fal-hero-btn-outline:hover { background: rgba(255, 255, 255, 0.18); }
 
+.fal-hero-proof {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+}
+
+.fal-hero-proof-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #7dd3a8;
+  box-shadow: 0 0 0 4px rgba(125, 211, 168, 0.14);
+}
+
+.fal-hero-proof strong {
+  color: #a7f3d0;
+  font-size: 1.08rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .fal-scroll-indicator {
   position: absolute;
   bottom: 28px;

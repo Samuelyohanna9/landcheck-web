@@ -112,7 +112,7 @@ export default function SurveyPlanLanding() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const desktopNavRef = useRef<HTMLElement>(null);
-  const [totalPlotsGenerated, setTotalPlotsGenerated] = useState<number | null>(null);
+  const [totalPlotsProcessed, setTotalPlotsProcessed] = useState<number | null>(null);
   const signedIn = isSurveyAuthed();
   const closeMenu = () => setMenuOpen(false);
 
@@ -155,10 +155,10 @@ export default function SurveyPlanLanding() {
         });
         const count = Number(data.total_plots_generated);
         if (active && Number.isSafeInteger(count) && count >= 0) {
-          setTotalPlotsGenerated(count);
+          setTotalPlotsProcessed(count);
         }
       } catch {
-        if (active) setTotalPlotsGenerated(null);
+        if (active) setTotalPlotsProcessed(null);
       }
     };
 
@@ -301,10 +301,10 @@ export default function SurveyPlanLanding() {
                 <a href="#workflow" className="spl-hero-btn-outline">See how it works</a>
               </div>
               <div className="spl-hero-stats">
-                {totalPlotsGenerated !== null && (
+                {totalPlotsProcessed !== null && (
                   <div className="spl-hero-stat">
-                    <strong>{totalPlotsGenerated.toLocaleString("en-NG")}</strong>
-                    <span>survey plots generated</span>
+                    <strong>{totalPlotsProcessed.toLocaleString("en-NG")}</strong>
+                    <span>survey plots processed</span>
                   </div>
                 )}
                 <div className="spl-hero-stat">
