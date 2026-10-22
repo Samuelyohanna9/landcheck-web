@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useMemo, useState, type FormEvent } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../api/client";
 import "../styles/password-reset.css";
 
@@ -64,7 +64,6 @@ function CheckIcon() {
 }
 
 export default function PasswordResetPage({ defaultProduct }: { defaultProduct?: ResetProduct }) {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryProduct = searchParams.get("product");
   const product = defaultProduct || (isResetProduct(queryProduct) ? queryProduct : undefined);
@@ -82,12 +81,6 @@ export default function PasswordResetPage({ defaultProduct }: { defaultProduct?:
   const confirmStarted = confirmPassword.length > 0;
   const passwordsMatch = confirmStarted && password === confirmPassword;
   const passwordsMismatch = confirmStarted && password !== confirmPassword;
-
-  useEffect(() => {
-    if (!successLoginPath) return undefined;
-    const redirectTimer = window.setTimeout(() => navigate(successLoginPath, { replace: true }), 2800);
-    return () => window.clearTimeout(redirectTimer);
-  }, [navigate, successLoginPath]);
 
   const statusText = useMemo(() => {
     if (!confirmStarted) return "Repeat your password to confirm it.";
@@ -147,7 +140,7 @@ export default function PasswordResetPage({ defaultProduct }: { defaultProduct?:
             <h1>Password reset successful</h1>
             <p>Your password has been changed securely. You can now sign in with your new password.</p>
             <Link className="password-reset-submit" to={loginPath}>Continue to sign in</Link>
-            <p className="password-reset-redirect-note">Taking you to sign in shortly...</p>
+            <p className="password-reset-redirect-note">You will stay on this page until you choose to continue.</p>
           </section>
         ) : (
           <section className="password-reset-card">
