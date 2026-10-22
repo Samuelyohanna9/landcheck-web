@@ -7961,6 +7961,34 @@ export default function GreenWork() {
     setActiveForm("super_admin");
   };
 
+  const deleteOrganization = async (org: Organization) => {
+    const organizationName = String(org.name || "this organization").trim();
+    const projectCount = Number(org.projects_count || 0);
+    const confirmed = window.confirm(
+      `Delete ${organizationName}? This removes it from the public partner listing and deactivates access. ` +
+        `Existing projects and field records will be preserved${projectCount > 0 ? ` (${projectCount} project${projectCount === 1 ? "" : "s"})` : ""}.`,
+    );
+    if (!confirmed) return;
+    if (
+      !(await ensureWorkOperationalConsent("organization_delete", {
+        organization_id: Number(org.id),
+        organization_name: organizationName,
+        preserved_history: true,
+      }))
+    ) {
+      return;
+    }
+    try {
+      await api.delete(`/green/admin/organizations/${org.id}`);
+      if (editingOrganizationId === Number(org.id)) clearOrganizationDraft();
+      if (adminCredentialOrgId === String(org.id)) setAdminCredentialOrgId("");
+      await Promise.all([loadOrganizations(), loadProjects(), loadAdminOverview()]);
+      toast.success(`${organizationName} deleted and removed from the public listing.`);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to delete organization");
+    }
+  };
+
   const clearOrganizationDraft = () => {
     setEditingOrganizationId(null);
     setNewOrganization({
@@ -14832,6 +14860,11 @@ export default function GreenWork() {
                           <button type="button" onClick={() => editOrganization(org)}>
                             Edit
                           </button>
+                          {org.is_active !== false && (
+                            <button type="button" className="green-work-danger-btn" onClick={() => void deleteOrganization(org)}>
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))

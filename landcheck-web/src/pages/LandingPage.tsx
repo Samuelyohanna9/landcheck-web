@@ -66,6 +66,7 @@ export default function LandingPage() {
   const { isLowBandwidth } = useLowBandwidthMode();
   const showFeaturedStory = useDeferredMount(900);
   const [partners, setPartners] = useState<PartnerOrg[]>([]);
+  const [failedPartnerLogos, setFailedPartnerLogos] = useState<Set<string>>(new Set());
   const [totalTrees, setTotalTrees] = useState<number | null>(null);
   const [heroVideoReady, setHeroVideoReady] = useState(false);
   const [visibleHeroVideoIndex, setVisibleHeroVideoIndex] = useState(0);
@@ -227,32 +228,52 @@ export default function LandingPage() {
   const renderPartnerBadge = (
     org: PartnerOrg & { renderKey: string },
     duplicate = false,
-  ) => (
-    <div
-      key={`${org.renderKey}${duplicate ? "-duplicate" : ""}`}
-      className="lp-partner-badge"
-      role="button"
-      tabIndex={duplicate ? -1 : 0}
-      aria-label={duplicate ? undefined : org.name}
-      title={org.name}
-      aria-hidden={duplicate ? true : undefined}
-      onClick={() => navigate("/green-partners#partners")}
-      onKeyDown={(e) => e.key === "Enter" && navigate("/green-partners#partners")}
-    >
-      {org.logo ? (
-        <img src={org.logo} alt={org.name} className="lp-partner-logo" width="132" height="88" loading="lazy" />
-      ) : (
-        <span className="lp-partner-initials">
-          {org.name
-            .split(" ")
-            .slice(0, 2)
-            .map((w) => w[0])
-            .join("")
-            .toUpperCase()}
-        </span>
-      )}
-    </div>
-  );
+  ) => {
+    const logoUrl = org.logo;
+    const showLogo = Boolean(logoUrl && !failedPartnerLogos.has(logoUrl));
+    const initials = org.name
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((word) => word[0])
+      .join("")
+      .toUpperCase() || "?";
+
+    return (
+      <div
+        key={`${org.renderKey}${duplicate ? "-duplicate" : ""}`}
+        className="lp-partner-badge"
+        role="button"
+        tabIndex={duplicate ? -1 : 0}
+        aria-label={duplicate ? undefined : org.name}
+        title={org.name}
+        aria-hidden={duplicate ? true : undefined}
+        onClick={() => navigate("/green-partners#partners")}
+        onKeyDown={(e) => e.key === "Enter" && navigate("/green-partners#partners")}
+      >
+        {showLogo ? (
+          <img
+            src={logoUrl || undefined}
+            alt={org.name}
+            className="lp-partner-logo"
+            width="132"
+            height="88"
+            loading="lazy"
+            onError={() => {
+              if (!logoUrl) return;
+              setFailedPartnerLogos((current) => {
+                if (current.has(logoUrl)) return current;
+                return new Set(current).add(logoUrl);
+              });
+            }}
+          />
+        ) : (
+          <span className="lp-partner-initials">{initials}</span>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="landcheck-landing public-landing">

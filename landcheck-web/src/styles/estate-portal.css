@@ -410,13 +410,12 @@
        did - that was the "doesn't feel premium" complaint: a small photo adrift in a big empty
        cell. */
     grid-template-columns: minmax(340px, 420px) minmax(400px, 540px);
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto auto;
     gap: clamp(24px, 4vw, 56px);
     align-items: center;
     width: min(100% - 48px, 1040px);
   }
-  .estate-auth-shell--login .estate-auth-brand { grid-column: 1 / -1; grid-row: 1; align-self: start; justify-self: center; }
-  .estate-auth-shell--login .estate-auth-card { grid-column: 1; grid-row: 2; }
-  .estate-auth-shell--login .estate-auth-visual { display: flex; grid-column: 2; grid-row: 2; }
-  .estate-auth-shell--login .estate-auth-back { grid-column: 1; grid-row: 3; justify-self: start; }
+  .estate-auth-shell--login .estate-auth-card { grid-column: 1; grid-row: 1; align-self: center; }
+  .estate-auth-shell--login .estate-auth-visual { display: flex; grid-column: 2; grid-row: 1; }
+  .estate-auth-shell--login .estate-auth-back { grid-column: 1; grid-row: 2; justify-self: start; }
 }

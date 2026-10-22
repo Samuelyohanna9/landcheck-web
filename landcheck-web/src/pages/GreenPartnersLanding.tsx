@@ -170,6 +170,7 @@ export default function GreenPartnersLanding() {
   const { isLowBandwidth } = useLowBandwidthMode();
   const showFeaturedStory = useDeferredMount(900);
   const [partners, setPartners] = useState<PartnerOrg[]>([]);
+  const [failedPartnerLogos, setFailedPartnerLogos] = useState<Set<string>>(new Set());
   const [photoStartIndex, setPhotoStartIndex] = useState(0);
   const availablePhotoMoments = useMemo(
     () => (isLowBandwidth ? photoMoments.slice(0, 4) : photoMoments),
@@ -230,28 +231,48 @@ export default function GreenPartnersLanding() {
   const renderPartnerLogo = (
     org: PartnerOrg & { renderKey: string },
     duplicate = false,
-  ) => (
-    <div
-      key={`${org.renderKey}${duplicate ? "-duplicate" : ""}`}
-      className="gp-partner-logo-item"
-      aria-hidden={duplicate ? true : undefined}
-      aria-label={duplicate ? undefined : org.name}
-      title={org.name}
-    >
-      {org.logo ? (
-        <img src={org.logo} alt={org.name} width="132" height="88" loading="lazy" decoding="async" />
-      ) : (
-        <span className="gp-partner-logo-fallback">
-          {org.name
-            .split(" ")
-            .slice(0, 2)
-            .map((word) => word[0])
-            .join("")
-            .toUpperCase()}
-        </span>
-      )}
-    </div>
-  );
+  ) => {
+    const logoUrl = org.logo;
+    const showLogo = Boolean(logoUrl && !failedPartnerLogos.has(logoUrl));
+    const initials = org.name
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((word) => word[0])
+      .join("")
+      .toUpperCase() || "?";
+
+    return (
+      <div
+        key={`${org.renderKey}${duplicate ? "-duplicate" : ""}`}
+        className="gp-partner-logo-item"
+        aria-hidden={duplicate ? true : undefined}
+        aria-label={duplicate ? undefined : org.name}
+        title={org.name}
+      >
+        {showLogo ? (
+          <img
+            src={logoUrl || undefined}
+            alt={org.name}
+            width="132"
+            height="88"
+            loading="lazy"
+            decoding="async"
+            onError={() => {
+              if (!logoUrl) return;
+              setFailedPartnerLogos((current) => {
+                if (current.has(logoUrl)) return current;
+                return new Set(current).add(logoUrl);
+              });
+            }}
+          />
+        ) : (
+          <span className="gp-partner-logo-fallback">{initials}</span>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="green-partners-page public-landing">

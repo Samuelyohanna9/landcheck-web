@@ -42,6 +42,19 @@
 
 .estate-auth-brand-tag { color: var(--auth-brand); font-family: inherit; font-weight: 800; letter-spacing: .12em; }
 
+.estate-auth-brand--login {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+  margin: 0 0 24px;
+  color: var(--auth-brand);
+  text-decoration: none;
+}
+.estate-auth-brand--login img { display: block; width: 182px; height: auto; }
+.estate-auth-brand--login span { color: var(--auth-brand); font: 800 .62rem "Inter", sans-serif; letter-spacing: .17em; text-transform: uppercase; }
+
 .estate-auth-card {
   padding: 22px 26px 18px;
   border: 1px solid #e6e9ef;
