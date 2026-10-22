@@ -136,7 +136,7 @@
 .edash .edash-plot-workflow-card {
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr) 112px;
-  align-items: center;
+  align-items: start;
   column-gap: 11px;
   min-height: 78px;
   padding: 12px;
@@ -149,7 +149,7 @@
 
 .edash .edash-plot-workflow-card .edash-info-card-body {
   grid-column: 2;
-  align-self: center;
+  align-self: start;
   min-width: 0;
 }
 
@@ -160,6 +160,7 @@
 
 .edash .edash-plot-workflow-card .edash-info-card-action {
   grid-column: 3;
+  align-self: start;
   width: 112px;
   min-width: 0;
   justify-content: center;
