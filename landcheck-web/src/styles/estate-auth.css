@@ -65,6 +65,7 @@
 .estate-auth-card .estate-kicker,
 .estate-kicker { color: var(--auth-brand); font-family: inherit; font-weight: 700; letter-spacing: .1em; }
 .estate-auth-card h1, .estate-auth-card h2 { font-family: inherit; font-size: 1.5rem; font-weight: 500; letter-spacing: -.01em; color: var(--auth-ink); }
+.estate-auth-shell--login .estate-auth-card h1 { color: #0b4f78; }
 .estate-auth-card > p:not(.estate-kicker) { color: var(--auth-muted); font-family: inherit; }
 .estate-auth-card label { color: var(--auth-ink); font: 400 .82rem "Inter", sans-serif; }
 .estate-auth-card label small { font-size: .74rem; }
