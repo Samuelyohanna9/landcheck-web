@@ -44,6 +44,12 @@ export default function AgentPortalAccessPage() {
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [selectedEstateId, setSelectedEstateId] = useState<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isMobileLayout, setIsMobileLayout] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.innerWidth <= 900
+      || window.matchMedia("(max-device-width: 900px)").matches
+      || (navigator.maxTouchPoints > 0 && window.innerWidth <= 1200);
+  });
   const [campaignName, setCampaignName] = useState("");
   const [campaignChannel, setCampaignChannel] = useState("agent");
   const [busy, setBusy] = useState(false);
@@ -58,11 +64,23 @@ export default function AgentPortalAccessPage() {
       setWorkspace(response.data);
       setSelectedEstateId((current) => current || response.data.estates?.[0]?.id || null);
     } catch (requestError) {
-      setError(await extractApiErrorMessage(requestError, "This workspace link is invalid or expired."));
+      setError(await extractApiErrorMessage(requestError, "This workspace link is invalid or has been revoked."));
     }
   };
 
   useEffect(() => { void load(); }, [token]);
+
+  useEffect(() => {
+    const updateLayout = () => {
+      setIsMobileLayout(
+        window.innerWidth <= 900
+          || window.matchMedia("(max-device-width: 900px)").matches
+          || (navigator.maxTouchPoints > 0 && window.innerWidth <= 1200),
+      );
+    };
+    window.addEventListener("resize", updateLayout);
+    return () => window.removeEventListener("resize", updateLayout);
+  }, []);
 
   const selectedEstate = workspace?.estates.find((estate) => estate.id === selectedEstateId) || workspace?.estates[0];
   const mapFeatures = useMemo<ProjectMapFeature[]>(() => (selectedEstate?.plots || []).filter((plot) => plot.geometry).map((plot) => ({
@@ -93,7 +111,7 @@ export default function AgentPortalAccessPage() {
   );
 
   return (
-    <main className={`agent-public${menuOpen ? " is-menu-open" : ""}`}>
+    <main className={`agent-public${isMobileLayout ? " agent-public-mobile" : ""}${menuOpen ? " is-menu-open" : ""}`}>
       <div className="agent-public-backdrop" onClick={() => setMenuOpen(false)} aria-hidden="true" />
       <aside id="agent-public-sidebar" className="agent-public-sidebar">
         <div className="agent-public-brand"><span className="agent-public-logo"><img src="/logo-wordmark-web.png" alt="LandCheck Estates" /></span></div>

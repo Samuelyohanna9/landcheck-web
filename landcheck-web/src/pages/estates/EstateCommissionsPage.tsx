@@ -165,6 +165,16 @@ export default function EstateCommissionsPage() {
     }
   };
 
+  const revokeAgentPortal = async (member: { id: number; display_name: string }) => {
+    if (!organizationId || !window.confirm(`Revoke ${member.display_name}'s agent workspace link? The current link will stop working immediately.`)) return;
+    try {
+      const response = await api.post(`/estates/organizations/${organizationId}/members/${member.id}/portal-revoke`);
+      toast.success(response.data.revoked ? "Agent workspace link revoked." : "No active workspace link found.");
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "The workspace link could not be revoked."));
+    }
+  };
+
   const saveCommissionTiers = async () => {
     if (!organizationId) return;
     setCommissionTiersBusy(true);
@@ -274,6 +284,7 @@ export default function EstateCommissionsPage() {
                         <button type="button" className="edash-btn-outline" onClick={() => void openAgentDetail(member.subject_type, member.subject_id)}>Details</button>
                         {(member.role === "sales" || member.role === "marketer") && <button type="button" className="edash-btn-outline" disabled={!member.is_active} onClick={() => void openAgentPortal(member)}>View portal</button>}
                         {member.role === "sales" || member.role === "marketer" ? <button type="button" className="edash-btn-outline" disabled={!member.email} title={member.email ? "Send or regenerate the workspace link" : "Add an email address when creating this agent"} onClick={async () => { try { const response = await api.post(`/estates/organizations/${organizationId}/members/${member.id}/portal-invite`); await navigator.clipboard?.writeText(response.data.portal_url); toast.success(response.data.email_sent ? "Workspace invite sent." : "Workspace link regenerated and copied."); } catch (error) { toast.error(await extractApiErrorMessage(error, "Workspace invite could not be sent.")); } }}>{member.email ? "Send link" : "No email"}</button> : null}
+                        {(member.role === "sales" || member.role === "marketer") && <button type="button" className="edash-btn-danger-outline" onClick={() => void revokeAgentPortal(member)}>Revoke link</button>}
                         <button type="button" className="edash-btn-outline" onClick={() => void toggleAgentActive(member)}>{member.is_active ? "Deactivate" : "Reactivate"}</button>
                       </td>
                     </tr>

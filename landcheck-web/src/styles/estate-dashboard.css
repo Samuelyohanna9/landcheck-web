@@ -772,6 +772,9 @@
 .edash-btn-outline:focus-visible { outline: 2px solid var(--edash-brand); outline-offset: 2px; }
 .edash-btn-outline:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 .edash-btn-outline svg { width: 14px; height: 14px; }
+.edash-btn-danger-outline { min-height: 34px; padding: 0 11px; border: 1px solid #e9b8b4; border-radius: 7px; background: #fff; color: #b3261e; font-family: inherit; font-size: .72rem; font-weight: 700; cursor: pointer; }
+.edash-btn-danger-outline:hover { border-color: #b3261e; background: #fff6f5; }
+.edash-btn-danger-outline:focus-visible { outline: 2px solid #e9b8b4; outline-offset: 2px; }
 
 .edash-btn-primary {
   display: inline-flex;
