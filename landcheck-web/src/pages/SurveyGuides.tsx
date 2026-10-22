@@ -7,7 +7,6 @@ type GuideStep = {
 };
 
 type GuideSection = {
-  number: string;
   id: string;
   kicker: string;
   title: string;
@@ -18,7 +17,6 @@ type GuideSection = {
 
 const guideSections: GuideSection[] = [
   {
-    number: "01",
     id: "survey-plan",
     kicker: "Survey plan production",
     title: "Create a survey plan",
@@ -39,7 +37,6 @@ const guideSections: GuideSection[] = [
     ],
   },
   {
-    number: "02",
     id: "subdivision",
     kicker: "Layout design",
     title: "Subdivide a parcel",
@@ -60,7 +57,6 @@ const guideSections: GuideSection[] = [
     ],
   },
   {
-    number: "03",
     id: "georeference",
     kicker: "Map alignment",
     title: "Georeference a scanned plan",
@@ -80,7 +76,6 @@ const guideSections: GuideSection[] = [
     ],
   },
   {
-    number: "04",
     id: "digitise",
     kicker: "Editable map data",
     title: "Digitise the aligned layout",
@@ -100,7 +95,6 @@ const guideSections: GuideSection[] = [
     ],
   },
   {
-    number: "05",
     id: "flood",
     kicker: "Hazard analysis",
     title: "Run a flood analysis",
@@ -119,7 +113,6 @@ const guideSections: GuideSection[] = [
     ],
   },
   {
-    number: "06",
     id: "erosion",
     kicker: "Hazard analysis",
     title: "Run an erosion analysis",
@@ -138,7 +131,6 @@ const guideSections: GuideSection[] = [
     ],
   },
   {
-    number: "07",
     id: "lulc",
     kicker: "Land cover intelligence",
     title: "Run a Land Use / Land Cover analysis",
@@ -168,19 +160,6 @@ const quickLinks = [
   { id: "lulc", label: "LULC" },
 ];
 
-function GuideIcon({ type }: { type: "survey" | "layout" | "map" | "hazard" }) {
-  if (type === "layout") {
-    return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="1.7" /><path d="M12 4v16M4 12h16" stroke="currentColor" strokeWidth="1.7" /></svg>;
-  }
-  if (type === "map") {
-    return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="7" stroke="currentColor" strokeWidth="1.7" /><circle cx="12" cy="12" r="2.5" stroke="currentColor" strokeWidth="1.7" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>;
-  }
-  if (type === "hazard") {
-    return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m12 3 9 17H3L12 3Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" /><path d="M12 9v5M12 17h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>;
-  }
-  return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 18V6l7-3 7 3v12l-7 3-7-3Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" /><path d="M12 3v18M5 6l7 3 7-3" stroke="currentColor" strokeWidth="1.7" /></svg>;
-}
-
 export default function SurveyGuides() {
   return (
     <main className="survey-guides-page">
@@ -202,8 +181,8 @@ export default function SurveyGuides() {
           <div className="survey-guides-toc">
             <p>On this page</p>
             <nav aria-label="Guide sections">
-              {quickLinks.map((item, index) => (
-                <a key={item.id} href={`#${item.id}`}><span>{String(index + 1).padStart(2, "0")}</span>{item.label}</a>
+              {quickLinks.map((item) => (
+                <a key={item.id} href={`#${item.id}`}>{item.label}</a>
               ))}
             </nav>
           </div>
@@ -222,22 +201,15 @@ export default function SurveyGuides() {
               <Link to="/survey-plan" className="survey-guides-primary-action">Open Survey workspace</Link>
               <Link to="/hazard-analysis" className="survey-guides-secondary-action">Run hazard analysis</Link>
             </div>
-            <div className="survey-guides-quick-grid" aria-label="Guide overview">
-              <div><span>01</span><strong>Prepare</strong><small>Coordinates and source plans</small></div>
-              <div><span>02</span><strong>Build</strong><small>Plans and estate layouts</small></div>
-              <div><span>03</span><strong>Review</strong><small>Geometry and map evidence</small></div>
-              <div><span>04</span><strong>Export</strong><small>Shareable project outputs</small></div>
-            </div>
           </section>
 
           <div className="survey-guides-notice">
-            <strong>Important:</strong> LandCheck assists with drafting, mapping, and screening. Please confirm the accuracy of your coordinatesbefore relying on any output.
+            <strong>Important:</strong> LandCheck assists with drafting, mapping, and screening. Please confirm the accuracy of your coordinates before relying on any output.
           </div>
 
           {guideSections.map((section) => (
             <section className="survey-guide-section" id={section.id} key={section.id}>
               <header className="survey-guide-section-header">
-                <span className="survey-guide-section-number">{section.number}</span>
                 <div>
                   <p className="survey-guides-kicker">{section.kicker}</p>
                   <h2>{section.title}</h2>
@@ -245,9 +217,8 @@ export default function SurveyGuides() {
                 </div>
               </header>
               <div className="survey-guide-steps">
-                {section.steps.map((step, index) => (
+                {section.steps.map((step) => (
                   <div className="survey-guide-step" key={step.title}>
-                    <span className="survey-guide-step-number">{index + 1}</span>
                     <div>
                       <h3>{step.title}</h3>
                       <p>{step.body}</p>
@@ -256,7 +227,7 @@ export default function SurveyGuides() {
                 ))}
               </div>
               <div className="survey-guide-checks">
-                <div className="survey-guide-checks-heading"><GuideIcon type={section.id === "survey-plan" ? "survey" : section.id === "subdivision" ? "layout" : section.id === "georeference" || section.id === "digitise" ? "map" : "hazard"} /><strong>Before you approve</strong></div>
+                <div className="survey-guide-checks-heading"><strong>Before you approve</strong></div>
                 <ul>{section.checks.map((check) => <li key={check}>{check}</li>)}</ul>
               </div>
             </section>
