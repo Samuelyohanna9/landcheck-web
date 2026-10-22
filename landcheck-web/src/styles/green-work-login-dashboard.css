@@ -108,3 +108,34 @@
 .work-login-page .work-login-brand span strong { color: var(--wl-text); font-weight: 800; }
 .work-login-page .work-login-brand span small { color: var(--wl-green); font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; font-size: 0.7rem; }
 .work-login-page .work-login-brand img { border-color: rgba(28, 73, 45, 0.2); }
+
+/* This stylesheet loads after the shared login styles; keep the full Work wordmark from being
+   reduced to the compact icon size used by the register-page brand. */
+.work-login-page .work-login-brand.work-login-brand--login {
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  width: 100%;
+  margin: 0 0 0.85rem;
+}
+
+.work-login-page .work-login-brand.work-login-brand--login > img {
+  display: block;
+  width: min(182px, 100%);
+  height: auto;
+  min-height: 58px;
+  object-fit: contain;
+  padding: 0.35rem 0.6rem;
+  border: 0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.work-login-page .work-login-brand.work-login-brand--login > span {
+  color: #168651;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  line-height: 1;
+  text-transform: uppercase;
+}
