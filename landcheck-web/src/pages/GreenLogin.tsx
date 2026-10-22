@@ -13,6 +13,7 @@ import GreenLoadingAnimation from "../components/GreenLoadingAnimation";
 import "../styles/green-auth.css";
 
 const GREEN_LOGO_SRC = "/logo-icon-192.png";
+const GREEN_WORDMARK_SRC = "/logo-wordmark-web.png";
 
 type AuthRoute = "field" | "sponsor";
 
@@ -161,9 +162,7 @@ export default function GreenLogin() {
     <div className="green-auth-page green-auth-gateway">
       <header className="green-auth-topbar">
         <button type="button" className="green-auth-brand" onClick={() => navigate("/")} aria-label="Return to LandCheck home">
-          <img src={GREEN_LOGO_SRC} alt="LandCheck" width="36" height="36" />
-          <span>LandCheck</span>
-          <small>Mobile</small>
+          <img src={GREEN_WORDMARK_SRC} alt="LandCheck" width="156" height="50" />
         </button>
         <span className="green-auth-secure-label">
           <GreenGlyph name="check-circle" /> Secure access
