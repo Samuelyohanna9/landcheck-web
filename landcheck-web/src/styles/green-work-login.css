@@ -948,10 +948,12 @@
   margin: 0 0 0.85rem;
 }
 
-.work-login-brand--login img {
+.work-login-brand--login > img {
   display: block;
-  width: 182px;
+  width: min(182px, 100%);
   height: auto;
+  min-height: 58px;
+  object-fit: contain;
   padding: 0.35rem 0.6rem;
   border: 0;
   border-radius: 8px;
