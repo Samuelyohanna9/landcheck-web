@@ -3,7 +3,7 @@ import { lazyWithChunkRecovery } from "../utils/lazyWithChunkRecovery";
 import { useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 import toast, { Toaster } from "react-hot-toast";
-import { api, BACKEND_URL } from "../api/client";
+import { api, BACKEND_URL, extractApiErrorMessage } from "../api/client";
 import type { TreeInspectData } from "../components/TreeMap";
 import GreenLoadingAnimation from "../components/GreenLoadingAnimation";
 import { clearWorkAuthed, getWorkAuthSession } from "../auth/workAuth";
@@ -3682,6 +3682,7 @@ export default function GreenWork() {
     is_active: true,
   });
   const [editingOrganizationId, setEditingOrganizationId] = useState<number | null>(null);
+  const [deletingOrganizationId, setDeletingOrganizationId] = useState<number | null>(null);
   const [roles, setRoles] = useState<RoleDefinition[]>([]);
   const [adminUsers, setAdminUsers] = useState<GreenUser[]>([]);
   const [adminUsersLoading, setAdminUsersLoading] = useState(false);
@@ -7970,15 +7971,7 @@ export default function GreenWork() {
         "The company can register again afterward.",
     );
     if (!confirmed) return;
-    if (
-      !(await ensureWorkOperationalConsent("organization_delete", {
-        organization_id: Number(org.id),
-        organization_name: organizationName,
-        hard_delete: true,
-      }))
-    ) {
-      return;
-    }
+    setDeletingOrganizationId(Number(org.id));
     try {
       await api.delete(`/green/admin/organizations/${org.id}`);
       if (editingOrganizationId === Number(org.id)) clearOrganizationDraft();
@@ -7986,7 +7979,9 @@ export default function GreenWork() {
       await Promise.all([loadOrganizations(), loadProjects(), loadAdminOverview()]);
       toast.success(`${organizationName} was permanently deleted.`);
     } catch (error: any) {
-      toast.error(error?.response?.data?.detail || "Failed to delete organization");
+      toast.error(await extractApiErrorMessage(error, "Failed to delete organization"));
+    } finally {
+      setDeletingOrganizationId(null);
     }
   };
 
@@ -14858,8 +14853,13 @@ export default function GreenWork() {
                           <button type="button" onClick={() => editOrganization(org)}>
                             Edit
                           </button>
-                          <button type="button" className="green-work-danger-btn" onClick={() => void deleteOrganization(org)}>
-                            Delete permanently
+                          <button
+                            type="button"
+                            className="green-work-danger-btn"
+                            disabled={deletingOrganizationId === Number(org.id)}
+                            onClick={() => void deleteOrganization(org)}
+                          >
+                            {deletingOrganizationId === Number(org.id) ? "Deleting..." : "Delete permanently"}
                           </button>
                         </div>
                       </div>
