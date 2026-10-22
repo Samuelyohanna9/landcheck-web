@@ -6,7 +6,6 @@ import GreenLoadingAnimation from "../components/GreenLoadingAnimation";
 import "../styles/green-work-login.css";
 import "../styles/green-work-login-dashboard.css";
 
-const GREEN_LOGO_SRC = "/logo-icon-192.png";
 const REMEMBERED_USERNAME_KEY = "work-login-remembered-username";
 
 // Land-parcel/cadastral backdrop - LandCheck's own product vocabulary (plot boundaries, a
@@ -148,15 +147,11 @@ export default function GreenWorkLogin() {
       </div>
 
       <div className="work-login-shell">
-        <div className="work-login-brand">
-          <img src={GREEN_LOGO_SRC} alt="" width="34" height="34" />
-          <span>
-            <strong>LandCheck</strong>
-            <small>Work</small>
-          </span>
-        </div>
-
         <section className="work-login-card">
+          <div className="work-login-brand work-login-brand--login">
+            <img src="/logo-wordmark-web.png" alt="LandCheck" width="182" height="58" />
+            <span>WORK</span>
+          </div>
           <span className="work-login-card-kicker">Secure organisation portal</span>
           <h1>Welcome back</h1>
           <p className="work-login-card-sub">Sign in to continue to your workspace.</p>

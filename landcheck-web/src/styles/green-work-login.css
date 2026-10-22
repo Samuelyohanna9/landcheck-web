@@ -937,3 +937,36 @@
     padding: 1.15rem 1rem;
   }
 }
+
+/* Use the public LandCheck wordmark inside the Work sign-in card, not as a separate page header. */
+.work-login-brand--login {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  width: 100%;
+  margin: 0 0 0.85rem;
+}
+
+.work-login-brand--login img {
+  display: block;
+  width: 182px;
+  height: auto;
+  padding: 0.35rem 0.6rem;
+  border: 0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.work-login-brand--login span {
+  color: #4ee092;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.work-login-card h1 { color: #9dcfe5; }
+.work-login-card-sub { color: #b5c2ce; }
+.work-login-form > label:not(.work-login-checkbox) { color: #b5c2ce; }
