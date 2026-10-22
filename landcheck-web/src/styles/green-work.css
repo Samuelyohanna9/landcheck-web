@@ -9808,5 +9808,46 @@
   }
 }
 
+/* Use the public LandCheck wordmark in the Work navigation, including the compact mobile header. */
+.green-work-menu-brand-logos img.green-work-menu-wordmark {
+  width: 132px;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.green-work-menu-brand {
+  flex: 0 0 auto;
+}
+
+.green-work-menu-brand small {
+  color: var(--gw-brand);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.green-work-mobile-brand {
+  gap: 6px;
+}
+
+.green-work-mobile-brand img.green-work-mobile-wordmark {
+  width: 122px;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  background: #f8fafc;
+}
+
+.green-work-mobile-brand > span small {
+  color: #168651;
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 
 

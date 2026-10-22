@@ -40,7 +40,7 @@ const GreenWorkLiveTablePanel = lazyWithChunkRecovery(() => import("../component
 const GreenWorkExistingTreeIntakePanel = lazyWithChunkRecovery(() => import("../components/green-work/GreenWorkExistingTreeIntakePanel"));
 const GreenWorkShareImpactPanel = lazyWithChunkRecovery(() => import("../components/green-work/GreenWorkShareImpactPanel"));
 
-const GREEN_LOGO_SRC = "/logo-icon-192.png";
+const WORK_WORDMARK_SRC = "/logo-wordmark-web.png";
 const REMOTE_MONITORING_PROGRESS_STEPS = [
   "Validating selected monitoring area",
   "Counting stored trees inside polygon",
@@ -11997,8 +11997,8 @@ export default function GreenWork() {
               <span />
             </button>
             <div className="green-work-mobile-brand" aria-label="LandCheck Work">
-              <img src={GREEN_LOGO_SRC} alt="" width="28" height="28" />
-              <span><strong>LandCheck</strong> <small>Work</small></span>
+              <img className="green-work-mobile-wordmark" src={WORK_WORDMARK_SRC} alt="LandCheck" width="132" height="41" />
+              <span><small>WORK</small></span>
             </div>
           </div>
           <div className="green-work-header-actions">
@@ -12177,15 +12177,12 @@ export default function GreenWork() {
         <div className="green-work-menu-head">
           <div className="green-work-menu-branding">
             <div className="green-work-menu-brand-logos" aria-label="LandCheck Work logos">
-              <img src={GREEN_LOGO_SRC} alt="LandCheck Green" width="28" height="28" />
+              <img className="green-work-menu-wordmark" src={WORK_WORDMARK_SRC} alt="LandCheck" width="132" height="41" />
               {partnerLogoDisplayUrl ? (
                 <img className="green-work-partner-logo" src={partnerLogoDisplayUrl} alt={`${partnerLogoName} logo`} width="26" height="26" />
               ) : null}
             </div>
-            <div className="green-work-menu-brand">
-              <strong>LandCheck</strong>
-              <small>Work</small>
-            </div>
+            <div className="green-work-menu-brand"><small>WORK</small></div>
           </div>
           <button className="green-work-menu-close" type="button" onClick={() => setMenuOpen(false)} aria-label="Close menu">
             X

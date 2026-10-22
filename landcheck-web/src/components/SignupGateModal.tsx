@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "../styles/csv-preview-modal.css";
 import "../styles/signup-gate-modal.css";
 import OtpBoxInput from "./OtpBoxInput";
+import GoogleGMark from "./GoogleGMark";
 import {
   claimDraftHazardJobs,
   claimDraftSurveyPlots,
@@ -142,6 +143,7 @@ export default function SignupGateModal({
               </p>
 
               <button type="button" className="signup-gate-google-btn" onClick={handleGoogle}>
+                <GoogleGMark className="signup-gate-google-mark" />
                 Continue with Google
               </button>
 

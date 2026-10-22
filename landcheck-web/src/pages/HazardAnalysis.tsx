@@ -973,7 +973,12 @@ export default function HazardAnalysis() {
       />
 
       <header className="hazard-header">
-        <button className="back-btn" onClick={() => navigate("/")}>Back</button>
+        <div className="hazard-header-left">
+          <a className="hazard-brand" href="/" aria-label="LandCheck home">
+            <img src="/logo-wordmark-web.png" alt="LandCheck" width="142" height="45" />
+          </a>
+          <button className="back-btn" onClick={() => navigate("/")}>Back</button>
+        </div>
         <h1 className="hazard-title">Hazard Risk Analysis</h1>
         <div className="hazard-header-right">
           <div className="hazard-type-tabs">
