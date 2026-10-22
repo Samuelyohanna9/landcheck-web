@@ -410,6 +410,7 @@ export default function SurveyPlanLanding() {
           <div className="spl-footer-column">
             <h2>Tools</h2>
             <Link to="/survey-plan">Survey workspace</Link>
+            <Link to="/survey/guides">Survey guides</Link>
             <Link to="/hazard-analysis">Hazard analysis</Link>
             <a href="mailto:support@landcheck.online?subject=LandCheck%20Support">Support</a>
           </div>

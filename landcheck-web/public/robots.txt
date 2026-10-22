@@ -7,11 +7,14 @@ Allow: /sponsor
 Allow: /privacy
 Allow: /flood
 Allow: /survey
+Allow: /survey/guides
 Allow: /news
 Allow: /career
 Allow: /estates$
 Allow: /estates/$
+Allow: /estates/public/
 Allow: /estates/data-processing-agreement
+Allow: /impact/
 
 # Disallow noindex tool alias routes (canonical points to primary)
 Disallow: /hazard-analysis
@@ -26,8 +29,10 @@ Disallow: /green/login/field
 Disallow: /green/login$
 Disallow: /dashboard
 Disallow: /admin
+Disallow: /app/claim
 
-# Estate dashboard is authenticated - only the /estates marketing page is public
+# Estate workspace and tokenized buyer/agent pages are not search content. Public estate
+# marketing pages are explicitly allowed above.
 Disallow: /estates/
 
 Sitemap: https://landcheck.online/sitemap.xml

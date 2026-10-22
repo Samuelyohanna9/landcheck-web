@@ -557,6 +557,11 @@ export default function LandingPage() {
                 </Link>
               </li>
               <li>
+                <Link to="/survey/guides">
+                  Survey Guides
+                </Link>
+              </li>
+              <li>
                 <Link to="/hazard-analysis">
                   Hazard Analysis
                 </Link>

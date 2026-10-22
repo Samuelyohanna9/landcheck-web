@@ -432,6 +432,29 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
     },
   },
 
+  "/survey/guides": {
+    title: "Survey Plan & Land Analysis Guides Nigeria | LandCheck",
+    description:
+      "Learn how to create survey plans, subdivide parcels, georeference scanned layouts, digitise boundaries, and review flood, erosion, and land-cover analysis.",
+    keywords:
+      "survey plan guide Nigeria, land subdivision guide, georeference scanned plan, digitise estate layout, flood analysis guide Nigeria",
+    canonicalPath: "/survey/guides",
+    ogType: "article",
+    ogImage: "https://landcheck.online/Digital-Land-Survey.jpg",
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "@id": "https://landcheck.online/survey/guides#article",
+      "headline": "Survey Plan and Land Analysis Guides",
+      "description":
+        "Practical guides for survey plan production, parcel subdivision, georeferencing, digitisation, flood, erosion, and land-cover analysis.",
+      "url": "https://landcheck.online/survey/guides",
+      "author": { "@id": "https://landcheck.online/#organization" },
+      "publisher": { "@id": "https://landcheck.online/#organization" },
+      "inLanguage": "en-NG",
+    },
+  },
+
   "/survey-plan": {
     title: "Survey Plan Tool | LandCheck",
     description:
@@ -618,6 +641,38 @@ const resolveSeoConfig = (pathname: string): SeoConfig => {
         },
       };
     }
+  }
+
+  // Public estate marketing pages are intended to be discoverable. Reservation, verification,
+  // buyer, agent, inspection, and workspace routes do not match this exact one-segment pattern
+  // and remain noindex through the fallback below.
+  const publicEstateMatch = normalizedPath.match(/^\/estates\/public\/([^/]+)$/);
+  if (publicEstateMatch) {
+    const estateName = publicEstateMatch[1]
+      .replace(/[-_]+/g, " ")
+      .replace(/\b\w/g, (character) => character.toUpperCase());
+    return {
+      title: `${estateName} | Estate Plots, Location & Verification | LandCheck`,
+      description:
+        `Explore ${estateName}: view the public estate layout, plot information, location, and buyer verification details on LandCheck.`,
+      keywords: `${estateName}, estate plots Nigeria, land for sale Nigeria, verify estate plot, LandCheck estate`,
+      canonicalPath: normalizedPath,
+      robots: "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      ogType: "website",
+      ogImage: "https://landcheck.online/estates.jpg",
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": `https://landcheck.online${normalizedPath}#page`,
+        "name": `${estateName} Estate`,
+        "description":
+          `Public estate information, plot availability, location, and buyer verification for ${estateName}.`,
+        "url": `https://landcheck.online${normalizedPath}`,
+        "isPartOf": { "@id": "https://landcheck.online/#website" },
+        "about": { "@id": "https://landcheck.online/#organization" },
+        "inLanguage": "en-NG",
+      },
+    };
   }
 
   const isPrivate = PRIVATE_ROUTE_PREFIXES.some(
