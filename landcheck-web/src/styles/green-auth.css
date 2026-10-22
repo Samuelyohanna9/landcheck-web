@@ -454,6 +454,11 @@
   color: #718d7d;
 }
 
+.green-auth-support .green-auth-support-success {
+  color: #176b3a;
+  font-weight: 700;
+}
+
 .green-auth-error {
   margin: 0;
   color: #b91c1c;

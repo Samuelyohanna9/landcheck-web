@@ -26,6 +26,7 @@ const GreenMerchantLogin = lazyWithChunkRecovery(() => import("./pages/GreenMerc
 const GreenWork = lazyWithChunkRecovery(() => import("./pages/GreenWork"));
 const GreenWorkLogin = lazyWithChunkRecovery(() => import("./pages/GreenWorkLogin"));
 const GreenWorkForgotPassword = lazyWithChunkRecovery(() => import("./pages/GreenWorkForgotPassword"));
+const PasswordResetPage = lazyWithChunkRecovery(() => import("./pages/PasswordResetPage"));
 const GreenWorkRegister = lazyWithChunkRecovery(() => import("./pages/GreenWorkRegister"));
 const GreenWorkEmailVerified = lazyWithChunkRecovery(() => import("./pages/GreenWorkEmailVerified"));
 const EstateAdminAccountingPage = lazyWithChunkRecovery(() => import("./pages/EstateAdminAccountingPage"));
@@ -55,7 +56,6 @@ const EstateLanding = lazyWithChunkRecovery(() => import("./pages/EstateLanding"
 const EstateLogin = lazyWithChunkRecovery(() => import("./pages/EstateLogin"));
 const EstateRegister = lazyWithChunkRecovery(() => import("./pages/EstateRegister"));
 const EstateForgotPassword = lazyWithChunkRecovery(() => import("./pages/EstateForgotPassword"));
-const EstateResetPassword = lazyWithChunkRecovery(() => import("./pages/EstateResetPassword"));
 const EstateEmailVerified = lazyWithChunkRecovery(() => import("./pages/EstateEmailVerified"));
 const EstateSetNewPassword = lazyWithChunkRecovery(() => import("./pages/EstateSetNewPassword"));
 const EstateChoosePlan = lazyWithChunkRecovery(() => import("./pages/EstateChoosePlan"));
@@ -381,6 +381,7 @@ export default function App() {
               <Route path="/green-merchant" element={<MerchantProtectedRoute element={<GreenMerchantDashboard />} />} />
               <Route path="/green-work/login" element={<GreenWorkLogin />} />
               <Route path="/green-work/forgot-password" element={<GreenWorkForgotPassword />} />
+              <Route path="/reset-password" element={<PasswordResetPage />} />
               <Route path="/green-work/register" element={<GreenWorkRegister />} />
               <Route path="/green-work/email-verified" element={<GreenWorkEmailVerified />} />
               <Route path="/green-work" element={<WorkProtectedRoute element={<GreenWork />} />} />
@@ -393,7 +394,7 @@ export default function App() {
               <Route path="/estates/login" element={<EstateLogin />} />
               <Route path="/estates/register" element={<EstateRegister />} />
               <Route path="/estates/forgot-password" element={<EstateForgotPassword />} />
-              <Route path="/estates/reset-password" element={<EstateResetPassword />} />
+              <Route path="/estates/reset-password" element={<PasswordResetPage defaultProduct="estates" />} />
               <Route path="/estates/email-verified" element={<EstateEmailVerified />} />
               <Route path="/estates/set-new-password" element={<EstateSetNewPassword />} />
               <Route path="/estates/choose-plan" element={<EstateProtectedRoute element={<EstateChoosePlan />} />} />

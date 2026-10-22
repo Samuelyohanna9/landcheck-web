@@ -73,6 +73,7 @@ export default function GreenLogin() {
   const [loading, setLoading] = useState(false);
   const [requestingReset, setRequestingReset] = useState(false);
   const [error, setError] = useState("");
+  const [resetMessage, setResetMessage] = useState("");
   const [sponsorSignup, setSponsorSignup] = useState(false);
   const [sponsorName, setSponsorName] = useState("");
   const [sponsorOrgName, setSponsorOrgName] = useState("");
@@ -100,6 +101,7 @@ export default function GreenLogin() {
     setSelectedRoute(nextRoute);
     setSponsorSignup(false);
     setError("");
+    setResetMessage("");
     navigate(`/green/login/${nextRoute}`, { replace: true });
   };
 
@@ -145,10 +147,10 @@ export default function GreenLogin() {
     if (selectedRoute !== "sponsor" || sponsorSignup) return;
     setRequestingReset(true);
     setError("");
+    setResetMessage("");
     try {
       const message = await requestGreenSponsorPasswordReset(sponsorEmail);
-      setError("");
-      window.alert(message);
+      setResetMessage(message);
     } catch (err: any) {
       setError(err?.response?.data?.detail || err?.message || "Unable to send reset email.");
     } finally {
@@ -377,6 +379,7 @@ export default function GreenLogin() {
                       {requestingReset ? "Sending reset email..." : "Forgot password? Send reset email"}
                     </button>
                     <span>Enter your sponsor email above first.</span>
+                    {resetMessage ? <span className="green-auth-support-success" role="status">{resetMessage}</span> : null}
                   </div>
                 ) : null}
 
