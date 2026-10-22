@@ -2196,7 +2196,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
                     ))}
                   </div>
 
-                  <div className="edash-info-card">
+                  <div className="edash-info-card edash-plot-workflow-card">
                     <span className="edash-info-card-icon"><EstateIcon name="customers" /></span>
                     <div className="edash-info-card-body">
                       <div className="edash-info-card-head"><span className="edash-info-card-title">Customer</span></div>
@@ -2212,7 +2212,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
                     <button type="button" className="edash-btn-outline edash-info-card-action" onClick={() => openTab("customer")}>View Customer</button>
                   </div>
 
-                  <div className="edash-info-card">
+                  <div className="edash-info-card edash-plot-workflow-card">
                     <span className="edash-info-card-icon"><EstateIcon name="wallet" /></span>
                     <div className="edash-info-card-body">
                       <div className="edash-info-card-head"><span className="edash-info-card-title">Payment Summary</span></div>
@@ -2231,7 +2231,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
                     <button type="button" className="edash-btn-outline edash-info-card-action" onClick={() => openTab("customer")}>View Payments</button>
                   </div>
 
-                  <div className="edash-info-card">
+                  <div className="edash-info-card edash-plot-workflow-card">
                     <span className="edash-info-card-icon"><EstateIcon name="survey" /></span>
                     <div className="edash-info-card-body">
                       <div className="edash-info-card-head">
@@ -2243,7 +2243,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
                     <button type="button" className="edash-btn-outline edash-info-card-action" onClick={() => openTab("survey")}>View Survey</button>
                   </div>
 
-                  <div className="edash-info-card">
+                  <div className="edash-info-card edash-plot-workflow-card">
                     <span className="edash-info-card-icon"><EstateIcon name="staking" /></span>
                     <div className="edash-info-card-body">
                       <div className="edash-info-card-head">
@@ -2265,7 +2265,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
                     </button>
                   </div>
 
-                  <div className="edash-info-card">
+                  <div className="edash-info-card edash-plot-workflow-card">
                     <span className="edash-info-card-icon"><EstateIcon name="development" /></span>
                     <div className="edash-info-card-body">
                       <div className="edash-info-card-head">
@@ -2283,7 +2283,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
                     )}
                   </div>
 
-                  <div className="edash-info-card">
+                  <div className="edash-info-card edash-plot-workflow-card">
                     <span className="edash-info-card-icon"><EstateIcon name="hazard" /></span>
                     <div className="edash-info-card-body">
                       <div className="edash-info-card-head">
@@ -2295,7 +2295,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
                     <button type="button" className="edash-btn-outline edash-info-card-action" onClick={() => openTab("hazards")}>View Analysis</button>
                   </div>
 
-                  <div style={{ display: "flex", gap: 8 }}>
+                  <div className="edash-plot-drawer-actions">
                     {selectedPlot.commercial_status === "available" && (
                       <button type="button" className="edash-btn-outline" onClick={() => openEditPlotBoundary()}>
                         Edit boundary

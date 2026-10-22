@@ -130,6 +130,66 @@
 .edash .edash-btn-outline:hover,
 .edash-onboard .edash-btn-outline:hover { background: #e6e9ef; border-color: #c3c6d4; color: var(--edash-ink); }
 
+/* Plot drawer workflow cards keep their details and actions on predictable tracks. The old flex
+   row let each description choose a different button position, which made the panel look uneven
+   and caused status badges to collide with long titles at narrow widths. */
+.edash .edash-plot-workflow-card {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 112px;
+  align-items: center;
+  column-gap: 11px;
+  min-height: 78px;
+  padding: 12px;
+}
+
+.edash .edash-plot-workflow-card .edash-info-card-icon {
+  grid-column: 1;
+  align-self: center;
+}
+
+.edash .edash-plot-workflow-card .edash-info-card-body {
+  grid-column: 2;
+  align-self: center;
+  min-width: 0;
+}
+
+.edash .edash-plot-workflow-card .edash-info-card-head {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.edash .edash-plot-workflow-card .edash-info-card-action {
+  grid-column: 3;
+  width: 112px;
+  min-width: 0;
+  justify-content: center;
+  padding: 0 8px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+}
+
+.edash .edash-plot-drawer-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+@media (max-width: 520px) {
+  .edash .edash-plot-workflow-card {
+    grid-template-columns: 34px minmax(0, 1fr);
+    align-items: start;
+    row-gap: 9px;
+  }
+
+  .edash .edash-plot-workflow-card .edash-info-card-action {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
 /* toolbar row: quiet ghost buttons with icons */
 .edash .edash-tools-bar { gap: 2px; padding: 4px 0; flex-wrap: wrap; }
 .edash .edash-tool-btn {
