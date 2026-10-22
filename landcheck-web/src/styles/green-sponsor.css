@@ -3894,3 +3894,305 @@
   color: #ffffff !important;
   opacity: 1;
 }
+
+/* Estate dashboard composition for the authenticated sponsor PWA. Keep the sponsor artwork
+   inside a bounded header decoration instead of allowing it to become the page surface. */
+.gs-sponsor-header {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: #ffffff !important;
+}
+
+.gs-sponsor-header::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 0 auto;
+  z-index: -1;
+  width: min(26%, 250px);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.56)), url("/background-sponsor.png") center / cover no-repeat;
+  opacity: 0.42;
+  pointer-events: none;
+}
+
+.gs-sponsor-header > * {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 767px) {
+  html:has(.green-sponsor-page),
+  body:has(.green-sponsor-page) {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    background: #f3f5f7;
+  }
+
+  body:has(.green-sponsor-page) {
+    position: fixed;
+    inset: 0;
+  }
+
+  .green-sponsor-page {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    background: #f3f5f7;
+    padding-bottom: calc(82px + env(safe-area-inset-bottom));
+  }
+
+  .gs-sponsor-header::after {
+    display: none;
+  }
+
+  .green-sponsor-header-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 12px 14px 13px;
+    border: 0;
+    border-bottom: 1px solid #e4e8ec;
+    border-radius: 0;
+    background: #ffffff !important;
+    box-shadow: 0 1px 4px rgba(16, 24, 39, 0.05);
+  }
+
+  .green-sponsor-header-brand {
+    min-width: 0;
+    gap: 10px;
+  }
+
+  .green-sponsor-logo-tile {
+    width: 40px;
+    height: 40px;
+    border-width: 1px;
+    border-radius: 10px;
+  }
+
+  .green-sponsor-header-copy {
+    min-width: 0;
+    gap: 3px;
+  }
+
+  .green-sponsor-badge {
+    align-self: flex-start;
+    padding: 3px 8px;
+    font-size: 9px;
+  }
+
+  .green-sponsor-header-copy h1 {
+    overflow: hidden;
+    color: #101827;
+    font-size: 1rem;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .green-sponsor-header-copy p {
+    display: none;
+  }
+
+  .green-sponsor-header-right {
+    justify-content: flex-start;
+    min-width: 0;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .green-sponsor-header-right::-webkit-scrollbar {
+    display: none;
+  }
+
+  .green-sponsor-stat-pill {
+    flex: 0 0 auto;
+    min-height: 28px;
+    padding: 5px 8px;
+    border: 1px solid #cdeedb;
+    border-radius: 999px;
+    background: #e6f6ec;
+    color: #0f6e44;
+    font-size: 10px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .gs-header-refresh-btn {
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    background: #ffffff;
+  }
+
+  .gs-evidence-strip {
+    width: calc(100% - 24px);
+    margin: 12px auto 10px;
+    padding: 10px;
+    border: 1px solid #e4e8ec;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(16, 24, 39, 0.04);
+  }
+
+  .gs-project-workspace {
+    width: calc(100% - 24px);
+    gap: 10px;
+  }
+
+  .gs-project-workspace > .green-sponsor-content-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .gs-project-workspace > .green-sponsor-content-grid > .green-sponsor-panel,
+  .gs-project-workspace > .green-sponsor-panel {
+    width: 100%;
+    min-width: 0;
+    margin: 0 !important;
+    padding: 14px;
+    border: 1px solid #e4e8ec;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(16, 24, 39, 0.04);
+  }
+
+  .gs-project-workspace .green-sponsor-panel::before {
+    display: none;
+  }
+
+  .gs-project-metrics {
+    gap: 8px;
+  }
+
+  .gs-project-metrics .green-sponsor-metric-card,
+  .gs-impact-panel .green-sponsor-metric-card {
+    min-height: 76px;
+    padding: 11px;
+    border: 1px solid #edf0f3;
+    border-radius: 12px;
+    background: #f8fafc;
+  }
+
+  .gs-project-metrics .green-sponsor-metric-card span,
+  .gs-impact-panel .green-sponsor-metric-card span {
+    font-size: 9px;
+    letter-spacing: 0.06em;
+  }
+
+  .gs-project-metrics .green-sponsor-metric-card strong,
+  .gs-impact-panel .green-sponsor-metric-card strong {
+    font-size: 1.05rem;
+  }
+
+  .gs-project-actions {
+    gap: 8px;
+  }
+
+  .gs-project-actions .green-sponsor-secondary-btn {
+    min-height: 44px;
+    padding: 9px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+  }
+
+  .gs-points-hub {
+    border-color: #e7c675 !important;
+    background: #fffdf7 !important;
+  }
+
+  .green-sponsor-panel-heading {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .green-sponsor-heading-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .green-sponsor-panel-heading h3 {
+    font-size: 0.95rem;
+  }
+
+  .green-sponsor-panel-heading p {
+    margin-top: 3px;
+    font-size: 0.74rem;
+    line-height: 1.35;
+  }
+
+  .gs-referral-card {
+    border-radius: 12px;
+    padding: 13px;
+  }
+
+  .gs-referral-actions {
+    width: 100%;
+    gap: 6px;
+  }
+
+  .gs-referral-actions .gs-referral-btn {
+    flex: 1;
+    min-height: 36px;
+    padding: 7px 8px;
+    font-size: 11px;
+  }
+
+  .gs-projects-panel .green-sponsor-project-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    overflow: visible;
+    padding: 0;
+  }
+
+  .gs-projects-panel .green-sponsor-project-card {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .gs-orders-panel .green-sponsor-order-list {
+    grid-template-columns: 1fr;
+  }
+
+  .green-sponsor-bottom-nav {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    min-height: 68px;
+    height: auto;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    border: 0;
+    border-top: 1px solid #e4e8ec;
+    border-radius: 0;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 -8px 24px rgba(16, 24, 39, 0.08);
+    transform: none;
+  }
+
+  .green-sponsor-bottom-tab {
+    min-height: 54px;
+    padding: 5px 2px 6px;
+    border-radius: 10px;
+    font-size: 9px;
+  }
+
+  .green-sponsor-bottom-tab-icon-wrap {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+  }
+}

@@ -6149,3 +6149,338 @@ body:has(.green-container) {
     min-height: 126px;
   }
 }
+
+/* Estate dashboard mobile shell for field agents. This final layer intentionally sits after
+   the older field-PWA variants above so the route has one predictable viewport composition. */
+@media (max-width: 720px) {
+  html:has(.green-container),
+  body:has(.green-container) {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    background: #f3f5f7;
+  }
+
+  body:has(.green-container) {
+    position: fixed;
+    inset: 0;
+  }
+
+  .green-container {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
+    padding-top: env(safe-area-inset-top);
+    background: #f3f5f7;
+    color: #101827;
+  }
+
+  .green-container .green-header,
+  .green-container.green-home-mode .green-header {
+    display: block !important;
+    position: relative;
+    z-index: 20;
+    flex: 0 0 58px;
+    height: 58px;
+    background: #ffffff;
+    border-bottom: 1px solid #e4e8ec;
+    box-shadow: 0 1px 4px rgba(16, 24, 39, 0.05);
+  }
+
+  .green-container .green-header-inner,
+  .green-container.green-home-mode .green-header-inner {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    max-width: none;
+    height: 58px;
+    min-height: 58px !important;
+    padding: 0 12px;
+  }
+
+  .green-container .green-header-brand,
+  .green-container.green-home-mode .green-header-brand {
+    display: flex !important;
+    align-items: center;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .green-container .green-brand-logo {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+  }
+
+  .green-container .green-brand-logo.green-brand-logo-partner {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+  }
+
+  .green-container .green-header-title {
+    min-width: 0;
+  }
+
+  .green-container .green-header-title h1 {
+    overflow: hidden;
+    color: #101827;
+    font-size: 0.98rem;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .green-container .green-header-title p {
+    margin-top: 2px;
+    color: #6b7685;
+    font-size: 0.64rem;
+  }
+
+  .green-container .green-header-actions,
+  .green-container.green-home-mode .green-header-actions {
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 0 0 auto;
+    gap: 5px;
+  }
+
+  .green-container .green-header-actions .green-ghost-btn {
+    display: none !important;
+  }
+
+  .green-container .green-sync-badge {
+    display: grid !important;
+    width: 70px;
+    min-width: 70px;
+    max-width: 70px;
+    padding: 4px 6px;
+    border: 1px solid #dbe7df;
+    border-radius: 9px;
+    background: #f1f8f3;
+    color: #21613c;
+  }
+
+  .green-container .green-sync-badge strong,
+  .green-container .green-sync-badge span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .green-container .green-sync-badge strong {
+    color: #237347;
+    font-size: 8px;
+  }
+
+  .green-container .green-sync-badge span {
+    color: #5d7968;
+    font-size: 8px;
+  }
+
+  .green-container .green-profile-chip {
+    max-width: 64px;
+    padding: 5px 6px;
+    border: 1px solid #dbe7df;
+    border-radius: 999px;
+    background: #eef8f1;
+    color: #21613c;
+    font-size: 8px;
+  }
+
+  .green-container .green-shell,
+  .green-container.green-home-mode .green-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: none;
+    height: calc(100dvh - 58px - env(safe-area-inset-top));
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 12px 12px calc(82px + env(safe-area-inset-bottom));
+    background: #f3f5f7;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .green-container .green-shell::-webkit-scrollbar {
+    display: none;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero {
+    display: block !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0;
+    padding: 12px;
+    border: 1px solid #e4e8ec;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(16, 24, 39, 0.04);
+    color: #101827;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero::after {
+    display: none;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-brand {
+    display: none !important;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-greeting {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-greeting span {
+    color: #101827;
+    font-family: inherit;
+    font-size: 0.92rem;
+    font-weight: 800;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-greeting svg {
+    color: #1a8f5a;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-status-row {
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-sync-card,
+  .green-container.green-home-mode .green-mobile-hero-user-card {
+    min-height: 48px;
+    padding: 8px 9px;
+    border: 1px solid #edf0f3;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: #445066;
+    box-shadow: none;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-sync-card small {
+    color: #6b7685;
+    font-size: 0.58rem;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-sync-card strong,
+  .green-container.green-home-mode .green-mobile-hero-user-card span {
+    overflow: hidden;
+    color: #445066;
+    font-size: 0.72rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .green-container .green-overview-card,
+  .green-container .green-overview-section,
+  .green-container .green-detail-card {
+    border: 1px solid #e4e8ec;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(16, 24, 39, 0.04);
+  }
+
+  .green-container .green-overview-card::before,
+  .green-container .green-overview-section::before,
+  .green-container .green-detail-card::before {
+    display: none;
+  }
+
+  .green-container .green-overview-card-head {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .green-container .green-overview-card-icon,
+  .green-container .green-overview-metric-icon,
+  .green-container .green-tile-icon {
+    border-radius: 10px;
+    background: #e6f6ec;
+    color: #1a8f5a;
+  }
+
+  .green-container .green-overview-card-head h2,
+  .green-container .green-overview-section-head h2 {
+    color: #101827;
+    font-family: inherit;
+    font-size: 1rem;
+    letter-spacing: -0.01em;
+  }
+
+  .green-container .green-overview-kicker,
+  .green-container .green-overview-metric-card > span,
+  .green-container .green-overview-proof-card > span {
+    color: #6b7685;
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+  }
+
+  .green-container .green-overview-metric-card {
+    min-height: 112px;
+    border: 1px solid #edf0f3;
+    border-radius: 12px;
+    background: #f8fafc;
+    box-shadow: none;
+  }
+
+  .green-container .green-overview-metric-card strong {
+    color: #101827;
+    font-size: 1.45rem;
+  }
+
+  .green-container .green-overview-metric-card small,
+  .green-container .green-overview-proof-card p,
+  .green-container .green-overview-survival-copy p {
+    color: #6b7685;
+  }
+
+  .green-container .green-bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    width: 100%;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    border: 0;
+    border-top: 1px solid #e4e8ec;
+    border-radius: 0;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 -8px 24px rgba(16, 24, 39, 0.08);
+    transform: none;
+  }
+
+  .green-container .green-nav-item,
+  .green-container .green-nav-add {
+    height: 52px;
+    border-radius: 10px;
+  }
+
+  .green-container .green-nav-item {
+    color: #6b7685;
+  }
+
+  .green-container .green-nav-item.active {
+    background: #e6f6ec;
+    color: #0f6e44;
+  }
+
+  .green-container .green-nav-add {
+    background: #1a8f5a;
+    box-shadow: 0 6px 14px rgba(26, 143, 90, 0.2);
+  }
+}

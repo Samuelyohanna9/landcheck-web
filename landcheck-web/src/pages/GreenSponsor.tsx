@@ -1146,7 +1146,7 @@ export default function GreenSponsor() {
           </div>
         </header>
       ) : (
-        <header className="green-sponsor-header-card" style={{ backgroundImage: `linear-gradient(90deg, #f9fcf9 0%, rgba(249,252,249,0.88) 55%, rgba(249,252,249,0) 100%), url(${SPONSOR_BACKGROUND})` }}>
+        <header className="green-sponsor-header-card gs-sponsor-header">
           <div className="green-sponsor-header-brand">
             {activeTab === "projects" && (
               displayPhotoUrl ? (
