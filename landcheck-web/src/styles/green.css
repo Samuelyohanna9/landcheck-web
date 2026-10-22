@@ -6484,3 +6484,110 @@ body:has(.green-container) {
     box-shadow: 0 6px 14px rgba(26, 143, 90, 0.2);
   }
 }
+
+/* Keep Green's mobile identity row inside a real header box. The previous
+   58px shell could clip the wordmark when the device added safe-area space. */
+@media (max-width: 720px) {
+  .green-container {
+    --green-mobile-header-height: 64px;
+    box-sizing: border-box;
+  }
+
+  .green-container .green-header,
+  .green-container.green-home-mode .green-header {
+    box-sizing: border-box;
+    height: var(--green-mobile-header-height);
+    flex-basis: var(--green-mobile-header-height);
+    overflow: visible;
+  }
+
+  .green-container .green-header::after,
+  .green-container.green-home-mode .green-header::after {
+    display: none;
+  }
+
+  .green-container .green-header-inner,
+  .green-container.green-home-mode .green-header-inner {
+    box-sizing: border-box;
+    height: var(--green-mobile-header-height);
+    min-height: var(--green-mobile-header-height) !important;
+    overflow: visible;
+  }
+
+  .green-container .green-header-brand,
+  .green-container.green-home-mode .green-header-brand {
+    overflow: visible;
+  }
+
+  .green-container .green-brand-logo,
+  .green-container .green-brand-logo.green-brand-logo-partner {
+    overflow: hidden;
+    flex: 0 0 auto;
+    align-self: center;
+  }
+
+  .green-container .green-brand-logo img,
+  .green-container .green-brand-logo.green-brand-logo-partner img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+  }
+
+  .green-container .green-shell,
+  .green-container.green-home-mode .green-shell {
+    height: calc(100dvh - var(--green-mobile-header-height) - env(safe-area-inset-top));
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-brand {
+    display: flex !important;
+    align-items: center;
+    min-width: 0;
+    gap: 0.55rem;
+    margin: 0 0 0.65rem;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-logos {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 0.35rem;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-logo {
+    width: 34px;
+    height: 34px;
+    border: 1px solid #e4e8ec;
+    border-radius: 8px;
+    box-shadow: none;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-brand-copy {
+    min-width: 0;
+    gap: 0.08rem;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-brand-copy strong,
+  .green-container.green-home-mode .green-mobile-hero-brand-copy span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-brand-copy strong {
+    color: #101827;
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .green-container.green-home-mode .green-mobile-hero-brand-copy span {
+    color: #6b7685;
+    font-size: 0.62rem;
+    font-weight: 600;
+  }
+}

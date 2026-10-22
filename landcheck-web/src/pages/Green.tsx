@@ -1051,14 +1051,14 @@ export default function Green() {
     [activeProject?.id, activeUser, ensureGreenPrivacyConsent, greenAuthUser?.full_name],
   );
   const greenHeaderPartnerLogo =
-    isPartnerGreenSession
-      ? ((activeProjectMatchesGreenSessionOrg ? activeProject?.organization_logo_url || null : null) || greenSessionPartnerLogo)
-      : null;
+    (activeProject && (!isPartnerGreenSession || activeProjectMatchesGreenSessionOrg)
+      ? activeProject.organization_logo_url || null
+      : null) || greenSessionPartnerLogo;
   const greenHeaderPartnerLogoUrl = greenHeaderPartnerLogo ? toDisplayPhotoUrl(greenHeaderPartnerLogo) : "";
   const greenHeaderPartnerName =
-    isPartnerGreenSession
-      ? ((activeProjectMatchesGreenSessionOrg ? activeProject?.organization_name || null : null) || greenSessionPartnerName)
-      : null;
+    (activeProject && (!isPartnerGreenSession || activeProjectMatchesGreenSessionOrg)
+      ? activeProject.organization_name || null
+      : null) || greenSessionPartnerName;
   const greenSessionOrgStatus = normalizeOrgLifecycleStatus(greenAuthUser?.organization_status);
   const greenRuntimeOrgStatus = normalizeOrgLifecycleStatus(activeProject?.organization_status || projects[0]?.organization_status || "");
   const greenEffectiveOrgStatus = isPartnerGreenSession ? (greenRuntimeOrgStatus || greenSessionOrgStatus) : "";
