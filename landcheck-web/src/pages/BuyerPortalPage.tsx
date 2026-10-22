@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../api/client";
+import GreenLoadingAnimation from "../components/GreenLoadingAnimation";
 import EstateIcon from "../components/estates/EstateIcon";
 // Buyers open this page directly from an SMS/WhatsApp/email link - never via in-app navigation
 // from the staff dashboard - so estate-dashboard.css (home of every .estate-buyer-* rule below)
@@ -136,8 +137,7 @@ export default function BuyerPortalPage() {
   if (!portal) return (
     <main className="estate-buyer-portal estate-buyer-portal--centered">
       <section className="estate-buyer-panel estate-buyer-state-card">
-        <span className="estate-buyer-spinner" aria-hidden="true" />
-        <p>Loading your LandCheck buyer portal...</p>
+        <GreenLoadingAnimation label="Loading your LandCheck buyer portal..." size="small" className="estate-loading-animation" />
       </section>
     </main>
   );

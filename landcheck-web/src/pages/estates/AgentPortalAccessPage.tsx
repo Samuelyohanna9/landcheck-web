@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, extractApiErrorMessage } from "../../api/client";
 import { ProjectMap, type ProjectMapFeature } from "../../components/ProjectMap";
+import GreenLoadingAnimation from "../../components/GreenLoadingAnimation";
 import EstateIcon from "../../components/estates/EstateIcon";
 import AgentKitSections from "../../components/estates/public/AgentKitSections";
 import AgentLiveInspectionsSection from "../../components/estates/public/AgentLiveInspectionsSection";
@@ -83,12 +84,18 @@ export default function AgentPortalAccessPage() {
   };
 
   if (error) return <main className="agent-public agent-public-error"><div className="agent-public-error-card"><strong>Workspace unavailable</strong><p>{error}</p></div></main>;
-  if (!workspace) return <main className="agent-public agent-public-loading"><div className="agent-public-loading-card">Loading workspace...</div></main>;
+  if (!workspace) return (
+    <main className="agent-public agent-public-loading">
+      <div className="agent-public-loading-card">
+        <GreenLoadingAnimation label="Loading workspace..." size="small" className="estate-loading-animation" />
+      </div>
+    </main>
+  );
 
   return (
     <main className={`agent-public${menuOpen ? " is-menu-open" : ""}`}>
       <div className="agent-public-backdrop" onClick={() => setMenuOpen(false)} aria-hidden="true" />
-      <aside className="agent-public-sidebar">
+      <aside id="agent-public-sidebar" className="agent-public-sidebar">
         <div className="agent-public-brand"><span className="agent-public-logo"><img src="/logo-wordmark-web.png" alt="LandCheck Estates" /></span></div>
         <div className="agent-public-profile"><span className="agent-public-avatar">{workspace.agent.name.slice(0, 1).toUpperCase()}</span><div><strong>{workspace.agent.name}</strong><small>{workspace.agent.role.replaceAll("_", " ")}</small></div></div>
         <nav className="agent-public-nav" aria-label="Agent workspace">
@@ -106,7 +113,16 @@ export default function AgentPortalAccessPage() {
 
       <section className="agent-public-main">
         <header className="agent-public-topbar">
-          <button type="button" className="agent-public-menu" onClick={() => setMenuOpen((current) => !current)} aria-label="Toggle menu"><EstateIcon name="menu" /></button>
+          <button
+            type="button"
+            className="agent-public-menu"
+            onClick={() => setMenuOpen((current) => !current)}
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={menuOpen}
+            aria-controls="agent-public-sidebar"
+          >
+            <EstateIcon name={menuOpen ? "close" : "menu"} />
+          </button>
           <div><span className="agent-public-kicker">{workspace.organization.name}</span><h1>Agent workspace</h1></div>
           <button type="button" className="agent-public-refresh" onClick={() => void load()}><EstateIcon name="activity" />Refresh</button>
         </header>
