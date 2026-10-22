@@ -1438,6 +1438,10 @@
   padding-top: 2rem;
 }
 
+.gp-new-hero-stats--single {
+  grid-template-columns: minmax(0, 18rem);
+}
+
 .gp-new-hero-stat-item strong {
   display: block;
   font-family: "Fraunces", serif;
@@ -1701,6 +1705,9 @@
     grid-template-columns: repeat(2, 1fr);
     gap: 1.2rem;
     padding-top: 1.5rem;
+  }
+  .gp-new-hero-stats--single {
+    grid-template-columns: minmax(0, 1fr);
   }
   .gp-new-hero-actions {
     justify-content: center;

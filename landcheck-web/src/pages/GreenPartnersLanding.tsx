@@ -281,22 +281,10 @@ export default function GreenPartnersLanding() {
               </a>
             </div>
 
-            <div className="gp-new-hero-stats">
-              <div className="gp-new-hero-stat-item">
-                <strong>{deliveryRoutes.length}</strong>
-                <span>Delivery models</span>
-              </div>
+            <div className="gp-new-hero-stats gp-new-hero-stats--single">
               <div className="gp-new-hero-stat-item">
                 <strong>{partners.length > 0 ? partners.length.toLocaleString() : "Live"}</strong>
-                <span>Partner organisations</span>
-              </div>
-              <div className="gp-new-hero-stat-item">
-                <strong>Offline-first</strong>
-                <span>Field capture</span>
-              </div>
-              <div className="gp-new-hero-stat-item">
-                <strong>NGN + USD</strong>
-                <span>Checkout ready</span>
+                <span>Registered partner organisations</span>
               </div>
             </div>
           </div>
