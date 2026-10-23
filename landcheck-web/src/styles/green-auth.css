@@ -1708,3 +1708,17 @@
     font-size: 0.68rem;
   }
 }
+
+/* Keep the PWA login card directly below the wordmark on small screens.
+   The older gateway rule vertically centered the shell, leaving a large blank
+   area between the brand divider and the actual login controls. */
+@media (max-width: 760px) {
+  .green-auth-gateway .green-auth-shell {
+    flex: 0 0 auto;
+    display: block;
+    width: min(25rem, 100%);
+    max-width: 25rem;
+    margin: 0.75rem auto 0;
+    align-items: initial;
+  }
+}

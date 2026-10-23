@@ -124,9 +124,7 @@ export default function FloodAnalysisLanding() {
     let active = true;
     const refreshHazardCount = async () => {
       try {
-        const { data } = await api.get<{ total_hazard_screenings_completed: number }>("/analytics/public-proof", {
-          headers: { "Cache-Control": "no-cache" },
-        });
+        const { data } = await api.get<{ total_hazard_screenings_completed: number }>("/analytics/public-proof");
         const count = Number(data.total_hazard_screenings_completed);
         if (active && Number.isSafeInteger(count) && count >= 0) {
           setTotalHazardScreenings(count);

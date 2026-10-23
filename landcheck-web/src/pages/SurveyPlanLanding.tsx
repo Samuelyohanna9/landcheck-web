@@ -150,9 +150,7 @@ export default function SurveyPlanLanding() {
     let active = true;
     const refreshPlotCount = async () => {
       try {
-        const { data } = await api.get<{ total_plots_generated: number }>("/analytics/public-proof", {
-          headers: { "Cache-Control": "no-cache" },
-        });
+        const { data } = await api.get<{ total_plots_generated: number }>("/analytics/public-proof");
         const count = Number(data.total_plots_generated);
         if (active && Number.isSafeInteger(count) && count >= 0) {
           setTotalPlotsProcessed(count);
