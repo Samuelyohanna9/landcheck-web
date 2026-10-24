@@ -383,9 +383,9 @@ export default function GreenPublicSponsor() {
         </button>
         <a href="/" className="gps-topbar-brand">
           <span className="gps-topbar-logo-badge">
-            <img src="/logo-icon-192.png" alt="LandCheck" width="33" height="33" decoding="async" fetchPriority="high" />
+            <img src="/logo-wordmark-web.png" alt="LandCheck" width="182" height="58" decoding="async" fetchPriority="high" />
           </span>
-          <span>LandCheck <strong>Green</strong></span>
+          <span className="gps-topbar-product">GREEN</span>
         </a>
         <nav className="gps-topbar-links" aria-label="Sponsor navigation">
           <button type="button" onClick={() => { setSelectedProjectId(null); document.getElementById("gps-projects")?.scrollIntoView({ behavior: "smooth" }); }}>Shop Projects</button>
@@ -409,9 +409,9 @@ export default function GreenPublicSponsor() {
           <nav className="gps-mobile-menu" aria-label="Sponsor navigation (mobile)">
             <div className="gps-mobile-menu__header">
               <a href="/" className="gps-mobile-menu__brand" onClick={() => setMobileMenuOpen(false)}>
-                <img src="/logo-icon-192.png" alt="LandCheck Green" width="40" height="40" decoding="async" />
+                <img src="/logo-wordmark-web.png" alt="LandCheck Green" width="182" height="58" decoding="async" />
                 <div className="gps-mobile-menu__brand-copy">
-                  <strong>LandCheck Green</strong>
+                  <strong>GREEN</strong>
                   <span>Public sponsorship</span>
                 </div>
               </a>
@@ -960,8 +960,10 @@ export default function GreenPublicSponsor() {
       <footer className="gps-footer">
         <div className="gps-footer-inner">
           <div className="gps-footer-col gps-footer-brand">
-            <span className="gps-topbar-logo-badge gps-footer-logo-badge"><img src="/logo-icon-192.png" alt="LandCheck" width="33" height="33" decoding="async" /></span>
-            <span className="gps-footer-brand-name">LandCheck Green</span>
+            <a href="/" className="gps-footer-logo-lockup" aria-label="LandCheck Green home">
+              <span className="gps-topbar-logo-badge gps-footer-logo-badge"><img src="/logo-wordmark-web.png" alt="LandCheck" width="140" height="44" loading="lazy" decoding="async" /></span>
+              <span className="gps-footer-brand-product">GREEN</span>
+            </a>
             <p>GPS-verified tree sponsorship in Nigeria. No account is required to get started.</p>
             <SocialLinks className="gps-footer-social" />
           </div>
