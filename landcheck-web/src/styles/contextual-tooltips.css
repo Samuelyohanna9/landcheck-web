@@ -1,0 +1,59 @@
+.lc-context-tooltip {
+  position: fixed;
+  z-index: 10000;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 24px));
+  padding: 8px 11px;
+  border: 1px solid rgba(190, 235, 204, 0.24);
+  border-radius: 8px;
+  background: #102a27;
+  color: #f5fff7;
+  box-shadow: 0 12px 28px rgba(5, 24, 16, 0.26);
+  font: 600 0.75rem/1.35 "Nunito Sans", "Segoe UI", sans-serif;
+  letter-spacing: 0.005em;
+  text-align: center;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  animation: lc-context-tooltip-in 120ms ease-out both;
+}
+
+.lc-context-tooltip[data-placement="bottom"] {
+  transform: translate(-50%, 0);
+}
+
+.lc-context-tooltip::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-right: 1px solid rgba(190, 235, 204, 0.24);
+  border-bottom: 1px solid rgba(190, 235, 204, 0.24);
+  background: #102a27;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.lc-context-tooltip[data-placement="top"]::after {
+  bottom: -5px;
+}
+
+.lc-context-tooltip[data-placement="bottom"]::after {
+  top: -5px;
+  transform: translateX(-50%) rotate(225deg);
+}
+
+@keyframes lc-context-tooltip-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (pointer: coarse) {
+  .lc-context-tooltip {
+    max-width: min(280px, calc(100vw - 20px));
+    padding: 9px 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lc-context-tooltip { animation: none; }
+}

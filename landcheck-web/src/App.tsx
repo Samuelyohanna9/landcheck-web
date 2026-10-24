@@ -1,6 +1,7 @@
 import { Component, Suspense, useEffect, useLayoutEffect, useState, type ErrorInfo, type ReactElement, type ReactNode } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import CookieConsentManager from "./components/CookieConsentManager";
+import ContextualTooltips from "./components/ContextualTooltips";
 import SeoRouteMeta from "./components/SeoRouteMeta";
 import HazardLoadingAnimation from "./components/HazardLoadingAnimation";
 import GreenLoadingAnimation from "./components/GreenLoadingAnimation";
@@ -365,6 +366,7 @@ export default function App() {
         <RouteScrollManager />
         <SeoRouteMeta />
         <CookieConsentManager />
+        <ContextualTooltips />
         <ChunkLoadBoundary>
           <Suspense fallback={<RouteLoadingFallback />}>
             <Routes>
