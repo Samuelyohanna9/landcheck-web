@@ -102,6 +102,7 @@ export default function EstateLanding() {
         </Link>
         <nav className="estate-portal-nav-links" aria-label="Estate product navigation">
           <a href="#platform">Platform</a>
+          <a href="#overview-video">Watch overview</a>
           <a href="#solutions">Solutions</a>
           <a href="#pricing">Pricing</a>
           <Link to="/estates/login" className="estate-nav-login">Sign in</Link>
@@ -116,6 +117,7 @@ export default function EstateLanding() {
             <button type="button" className="estate-mobile-close" onClick={closeMenu} aria-label="Close navigation">&times;</button>
           </div>
           <a href="#platform" className="estate-mobile-item" onClick={closeMenu}>Platform</a>
+          <a href="#overview-video" className="estate-mobile-item" onClick={closeMenu}>Watch overview</a>
           <a href="#solutions" className="estate-mobile-item" onClick={closeMenu}>Solutions</a>
           <a href="#pricing" className="estate-mobile-item" onClick={closeMenu}>Pricing</a>
           <Link to="/estates/login" className="estate-mobile-item" onClick={closeMenu}>Sign in</Link>
@@ -132,6 +134,23 @@ export default function EstateLanding() {
           <a href="#platform" className="estate-button estate-button--outline-light">View platform</a>
         </div>
         <p className="estate-hero-caption">One connected record for every plot.</p>
+      </section>
+
+      <section className="estate-video-section" id="overview-video" aria-labelledby="estate-video-title">
+        <div className="estate-video-copy">
+          <p className="estate-kicker">See it in action</p>
+          <h2 id="estate-video-title">One connected workspace for every plot.</h2>
+          <p>See how LandCheck Estates brings layout design, plot sales, marketing, payments, surveying and estate delivery together.</p>
+        </div>
+        <div className="estate-video-frame">
+          <iframe
+            src="https://www.youtube-nocookie.com/embed/G7IjmlPz-Es?rel=0&modestbranding=1"
+            title="LandCheck Estates product overview"
+            loading="lazy"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        </div>
       </section>
 
       <section className="estate-content-section" id="platform">

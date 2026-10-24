@@ -115,6 +115,12 @@
 .estate-portal .estate-text-link--light { color: #f2f3e9; text-decoration-color: rgba(242, 243, 233, .6); }
 .estate-content-section { width: min(1220px, calc(100% - 48px)); margin: auto; padding: clamp(78px, 10vw, 136px) 0; }
 .estate-content-section[id] { scroll-margin-top: 88px; }
+.estate-video-section { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: clamp(62px, 8vw, 100px) 0 clamp(78px, 10vw, 136px); display: grid; grid-template-columns: minmax(0, .75fr) minmax(0, 1.25fr); align-items: center; gap: clamp(34px, 6vw, 78px); }
+.estate-video-section[id] { scroll-margin-top: 88px; }
+.estate-video-copy h2 { max-width: 420px; margin: 10px 0 14px; font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif; font-size: clamp(2rem, 4vw, 3rem); font-weight: 500; letter-spacing: -.04em; line-height: 1.12; text-wrap: balance; }
+.estate-video-copy > p:last-child { max-width: 410px; margin: 0; color: var(--estate-slate); font-size: .98rem; line-height: 1.65; }
+.estate-video-frame { position: relative; overflow: hidden; aspect-ratio: 16 / 9; border: 1px solid var(--estate-line); border-radius: 8px; background: var(--estate-navy); box-shadow: 0 22px 52px rgba(16, 36, 58, .14); }
+.estate-video-frame iframe { display: block; width: 100%; height: 100%; border: 0; }
 .estate-centered-heading { max-width: 660px; margin: 0 auto 44px; font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif; font-size: clamp(2rem, 4vw, 3rem); font-weight: 500; letter-spacing: -.04em; line-height: 1.15; text-align: center; text-wrap: balance; }
 .estate-screenshot-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; margin-bottom: 56px; }
 .estate-screenshot { margin: 0; }
@@ -285,6 +291,9 @@
 .estate-auth-shell--register .estate-register-intro { grid-column: 1; grid-row: 1; }
 
 @media (max-width: 850px) {
+  .estate-video-section { grid-template-columns: 1fr; gap: 28px; }
+  .estate-video-copy { text-align: center; }
+  .estate-video-copy h2, .estate-video-copy > p:last-child { margin-left: auto; margin-right: auto; }
   .estate-screenshot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .estate-feature-row { grid-template-columns: 1fr; gap: 28px; width: 100%; }
   .estate-feature-text { text-align: center; }
@@ -314,6 +323,7 @@
   .estate-intro-actions--centered { gap: 12px; margin-top: 22px; }
   .estate-button { min-height: 44px; padding: 0 13px; font-size: .73rem; }
   .estate-content-section { width: calc(100% - 40px); padding: 60px 0; }
+  .estate-video-section { width: calc(100% - 40px); padding: 52px 0 60px; }
   .estate-phone-frame { width: 200px; }
   .estate-centered-heading { margin-bottom: 30px; font-size: clamp(1.7rem, 8vw, 2.4rem); }
   .estate-screenshot-grid { grid-template-columns: 1fr; gap: 32px; margin-bottom: 40px; }
