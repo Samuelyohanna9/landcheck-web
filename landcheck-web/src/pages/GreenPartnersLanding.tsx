@@ -445,7 +445,7 @@ export default function GreenPartnersLanding() {
                     loading="lazy"
                     decoding="async"
                   />
-                  <a href={GREEN_WORK_VIDEO_URL} target="_blank" rel="noreferrer" className="gp-demo-linkout">
+                  <a href={GREEN_WORK_VIDEO_URL} target="_blank" rel="noreferrer" className="gp-btn gp-btn--secondary gp-demo-linkout">
                     Watch on YouTube
                   </a>
                 </div>
@@ -459,7 +459,7 @@ export default function GreenPartnersLanding() {
                     allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
                     allowFullScreen
                   />
-                  <a href={GREEN_WORK_VIDEO_URL} target="_blank" rel="noreferrer" className="gp-demo-linkout">
+                  <a href={GREEN_WORK_VIDEO_URL} target="_blank" rel="noreferrer" className="gp-btn gp-btn--secondary gp-demo-linkout">
                     Open on YouTube
                   </a>
                 </div>
