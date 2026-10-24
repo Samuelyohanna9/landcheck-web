@@ -201,10 +201,6 @@ export default function SurveyPlanLanding() {
           <span /><span /><span />
         </button>
         <nav className="spl-nav-links" aria-label="Survey navigation" ref={desktopNavRef}>
-          <a href="#features">Features</a>
-          <a href="#workflow">Workflow</a>
-          <a href="#for-surveyors">For Surveyors</a>
-          <a href="#for-estates">For Estates</a>
           {NAV_GROUPS.map((group) => (
             <div key={group.label} className="spl-nav-group">
               <button
@@ -246,10 +242,6 @@ export default function SurveyPlanLanding() {
             <img src="/logo-wordmark-web.png" alt="LandCheck" width="156" height="50" />
             <button type="button" className="spl-mobile-close" onClick={closeMenu} aria-label="Close navigation">&times;</button>
           </div>
-          <a href="#features" className="spl-mobile-item" onClick={closeMenu}>Features</a>
-          <a href="#workflow" className="spl-mobile-item" onClick={closeMenu}>Workflow</a>
-          <a href="#for-surveyors" className="spl-mobile-item" onClick={closeMenu}>For Surveyors</a>
-          <a href="#for-estates" className="spl-mobile-item" onClick={closeMenu}>For Estates</a>
           {NAV_GROUPS.map((group) => (
             <div key={group.label} className="spl-mobile-group">
               <span className="spl-mobile-group-label">{group.label}</span>
