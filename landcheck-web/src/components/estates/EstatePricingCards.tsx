@@ -9,6 +9,9 @@ export const ESTATE_PLANS = {
   enterprise: { label: "Enterprise", monthly: 145000, yearly: 1595000, hazardAnalysis: true, autoPosting: true, soilAnalysis: true, smsNotifications: true, liveInspections: true, maxEstates: null },
 } as const;
 
+// Display copy mirrors the backend billing_plans.py source of truth.
+export const ESTATE_TRIAL_DAYS = 14;
+
 export type EstatePlanKey = keyof typeof ESTATE_PLANS;
 export type EstateBillingCycle = "monthly" | "yearly";
 export type EstatePaymentProvider = "flutterwave" | "paystack";
@@ -107,7 +110,7 @@ export default function EstatePricingCards({
               {PLAN_BADGE[key] && <span className="estate-pricing-badge">{PLAN_BADGE[key]}</span>}
               <h3>{plan.label}</h3>
               <p className="estate-pricing-price">{naira(price)}<span>/{billingCycle === "monthly" ? "month" : "year"}</span></p>
-              <p className="estate-pricing-trial">3-day free trial &middot; card or bank transfer &middot; cancel anytime</p>
+              <p className="estate-pricing-trial">{ESTATE_TRIAL_DAYS}-day free trial &middot; card or bank transfer &middot; cancel anytime</p>
               <ul className="estate-pricing-features">
                 {PLAN_FEATURES[key].map((feature) => <li key={feature}>{feature}</li>)}
               </ul>

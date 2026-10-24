@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../api/client";
 import { getEstateAuthSession } from "../auth/estateAuth";
-import EstatePricingCards, { type EstateBillingCycle, type EstatePaymentProvider, type EstatePlanKey } from "../components/estates/EstatePricingCards";
+import EstatePricingCards, { ESTATE_TRIAL_DAYS, type EstateBillingCycle, type EstatePaymentProvider, type EstatePlanKey } from "../components/estates/EstatePricingCards";
 import "../styles/estate-portal.css";
 
 export default function EstateChoosePlan() {
@@ -72,7 +72,7 @@ export default function EstateChoosePlan() {
         <p className="estate-kicker">Company workspace</p>
         <h1 style={{ margin: "10px 0 0", fontFamily: "'Iowan Old Style', 'Palatino Linotype', Georgia, serif", fontWeight: 500, fontSize: "clamp(1.9rem, 4vw, 2.6rem)" }}>Choose a plan to get started</h1>
         <p style={{ maxWidth: 480, margin: "12px auto 40px", color: "var(--estate-slate)" }}>
-          Every plan includes a 3-day free trial. A refundable NGN 50 payment verifies your payment method. Card renewals are automatic; bank-transfer renewals use scheduled email reminders and a secure payment link.
+          Every plan includes a {ESTATE_TRIAL_DAYS}-day free trial. A refundable NGN 50 payment verifies your payment method. Card renewals are automatic; bank-transfer renewals use scheduled email reminders and a secure payment link.
         </p>
         {error && <div className="estate-auth-error" role="alert" style={{ maxWidth: 480, margin: "0 auto 24px", textAlign: "left" }}>{error}</div>}
         <EstatePricingCards onSelectPlan={selectPlan} busyPlan={busyPlan} availableProviders={availableProviders} />

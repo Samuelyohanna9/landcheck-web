@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../api/client";
 import { clearWorkAuthed, getWorkAuthSession } from "../auth/workAuth";
 import GreenLoadingAnimation from "../components/GreenLoadingAnimation";
+import { ESTATE_TRIAL_DAYS } from "../components/estates/EstatePricingCards";
 import "../styles/admin-dashboard.css";
 
 type EstateAdminEstate = {
@@ -386,7 +387,7 @@ export default function EstateAdminDashboard() {
                                       <div className="estate-admin-reconcile-form" onClick={(event) => event.stopPropagation()}>
                                         <div>
                                           <strong>Reconcile verified bank transfer</strong>
-                                          <small>Choose the plan agreed with the company. This grants the 3-day trial immediately.</small>
+                                          <small>Choose the plan agreed with the company. This grants the {ESTATE_TRIAL_DAYS}-day trial immediately.</small>
                                         </div>
                                         <label>Plan<select value={reconcilePlan} onChange={(event) => setReconcilePlan(event.target.value as "basic" | "plus")}><option value="basic">Basic</option><option value="plus">Plus</option></select></label>
                                         <label>Billing<select value={reconcileCycle} onChange={(event) => setReconcileCycle(event.target.value as "monthly" | "yearly")}><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></label>
