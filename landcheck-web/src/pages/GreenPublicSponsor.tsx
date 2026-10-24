@@ -34,6 +34,8 @@ const PlantyAssistant = lazyWithChunkRecovery(() => import("../components/Planty
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=online.landcheck.mobile";
 const GUEST_CHECKOUT_STORAGE_KEY = "lc_guest_checkout_pending";
 const DEFERRED_SECTION_STYLE = { contentVisibility: "auto" as const, containIntrinsicSize: "900px" };
+const INSTAGRAM_REEL_URL = "https://www.instagram.com/reels/DbPXG1RsLrY/";
+const INSTAGRAM_REEL_EMBED_URL = "https://www.instagram.com/reel/DbPXG1RsLrY/embed";
 
 const PROJECT_THUMBNAIL_SRC = "/thumpnail_public.webp";
 
@@ -480,6 +482,43 @@ export default function GreenPublicSponsor() {
       )}
 
       {/* ─── Photo proof — real field evidence, not stock photography ─── */}
+      {!selectedProject && !returnState && (
+        <section className="gps-video-section" style={DEFERRED_SECTION_STYLE}>
+          <div className="gps-video-shell">
+            <div className="gps-video-copy">
+              <span className="gps-section-eyebrow">Field demonstration</span>
+              <h2>See how sponsored trees are verified</h2>
+              <p>
+                Follow the journey from a public sponsorship to GPS-backed planting evidence, field photos, and ongoing care.
+              </p>
+            </div>
+            <div className="gps-video-media">
+              {isLowBandwidth ? (
+                <div className="gps-video-fallback">
+                  <img src={PROJECT_THUMBNAIL_SRC} alt="LandCheck Green public sponsorship field verification preview" loading="lazy" decoding="async" />
+                  <a href={INSTAGRAM_REEL_URL} target="_blank" rel="noreferrer" className="gps-video-link">
+                    Watch on Instagram
+                  </a>
+                </div>
+              ) : (
+                <div className="gps-video-embed">
+                  <iframe
+                    src={INSTAGRAM_REEL_EMBED_URL}
+                    title="LandCheck Green public sponsorship field verification"
+                    loading="lazy"
+                    allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                    allowFullScreen
+                  />
+                  <a href={INSTAGRAM_REEL_URL} target="_blank" rel="noreferrer" className="gps-video-link">
+                    Open on Instagram
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
       {!selectedProject && !returnState && (
         <section className="gps-proof-gallery" style={DEFERRED_SECTION_STYLE}>
           <div className="gps-proof-gallery-shell">

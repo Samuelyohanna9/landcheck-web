@@ -3139,3 +3139,39 @@
   font-family: var(--public-font-body) !important;
   font-weight: 700 !important;
 }
+
+/* YouTube overview: use a landscape player rather than the old vertical Reel frame. */
+.green-partners-page .gp-demo-embed--youtube,
+.green-partners-page .gp-demo-fallback--youtube {
+  max-width: none;
+  width: 100%;
+}
+
+.green-partners-page .gp-demo-embed--youtube {
+  padding: 0;
+  border-radius: 22px;
+  overflow: hidden;
+  background: #10251b;
+}
+
+.green-partners-page .gp-demo-iframe--youtube {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  aspect-ratio: 16 / 9;
+  border-radius: 22px;
+}
+
+.green-partners-page .gp-demo-fallback--youtube img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 22px;
+}
+
+@media (max-width: 900px) {
+  .green-partners-page .gp-demo-iframe--youtube {
+    min-height: 0;
+  }
+}

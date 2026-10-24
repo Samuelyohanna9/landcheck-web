@@ -1827,5 +1827,130 @@
   max-width: none;
 }
 
+/* Public sponsorship proof video */
+.gps-video-section {
+  padding: 56px 24px 0;
+}
+
+.gps-video-shell {
+  width: min(1240px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(240px, 0.72fr) minmax(0, 1.28fr);
+  gap: 44px;
+  align-items: center;
+  padding: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 26px;
+  background: linear-gradient(135deg, rgba(21, 70, 46, 0.72), rgba(9, 25, 17, 0.92));
+  box-shadow: var(--gps-shadow-md);
+}
+
+.gps-video-copy {
+  max-width: 390px;
+}
+
+.gps-video-copy h2 {
+  margin: 10px 0 0;
+  color: var(--gps-text);
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+.gps-video-copy p {
+  margin: 16px 0 0;
+  color: var(--gps-text-muted);
+  font-size: 0.98rem;
+  line-height: 1.7;
+}
+
+.gps-video-media,
+.gps-video-embed,
+.gps-video-fallback {
+  width: 100%;
+}
+
+.gps-video-embed,
+.gps-video-fallback {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gps-video-embed iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 0;
+  border: 0;
+  border-radius: 18px;
+  background: #08120d;
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.22);
+}
+
+.gps-video-fallback img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 18px;
+}
+
+.gps-video-link {
+  align-self: flex-start;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border: 1px solid rgba(111, 224, 155, 0.28);
+  border-radius: 999px;
+  color: #dff7e7;
+  background: rgba(111, 224, 155, 0.1);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.gps-video-link:hover {
+  border-color: rgba(111, 224, 155, 0.52);
+  background: rgba(111, 224, 155, 0.18);
+}
+
+@media (max-width: 900px) {
+  .gps-video-section {
+    padding: 42px 20px 0;
+  }
+
+  .gps-video-shell {
+    grid-template-columns: 1fr;
+    gap: 26px;
+    padding: 24px;
+  }
+
+  .gps-video-copy {
+    max-width: 620px;
+  }
+}
+
+@media (max-width: 640px) {
+  .gps-video-section {
+    padding: 30px 16px 0;
+  }
+
+  .gps-video-shell {
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .gps-video-embed iframe,
+  .gps-video-fallback img {
+    border-radius: 14px;
+  }
+}
+
 
 

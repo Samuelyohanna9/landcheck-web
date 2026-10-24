@@ -19,8 +19,8 @@ type PhotoMoment = {
   label?: string;
 };
 
-const INSTAGRAM_REEL_URL = "https://www.instagram.com/reels/DbPXG1RsLrY/";
-const INSTAGRAM_REEL_EMBED_URL = "https://www.instagram.com/reel/DbPXG1RsLrY/embed";
+const GREEN_WORK_VIDEO_URL = "https://youtu.be/J1aqFz_GstM";
+const GREEN_WORK_VIDEO_EMBED_URL = "https://www.youtube-nocookie.com/embed/J1aqFz_GstM?rel=0&modestbranding=1";
 const DEFERRED_SECTION_STYLE = { contentVisibility: "auto" as const, containIntrinsicSize: "960px" };
 
 const photoAsset = (fileName: string) => encodeURI(`/${fileName}`);
@@ -424,10 +424,10 @@ export default function GreenPartnersLanding() {
         <div className="gp-shell">
           <div className="gp-proof-showcase">
             <div className="gp-proof-content">
-              <span className="gp-section-eyebrow">Field demonstration</span>
-              <h2>See how planting records are verified</h2>
+              <span className="gp-section-eyebrow">LandCheck Green + Work</span>
+              <h2>See the connected platform in action</h2>
               <p>
-                Watch how field teams use LC Green mobile to log GPS coordinates, upload evidence, and submit records for review.
+                See how field teams capture verified evidence and how programme teams turn it into organised delivery, maintenance, and reporting.
               </p>
               <div className="gp-proof-actions">
                 <a href="/green-work/login" className="gp-btn gp-btn--primary">
@@ -437,7 +437,7 @@ export default function GreenPartnersLanding() {
             </div>
             <div className="gp-proof-media">
               {isLowBandwidth ? (
-                <div className="gp-demo-fallback">
+                <div className="gp-demo-fallback gp-demo-fallback--youtube">
                   <img
                     src="/thumpnail_public.jpg"
                     alt="LandCheck Green field verification preview"
@@ -445,22 +445,22 @@ export default function GreenPartnersLanding() {
                     loading="lazy"
                     decoding="async"
                   />
-                  <a href={INSTAGRAM_REEL_URL} target="_blank" rel="noreferrer" className="gp-demo-linkout">
-                    Watch on Instagram
+                  <a href={GREEN_WORK_VIDEO_URL} target="_blank" rel="noreferrer" className="gp-demo-linkout">
+                    Watch on YouTube
                   </a>
                 </div>
               ) : (
-                <div className="gp-demo-embed">
+                <div className="gp-demo-embed gp-demo-embed--youtube">
                   <iframe
-                    src={INSTAGRAM_REEL_EMBED_URL}
-                    title="LandCheck Green field verification reel"
-                    className="gp-demo-iframe"
+                    src={GREEN_WORK_VIDEO_EMBED_URL}
+                    title="LandCheck Green and Work platform overview"
+                    className="gp-demo-iframe gp-demo-iframe--youtube"
                     loading="lazy"
                     allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
                     allowFullScreen
                   />
-                  <a href={INSTAGRAM_REEL_URL} target="_blank" rel="noreferrer" className="gp-demo-linkout">
-                    Open on Instagram
+                  <a href={GREEN_WORK_VIDEO_URL} target="_blank" rel="noreferrer" className="gp-demo-linkout">
+                    Open on YouTube
                   </a>
                 </div>
               )}
