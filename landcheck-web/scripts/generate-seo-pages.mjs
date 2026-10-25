@@ -40,6 +40,7 @@ const PRIVATE_SHELL_PATHS = [
   "/estates/documents",
   "/app/claim",
   "/dashboard",
+  "/admin",
 ];
 const SOCIAL_PROFILES = [
   "https://play.google.com/store/apps/details?id=online.landcheck.mobile",
