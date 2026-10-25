@@ -3096,6 +3096,15 @@
   margin-bottom: 96px;
 }
 
+.green-partners-page .gp-work-dashboard-stage .gp-section-intro--center {
+  text-align: center;
+}
+
+.green-partners-page .gp-work-dashboard-stage .gp-section-intro--center p {
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .green-partners-page .gp-work-dashboard-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3124,10 +3133,12 @@
 
 .green-partners-page .gp-work-dashboard-card figcaption {
   padding: 16px 0 0;
+  text-align: center;
 }
 
 .green-partners-page .gp-work-dashboard-card figcaption span {
-  display: inline-flex;
+  display: flex;
+  justify-content: center;
   color: #1f8c58;
   font-size: 0.72rem;
   font-weight: 800;
@@ -3146,7 +3157,7 @@
 
 .green-partners-page .gp-work-dashboard-card figcaption p {
   max-width: 34rem;
-  margin: 8px 0 0;
+  margin: 8px auto 0;
   color: #4f6659;
   font-size: 0.95rem;
   line-height: 1.55;
