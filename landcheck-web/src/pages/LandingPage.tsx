@@ -612,7 +612,7 @@ export default function LandingPage() {
                 </Link>
               </li>
               <li>
-                <Link to="/news">
+                <Link to="/news/">
                   News
                 </Link>
               </li>

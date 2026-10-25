@@ -6,6 +6,7 @@ export type NewsArticle = {
   tag: string;
   title: string;
   date: string;
+  dateModified?: string;
   location?: string;
   readMinutes: number;
   summary: string;

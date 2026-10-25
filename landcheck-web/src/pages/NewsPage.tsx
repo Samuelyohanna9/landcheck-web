@@ -19,12 +19,12 @@ const articleSchema = {
   "@context": "https://schema.org",
   "@graph": newsArticles.map((article) => ({
     "@type": "BlogPosting",
-    "@id": `https://landcheck.online/news/${article.slug}`,
+    "@id": `https://landcheck.online/news/${article.slug}/`,
     headline: article.title,
     datePublished: article.date,
-    dateModified: article.date,
+    dateModified: article.dateModified || article.date,
     description: article.summary,
-    url: `https://landcheck.online/news/${article.slug}`,
+    url: `https://landcheck.online/news/${article.slug}/`,
     author: {
       "@type": "Organization",
       name: "LandCheck Geospatial Technologies Limited",
@@ -70,7 +70,7 @@ export default function NewsPage() {
           <section className="np-spotlight">
             <div className="ip-container np-spotlight-container">
               <span className="np-spotlight-eyebrow">Sponsor stories</span>
-              <a className="np-spotlight-card" href={`/news/${featured.slug}`}>
+              <a className="np-spotlight-card" href={`/news/${featured.slug}/`}>
                 {featured.heroImage ? (
                   <div className="np-spotlight-media">
                     <img src={featured.heroImage} alt={featured.heroImageAlt || featured.title} loading="lazy" />
@@ -91,7 +91,7 @@ export default function NewsPage() {
               {secondarySponsorStories.length > 0 ? (
                 <div className="np-spotlight-secondary">
                   {secondarySponsorStories.map((article) => (
-                    <a key={article.slug} className="np-library-card np-library-card--photo" href={`/news/${article.slug}`}>
+                    <a key={article.slug} className="np-library-card np-library-card--photo" href={`/news/${article.slug}/`}>
                       {article.heroImage ? (
                         <div className="np-library-card-media">
                           <img src={article.heroImage} alt={article.heroImageAlt || article.title} loading="lazy" />
@@ -117,7 +117,7 @@ export default function NewsPage() {
             <h2 className="np-library-heading">Guides &amp; reporting insights</h2>
             <div className="np-library-grid">
               {insightArticles.map((article) => (
-                <a key={article.slug} className="np-library-card" href={`/news/${article.slug}`}>
+                <a key={article.slug} className="np-library-card" href={`/news/${article.slug}/`}>
                   <div className="np-article-meta">
                     <span className="np-tag">{article.tag}</span>
                     <time dateTime={article.date}>{formatDate(article.date)}</time>

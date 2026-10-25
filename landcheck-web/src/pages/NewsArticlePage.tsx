@@ -27,7 +27,7 @@ export default function NewsArticlePage() {
               <span className="ip-eyebrow">LandCheck insights</span>
               <h1>Story not found</h1>
               <p>This story may have moved. Browse all LandCheck stories instead.</p>
-              <a className="np-inline-link" href="/news">
+              <a className="np-inline-link" href="/news/">
                 Back to all stories
               </a>
             </div>
@@ -44,6 +44,7 @@ export default function NewsArticlePage() {
     "@type": "BlogPosting",
     headline: article.title,
     datePublished: article.date,
+    dateModified: article.dateModified || article.date,
     description: article.summary,
     author: { "@type": "Organization", name: "LandCheck Geospatial Technologies Limited" },
   };
@@ -56,7 +57,7 @@ export default function NewsArticlePage() {
       <main>
         <article className="np-story">
           <div className="ip-container np-story-container">
-            <a className="np-back-link" href="/news">
+            <a className="np-back-link" href="/news/">
               ← All stories
             </a>
 
@@ -118,8 +119,8 @@ export default function NewsArticlePage() {
                   and photographed by a field agent, and visible to the sponsor from a phone.
                 </p>
                 <div className="np-cta-actions">
-                  <a href="/sponsor">Sponsor a tree</a>
-                  <a href="/green-partners">See how it works</a>
+                  <a href="/sponsor/">Sponsor a tree</a>
+                  <a href="/green-partners/">See how it works</a>
                 </div>
               </div>
             ) : (
@@ -130,7 +131,7 @@ export default function NewsArticlePage() {
                   managers and programme supervisors.
                 </p>
                 <div className="np-cta-actions">
-                  <button type="button" onClick={() => navigate("/green-partners")}>
+                  <button type="button" onClick={() => navigate("/green-partners/")}>
                     Open LC Green Corporate
                   </button>
                   <a href="/lc-green-corporate-brochure.pdf" download>
@@ -145,7 +146,7 @@ export default function NewsArticlePage() {
                 <h3>More stories</h3>
                 <div className="np-related-grid">
                   {related.map((item) => (
-                    <a key={item.slug} className="np-related-card" href={`/news/${item.slug}`}>
+                    <a key={item.slug} className="np-related-card" href={`/news/${item.slug}/`}>
                       {item.heroImage ? <img src={item.heroImage} alt="" loading="lazy" /> : null}
                       <span className="np-tag">{item.tag}</span>
                       <h4>{item.title}</h4>

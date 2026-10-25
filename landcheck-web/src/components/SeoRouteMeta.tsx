@@ -21,7 +21,7 @@ type SharedSeoConfig = Omit<SeoConfig, "robots"> & { robots?: string | null };
 
 const PUBLIC_ROUTES = routeMetadata as Record<string, SharedSeoConfig>;
 
-const PRIVATE_ROUTE_PREFIXES = ["/green", "/green-work", "/dashboard", "/admin"];
+const PRIVATE_ROUTE_PREFIXES = ["/green", "/green-work", "/dashboard", "/admin", "/estate-admin", "/app/claim"];
 const IMPACT_ROUTE_PREFIX = "/impact/";
 
 const normalizePath = (value: string) => {
@@ -146,7 +146,7 @@ const resolveSeoConfig = (pathname: string): SeoConfig => {
           "@id": `${SITE_ORIGIN}/news/${article.slug}/`,
           headline: article.title,
           datePublished: article.date,
-          dateModified: article.date,
+          dateModified: article.dateModified || article.date,
           description: article.summary,
           url: `${SITE_ORIGIN}/news/${article.slug}/`,
           author: { "@type": "Organization", name: "LandCheck Geospatial Technologies Limited", url: SITE_ORIGIN },

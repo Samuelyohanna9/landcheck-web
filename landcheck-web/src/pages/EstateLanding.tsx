@@ -292,7 +292,7 @@ export default function EstateLanding() {
             <h2>Company</h2>
             <ul>
               <li><Link to="/career">Careers</Link></li>
-              <li><Link to="/news">News</Link></li>
+              <li><Link to="/news/">News</Link></li>
               <li><a href="mailto:support@landcheck.online?subject=LandCheck%20Support">Support</a></li>
               <li><Link to="/privacy">Privacy</Link></li>
             </ul>

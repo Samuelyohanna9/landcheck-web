@@ -2,6 +2,63 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
 
+# Keep application workspaces and tool aliases out of search indexes. The static
+# shell generator supplies matching meta robots tags; this also covers responses
+# served by the SPA fallback before client-side routing runs.
+/green
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/green/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/green-work
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/green-work/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/dashboard
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/dashboard/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/admin
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/admin/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/estate-admin
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/estate-admin/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/survey-plan
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/survey-plan/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/hazard-analysis
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/hazard-analysis/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/feedback
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/feedback/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/app/claim
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/app/claim/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+
 /index.html
   Cache-Control: public, max-age=0, must-revalidate
 

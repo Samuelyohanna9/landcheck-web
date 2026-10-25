@@ -10,7 +10,7 @@ export default function FeaturedStorySpotlight({ article }: { article: NewsArtic
       <button
         type="button"
         className="fs-spotlight-media"
-        onClick={() => navigate(`/news/${article.slug}`)}
+        onClick={() => navigate(`/news/${article.slug}/`)}
         style={article.heroImage ? { backgroundImage: `url("${article.heroImage}")` } : undefined}
       >
         <span className="fs-spotlight-overlay" aria-hidden="true" />
@@ -22,7 +22,7 @@ export default function FeaturedStorySpotlight({ article }: { article: NewsArtic
             <span className="fs-spotlight-cta">Read the story →</span>
             <a
               className="fs-spotlight-sponsor"
-              href="/sponsor"
+              href="/sponsor/"
               onClick={(event) => event.stopPropagation()}
             >
               Sponsor a tree like this one

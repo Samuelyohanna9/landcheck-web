@@ -8,7 +8,7 @@ const HELPFUL_LINKS = [
   { to: "/survey", label: "Survey plans" },
   { to: "/flood", label: "Flood & hazard analysis" },
   { to: "/green-partners", label: "Tree & farm monitoring" },
-  { to: "/news", label: "Insights" },
+  { to: "/news/", label: "Insights" },
   { to: "/career", label: "Careers" },
 ];
 
