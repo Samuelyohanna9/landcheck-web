@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { API_URL, api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import EstateProgressSteps, { type EstateProgressStep } from "../../components/estates/EstateProgressSteps";
+import { getEstateAuthSession } from "../../auth/estateAuth";
+import { estateQueryKeys, getEstateQueryScope, invalidateEstateQueries } from "../../query/estateQueries";
+import { assertEstateQueryEpoch, getEstateQueryEpoch } from "../../query/estateQueryClient";
 
 const FORECAST_PROGRESS_STEPS: EstateProgressStep[] = [
   { label: "Screening flood and erosion risk", match: ["flood", "erosion", "starting forecast"] },
@@ -21,6 +25,21 @@ const FORECAST_PROGRESS_STEPS: EstateProgressStep[] = [
  * have its own place in the sidebar instead of crowding Settings out. */
 export default function EstatePublicSitePage() {
   const { estateId } = useParams();
+  const queryClient = useQueryClient();
+  const estateQueryScope = getEstateQueryScope(getEstateAuthSession());
+  const publicSettingsQuery = useQuery({
+    queryKey: estateQueryKeys.estate(estateQueryScope, estateId || "none", "public-settings"),
+    queryFn: async ({ signal }) => {
+      const requestEpoch = getEstateQueryEpoch();
+      const response = await api.get(`/estates/${estateId}/public-settings`, { signal });
+      assertEstateQueryEpoch(requestEpoch);
+      return response.data;
+    },
+    enabled: Boolean(estateId && estateQueryScope.organizationId && estateQueryScope.userId),
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+    networkMode: "online",
+  });
   const paymentPlanStageIdRef = useRef(0);
   const [estateName, setEstateName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -60,8 +79,11 @@ export default function EstatePublicSitePage() {
       setDevelopmentForecast(null);
       setForecastUpgrade(error?.response?.status === 402);
     });
-    api.get(`/estates/${estateId}/public-settings`).then((response) => {
-      const publicPage = response.data;
+  };
+
+  useEffect(() => {
+    const publicPage = publicSettingsQuery.data;
+    if (publicPage) {
       setPublicEnabled(Boolean(publicPage.public_enabled));
       setPublicDescription(publicPage.public_description || "");
       setPublicTagline(publicPage.public_tagline || "");
@@ -82,8 +104,12 @@ export default function EstatePublicSitePage() {
       })));
       setPublicCanPublish(Boolean(publicPage.can_publish));
       setPublicUrlPath(publicPage.public_url_path || null);
-    }).catch(() => { /* optional until its migration is deployed */ }).finally(() => setLoading(false));
-  };
+      setLoading(false);
+    } else if (publicSettingsQuery.isError) {
+      setLoading(false);
+    }
+  }, [publicSettingsQuery.data, publicSettingsQuery.isError]);
+
   useEffect(load, [estateId]);
 
   const savePublicPage = async () => {
@@ -126,6 +152,7 @@ export default function EstatePublicSitePage() {
         setPublicCoverFile(null);
         setPublicCoverPreview(null);
       }
+      await invalidateEstateQueries(estateQueryScope, estateId || "none", ["public-settings", "activity"]);
       toast.success(publicEnabled ? "Public Estate page published." : "Public Estate page saved.");
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "The public Estate page could not be saved."));
@@ -164,6 +191,7 @@ export default function EstatePublicSitePage() {
     try {
       const response = await api.patch(`/estates/${estateId}/development-forecast/public`, { public_enabled: publicVisible });
       setDevelopmentForecast(response.data.forecast || null);
+      if (estateId) await queryClient.invalidateQueries({ queryKey: estateQueryKeys.estate(estateQueryScope, estateId, "public-settings") });
       toast.success(publicVisible ? "Development outlook added to the public page." : "Development outlook hidden from the public page.");
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "Forecast visibility could not be updated."));
@@ -179,12 +207,14 @@ export default function EstatePublicSitePage() {
   };
 
   const useDefaultCover = async () => {
+    if (!estateId) return;
     if (!window.confirm("Switch the public page back to the default cover photo?")) return;
     setCoverBusy(true);
     try {
       await api.delete(`/estates/${estateId}/public-cover`);
       setPublicCoverPath(null);
       chooseCoverFile(null);
+      await queryClient.invalidateQueries({ queryKey: estateQueryKeys.estate(estateQueryScope, estateId, "public-settings") });
       toast.success("Back to the default cover photo.");
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "Could not switch back to the default cover photo."));

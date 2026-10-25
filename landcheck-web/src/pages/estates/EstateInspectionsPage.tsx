@@ -7,6 +7,7 @@ import EstateShell from "../../components/estates/EstateShell";
 import EstateModal from "../../components/estates/EstateModal";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import MarketingInspectionsTab from "../../components/estates/marketing/MarketingInspectionsTab";
+import { getEstateQueryScope, invalidateEstateQueries, useEstatePlotsQuery } from "../../query/estateQueries";
 
 type TabKey = "site" | "live";
 
@@ -54,6 +55,8 @@ export default function EstateInspectionsPage() {
   const selectTab = (key: TabKey) => setSearchParams(key === "site" ? {} : { tab: key }, { replace: true });
 
   const session = getEstateAuthSession();
+  const estateQueryScope = getEstateQueryScope(session);
+  const plotsQuery = useEstatePlotsQuery(estateQueryScope, estateId);
   const role = String(session?.user.role_key || "").toLowerCase();
   const canManage = role === "owner" || role === "manager";
 
@@ -78,6 +81,14 @@ export default function EstateInspectionsPage() {
   const [approvingKey, setApprovingKey] = useState<string | null>(null);
   const [requestAgent, setRequestAgent] = useState<Record<string, string>>({});
 
+  useEffect(() => {
+    if (plotsQuery.data) {
+      setPlots((plotsQuery.data.features || []).map((feature: any) => ({ id: feature.properties.id, plot_number: feature.properties.plot_number })));
+    } else if (plotsQuery.isError) {
+      setPlots([]);
+    }
+  }, [plotsQuery.data, plotsQuery.isError]);
+
   const load = () => {
     if (!estateId) return;
     api.get(`/estates/${estateId}`).then((response) => {
@@ -94,7 +105,6 @@ export default function EstateInspectionsPage() {
       setPublished(Boolean(response.data.public_enabled && response.data.public_slug));
       setHasMeetingPoint(Boolean(response.data.public_meeting_point));
     }).catch(() => undefined);
-    api.get(`/estates/${estateId}/plots.geojson`).then((response) => setPlots((response.data?.features || []).map((feature: any) => ({ id: feature.properties.id, plot_number: feature.properties.plot_number })))).catch(() => setPlots([]));
     api.get(`/estates/${estateId}/marketing/live-inspections`).then((response) => setSessions(response.data || [])).catch(() => setSessions([]));
     api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));
   };
@@ -118,6 +128,7 @@ export default function EstateInspectionsPage() {
       const customerNote = response.data.customer_notified ? "the buyer was emailed the confirmed time" : "the buyer has no email on file, so wasn't notified directly";
       const agentNote = response.data.agent_notified ? " and the agent was emailed what to do" : "";
       toast.success(`Time confirmed - ${customerNote}${agentNote}.`);
+      await invalidateEstateQueries(estateQueryScope, estateId, ["live-inspections", "activity"]);
       load();
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "The time could not be confirmed."));
@@ -134,6 +145,7 @@ export default function EstateInspectionsPage() {
     try {
       await api.post(`/estates/${estateId}/marketing/live-inspections/${session.id}/cancel`);
       toast.success(`${verb === "End" ? "Ended" : "Cancelled"}.`);
+      await invalidateEstateQueries(estateQueryScope, estateId, ["live-inspections", "activity"]);
       load();
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, `The live inspection could not be ${verb === "End" ? "ended" : "cancelled"}.`));
@@ -161,6 +173,7 @@ export default function EstateInspectionsPage() {
       const buyerNote = response.data.invite_email_sent ? "the buyer's link was emailed and copied" : "the buyer's link was copied (no email on file to send it to)";
       const agentNote = agentMemberId ? (response.data.agent_notified ? " and the agent was emailed what to do next" : " (the agent has no email on file, so they weren't notified - share the plot and buyer details with them directly)") : "";
       toast.success(`Live inspection scheduled - ${buyerNote}${agentNote}.`);
+      await invalidateEstateQueries(estateQueryScope, estateId, ["live-inspections", "activity"]);
       setShowSchedule(false);
       load();
     } catch (error) {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
@@ -7,6 +8,7 @@ import EstateShell from "../../components/estates/EstateShell";
 import EstatePricingCards, { ESTATE_PLANS, type EstateBillingCycle, type EstatePlanKey } from "../../components/estates/EstatePricingCards";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import Spinner from "../../components/estates/EstateSpinner";
+import { estateQueryKeys, getEstateQueryScope } from "../../query/estateQueries";
 
 type BillingStatus = {
   status: "none" | "trialing" | "active" | "past_due" | "canceled" | "expired";
@@ -43,6 +45,12 @@ export default function EstateBillingPage() {
   const navigate = useNavigate();
   const session = getEstateAuthSession();
   const organizationId = session?.user.organization_id;
+  const queryClient = useQueryClient();
+  const estateQueryScope = getEstateQueryScope(session);
+
+  const refreshBillingQuery = async () => {
+    await queryClient.invalidateQueries({ queryKey: estateQueryKeys.account(estateQueryScope, "billing-status") });
+  };
 
   const [sidebarEstateId, setSidebarEstateId] = useState("");
   const [sidebarEstateName, setSidebarEstateName] = useState("");
@@ -104,6 +112,7 @@ export default function EstateBillingPage() {
         toast.success(`You're now on the ${ESTATE_PLANS[planKey].label} plan.`);
       }
       setShowUpgrade(false);
+      await refreshBillingQuery();
       await load();
     } catch (err) {
       toast.error(await extractApiErrorMessage(err, "Plan could not be changed."));
@@ -119,6 +128,7 @@ export default function EstateBillingPage() {
     try {
       await api.post("/estates/billing/cancel", {}, { params: { organization_id: organizationId } });
       toast.success("Your subscription has been cancelled.");
+      await refreshBillingQuery();
       await load();
     } catch (err) {
       toast.error(await extractApiErrorMessage(err, "Subscription could not be cancelled."));

@@ -5,10 +5,16 @@ import { api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateModal from "../../components/estates/EstateModal";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
+import { getEstateAuthSession } from "../../auth/estateAuth";
+import { getEstateQueryScope, invalidateEstateQueries, useEstateActivityQuery, useEstateBlocksQuery, useEstateDetailQuery } from "../../query/estateQueries";
 
 export default function EstateSettingsPage() {
   const { estateId } = useParams();
   const navigate = useNavigate();
+  const estateQueryScope = getEstateQueryScope(getEstateAuthSession());
+  const detailQuery = useEstateDetailQuery(estateQueryScope, estateId);
+  const blocksQuery = useEstateBlocksQuery(estateQueryScope, estateId);
+  const activityQuery = useEstateActivityQuery(estateQueryScope, estateId);
   const [estateDetail, setEstateDetail] = useState<any>(null);
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
@@ -21,29 +27,42 @@ export default function EstateSettingsPage() {
   const [rulePercentage, setRulePercentage] = useState("0");
   const [activity, setActivity] = useState<any[]>([]);
 
-  const load = () => {
-    if (!estateId) return;
-    api.get(`/estates/${estateId}`).then(async (response) => {
-      setEstateDetail(response.data);
-      setName(response.data.name || "");
-      setLocation(response.data.location_text || "");
-      setUnitSystem(response.data.unit_system === "ft" ? "ft" : "m");
-      try {
-        const rule = (await api.get(`/estates/organizations/${response.data.organization_id}/survey-eligibility`)).data;
-        setRuleEnabled(Boolean(rule.is_enabled));
-        setRulePercentage(String(rule.percentage || "0"));
-      } catch { /* eligibility rule is optional */ }
-    }).catch(() => setEstateDetail(null));
-    api.get(`/estates/${estateId}/blocks`).then((response) => setBlocks(response.data || [])).catch(() => setBlocks([]));
-    api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));
-  };
-  useEffect(load, [estateId]);
+  useEffect(() => {
+    const detail = detailQuery.data;
+    if (detail) {
+      setEstateDetail(detail);
+      setName(detail.name || "");
+      setLocation(detail.location_text || "");
+      setUnitSystem(detail.unit_system === "ft" ? "ft" : "m");
+    } else if (detailQuery.isError) {
+      setEstateDetail(null);
+    }
+  }, [detailQuery.data, detailQuery.isError]);
+
+  useEffect(() => {
+    if (blocksQuery.data) setBlocks(blocksQuery.data || []);
+    else if (blocksQuery.isError) setBlocks([]);
+    if (activityQuery.data) setActivity(activityQuery.data || []);
+    else if (activityQuery.isError) setActivity([]);
+  }, [blocksQuery.data, blocksQuery.isError, activityQuery.data, activityQuery.isError]);
+
+  useEffect(() => {
+    const organizationId = detailQuery.data?.organization_id;
+    if (!organizationId) return;
+    api.get(`/estates/organizations/${organizationId}/survey-eligibility`)
+      .then((response) => {
+        setRuleEnabled(Boolean(response.data?.is_enabled));
+        setRulePercentage(String(response.data?.percentage || "0"));
+      })
+      .catch(() => undefined);
+  }, [detailQuery.data?.organization_id]);
 
   const saveEstate = async () => {
+    if (!estateId) return;
     try {
       await api.patch(`/estates/${estateId}`, { name: name.trim(), location_text: location.trim() || null, unit_system: unitSystem });
+      await invalidateEstateQueries(estateQueryScope, estateId, ["detail", "activity", "public-settings"]);
       toast.success("Estate details saved.");
-      load();
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "Estate details could not be saved."));
     }
@@ -64,11 +83,12 @@ export default function EstateSettingsPage() {
   };
 
   const addBlock = async () => {
-    if (!blockLabel.trim()) return;
+    if (!estateId || !blockLabel.trim()) return;
     try {
       const response = await api.post(`/estates/${estateId}/blocks`, { label: blockLabel.trim(), name: blockName.trim() || null });
       setBlocks((current) => [...current, response.data]);
       setBlockLabel(""); setBlockName(""); setShowAddBlock(false);
+      await invalidateEstateQueries(estateQueryScope, estateId, ["blocks", "activity"]);
       toast.success("Block added.");
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "Block could not be saved."));

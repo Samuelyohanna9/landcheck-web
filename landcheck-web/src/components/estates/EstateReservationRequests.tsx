@@ -6,6 +6,7 @@ import { PAYMENT_METHODS } from "./FinancialComponents";
 import EstatePagination from "./EstatePagination";
 import { whatsappHref } from "../../utils/estateMarketing";
 import { findDuplicateCustomers, DuplicateCustomerModal, type DuplicateCustomerMatch } from "./CustomerDuplicateCheck";
+import { getEstateQueryScope, useEstateReservationRequestsQuery, invalidateEstateQueries } from "../../query/estateQueries";
 
 type ReservationRequest = {
   id: number;
@@ -83,6 +84,8 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
   const conversionRequestRef = useRef<{ fingerprint: string; key: string } | null>(null);
   const [duplicateMatches, setDuplicateMatches] = useState<DuplicateCustomerMatch[] | null>(null);
   const [pendingRequestId, setPendingRequestId] = useState<number | null>(null);
+  const estateQueryScope = getEstateQueryScope(getEstateAuthSession());
+  const reservationQuery = useEstateReservationRequestsQuery(estateQueryScope, estateId, page);
   const role = getEstateAuthSession()?.user.role_key;
   const canUpdate = role === "owner" || role === "manager" || role === "sales" || role === "marketer";
 
@@ -96,22 +99,22 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
     setNextPaymentDueDate("");
   };
 
-  const load = () => {
-    api.get(`/estates/${estateId}/reservation-requests`, { params: { page, page_size: 8 } })
-      .then((response) => {
-        setRequests(response.data?.items || []);
-        setTotal(Number(response.data?.total || 0));
-        setNewCount(Number(response.data?.new_count || 0));
-      })
-      .catch(() => setRequests([]))
-      .finally(() => setLoading(false));
-  };
-
   useEffect(() => {
-    load();
-    const timer = window.setInterval(load, 30000);
-    return () => window.clearInterval(timer);
-  }, [estateId, page]);
+    const data = reservationQuery.data;
+    if (data) {
+      setRequests(data.items || []);
+      setTotal(Number(data.total || 0));
+      setNewCount(Number(data.new_count || 0));
+      setLoading(false);
+    } else if (reservationQuery.isError) {
+      setRequests([]);
+      setTotal(0);
+      setNewCount(0);
+      setLoading(false);
+    } else {
+      setLoading(reservationQuery.isPending);
+    }
+  }, [reservationQuery.data, reservationQuery.isError, reservationQuery.isPending]);
 
   const updateStatus = async (requestId: number, status: ReservationRequest["status"]) => {
     if (updatingId === requestId || migratingId === requestId) return;
@@ -119,6 +122,7 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
     try {
       const response = await api.patch(`/estates/reservation-requests/${requestId}`, { status });
       setRequests((current) => current.map((item) => item.id === requestId ? response.data : item));
+      await invalidateEstateQueries(estateQueryScope, estateId, ["reservations", "activity"]);
       toast.success("Reservation request updated.");
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "The reservation request could not be updated."));
@@ -151,6 +155,7 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
       resetConversionPaymentForm();
       setDuplicateMatches(null);
       setPendingRequestId(null);
+      await invalidateEstateQueries(estateQueryScope, estateId, ["reservations", "selectors", "dashboard", "payments", "documents", "activity"]);
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "The request could not be added to customers."));
     } finally {

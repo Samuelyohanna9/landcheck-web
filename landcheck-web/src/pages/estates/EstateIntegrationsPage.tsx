@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
+import { getEstateAuthSession } from "../../auth/estateAuth";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
 import EstateModal from "../../components/estates/EstateModal";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import Spinner from "../../components/estates/EstateSpinner";
+import { getEstateQueryScope, invalidateEstateMutation, invalidateEstateResourcesAcrossEstates, useEstatePlotsQuery } from "../../query/estateQueries";
 import { loadMapboxGl, loadMapboxGlCss } from "../../utils/mapboxLoader";
 import "../../styles/estate-integrations.css";
 
@@ -118,6 +120,7 @@ function IntegrationsHome({ onStartImport }: { onStartImport: () => void }) {
 
 function ImportHistory({ onStartImport }: { onStartImport: () => void }) {
   const [rows, setRows] = useState<BatchHistoryRow[] | null>(null);
+  const estateQueryScope = getEstateQueryScope(getEstateAuthSession());
 
   const load = () => { api.get<{ rows: BatchHistoryRow[] }>("/estates/import-batches").then((r) => setRows(r.data.rows || [])).catch(() => setRows([])); };
   useEffect(() => { load(); }, []);
@@ -136,6 +139,7 @@ function ImportHistory({ onStartImport }: { onStartImport: () => void }) {
     if (!window.confirm("Reverse this import? This only works if nothing created by it has since been changed.")) return;
     try {
       await api.post(`/estates/import-batches/${id}/reverse`);
+      await invalidateEstateResourcesAcrossEstates(estateQueryScope, ["detail", "selectors", "plots", "layers", "blocks", "dashboard", "payments", "documents", "reservations", "activity"]);
       toast.success("Batch reversed.");
       load();
     } catch (error) {
@@ -184,6 +188,7 @@ function ImportHistory({ onStartImport }: { onStartImport: () => void }) {
 }
 
 function ImportWizard({ estates, onDone, onCancel }: { estates: EstateOption[]; onDone: () => void; onCancel: () => void }) {
+  const estateQueryScope = getEstateQueryScope(getEstateAuthSession());
   const [step, setStep] = useState(1);
   const [estateId, setEstateId] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -348,6 +353,7 @@ function ImportWizard({ estates, onDone, onCancel }: { estates: EstateOption[]; 
     setCommitting(true);
     try {
       const response = await api.post<CommitResult>(`/estates/import-batches/${batchId}/commit`, {});
+      await invalidateEstateMutation(estateQueryScope, estateId, "import");
       setResult(response.data);
       setStep(4);
     } catch (error) {
@@ -598,17 +604,26 @@ function ImportWizard({ estates, onDone, onCancel }: { estates: EstateOption[]; 
 function PlotMapPickerModal({ estateId, onSelect, onClose }: { estateId: string; onSelect: (plot: PlotOption) => void; onClose: () => void }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
+  const plotsQuery = useEstatePlotsQuery(getEstateQueryScope(getEstateAuthSession()), estateId);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    if (plotsQuery.isPending) {
+      setLoading(true);
+      return () => { cancelled = true; };
+    }
+    if (plotsQuery.isError || !plotsQuery.data) {
+      setLoadError("Could not load the map - use the list instead.");
+      setLoading(false);
+      return () => { cancelled = true; };
+    }
     (async () => {
       try {
         const [mapboxgl] = await Promise.all([loadMapboxGl(), loadMapboxGlCss()]);
-        const response = await api.get(`/estates/${estateId}/plots.geojson`);
         if (cancelled || !containerRef.current) return;
-        const geojson = response.data;
+        const geojson = plotsQuery.data;
         if (!geojson?.features?.length) {
           setLoadError("No mapped plots were found in this estate - use the list instead.");
           setLoading(false);
@@ -654,7 +669,7 @@ function PlotMapPickerModal({ estateId, onSelect, onClose }: { estateId: string;
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, [estateId]);
+  }, [estateId, plotsQuery.data, plotsQuery.isError, plotsQuery.isPending]);
 
   return (
     <EstateModal title="Select a plot on the map" subtitle="Click any plot to link this row to it." onClose={onClose}>

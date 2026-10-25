@@ -11,6 +11,7 @@ import { isSurveyAuthed } from "./auth/surveyAuth";
 import { getEstateAuthSession, isEstateAuthed } from "./auth/estateAuth";
 import { CookieConsentProvider } from "./privacy/cookieConsent";
 import { lazyWithChunkRecovery, CHUNK_RECOVERY_STORAGE_KEY } from "./utils/lazyWithChunkRecovery";
+import EstateQueryProvider from "./query/EstateQueryProvider";
 
 const LandingPage = lazyWithChunkRecovery(() => import("./pages/LandingPage"));
 const SurveyPlan = lazyWithChunkRecovery(() => import("./pages/SurveyPlan"));
@@ -362,14 +363,15 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <CookieConsentProvider>
-        <RouteScrollManager />
-        <SeoRouteMeta />
-        <CookieConsentManager />
-        <ContextualTooltips />
-        <ChunkLoadBoundary>
-          <Suspense fallback={<RouteLoadingFallback />}>
-            <Routes>
+      <EstateQueryProvider>
+        <CookieConsentProvider>
+          <RouteScrollManager />
+          <SeoRouteMeta />
+          <CookieConsentManager />
+          <ContextualTooltips />
+          <ChunkLoadBoundary>
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/survey-plan" element={<SurveyPlan />} />
               <Route path="/hazard-analysis" element={<HazardAnalysis />} />
@@ -454,10 +456,11 @@ export default function App() {
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/estate-admin" element={<EstateAdminDashboard />} />
               <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </ChunkLoadBoundary>
-      </CookieConsentProvider>
+              </Routes>
+            </Suspense>
+          </ChunkLoadBoundary>
+        </CookieConsentProvider>
+      </EstateQueryProvider>
     </BrowserRouter>
   );
 }

@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
+import { getEstateAuthSession } from "../../auth/estateAuth";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
+import { getEstateQueryScope, invalidateEstateMutation, useEstatePlotsQuery } from "../../query/estateQueries";
 
 const STATUS_LABELS: Record<string, string> = {
   not_started: "Not started",
@@ -15,14 +17,20 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function EstateDevelopmentPage() {
   const { estateId } = useParams();
+  const estateQueryScope = getEstateQueryScope(getEstateAuthSession());
+  const plotsQuery = useEstatePlotsQuery(estateQueryScope, estateId);
   const [estateName, setEstateName] = useState("");
   const [plots, setPlots] = useState<any[]>([]);
   const [activity, setActivity] = useState<any[]>([]);
 
+  useEffect(() => {
+    if (plotsQuery.data) setPlots((plotsQuery.data.features || []).map((feature: any) => feature.properties));
+    else if (plotsQuery.isError) setPlots([]);
+  }, [plotsQuery.data, plotsQuery.isError]);
+
   const load = () => {
     if (!estateId) return;
     api.get(`/estates/${estateId}`).then((response) => setEstateName(response.data.name)).catch(() => undefined);
-    api.get(`/estates/${estateId}/plots.geojson`).then((response) => setPlots((response.data?.features || []).map((feature: any) => feature.properties))).catch(() => setPlots([]));
     api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));
   };
   useEffect(load, [estateId]);
@@ -31,6 +39,7 @@ export default function EstateDevelopmentPage() {
     try {
       await api.patch(`/estates/plots/${plotId}/development-status`, { status });
       setPlots((current) => current.map((plot) => (plot.id === plotId ? { ...plot, development_status: status } : plot)));
+      if (estateId) await invalidateEstateMutation(estateQueryScope, estateId, "plot");
       toast.success("Development status updated.");
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "Development status could not be saved."));

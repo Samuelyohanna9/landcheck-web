@@ -1,6 +1,8 @@
 import { api } from "../api/client";
+import { clearEstateQueryCache } from "../query/estateQueryClient";
 
 export const ESTATE_AUTH_STORAGE_KEY = "landcheck_estate_auth";
+export const ESTATE_AUTH_SESSION_CHANGED_EVENT = "landcheck:estate-session-changed";
 
 export type EstateAuthUser = {
   id: number;
@@ -83,15 +85,24 @@ export const isEstateAuthed = () => Boolean(getEstateAuthSession());
 
 export const setEstateAuthSession = (session: EstateAuthSession) => {
   if (typeof window !== "undefined") {
+    const previous = getEstateAuthSession();
+    const previousIdentity = previous
+      ? `${previous.session_uid}:${previous.user.organization_id}:${previous.user.id}:${previous.user.role_key || ""}:${[...(previous.user.permissions || [])].sort().join(",")}`
+      : "";
+    const nextIdentity = `${session.session_uid}:${session.user.organization_id}:${session.user.id}:${session.user.role_key || ""}:${[...(session.user.permissions || [])].sort().join(",")}`;
+    if (previousIdentity && previousIdentity !== nextIdentity) clearEstateQueryCache();
     window.localStorage.removeItem(ESTATE_AUTH_STORAGE_KEY);
     window.sessionStorage.setItem(ESTATE_AUTH_STORAGE_KEY, JSON.stringify({ ...session, access_token: "" }));
+    window.dispatchEvent(new Event(ESTATE_AUTH_SESSION_CHANGED_EVENT));
   }
 };
 
 export const clearEstateAuthSession = () => {
   if (typeof window === "undefined") return;
+  clearEstateQueryCache();
   window.localStorage.removeItem(ESTATE_AUTH_STORAGE_KEY);
   window.sessionStorage.removeItem(ESTATE_AUTH_STORAGE_KEY);
+  window.dispatchEvent(new Event(ESTATE_AUTH_SESSION_CHANGED_EVENT));
   void api.post("/estates/auth/logout", {}).catch(() => undefined);
 };
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
+import { getEstateAuthSession } from "../../auth/estateAuth";
 import { money, formatPaymentPlan, PaymentPlanEditor, PaymentStatusBadge } from "../../components/estates/FinancialComponents";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateModal from "../../components/estates/EstateModal";
@@ -9,6 +10,7 @@ import EstatePagination from "../../components/estates/EstatePagination";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import Spinner from "../../components/estates/EstateSpinner";
 import { findDuplicateCustomers, DuplicateCustomerModal, type DuplicateCustomerMatch } from "../../components/estates/CustomerDuplicateCheck";
+import { getEstateQueryScope, invalidateEstateMutation } from "../../query/estateQueries";
 
 type CustomerRow = { id: number; name: string; reference?: string | null; phone?: string | null; email?: string | null; plot_count?: number; agreed_price?: string; outstanding?: string };
 type TimelineEvent = {
@@ -32,6 +34,7 @@ type TimelineEvent = {
 export default function EstateCustomersPage() {
   const { estateId } = useParams();
   const navigate = useNavigate();
+  const estateQueryScope = getEstateQueryScope(getEstateAuthSession());
   const [estateName, setEstateName] = useState("");
   const [organizationId, setOrganizationId] = useState<number | null>(null);
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
@@ -190,6 +193,7 @@ export default function EstateCustomersPage() {
     if (!organizationId || !newName.trim()) { toast.error("Enter the customer name."); return; }
     try {
       const response = await api.post(`/estates/organizations/${organizationId}/customers`, { full_name: newName.trim(), phone: newPhone.trim() || null, email: newEmail.trim() || null });
+      if (estateId) await invalidateEstateMutation(estateQueryScope, estateId, "customer");
       setNewName(""); setNewPhone(""); setNewEmail(""); setShowAddCustomer(false); setDuplicateMatches(null);
       toast.success("Customer added.");
       load();
@@ -339,7 +343,7 @@ export default function EstateCustomersPage() {
                                 )}
                               </div>
                               {planEditorAllocationId === row.allocation_id && (
-                                <PaymentPlanEditor allocationId={row.allocation_id} currentPlan={row.payment_plan} onSaved={() => { setPlanEditorAllocationId(null); void chooseCustomer(selectedId); }} />
+                                <PaymentPlanEditor allocationId={row.allocation_id} currentPlan={row.payment_plan} onSaved={() => { setPlanEditorAllocationId(null); void invalidateEstateMutation(estateQueryScope, estateId, "payment"); void chooseCustomer(selectedId); }} />
                               )}
                               {expandedAllocationId === row.allocation_id && (
                                 <div style={{ overflowX: "auto", marginTop: 6 }}>

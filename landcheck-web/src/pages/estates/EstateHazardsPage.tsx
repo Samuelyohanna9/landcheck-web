@@ -2,11 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
+import { getEstateAuthSession } from "../../auth/estateAuth";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import Spinner from "../../components/estates/EstateSpinner";
 import EstateProgressSteps, { type EstateProgressStep } from "../../components/estates/EstateProgressSteps";
+import { getEstateQueryScope, invalidateEstateQueries } from "../../query/estateQueries";
 
 const HAZARD_PROGRESS_STEPS: EstateProgressStep[] = [
   { label: "Preparing the Estate boundary", match: ["preparing"] },
@@ -81,6 +83,7 @@ function floodSignalSummary(assessments: any[]) {
 export default function EstateHazardsPage() {
   const { estateId } = useParams();
   const navigate = useNavigate();
+  const estateQueryScope = getEstateQueryScope(getEstateAuthSession());
   const [estateName, setEstateName] = useState("");
   const [dashboard, setDashboard] = useState<any>(null);
   const [activity, setActivity] = useState<any[]>([]);
@@ -121,6 +124,7 @@ export default function EstateHazardsPage() {
       const created = await api.post<HazardJobStatus>(`/estates/${estateId}/hazards/assess-all`);
       const job = await pollHazardJob(created.data.id);
       setDashboard(job.result);
+      await invalidateEstateQueries(estateQueryScope, estateId, ["hazards", "dashboard", "activity"]);
       toast.success("Hazard analysis complete for the Estate boundary.");
     } catch (error) {
       if (isUpgradeRequiredError(error)) setUpgradeRequired(true);

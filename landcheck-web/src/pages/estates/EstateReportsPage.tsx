@@ -2,13 +2,16 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
+import { getEstateAuthSession } from "../../auth/estateAuth";
 import { money } from "../../components/estates/FinancialComponents";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import Spinner from "../../components/estates/EstateSpinner";
+import { getEstateQueryScope, useEstateDashboardQuery } from "../../query/estateQueries";
 
 export default function EstateReportsPage() {
   const { estateId } = useParams();
+  const dashboardQuery = useEstateDashboardQuery(getEstateQueryScope(getEstateAuthSession()), estateId);
   const [estateName, setEstateName] = useState("");
   const [dashboard, setDashboard] = useState<any>(null);
   const [quality, setQuality] = useState<any>(null);
@@ -17,9 +20,13 @@ export default function EstateReportsPage() {
   const [reportBusy, setReportBusy] = useState(false);
 
   useEffect(() => {
+    if (dashboardQuery.data) setDashboard(dashboardQuery.data);
+    else if (dashboardQuery.isError) setDashboard(null);
+  }, [dashboardQuery.data, dashboardQuery.isError]);
+
+  useEffect(() => {
     if (!estateId) return;
     api.get(`/estates/${estateId}`).then((response) => setEstateName(response.data.name)).catch(() => undefined);
-    api.get(`/estates/${estateId}/dashboard`).then((response) => setDashboard(response.data)).catch(() => setDashboard(null));
     api.get(`/estates/${estateId}/quality-check`).then((response) => setQuality(response.data)).catch(() => setQuality(null));
     api.get(`/estates/${estateId}/hazards`).then((response) => setHazards(response.data)).catch(() => setHazards(null));
     api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));

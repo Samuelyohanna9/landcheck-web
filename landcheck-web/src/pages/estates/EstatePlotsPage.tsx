@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
+import { getEstateAuthSession } from "../../auth/estateAuth";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import { money } from "../../components/estates/FinancialComponents";
 import { PlotStatusBadge } from "../../components/estates/plotStatusColors";
 import { formatArea, type UnitSystem } from "../../utils/unitFormat";
+import { getEstateQueryScope, invalidateEstateMutation, useEstatePlotsQuery } from "../../query/estateQueries";
 
 type PlotFeature = {
   id: number;
@@ -39,6 +41,8 @@ function statusTone(value: string): "good" | "warn" | "info" | "danger" | "neutr
 export default function EstatePlotsPage() {
   const { estateId } = useParams();
   const navigate = useNavigate();
+  const estateQueryScope = getEstateQueryScope(getEstateAuthSession());
+  const plotsQuery = useEstatePlotsQuery(estateQueryScope, estateId);
   const [estateName, setEstateName] = useState("");
   const [unitSystem, setUnitSystem] = useState<UnitSystem>("m");
   const [plots, setPlots] = useState<PlotFeature["properties"][]>([]);
@@ -75,18 +79,22 @@ export default function EstatePlotsPage() {
     }
   };
 
+  useEffect(() => {
+    if (plotsQuery.data) {
+      const rows = ((plotsQuery.data.features || []) as PlotFeature[]).map((feature) => feature.properties);
+      setPlots(rows);
+      syncListingDefaults(rows);
+    } else if (plotsQuery.isError) {
+      setPlots([]);
+    }
+  }, [plotsQuery.data, plotsQuery.isError]);
+
   const loadPlotsPageData = () => {
     if (!estateId) return;
     api.get(`/estates/${estateId}`).then((response) => {
       setEstateName(response.data.name);
       setUnitSystem(response.data.unit_system === "ft" ? "ft" : "m");
     }).catch(() => undefined);
-    api.get(`/estates/${estateId}/plots.geojson`).then((response) => {
-      const features = (response.data?.features || []) as PlotFeature[];
-      const rows = features.map((feature) => feature.properties);
-      setPlots(rows);
-      syncListingDefaults(rows);
-    }).catch(() => setPlots([]));
     api.get(`/estates/${estateId}/blocks`).then((response) => setBlocks(response.data || [])).catch(() => setBlocks([]));
     api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));
   };
@@ -101,6 +109,7 @@ export default function EstatePlotsPage() {
     setPriceBusy(true);
     try {
       const response = await api.patch(`/estates/plots/${plotId}/public-price`, { asking_price: priceDraft.trim() ? Number(priceDraft) : null });
+      if (estateId) await invalidateEstateMutation(estateQueryScope, estateId, "plot");
       setPlots((current) => current.map((plot) => plot.id === plotId ? { ...plot, asking_price: response.data.asking_price } : plot));
       setEditingPriceId(null);
       toast.success("Public price saved.");
@@ -115,6 +124,7 @@ export default function EstatePlotsPage() {
     setAddressBusy(true);
     try {
       const response = await api.patch(`/estates/plots/${plotId}/public-address`, { public_address: addressDraft.trim() || null });
+      if (estateId) await invalidateEstateMutation(estateQueryScope, estateId, "plot");
       setPlots((current) => current.map((plot) => plot.id === plotId ? { ...plot, public_address: response.data.public_address } : plot));
       setEditingAddressId(null);
       toast.success("Plot address saved.");
@@ -129,6 +139,7 @@ export default function EstatePlotsPage() {
     setTitleBusy(true);
     try {
       const response = await api.patch(`/estates/plots/${plotId}/title-verification`, { verified, note: note || null });
+      if (estateId) await invalidateEstateMutation(estateQueryScope, estateId, "plot");
       setPlots((current) => current.map((plot) => plot.id === plotId ? { ...plot, title_verified: response.data.title_verified, title_verified_note: note || null } : plot));
       setEditingTitleId(null);
       toast.success(verified ? "Plot marked as title-verified - this now shows publicly." : "Verification removed.");
@@ -140,6 +151,7 @@ export default function EstatePlotsPage() {
   };
 
   const applyListingDefaults = async (kind: "address" | "price") => {
+    if (!estateId) return;
     if (kind === "price" && (!uniformPrice.trim() || !Number.isFinite(Number(uniformPrice)) || Number(uniformPrice) <= 0)) {
       toast.error("Enter a valid uniform price first.");
       return;
@@ -152,6 +164,7 @@ export default function EstatePlotsPage() {
         apply_price: kind === "price",
         asking_price: kind === "price" ? Number(uniformPrice) : undefined,
       });
+      await invalidateEstateMutation(estateQueryScope, estateId, "plot");
       if (kind === "address") {
         const value = response.data.public_address || null;
         setSharedAddress(value || "");

@@ -1,30 +1,38 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../../api/client";
+import { getEstateAuthSession } from "../../auth/estateAuth";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import PlotHistoryList from "../../components/estates/PlotHistoryList";
 import type { PlotHistoryEvent } from "../../utils/plotHistory";
 import { PlotStatusBadge } from "../../components/estates/plotStatusColors";
+import { getEstateQueryScope, useEstatePlotsQuery } from "../../query/estateQueries";
 
 type PlotSummary = { id: number; plot_number: string; commercial_status: string; area_sqm: number; public_address: string | null };
 
 export default function EstatePlotHistoryPage() {
   const { estateId, plotId } = useParams();
+  const plotsQuery = useEstatePlotsQuery(getEstateQueryScope(getEstateAuthSession()), estateId);
   const [estateName, setEstateName] = useState("");
   const [plot, setPlot] = useState<PlotSummary | null>(null);
   const [events, setEvents] = useState<PlotHistoryEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [activity, setActivity] = useState<any[]>([]);
 
+  useEffect(() => {
+    if (plotsQuery.data) {
+      const feature = (plotsQuery.data.features || []).find((item: any) => String(item.properties.id) === String(plotId));
+      setPlot(feature ? feature.properties : null);
+    } else if (plotsQuery.isError) {
+      setPlot(null);
+    }
+  }, [plotsQuery.data, plotsQuery.isError, plotId]);
+
   const load = () => {
     if (!estateId || !plotId) return;
     setLoading(true);
     api.get(`/estates/${estateId}`).then((response) => setEstateName(response.data.name)).catch(() => undefined);
-    api.get(`/estates/${estateId}/plots.geojson`).then((response) => {
-      const feature = (response.data?.features || []).find((item: any) => String(item.properties.id) === String(plotId));
-      setPlot(feature ? feature.properties : null);
-    }).catch(() => setPlot(null));
     api.get(`/estates/plots/${plotId}/timeline`).then((response) => setEvents(response.data || [])).catch(() => setEvents([])).finally(() => setLoading(false));
     api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));
   };

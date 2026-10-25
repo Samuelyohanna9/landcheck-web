@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../../api/client";
+import { getEstateAuthSession } from "../../../auth/estateAuth";
 import { fetchBlobUrl, formatDateTime } from "../../../utils/estateMarketing";
 import EstateIcon from "../EstateIcon";
+import { getEstateQueryScope, useEstatePlotsQuery } from "../../../query/estateQueries";
 
 type Update = {
   id: number; kind: string; title: string; body: string | null; plot_number: string | null; plot_id: number | null;
@@ -38,6 +40,7 @@ export function VerifyBadge({ verification, label }: { verification: string; lab
 }
 
 export default function MarketingProgressTab({ estateId, canPost }: { estateId: string; canPost: boolean }) {
+  const plotsQuery = useEstatePlotsQuery(getEstateQueryScope(getEstateAuthSession()), estateId);
   const [updates, setUpdates] = useState<Update[]>([]);
   const [plots, setPlots] = useState<PlotOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,12 +70,14 @@ export default function MarketingProgressTab({ estateId, canPost }: { estateId: 
 
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {
-    api.get(`/estates/${estateId}/plots.geojson`).then((response) => {
-      const items: PlotOption[] = (response.data?.features || []).map((feature: any) => ({ id: Number(feature.properties.id), plot_number: String(feature.properties.plot_number) }));
+    if (plotsQuery.data) {
+      const items: PlotOption[] = (plotsQuery.data.features || []).map((feature: any) => ({ id: Number(feature.properties.id), plot_number: String(feature.properties.plot_number) }));
       items.sort((a, b) => a.plot_number.localeCompare(b.plot_number, undefined, { numeric: true }));
       setPlots(items);
-    }).catch(() => setPlots([]));
-  }, [estateId]);
+    } else if (plotsQuery.isError) {
+      setPlots([]);
+    }
+  }, [plotsQuery.data, plotsQuery.isError]);
 
   const locate = () => {
     if (!navigator.geolocation) { setGeoError("This device cannot share its location."); return; }

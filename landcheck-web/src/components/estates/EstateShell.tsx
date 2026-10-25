@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
@@ -8,6 +9,8 @@ import EstateModal from "./EstateModal";
 import { clearEstateAuthSession, getEstateAuthSession, setEstateAuthSession } from "../../auth/estateAuth";
 import { prefetchMapboxCore } from "../../utils/mapboxLoader";
 import { useFloatingPopoverPosition } from "../../utils/useFloatingPopoverPosition";
+import { clearEstateQueryCache } from "../../query/estateQueryClient";
+import { getEstateQueryScope, useEstateShellQueries, estateQueryKeys } from "../../query/estateQueries";
 import "../../styles/estate-dashboard.css";
 import "../../styles/estate-monday.css";
 import "../../styles/estate-legal.css";
@@ -186,10 +189,10 @@ export default function EstateShell({
   const [renameBusy, setRenameBusy] = useState(false);
   const [renameValue, setRenameValue] = useState(estateName || "");
   const [displayEstateName, setDisplayEstateName] = useState(estateName || "Estate");
-  const [companyLogoPath, setCompanyLogoPath] = useState<string | null>(null);
   const [estateSession, setEstateSession] = useState(getEstateAuthSession());
   const [subscriptionStatus, setSubscriptionStatus] = useState<EstateSubscriptionStatus | null>(null);
   const [billingLoading, setBillingLoading] = useState(!skipBillingGate);
+  const queryClient = useQueryClient();
   const activeItem = estateNavItems.find((item) => item.key === activeKey);
   // Which nav items with sub-views (Marketing, ...) have their sub-view list expanded - starts
   // expanded when you're already on that item's own page, so its sub-views are visible as soon
@@ -225,6 +228,12 @@ export default function EstateShell({
         .then((response) => {
           if (!mounted || !response.data?.authed || !response.data.user) return;
           const refreshed = { ...current, user: { ...current.user, ...response.data.user } };
+          const permissionsChanged =
+            current.user.organization_id !== refreshed.user.organization_id ||
+            current.user.id !== refreshed.user.id ||
+            current.user.role_key !== refreshed.user.role_key ||
+            JSON.stringify([...(current.user.permissions || [])].sort()) !== JSON.stringify([...(refreshed.user.permissions || [])].sort());
+          if (permissionsChanged) clearEstateQueryCache();
           setEstateAuthSession(refreshed);
           setEstateSession(refreshed);
         })
@@ -262,6 +271,8 @@ export default function EstateShell({
   const organizationId = estateSession?.user.organization_id;
   const canAcceptDpa = String(estateSession?.user.role_key || "").toLowerCase() === "owner";
   const dpaPromptStorageKey = `edash_dpa_prompt_seen_${organizationId || "org"}_${estateSession?.user.id || "user"}`;
+  const estateQueryScope = getEstateQueryScope(estateSession);
+  const shellQueries = useEstateShellQueries(estateQueryScope, estateId, skipBillingGate);
 
   const latestDeliveryTimestamp = deliveryRows.reduce<string | null>(
     (latest, row) => (!latest || row.created_at > latest ? row.created_at : latest),
@@ -336,59 +347,45 @@ export default function EstateShell({
   }, [deliverySeenStorageKey]);
 
   useEffect(() => {
-    if (!estateId || estateId === "0") return;
-    let mounted = true;
-    api.get(`/estates/${estateId}/notifications`, { params: { limit: 250 } })
-      .then((response) => {
-        if (!mounted) return;
-        const items = Array.isArray(response.data?.items) ? response.data.items : [];
-        setDeliveryRows(items.map((item: DeliverySignal) => ({ id: Number(item.id), created_at: String(item.created_at || "") })).filter((item: DeliverySignal) => item.created_at));
-      })
-      .catch(() => { if (mounted) setDeliveryRows([]); });
-    api.get(`/estates/${estateId}/marketing/social/whatsapp/conversations`)
-      .then((response) => {
-        if (!mounted) return;
-        const items = Array.isArray(response.data?.items) ? response.data.items : [];
-        setWhatsappUnreadCount(items.reduce((total: number, item: { unread_count?: number }) => total + Number(item.unread_count || 0), 0));
-      })
-      .catch(() => { if (mounted) setWhatsappUnreadCount(0); });
-    api.get(`/estates/${estateId}/reservation-requests`, { params: { status: "new", page: 1, page_size: 1 } })
-      .then((response) => {
-        if (!mounted) return;
-        const rows = Array.isArray(response.data) ? response.data : (response.data?.items || []);
-        const latestId = rows.reduce((latest: number | null, row: { id?: number }) => Math.max(latest || 0, Number(row.id || 0)), 0) || null;
-        setNewReservationCount(Number(response.data?.new_count ?? rows.length));
-        setNewReservationLatestId(latestId);
-        let seenId = 0;
-        try { seenId = Number(window.localStorage.getItem(reservationNoticeStorageKey) || 0); } catch { /* continue without persisted dismissal */ }
-        if (latestId && latestId > seenId) setShowReservationNotice(true);
-      })
-      .catch(() => { if (mounted) { setNewReservationCount(0); setNewReservationLatestId(null); } });
-    return () => { mounted = false; };
-  }, [estateId, reservationNoticeStorageKey, activeKey]);
+    const items = Array.isArray(shellQueries.notifications.data?.items) ? shellQueries.notifications.data.items : [];
+    setDeliveryRows(items.map((item: DeliverySignal) => ({ id: Number(item.id), created_at: String(item.created_at || "") })).filter((item: DeliverySignal) => item.created_at));
+    if (shellQueries.notifications.isError) setDeliveryRows([]);
+  }, [shellQueries.notifications.data, shellQueries.notifications.isError]);
+
+  useEffect(() => {
+    const items = Array.isArray(shellQueries.whatsappConversations.data?.items) ? shellQueries.whatsappConversations.data.items : [];
+    setWhatsappUnreadCount(items.reduce((total: number, item: { unread_count?: number }) => total + Number(item.unread_count || 0), 0));
+    if (shellQueries.whatsappConversations.isError) setWhatsappUnreadCount(0);
+  }, [shellQueries.whatsappConversations.data, shellQueries.whatsappConversations.isError]);
+
+  useEffect(() => {
+    const response = shellQueries.reservationRequests.data;
+    const rows = Array.isArray(response) ? response : (response?.items || []);
+    const latestId = rows.reduce((latest: number | null, row: { id?: number }) => Math.max(latest || 0, Number(row.id || 0)), 0) || null;
+    setNewReservationCount(Number(response?.new_count ?? rows.length));
+    setNewReservationLatestId(latestId);
+    if (latestId) {
+      let seenId = 0;
+      try { seenId = Number(window.localStorage.getItem(reservationNoticeStorageKey) || 0); } catch { /* continue without persisted dismissal */ }
+      if (latestId > seenId) setShowReservationNotice(true);
+    }
+    if (shellQueries.reservationRequests.isError) {
+      setNewReservationCount(0);
+      setNewReservationLatestId(null);
+    }
+  }, [shellQueries.reservationRequests.data, shellQueries.reservationRequests.isError, reservationNoticeStorageKey]);
 
   useEffect(() => {
     if (activeKey === "notifications") markDeliverySeen();
   }, [activeKey, latestDeliveryTimestamp]);
 
-  // Polled on its own short interval (not just on navigation, like the counts above) so a
-  // session going live is noticed on the sidebar even while staff are elsewhere in the dashboard.
+  // Query polling pauses when the tab is hidden or the browser is offline. React Query also
+  // refetches this query when the application becomes active again.
   useEffect(() => {
-    if (!estateId || estateId === "0") return undefined;
-    let mounted = true;
-    const loadLiveCount = () => {
-      api.get(`/estates/${estateId}/marketing/live-inspections`)
-        .then((response) => {
-          if (!mounted) return;
-          const rows = Array.isArray(response.data) ? response.data : [];
-          setLiveInspectionCount(rows.filter((row: { status?: string }) => row.status === "live").length);
-        })
-        .catch(() => { if (mounted) setLiveInspectionCount(0); });
-    };
-    loadLiveCount();
-    const interval = window.setInterval(loadLiveCount, 20000);
-    return () => { mounted = false; window.clearInterval(interval); };
-  }, [estateId]);
+    const rows = Array.isArray(shellQueries.liveInspections.data) ? shellQueries.liveInspections.data : [];
+    setLiveInspectionCount(rows.filter((row: { status?: string }) => row.status === "live").length);
+    if (shellQueries.liveInspections.isError) setLiveInspectionCount(0);
+  }, [shellQueries.liveInspections.data, shellQueries.liveInspections.isError]);
 
   const saveEstateName = async () => {
     const nextName = renameValue.trim();
@@ -405,6 +402,8 @@ export default function EstateShell({
       setRenameValue(savedName);
       setRenameOpen(false);
       onEstateNameChange?.(savedName);
+      await queryClient.invalidateQueries({ queryKey: estateQueryKeys.estate(estateQueryScope, estateId, "detail") });
+      await queryClient.invalidateQueries({ queryKey: estateQueryKeys.estate(estateQueryScope, estateId, "public-settings") });
       toast.success("Estate name updated.");
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "Estate name could not be updated."));
@@ -453,17 +452,19 @@ export default function EstateShell({
       setBillingLoading(false);
       return;
     }
-    setBillingLoading(true);
-    api.get("/estates/billing/status", { params: { organization_id: organizationId } })
-      .then((response) => {
-        const status = String(response.data?.status || "none") as EstateSubscriptionStatus;
-        setSubscriptionStatus(status);
-        if (status === "none") navigate("/estates/choose-plan", { replace: true });
-      })
-      .catch(() => undefined)
-      .finally(() => setBillingLoading(false));
+    const response = shellQueries.billingStatus.data;
+    if (response) {
+      const status = String(response.status || "none") as EstateSubscriptionStatus;
+      setSubscriptionStatus(status);
+      setBillingLoading(false);
+      if (status === "none") navigate("/estates/choose-plan", { replace: true });
+    } else if (shellQueries.billingStatus.isError) {
+      setBillingLoading(false);
+    } else {
+      setBillingLoading(true);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [skipBillingGate, estateSession?.user.organization_id]);
+  }, [skipBillingGate, estateSession?.user.organization_id, shellQueries.billingStatus.data, shellQueries.billingStatus.isError]);
 
   const readOnly = !billingLoading && ["past_due", "canceled", "expired"].includes(String(subscriptionStatus));
   const readOnlyMessage = subscriptionStatus === "past_due"
@@ -475,20 +476,9 @@ export default function EstateShell({
     return () => setEstateReadOnly(false);
   }, [readOnly]);
 
-  // The company logo is configured once in Estate settings and reused throughout the workspace.
+  // The company logo is shared with the Estate page through the public-settings query.
   // Keep the account avatar for the signed-in person; the adjacent mark identifies the company.
-  useEffect(() => {
-    if (!estateId || estateId === "0") return;
-    let mounted = true;
-    api.get(`/estates/${estateId}/public-settings`)
-      .then((response) => {
-        if (mounted) setCompanyLogoPath(response.data?.public_logo_path || null);
-      })
-      .catch(() => {
-        if (mounted) setCompanyLogoPath(null);
-      });
-    return () => { mounted = false; };
-  }, [estateId]);
+  const companyLogoPath = shellQueries.publicSettings.data?.public_logo_path || null;
 
   const companyLogoUrl = companyLogoPath
     ? (companyLogoPath.startsWith("http") ? companyLogoPath : `${API_URL}${companyLogoPath}`)

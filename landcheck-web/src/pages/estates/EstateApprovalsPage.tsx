@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
+import { getEstateAuthSession } from "../../auth/estateAuth";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateModal from "../../components/estates/EstateModal";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
+import { getEstateQueryScope, useEstatePlotsQuery } from "../../query/estateQueries";
 
 type MilestoneType = "survey_plan_approval" | "layout_approval" | "governors_consent" | "certificate_of_occupancy";
 type MilestoneStatus = "not_started" | "submitted" | "under_review" | "approved" | "rejected";
@@ -51,6 +53,7 @@ function formatDate(value: string | null): string {
 
 export default function EstateApprovalsPage() {
   const { estateId } = useParams();
+  const plotsQuery = useEstatePlotsQuery(getEstateQueryScope(getEstateAuthSession()), estateId);
   const [estateName, setEstateName] = useState("");
   const [activity, setActivity] = useState<any[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
@@ -63,10 +66,17 @@ export default function EstateApprovalsPage() {
   const [savingId, setSavingId] = useState<number | null>(null);
   const [drafts, setDrafts] = useState<Record<number, { status: MilestoneStatus; reference_number: string; note: string; is_public: boolean }>>({});
 
+  useEffect(() => {
+    if (plotsQuery.data) {
+      setPlots((plotsQuery.data.features || []).map((feature: any) => ({ id: feature.properties.id, plot_number: feature.properties.plot_number })));
+    } else if (plotsQuery.isError) {
+      setPlots([]);
+    }
+  }, [plotsQuery.data, plotsQuery.isError]);
+
   const load = () => {
     if (!estateId) return;
     api.get(`/estates/${estateId}`).then((response) => setEstateName(response.data.name)).catch(() => undefined);
-    api.get(`/estates/${estateId}/plots.geojson`).then((response) => setPlots((response.data?.features || []).map((feature: any) => ({ id: feature.properties.id, plot_number: feature.properties.plot_number })))).catch(() => setPlots([]));
     api.get(`/estates/${estateId}/marketing/approvals`).then((response) => {
       const rows: Milestone[] = response.data || [];
       setMilestones(rows);

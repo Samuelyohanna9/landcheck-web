@@ -1,12 +1,14 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { api, createIdempotencyKey, extractApiErrorMessage } from "../../api/client";
+import { getEstateAuthSession } from "../../auth/estateAuth";
 import { money, PAYMENT_METHODS } from "../../components/estates/FinancialComponents";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateModal from "../../components/estates/EstateModal";
 import Spinner from "../../components/estates/EstateSpinner";
 import EstatePagination from "../../components/estates/EstatePagination";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
+import { getEstateQueryScope, invalidateEstateAccountQueries } from "../../query/estateQueries";
 
 async function download(path: string, name: string) {
   const response = await api.get(path, { responseType: "blob" });
@@ -21,6 +23,7 @@ async function download(path: string, name: string) {
 const today = () => new Date().toISOString().slice(0, 10);
 
 export default function EstateCommissionsPage() {
+  const estateQueryScope = getEstateQueryScope(getEstateAuthSession());
   const [sidebarEstateId, setSidebarEstateId] = useState("");
   const [sidebarEstateName, setSidebarEstateName] = useState("");
   const [organizationId, setOrganizationId] = useState<number | null>(null);
@@ -113,6 +116,7 @@ export default function EstateCommissionsPage() {
       toast.success(response.data?.email_sent ? `${newAgentName.trim()} added and invite sent.` : `${newAgentName.trim()} added.`);
       setNewAgentName(""); setNewAgentEmail(""); setNewAgentPhone("");
       setShowAddAgent(false);
+      await invalidateEstateAccountQueries(estateQueryScope, ["sales-agents"]);
       await loadAgents(organizationId, agentPage);
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "Agent could not be added."));
@@ -146,6 +150,7 @@ export default function EstateCommissionsPage() {
     try {
       await api.patch(`/estates/organizations/${organizationId}/members/${member.id}`, { is_active: !member.is_active });
       toast.success(member.is_active ? "Agent deactivated." : "Agent reactivated.");
+      await invalidateEstateAccountQueries(estateQueryScope, ["sales-agents"]);
       await loadAgents(organizationId);
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "Agent could not be updated."));
@@ -169,6 +174,7 @@ export default function EstateCommissionsPage() {
     if (!organizationId || !window.confirm(`Revoke ${member.display_name}'s agent workspace link? The current link will stop working immediately.`)) return;
     try {
       const response = await api.post(`/estates/organizations/${organizationId}/members/${member.id}/portal-revoke`);
+      await invalidateEstateAccountQueries(estateQueryScope, ["sales-agents"]);
       toast.success(response.data.revoked ? "Agent workspace link revoked." : "No active workspace link found.");
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "The workspace link could not be revoked."));

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, createIdempotencyKey, extractApiErrorMessage } from "../api/client";
 import { getEstateAuthSession } from "../auth/estateAuth";
+import { getEstateQueryScope, invalidateEstateQueries, invalidateEstateResourcesAcrossEstates } from "../query/estateQueries";
 import { FinancialSummaryCards, PaymentStatusBadge, PaymentPlanEditor, formatPaymentPlan, money, PAYMENT_METHODS, paymentMethodLabel } from "../components/estates/FinancialComponents";
 import { PlotStatusBadge } from "../components/estates/plotStatusColors";
 import EstateShell from "../components/estates/EstateShell";
@@ -77,6 +78,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
   const session = getEstateAuthSession();
   const organizationId = session?.user.organization_id;
   const isOwner = session?.user.role_key === "owner";
+  const estateQueryScope = getEstateQueryScope(session);
 
   const [view, setView] = useState<"payments" | "accounting" | "due_payments">("payments");
   const [accountingLoaded, setAccountingLoaded] = useState(false);
@@ -159,6 +161,15 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
   const paymentRequestRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
   const fail = async (error: unknown, message: string) => toast.error(await extractApiErrorMessage(error, message));
+
+  const invalidateCurrentEstateFinancialData = async () => {
+    if (sidebarEstateId) {
+      await invalidateEstateQueries(estateQueryScope, sidebarEstateId, ["selectors", "dashboard", "payments", "documents", "reservations", "activity"]);
+    }
+    // Finance mutations are organization-wide. Refresh the same resources for other
+    // estates already visited in this session instead of leaving those cached views stale.
+    await invalidateEstateResourcesAcrossEstates(estateQueryScope, ["selectors", "dashboard", "payments", "documents", "reservations", "activity"]);
+  };
 
   const setup = async () => {
     const [selectors, totals] = await Promise.all([api.get("/estates/selectors"), api.get("/estates/financial-summary")]);
@@ -476,6 +487,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
       toast.success(noticeText);
       paymentRequestRef.current = null;
       setRecording(false);
+      await invalidateCurrentEstateFinancialData();
       await load();
     } catch (error) {
       await fail(error, "Payment could not be recorded.");
@@ -488,6 +500,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
     try {
       const response = await api.post(`/estates/payments/${id}/confirm`);
       toast.success(`Payment confirmed.${response.data.customer_notified ? " A confirmation email has been sent to the customer." : ""}`);
+      await invalidateCurrentEstateFinancialData();
       await load();
     } catch (error) {
       await fail(error, "Payment could not be confirmed.");
@@ -504,6 +517,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
       const response = await api.post(`/estates/payments/${detail.payment.id}/${kind}`, kind === "void" ? { reason } : undefined);
       setDetail(null);
       toast.success(`Payment ${kind}ed.${kind === "confirm" && response.data.customer_notified ? " A confirmation email has been sent to the customer." : ""}`);
+      await invalidateCurrentEstateFinancialData();
       await load();
     } catch (error) {
       await fail(error, `Payment could not be ${kind}ed.`);
@@ -522,6 +536,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
       setFile(null);
       setDocumentDescription("");
       setShowUpload(false);
+      await invalidateCurrentEstateFinancialData();
       await load();
     } catch (error) {
       await fail(error, "Document could not be uploaded.");
@@ -1052,7 +1067,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
 
       {recordDetail && (
         <EstateModal title={`Plot ${recordDetail.plot?.number || "record"}`} subtitle={`${recordDetail.customer?.name || "Customer"} - ${recordDetail.estate?.name || "Estate"}`} onClose={() => setRecordDetail(null)}>
-          <AllocationRecordView record={recordDetail} onPrint={() => void printAllocation(recordDetail.allocation.id)} onPlanChanged={() => void viewAllocation(recordDetail.allocation.id)} />
+          <AllocationRecordView record={recordDetail} onPrint={() => void printAllocation(recordDetail.allocation.id)} onPlanChanged={() => { void invalidateCurrentEstateFinancialData().then(() => viewAllocation(recordDetail.allocation.id)); }} />
         </EstateModal>
       )}
     </EstateShell>

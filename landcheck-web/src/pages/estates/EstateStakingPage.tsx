@@ -2,14 +2,17 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
+import { getEstateAuthSession } from "../../auth/estateAuth";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
 import EstatePagination from "../../components/estates/EstatePagination";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
+import { getEstateQueryScope, invalidateEstateMutation } from "../../query/estateQueries";
 
 export default function EstateStakingPage() {
   const { estateId } = useParams();
   const navigate = useNavigate();
+  const estateQueryScope = getEstateQueryScope(getEstateAuthSession());
   const [estateName, setEstateName] = useState("");
   const [tasks, setTasks] = useState<any[]>([]);
   const [activity, setActivity] = useState<any[]>([]);
@@ -28,7 +31,7 @@ export default function EstateStakingPage() {
   const run = async (label: string, action: () => Promise<unknown>) => {
     if (actionBusy) return;
     setActionBusy(label);
-    try { await action(); toast.success(`${label} completed.`); load(); }
+    try { await action(); if (estateId) await invalidateEstateMutation(estateQueryScope, estateId, "staking"); toast.success(`${label} completed.`); load(); }
     catch (error) { toast.error(await extractApiErrorMessage(error, `${label} could not be completed.`)); }
     finally { setActionBusy(""); }
   };

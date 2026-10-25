@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { clearEstateAuthSession, getEstateAuthSession } from "../auth/estateAuth";
+import { clearEstateAuthSession, getEstateAuthSession, ESTATE_AUTH_SESSION_CHANGED_EVENT, type EstateAuthSession } from "../auth/estateAuth";
 import { claimEstateSurveyRequestSession } from "../auth/surveyAuth";
 import { api, createIdempotencyKey, extractApiErrorMessage } from "../api/client";
 import { money, PAYMENT_METHODS } from "../components/estates/FinancialComponents";
@@ -25,6 +26,7 @@ import EstateOperationsSummary from "../components/estates/EstateOperationsSumma
 import Spinner, { LoadingPanel } from "../components/estates/EstateSpinner";
 import PlotHistoryList from "../components/estates/PlotHistoryList";
 import { clearSurveyPlanDraft } from "../offline/surveyPlanDraft";
+import { getEstateQueryScope, useEstateSharedQueries, estateQueryKeys, invalidateEstateQueries, invalidateEstateMutation } from "../query/estateQueries";
 import "../styles/estates.css";
 import "../styles/estate-dashboard.css";
 import "../styles/estate-monday.css";
@@ -477,6 +479,15 @@ export default function Estates() {
   const location = useLocation();
   const isMapView = location.pathname.endsWith("/map");
   const [searchParams] = useSearchParams();
+  const [estateSession, setEstateSession] = useState<EstateAuthSession | null>(() => getEstateAuthSession());
+  useEffect(() => {
+    const syncSession = () => setEstateSession(getEstateAuthSession());
+    window.addEventListener(ESTATE_AUTH_SESSION_CHANGED_EVENT, syncSession);
+    return () => window.removeEventListener(ESTATE_AUTH_SESSION_CHANGED_EVENT, syncSession);
+  }, []);
+  const estateQueryScope = getEstateQueryScope(estateSession);
+  const estateQueries = useEstateSharedQueries(estateQueryScope, estateId);
+  const queryClient = useQueryClient();
   const [estates, setEstates] = useState<Estate[]>([]);
   const [organizations, setOrganizations] = useState<any[]>([]);
   const [organizationsLoaded, setOrganizationsLoaded] = useState(false);
@@ -791,7 +802,12 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
   };
   const approveEstateMap = async () => {
     if (!estateId) return;
-    try { const response = await api.post(`/estates/${estateId}/approve-map`); setDashboard((current: any) => current ? { ...current, estate: { ...current.estate, status: response.data.status } } : current); toast.success("Estate map approved and published as the operational plot register."); }
+    try {
+      const response = await api.post(`/estates/${estateId}/approve-map`);
+      setDashboard((current: any) => current ? { ...current, estate: { ...current.estate, status: response.data.status } } : current);
+      await invalidateEstateQueries(estateQueryScope, estateId, ["detail", "dashboard", "activity"]);
+      toast.success("Estate map approved and published as the operational plot register.");
+    }
     catch (error) { toast.error(await extractApiErrorMessage(error, "Resolve the geometry issues before publishing the Estate map.")); }
   };
   const loadQualityCheck = async () => {
@@ -833,7 +849,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     const ring = plotInputMapPoints.map((point) => [point.lng, point.lat]);
     if (ring.length < 3 || ring.some((point) => point.some((value) => !Number.isFinite(value)))) { toast.error("Check the coordinate values before creating this plot."); return; }
     if (plotInputClosure === "self-intersecting") { toast.error("Order the boundary points before creating the plot."); return; }
-    try { await api.post(`/estates/${estateId}/plots`, { plot_number: plotNumber.trim(), geometry: { type: "Polygon", coordinates: [[...ring, ring[0]]] }, geometry_status: "approved" }); stashPendingNotice("Plot created."); window.location.reload(); }
+    try { await api.post(`/estates/${estateId}/plots`, { plot_number: plotNumber.trim(), geometry: { type: "Polygon", coordinates: [[...ring, ring[0]]] }, geometry_status: "approved" }); await invalidateEstateMutation(estateQueryScope, estateId, "plot"); stashPendingNotice("Plot created."); window.location.reload(); }
     catch (error) { toast.error(await extractApiErrorMessage(error, "Plot could not be created.")); }
   };
   const createEstateBoundaryFromInput = async () => {
@@ -842,7 +858,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     const ring = plotInputMapPoints.map((point) => [point.lng, point.lat]);
     if (ring.length < 3 || ring.some((point) => point.some((value) => !Number.isFinite(value)))) { toast.error("Check the coordinate values before setting the boundary."); return; }
     if (plotInputClosure === "self-intersecting") { toast.error("Order the boundary points before setting the boundary."); return; }
-    try { await api.patch(`/estates/${estateId}`, { boundary: { type: "Polygon", coordinates: [[...ring, ring[0]]] } }); stashPendingNotice("Estate boundary set."); window.location.reload(); }
+    try { await api.patch(`/estates/${estateId}`, { boundary: { type: "Polygon", coordinates: [[...ring, ring[0]]] } }); await invalidateEstateMutation(estateQueryScope, estateId, "settings"); await invalidateEstateQueries(estateQueryScope, estateId, ["plots", "dashboard"]); stashPendingNotice("Estate boundary set."); window.location.reload(); }
     catch (error) { toast.error(await extractApiErrorMessage(error, "Estate boundary could not be set.")); }
   };
   const useAsEstateBoundary = async (plotId: number) => {
@@ -851,6 +867,8 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     if (!feature?.geometry) { toast.error("Could not find that plot's geometry."); return; }
     try {
       await api.patch(`/estates/${estateId}`, { boundary: feature.geometry });
+      await invalidateEstateMutation(estateQueryScope, estateId, "settings");
+      await invalidateEstateQueries(estateQueryScope, estateId, ["plots", "dashboard"]);
       stashPendingNotice("Estate boundary set.");
       window.location.reload();
     } catch (error) {
@@ -862,6 +880,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     setDeletePlotBusy(true);
     try {
       await api.delete(`/estates/${estateId}/plots/${selectedPlot.id}`);
+      await invalidateEstateMutation(estateQueryScope, estateId, "plot");
       stashPendingNotice("Plot deleted.");
       window.location.reload();
     } catch (error) {
@@ -887,6 +906,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     setEditPlotBusy(true);
     try {
       await api.patch(`/estates/${estateId}/plots/${selectedPlot.id}/geometry`, { geometry: { type: "Polygon", coordinates: [[...ring, ring[0]]] } });
+      await invalidateEstateMutation(estateQueryScope, estateId, "plot");
       stashPendingNotice("Plot boundary saved.");
       window.location.reload();
     } catch (error) {
@@ -914,6 +934,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     setResetLayoutBusy(true);
     try {
       await api.delete(`/estates/${estateId}/layout`);
+      await invalidateEstateMutation(estateQueryScope, estateId, "layout");
       stashPendingNotice("Layout reset.");
       window.location.reload();
     } catch (error) {
@@ -974,7 +995,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
       customerRequestRef.current = { fingerprint, key: createIdempotencyKey("estate-customer") };
     }
     const idempotencyKey = customerRequestRef.current.key;
-    try { const response = await api.post(`/estates/organizations/${organizationId}/customers`, { full_name: customerName.trim(), phone: customerPhone.trim() || null, email: customerEmail.trim() || null }, { headers: { "X-Idempotency-Key": idempotencyKey } }); setSelectedCustomerId(String(response.data.id)); setCustomerName(""); setCustomerPhone(""); setCustomerEmail(""); customerRequestRef.current = null; stashPendingNotice("Customer added."); window.location.reload(); }
+    try { const response = await api.post(`/estates/organizations/${organizationId}/customers`, { full_name: customerName.trim(), phone: customerPhone.trim() || null, email: customerEmail.trim() || null }, { headers: { "X-Idempotency-Key": idempotencyKey } }); if (estateId) await invalidateEstateMutation(estateQueryScope, estateId, "customer"); setSelectedCustomerId(String(response.data.id)); setCustomerName(""); setCustomerPhone(""); setCustomerEmail(""); customerRequestRef.current = null; stashPendingNotice("Customer added."); window.location.reload(); }
     catch (error) { toast.error(await extractApiErrorMessage(error, "Customer could not be created.")); }
   };
   const createCustomer = async () => {
@@ -1035,6 +1056,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
         catch { /* the reservation/allocation itself already succeeded - a failed receipt upload shouldn't block it */ }
       }
       assignmentRequestRef.current = null;
+      await invalidateEstateMutation(estateQueryScope, estateId, allocate ? "allocation" : "reservation");
       stashPendingNotice(`Plot ${allocate ? "allocated" : "reserved"}.${response.data.customer_notified ? " A confirmation email has been sent to the customer." : ""}`);
       window.location.reload();
     }
@@ -1043,14 +1065,19 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
   };
   const recordInspection = async () => {
     if (!selectedPlot) return;
-    try { await api.post(`/estates/plots/${selectedPlot.id}/inspections`, { inspection_type: "site_visit", outcome: inspectionOutcome, notes: inspectionNotes || null }); setInspectionNotes(""); toast.success("Field inspection recorded."); setInspections((await api.get(`/estates/plots/${selectedPlot.id}/inspections`)).data); }
+    try { await api.post(`/estates/plots/${selectedPlot.id}/inspections`, { inspection_type: "site_visit", outcome: inspectionOutcome, notes: inspectionNotes || null }); setInspectionNotes(""); toast.success("Field inspection recorded."); setInspections((await api.get(`/estates/plots/${selectedPlot.id}/inspections`)).data); if (estateId) await invalidateEstateQueries(estateQueryScope, estateId, ["activity"]); }
     catch (error) { toast.error(await extractApiErrorMessage(error, "Inspection could not be recorded.")); }
   };
   useEffect(() => { const plot = plots.find((item) => item.id === selectedPlotId); if (!plot) { setInspections([]); return; } api.get(`/estates/plots/${plot.id}/inspections`).then((response) => setInspections(response.data || [])).catch(() => setInspections([])); }, [plots, selectedPlotId]);
   useEffect(() => { const plot = plots.find((item) => item.id === selectedPlotId); if (!plot) { setPlotTimeline([]); return; } api.get(`/estates/plots/${plot.id}/timeline`).then((response) => setPlotTimeline(response.data || [])).catch(() => setPlotTimeline([])); }, [plots, selectedPlotId]);
   const loadHazards = async () => {
     if (!selectedPlot) return;
-    try { const response = await api.post(`/estates/plots/${selectedPlot.id}/hazards/assess`); setHazards(response.data); if (estateId) setHazardDashboard((await api.get(`/estates/${estateId}/hazards`)).data); toast.success("Hazard screening completed."); }
+    try {
+      const response = await api.post(`/estates/plots/${selectedPlot.id}/hazards/assess`);
+      setHazards(response.data);
+      if (estateId) await queryClient.refetchQueries({ queryKey: estateQueryKeys.estate(estateQueryScope, estateId, "hazards"), type: "active" });
+      toast.success("Hazard screening completed.");
+    }
     catch (error) {
       if (isUpgradeRequiredError(error)) setHazardUpgradeRequired(true);
       else toast.error(await extractApiErrorMessage(error, "Hazard screening could not be loaded."));
@@ -1081,17 +1108,24 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     if (coordinates.length < 2) { toast.error("Enter at least two longitude, latitude rows for the layer."); return; }
     const polygon=layerType === "open_space";
     const geometry=polygon ? {type:"Polygon",coordinates:[[...coordinates,coordinates[0]]]} : {type:"LineString",coordinates};
-    try { await api.post(`/estates/${estateId}/layers`, {feature_type:layerType,name:layerName || null,geometry}); stashPendingNotice("Layer added."); window.location.reload(); }
+    try { await api.post(`/estates/${estateId}/layers`, {feature_type:layerType,name:layerName || null,geometry}); await invalidateEstateMutation(estateQueryScope, estateId, "layer"); stashPendingNotice("Layer added."); window.location.reload(); }
     catch (error) { toast.error(await extractApiErrorMessage(error,"Layer could not be saved.")); }
   };
   const createBlock = async () => {
     if (!estateId || !blockLabel.trim()) { toast.error("Enter a block label first."); return; }
-    try { const response = await api.post(`/estates/${estateId}/blocks`, { label: blockLabel.trim(), name: blockName.trim() || null }); setBlocks((current) => [...current, response.data]); setBlockLabel(""); setBlockName(""); toast.success("Block added to the estate register."); }
+    try {
+      const response = await api.post(`/estates/${estateId}/blocks`, { label: blockLabel.trim(), name: blockName.trim() || null });
+      setBlocks((current) => [...current, response.data]);
+      setBlockLabel("");
+      setBlockName("");
+      await invalidateEstateQueries(estateQueryScope, estateId, ["blocks", "plots", "dashboard", "activity"]);
+      toast.success("Block added to the estate register.");
+    }
     catch (error) { toast.error(await extractApiErrorMessage(error, "Block could not be saved.")); }
   };
   const refreshImportReviews = async () => {
     if (!estateId) return;
-    setImportReviews((await api.get(`/estates/${estateId}/import-reviews`)).data || []);
+    await queryClient.refetchQueries({ queryKey: estateQueryKeys.estate(estateQueryScope, estateId, "import-reviews"), type: "active" });
   };
   const uploadLayout = async (kind: "csv" | "geojson" | "dxf" | "scanned-layout") => {
     if (!estateId) return;
@@ -1118,6 +1152,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     setLayoutMessage("");
     try {
       await api.post(`/estates/import-reviews/${reviewId}/decision`, { status, as_boundary: asBoundary });
+      if (estateId) await invalidateEstateMutation(estateQueryScope, estateId, "import");
       await refreshImportReviews();
       const text = status === "approved" ? (asBoundary ? "Estate boundary set. Open \"Design Layout\" to subdivide it or design a layout automatically." : "Plots added to your Estate register.") : "Layout discarded.";
       setLayoutMessage(text);
@@ -1175,6 +1210,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     try {
       const response = await api.post(`/estates/${estateId}/layout-proposals`, criteria);
       setLayoutProposal(response.data);
+      await invalidateEstateQueries(estateQueryScope, estateId, ["layout-proposals", "activity"]);
       toast.success("Draft layout created. Review it before adding plots to the Estate.");
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "The draft layout could not be created."));
@@ -1183,6 +1219,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     }
   };
   const decideLayoutProposal = async (proposalId: number, status: "approved" | "rejected", options?: { replaceExisting?: boolean }) => {
+    if (!estateId) return;
     // Approving over an Estate that already has an approved layout would otherwise fail outright
     // on the first clashing plot number - ask first, rather than let that confusing error be the
     // only thing that happens when the user clicks Approve.
@@ -1194,6 +1231,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     try {
       await api.post(`/estates/layout-proposals/${proposalId}/decision`, { status, replace_existing: Boolean(options?.replaceExisting) });
       setPendingLayoutApproval(null);
+      await invalidateEstateMutation(estateQueryScope, estateId, "layout");
       if (status === "approved") {
         await refreshEstateLayoutData();
         setQuality(null);
@@ -1215,6 +1253,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
       if (featureCandidates) payload.feature_candidates = featureCandidates;
       const response = await api.patch(`/estates/layout-proposals/${proposalId}`, payload);
       setLayoutProposal(response.data);
+      if (estateId) await invalidateEstateQueries(estateQueryScope, estateId, ["layout-proposals", "activity"]);
       toast.success(`Saved. ${response.data.candidates?.length || 0} plots in this draft now.`);
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "Your changes could not be saved."));
@@ -1225,6 +1264,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     try {
       const response = await api.post(`/estates/layout-proposals/${proposalId}/features`, { feature_type: featureType, geometry, width_m: widthM, plot_candidates: plotCandidates });
       setLayoutProposal(response.data);
+      if (estateId) await invalidateEstateQueries(estateQueryScope, estateId, ["layout-proposals", "activity"]);
       toast.success(`${featureType === "road" ? "Road" : "Open space"} added. ${response.data.candidates?.length || 0} plots remain in this draft.`);
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "That shape could not be added."));
@@ -1235,6 +1275,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     try {
       const response = await api.post(`/estates/layout-proposals/${proposalId}/remove-feature`, { feature_index: featureIndex, plot_candidates: plotCandidates, feature_candidates: featureCandidates });
       setLayoutProposal(response.data);
+      if (estateId) await invalidateEstateQueries(estateQueryScope, estateId, ["layout-proposals", "activity"]);
       toast.success(`Removed. ${response.data.candidates?.length || 0} plots in this draft now.`);
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "That shape could not be removed."));
@@ -1255,58 +1296,91 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     if (!feature || points.length < 2) { toast.error("Enter at least two valid coordinate rows."); return; }
     const isPolygon = feature.geometry.type === "Polygon";
     const ring = isPolygon && points[0].join() !== points[points.length - 1].join() ? [...points, points[0]] : points;
-    try { await api.patch(`/estates/${estateId}/layers/${selectedLayerId}`, { geometry: isPolygon ? { type: "Polygon", coordinates: [ring] } : { type: "LineString", coordinates: points } }); setLayerGeojson((current: any) => ({ ...current, features: current.features.map((item: any) => item.id === Number(selectedLayerId) ? { ...item, geometry: isPolygon ? { type: "Polygon", coordinates: [ring] } : { type: "LineString", coordinates: points } } : item) })); toast.success("Layer geometry updated."); }
+    try { await api.patch(`/estates/${estateId}/layers/${selectedLayerId}`, { geometry: isPolygon ? { type: "Polygon", coordinates: [ring] } : { type: "LineString", coordinates: points } }); setLayerGeojson((current: any) => ({ ...current, features: current.features.map((item: any) => item.id === Number(selectedLayerId) ? { ...item, geometry: isPolygon ? { type: "Polygon", coordinates: [ring] } : { type: "LineString", coordinates: points } } : item) })); await invalidateEstateQueries(estateQueryScope, estateId, ["layers", "activity"]); toast.success("Layer geometry updated."); }
     catch (error) { toast.error(await extractApiErrorMessage(error, "Layer could not be updated.")); }
   };
   const archiveLayer = async () => {
     if (!estateId || !selectedLayerId) return;
-    try { await api.delete(`/estates/${estateId}/layers/${selectedLayerId}`); setLayerGeojson((current: any) => ({ ...current, features: current.features.filter((item: any) => item.id !== Number(selectedLayerId)) })); setSelectedLayerId(""); setLayerEditCoordinates(""); toast.success("Layer archived."); }
+    try { await api.delete(`/estates/${estateId}/layers/${selectedLayerId}`); setLayerGeojson((current: any) => ({ ...current, features: current.features.filter((item: any) => item.id !== Number(selectedLayerId)) })); setSelectedLayerId(""); setLayerEditCoordinates(""); await invalidateEstateQueries(estateQueryScope, estateId, ["layers", "activity"]); toast.success("Layer archived."); }
     catch (error) { toast.error(await extractApiErrorMessage(error, "Layer could not be archived.")); }
   };
   useEffect(() => {
     if (!estateId) return;
-    api.get(`/estates/${estateId}`).then((response) => {
-      setEstateDetail(response.data);
-      setImportSourceCrs(response.data.crs || "EPSG:4326");
-      // The Estate's own registered CRS (set at Estate creation, e.g. a Nigerian UTM/Minna belt) is
-      // the coordinate system its survey plans and DGPS exports should agree on - seed every picker
-      // from it so drawing, entering coordinates, importing files, and exporting DGPS data all start
-      // out on the same system by default instead of each one guessing its own generic fallback.
-      const estateMapSystem = estateMapCoordinateSystem(response.data.crs);
+    const detail = estateQueries.detail.data;
+    if (detail) {
+      setEstateDetail(detail);
+      setImportSourceCrs(detail.crs || "EPSG:4326");
+      // The Estate's registered CRS seeds every coordinate picker and export control.
+      const estateMapSystem = estateMapCoordinateSystem(detail.crs);
       setPlotInputCoordinateSystem(estateMapSystem);
       setScannedLayoutCrs(estateMapSystem);
       setDgpsExportCoordinateSystem(estateMapSystem);
       setLayoutExportCoordinateSystem(estateMapSystem);
-      const organizationId = response.data.organization_id;
-      if (organizationId) {
-        api.get(`/estates/organizations/${organizationId}/sales-agents`).then((agentsResponse) => setSalesAgents(agentsResponse.data || [])).catch(() => setSalesAgents([]));
-      }
-    }).catch(() => setEstateDetail(null));
-    api.get("/estates/selectors", { params: { estate_id: estateId } })
-      .then((response) => { setAllocations(response.data.allocations || []); setPlots(response.data.plots || []); setCustomers(response.data.customers || []); })
-      .catch(() => { setAllocations([]); setPlots([]); setCustomers([]); });
-    Promise.all([
-      api.get("/estates/survey-requests", { params: { estate_id: estateId } }),
-      api.get("/estates/staking-tasks", { params: { estate_id: estateId } }),
-    ]).then(([surveys, staking]) => {
-      setSurveyRequests(surveys.data || []);
-      setStakingTasks(staking.data || []);
-    }).catch(() => {
-      setSurveyRequests([]);
-      setStakingTasks([]);
-    });
-    api.get(`/estates/${estateId}/plots.geojson`).then((response) => setPlotGeojson(response.data)).catch(() => setPlotGeojson({ type: "FeatureCollection", features: [] }));
-    api.get(`/estates/${estateId}/layers.geojson`).then((response) => setLayerGeojson(response.data)).catch(() => setLayerGeojson({ type: "FeatureCollection", features: [] }));
-    api.get(`/estates/${estateId}/import-reviews`).then((response) => setImportReviews(response.data || [])).catch(() => setImportReviews([]));
-    api.get(`/estates/${estateId}/layout-proposals`).then((response) => setLayoutProposal((response.data || [])[0] || null)).catch(() => setLayoutProposal(null));
-    api.get(`/estates/${estateId}/hazards`).then((response) => { setHazardDashboard(response.data); setHazardUpgradeRequired(false); }).catch((err) => { setHazardDashboard(null); setHazardUpgradeRequired(isUpgradeRequiredError(err)); });
-    api.get(`/estates/${estateId}/blocks`).then((response) => setBlocks(response.data || [])).catch(() => setBlocks([]));
-    api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));
-    api.get(`/estates/${estateId}/dashboard`).then((response) => setDashboard(response.data)).catch(() => setDashboard(null));
-    api.get("/estates/payments", { params: { estate_id: estateId, page_size: 100 } }).then((response) => setEstatePayments(response.data?.items || [])).catch(() => setEstatePayments([]));
-    api.get("/estates/documents", { params: { page_size: 100 } }).then((response) => setEstateDocuments(response.data?.items || [])).catch(() => setEstateDocuments([]));
-    api.get(`/estates/${estateId}/public-settings`).then((response) => setPublicSettings(response.data)).catch(() => setPublicSettings(null));
-  }, [estateId]);
+    } else if (estateQueries.detail.isError) {
+      setEstateDetail(null);
+    }
+    if (estateQueries.salesAgents.data) setSalesAgents(estateQueries.salesAgents.data || []);
+    else if (estateQueries.salesAgents.isError) setSalesAgents([]);
+  }, [estateId, estateQueries.detail.data, estateQueries.detail.isError, estateQueries.salesAgents.data, estateQueries.salesAgents.isError]);
+
+  useEffect(() => {
+    const selectors = estateQueries.selectors.data;
+    if (selectors) {
+      setAllocations(selectors.allocations || []);
+      setPlots(selectors.plots || []);
+      setCustomers(selectors.customers || []);
+    } else if (estateQueries.selectors.isError) {
+      setAllocations([]);
+      setPlots([]);
+      setCustomers([]);
+    }
+    if (estateQueries.surveyRequests.data) setSurveyRequests(estateQueries.surveyRequests.data || []);
+    else if (estateQueries.surveyRequests.isError) setSurveyRequests([]);
+    if (estateQueries.stakingTasks.data) setStakingTasks(estateQueries.stakingTasks.data || []);
+    else if (estateQueries.stakingTasks.isError) setStakingTasks([]);
+    if (estateQueries.plots.data) setPlotGeojson(estateQueries.plots.data);
+    else if (estateQueries.plots.isError) setPlotGeojson({ type: "FeatureCollection", features: [] });
+    if (estateQueries.layers.data) setLayerGeojson(estateQueries.layers.data);
+    else if (estateQueries.layers.isError) setLayerGeojson({ type: "FeatureCollection", features: [] });
+    if (estateQueries.importReviews.data) setImportReviews(estateQueries.importReviews.data || []);
+    else if (estateQueries.importReviews.isError) setImportReviews([]);
+    if (estateQueries.layoutProposals.data) setLayoutProposal((estateQueries.layoutProposals.data || [])[0] || null);
+    else if (estateQueries.layoutProposals.isError) setLayoutProposal(null);
+    if (estateQueries.hazards.data !== undefined) {
+      setHazardDashboard(estateQueries.hazards.data);
+      setHazardUpgradeRequired(false);
+    } else if (estateQueries.hazards.isError) {
+      setHazardDashboard(null);
+      setHazardUpgradeRequired(isUpgradeRequiredError(estateQueries.hazards.error));
+    }
+    if (estateQueries.blocks.data) setBlocks(estateQueries.blocks.data || []);
+    else if (estateQueries.blocks.isError) setBlocks([]);
+    if (estateQueries.activity.data) setActivity(estateQueries.activity.data || []);
+    else if (estateQueries.activity.isError) setActivity([]);
+    if (estateQueries.dashboard.data) setDashboard(estateQueries.dashboard.data);
+    else if (estateQueries.dashboard.isError) setDashboard(null);
+    if (estateQueries.payments.data) setEstatePayments(estateQueries.payments.data?.items || []);
+    else if (estateQueries.payments.isError) setEstatePayments([]);
+    if (estateQueries.documents.data) setEstateDocuments(estateQueries.documents.data?.items || []);
+    else if (estateQueries.documents.isError) setEstateDocuments([]);
+    if (estateQueries.publicSettings.data) setPublicSettings(estateQueries.publicSettings.data);
+    else if (estateQueries.publicSettings.isError) setPublicSettings(null);
+  }, [
+    estateQueries.selectors.data, estateQueries.selectors.isError,
+    estateQueries.surveyRequests.data, estateQueries.surveyRequests.isError,
+    estateQueries.stakingTasks.data, estateQueries.stakingTasks.isError,
+    estateQueries.plots.data, estateQueries.plots.isError,
+    estateQueries.layers.data, estateQueries.layers.isError,
+    estateQueries.importReviews.data, estateQueries.importReviews.isError,
+    estateQueries.layoutProposals.data, estateQueries.layoutProposals.isError,
+    estateQueries.hazards.data, estateQueries.hazards.error, estateQueries.hazards.isError,
+    estateQueries.blocks.data, estateQueries.blocks.isError,
+    estateQueries.activity.data, estateQueries.activity.isError,
+    estateQueries.dashboard.data, estateQueries.dashboard.isError,
+    estateQueries.payments.data, estateQueries.payments.isError,
+    estateQueries.documents.data, estateQueries.documents.isError,
+    estateQueries.publicSettings.data, estateQueries.publicSettings.isError,
+  ]);
   // Builds the mapboxgl.Map exactly ONCE per estate, guarded by mapRef.current the same way the
   // already-reliable MapViewEnhanced/ProjectMap components do it - this is a stronger guarantee
   // than a dependency array, since it physically refuses to construct a second map even if the
@@ -1448,46 +1522,30 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
   }, [searchParams, allocations]);
   const refreshWorkflow = async () => {
     if (!estateId) return;
-    const [surveys, staking] = await Promise.all([
-      api.get("/estates/survey-requests", { params: { estate_id: estateId } }),
-      api.get("/estates/staking-tasks", { params: { estate_id: estateId } }),
+    await Promise.all([
+      queryClient.refetchQueries({ queryKey: estateQueryKeys.estate(estateQueryScope, estateId, "survey-requests"), type: "active" }),
+      queryClient.refetchQueries({ queryKey: estateQueryKeys.estate(estateQueryScope, estateId, "staking-tasks"), type: "active" }),
     ]);
-    setSurveyRequests(surveys.data || []);
-    setStakingTasks(staking.data || []);
   };
   const refreshEstateLayoutData = async () => {
     if (!estateId) return;
-    const [selectors, plotsMap, layersMap, blockRows, events, metrics, proposals, surveys, staking] = await Promise.all([
-      api.get("/estates/selectors", { params: { estate_id: estateId } }),
-      api.get(`/estates/${estateId}/plots.geojson`),
-      api.get(`/estates/${estateId}/layers.geojson`),
-      api.get(`/estates/${estateId}/blocks`),
-      api.get(`/estates/${estateId}/activity`),
-      api.get(`/estates/${estateId}/dashboard`),
-      api.get(`/estates/${estateId}/layout-proposals`),
-      api.get("/estates/survey-requests", { params: { estate_id: estateId } }),
-      api.get("/estates/staking-tasks", { params: { estate_id: estateId } }),
-    ]);
-    setAllocations(selectors.data.allocations || []);
-    setPlots(selectors.data.plots || []);
-    setCustomers(selectors.data.customers || []);
-    setPlotGeojson(plotsMap.data);
-    setLayerGeojson(layersMap.data);
-    setBlocks(blockRows.data || []);
-    setActivity(events.data || []);
-    setDashboard(metrics.data);
-    setLayoutProposal((proposals.data || [])[0] || null);
-    setSurveyRequests(surveys.data || []);
-    setStakingTasks(staking.data || []);
-    void api.get("/estates/payments", { params: { estate_id: estateId, page_size: 100 } }).then((response) => setEstatePayments(response.data?.items || [])).catch(() => setEstatePayments([]));
-    void api.get("/estates/documents", { params: { page_size: 100 } }).then((response) => setEstateDocuments(response.data?.items || [])).catch(() => setEstateDocuments([]));
+    const resources = [
+      "selectors", "plots", "layers", "blocks", "activity", "dashboard", "layout-proposals",
+      "survey-requests", "staking-tasks", "payments", "documents",
+    ] as const;
+    await Promise.all(resources.map((resource) => queryClient.refetchQueries({
+      queryKey: estateQueryKeys.estate(estateQueryScope, estateId, resource),
+      type: "active",
+    })));
   };
   const runWorkflow = async (label: string, action: () => Promise<any>) => {
+    if (!estateId) return;
     if (workflowBusy) return;
     setWorkflowBusy(label);
     try {
       const result = await action();
       await refreshWorkflow();
+      await invalidateEstateQueries(estateQueryScope, estateId, ["dashboard", "activity"]);
       const notified = Boolean(result?.data?.customer_notified);
       toast.success(`${label} completed.${notified ? " A confirmation email has been sent to the customer." : ""}`);
     }
@@ -1704,6 +1762,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     try {
       const response = await api.patch(`/estates/plots/${selectedPlot.id}/development-status`, { status });
       setPlots((current) => current.map((plot) => (plot.id === selectedPlot.id ? { ...plot, development_status: status } : plot)));
+      if (estateId) await invalidateEstateMutation(estateQueryScope, estateId, "plot");
       setEditingDevelopment(false);
       toast.success(`Development status updated.${response.data.customer_notified ? " A confirmation email has been sent to the customer." : ""}`);
     } catch (error) {
@@ -1717,6 +1776,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     setPlotDocumentBusy(true);
     try {
       await api.post("/estates/documents", form, { params: { entity_type: "plot", entity_id: selectedPlot.id, document_type: "plot_record", description: `Uploaded from the plot drawer for ${selectedPlot.plot_number}` } });
+      if (estateId) await invalidateEstateQueries(estateQueryScope, estateId, ["documents", "activity"]);
       setPlotDocumentFile(null);
       toast.success("Document stored in the private Document Vault.");
     } catch (error) {
