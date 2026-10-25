@@ -1,4 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- offline payloads mirror the existing Green API contracts. */
 import type { AxiosInstance } from "axios";
+import { getGreenAuthSession } from "../auth/greenAuth";
+import { getWorkAuthSession } from "../auth/workAuth";
 
 type GreenQueueActionType =
   | "create_tree"
@@ -12,11 +15,22 @@ type GreenQueueContext = {
   assigneeName?: string;
 };
 
+export type GreenOfflineScope = {
+  key: string;
+  userId: number;
+  organizationId: number | null;
+  roleKey: string;
+  authMode: string;
+  appMode: string;
+};
+
 type GreenQueueAction = {
   id?: number;
   type: GreenQueueActionType;
   payload: Record<string, any>;
   context?: GreenQueueContext;
+  scopeKey?: string;
+  idempotencyKey?: string;
   createdAt?: string;
   retries?: number;
   lastError?: string;
@@ -27,6 +41,7 @@ type GreenPhotoRecord = {
   file: Blob;
   fileName: string;
   mimeType: string;
+  scopeKey?: string;
   createdAt: string;
 };
 
@@ -39,14 +54,21 @@ type GreenConflictRecord = {
 };
 
 const DB_NAME = "landcheck-green-offline-db";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_KV = "kv";
 const STORE_QUEUE = "queue";
 const STORE_PHOTOS = "photos";
+const STORE_SYNC_LOCKS = "sync-locks";
 
 const KEY_PROJECTS = "green:projects";
 const KEY_USERS = "green:users";
 const KEY_CONFLICTS = "green:conflicts";
+const LEGACY_SCOPE_KEY = "legacy-unscoped-v1";
+const SYNC_LOCK_KEY_PREFIX = "green-sync:";
+const SYNC_LEASE_MS = 5 * 60 * 1000;
+const TAB_OWNER_ID = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+  ? crypto.randomUUID()
+  : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 let syncPromise: Promise<{ synced: number; failed: number; conflicts: number; pending: number }> | null = null;
@@ -65,8 +87,9 @@ function openDb(): Promise<IDBDatabase> {
   }
   dbPromise = new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event) => {
       const db = request.result;
+      const oldVersion = (event as IDBVersionChangeEvent).oldVersion;
       if (!db.objectStoreNames.contains(STORE_KV)) {
         db.createObjectStore(STORE_KV, { keyPath: "key" });
       }
@@ -77,6 +100,30 @@ function openDb(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STORE_PHOTOS)) {
         const photosStore = db.createObjectStore(STORE_PHOTOS, { keyPath: "id", autoIncrement: true });
         photosStore.createIndex("createdAt", "createdAt", { unique: false });
+      }
+      if (!db.objectStoreNames.contains(STORE_SYNC_LOCKS)) {
+        db.createObjectStore(STORE_SYNC_LOCKS, { keyPath: "key" });
+      }
+      if (oldVersion < 2) {
+        for (const storeName of [STORE_KV, STORE_QUEUE, STORE_PHOTOS]) {
+          if (!db.objectStoreNames.contains(storeName)) continue;
+          const store = request.transaction?.objectStore(storeName);
+          if (!store) continue;
+          const cursorRequest = store.openCursor();
+          cursorRequest.onsuccess = () => {
+            const cursor = cursorRequest.result;
+            if (!cursor) return;
+            const row = cursor.value as Record<string, unknown>;
+            if (!row.scopeKey) {
+              const migrated: Record<string, unknown> = { ...row, scopeKey: LEGACY_SCOPE_KEY, legacy: true };
+              if (storeName === STORE_QUEUE && !migrated.idempotencyKey) {
+                migrated.idempotencyKey = `legacy-queue-${String(cursor.primaryKey)}`;
+              }
+              store.put(migrated);
+            }
+            cursor.continue();
+          };
+        }
       }
     };
     request.onsuccess = () => {
@@ -157,39 +204,110 @@ async function kvGet<T>(key: string): Promise<T | null> {
 }
 
 function kvKeyProjectDetail(projectId: number) {
-  return `green:project:${projectId}:detail`;
+  return `project:${projectId}:detail`;
 }
 
 function kvKeyProjectTrees(projectId: number) {
-  return `green:project:${projectId}:trees`;
+  return `project:${projectId}:trees`;
 }
 
 function kvKeyTasks(projectId: number, assigneeName: string) {
-  return `green:project:${projectId}:tasks:${assigneeName}`;
+  return `project:${projectId}:tasks:${assigneeName}`;
 }
 
 function kvKeyWorkOrders(projectId: number, assigneeName: string) {
-  return `green:project:${projectId}:workorders:${assigneeName}`;
+  return `project:${projectId}:workorders:${assigneeName}`;
 }
 
 function kvKeyTreeTasks(treeId: number) {
-  return `green:tree:${treeId}:tasks`;
+  return `tree:${treeId}:tasks`;
 }
 
 function kvKeyTreeTimeline(treeId: number) {
-  return `green:tree:${treeId}:timeline`;
+  return `tree:${treeId}:timeline`;
 }
 
 function kvKeyProjectCustodians(projectId: number) {
-  return `green:project:${projectId}:custodians`;
+  return `project:${projectId}:custodians`;
 }
 
 function kvKeyProjectAllocations(projectId: number) {
-  return `green:project:${projectId}:allocations`;
+  return `project:${projectId}:allocations`;
 }
 
 function kvKeyTreeIdMap(tempTreeId: number) {
-  return `green:tree-id-map:${tempTreeId}`;
+  return `tree-id-map:${tempTreeId}`;
+}
+
+const encodeScopePart = (value: unknown) => encodeURIComponent(String(value ?? "").trim() || "-");
+
+export function buildGreenOfflineScopeKey(input: {
+  userId?: number | null;
+  organizationId?: number | null;
+  roleKey?: string | null;
+  authMode?: string | null;
+  appMode?: string | null;
+  allowGreen?: boolean;
+  allowWork?: boolean;
+}): string {
+  return [
+    "green",
+    "user", encodeScopePart(input.userId ?? 0),
+    "org", encodeScopePart(input.organizationId ?? "none"),
+    "role", encodeScopePart(input.roleKey || "unknown"),
+    "auth", encodeScopePart(input.authMode || "unknown"),
+    "app", encodeScopePart(input.appMode || "unknown"),
+    "permissions", encodeScopePart(`${input.allowGreen !== false ? "green" : ""},${input.allowWork ? "work" : ""}`),
+  ].join(":");
+}
+
+export function getCurrentGreenOfflineScope(): GreenOfflineScope | null {
+  if (typeof window === "undefined") return null;
+  const pathname = String(window.location.pathname || "").toLowerCase();
+  const workSession = getWorkAuthSession();
+  const greenSession = getGreenAuthSession();
+  const session = pathname.startsWith("/green-work") ? workSession || greenSession : greenSession || workSession;
+  if (!session?.user || !Number.isFinite(Number(session.user.id))) return null;
+  const user = session.user as any;
+  const authMode = String((session as any).auth_mode || "unknown");
+  const appMode = String((session as any).appMode || (pathname.startsWith("/green-work") ? "green_work" : "green"));
+  return {
+    key: buildGreenOfflineScopeKey({
+      userId: Number(user.id),
+      organizationId: user.organization_id == null ? null : Number(user.organization_id),
+      roleKey: user.role_key || user.role || null,
+      authMode,
+      appMode,
+      allowGreen: Boolean(user.allow_green),
+      allowWork: Boolean(user.allow_work),
+    }),
+    userId: Number(user.id),
+    organizationId: user.organization_id == null ? null : Number(user.organization_id),
+    roleKey: String(user.role_key || user.role || "unknown"),
+    authMode,
+    appMode,
+  };
+}
+
+function resolveScope(scope?: GreenOfflineScope | null): GreenOfflineScope | null {
+  return scope || getCurrentGreenOfflineScope();
+}
+
+function requireScope(scope?: GreenOfflineScope | null): GreenOfflineScope {
+  const resolved = resolveScope(scope);
+  if (!resolved) throw new Error("An authenticated Green or Work account is required for offline work.");
+  return resolved;
+}
+
+function scopedKvKey(scope: GreenOfflineScope, key: string): string {
+  return `green:${scope.key}:${key}`;
+}
+
+function createOfflineId(prefix: string): string {
+  const random = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${prefix}-${random}`.slice(0, 128);
 }
 
 function normalizeAssignee(value: string | null | undefined) {
@@ -212,10 +330,13 @@ export function isLikelyNetworkError(error: any): boolean {
   );
 }
 
-async function queueAdd(action: GreenQueueAction): Promise<number> {
+async function queueAdd(action: GreenQueueAction, scope?: GreenOfflineScope): Promise<number> {
+  const offlineScope = requireScope(scope);
   return withStore(STORE_QUEUE, "readwrite", async (store) => {
     const payload: GreenQueueAction = {
       ...action,
+      scopeKey: offlineScope.key,
+      idempotencyKey: action.idempotencyKey || createOfflineId(`green-${action.type}`),
       createdAt: action.createdAt || new Date().toISOString(),
       retries: Number(action.retries || 0),
     };
@@ -224,34 +345,44 @@ async function queueAdd(action: GreenQueueAction): Promise<number> {
   });
 }
 
-async function queueList(): Promise<GreenQueueAction[]> {
+async function queueList(scopeKey?: string): Promise<GreenQueueAction[]> {
   return withStore(STORE_QUEUE, "readonly", async (store) => {
     const all = (await requestToPromise(store.getAll())) as GreenQueueAction[];
-    return all.sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+    return all
+      .filter((row) => scopeKey === undefined || row.scopeKey === scopeKey)
+      .sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
   });
 }
 
-async function queuePut(action: GreenQueueAction): Promise<void> {
+async function queuePut(action: GreenQueueAction, scope?: GreenOfflineScope): Promise<void> {
   if (!action.id) return;
+  const offlineScope = requireScope(scope);
+  if (action.scopeKey !== offlineScope.key) return;
   await withStore(STORE_QUEUE, "readwrite", async (store) => {
     await requestToPromise(store.put(action));
   });
 }
 
-async function queueDelete(id: number): Promise<void> {
+async function queueDelete(id: number, scope?: GreenOfflineScope): Promise<void> {
   await withStore(STORE_QUEUE, "readwrite", async (store) => {
+    if (scope) {
+      const row = (await requestToPromise(store.get(id))) as GreenQueueAction | undefined;
+      if (row?.scopeKey !== scope.key) return;
+    }
     await requestToPromise(store.delete(id));
   });
 }
 
-async function queueCount(): Promise<number> {
+async function queueCount(scopeKey?: string): Promise<number> {
   return withStore(STORE_QUEUE, "readonly", async (store) => {
-    const count = await requestToPromise(store.count());
-    return Number(count || 0);
+    if (scopeKey === undefined) return Number(await requestToPromise(store.count()) || 0);
+    const all = (await requestToPromise(store.getAll())) as GreenQueueAction[];
+    return all.filter((row) => row.scopeKey === scopeKey).length;
   });
 }
 
-async function photoAdd(file: File | Blob): Promise<number> {
+async function photoAdd(file: File | Blob, scope?: GreenOfflineScope): Promise<number> {
+  const offlineScope = requireScope(scope);
   const blob = file instanceof Blob ? file : new Blob([file]);
   const fileName =
     (file as File)?.name && String((file as File).name).trim()
@@ -263,6 +394,7 @@ async function photoAdd(file: File | Blob): Promise<number> {
       file: blob,
       fileName,
       mimeType,
+      scopeKey: offlineScope.key,
       createdAt: new Date().toISOString(),
     };
     const id = await requestToPromise(store.add(payload));
@@ -270,31 +402,42 @@ async function photoAdd(file: File | Blob): Promise<number> {
   });
 }
 
-async function photoGet(photoId: number): Promise<GreenPhotoRecord | null> {
+async function photoGet(photoId: number, scope?: GreenOfflineScope): Promise<GreenPhotoRecord | null> {
+  const offlineScope = requireScope(scope);
   return withStore(STORE_PHOTOS, "readonly", async (store) => {
     const row = (await requestToPromise(store.get(photoId))) as GreenPhotoRecord | undefined;
-    return row || null;
+    return row?.scopeKey === offlineScope.key ? row : null;
   });
 }
 
-async function photoDelete(photoId: number): Promise<void> {
+async function photoDelete(photoId: number, scope?: GreenOfflineScope): Promise<void> {
+  const offlineScope = requireScope(scope);
   await withStore(STORE_PHOTOS, "readwrite", async (store) => {
-    await requestToPromise(store.delete(photoId));
+    const row = (await requestToPromise(store.get(photoId))) as GreenPhotoRecord | undefined;
+    if (row?.scopeKey === offlineScope.key) await requestToPromise(store.delete(photoId));
   });
 }
 
-async function pushConflict(record: GreenConflictRecord): Promise<void> {
-  const existing = (await kvGet<GreenConflictRecord[]>(KEY_CONFLICTS)) || [];
+async function pushConflict(record: GreenConflictRecord, scope: GreenOfflineScope): Promise<void> {
+  const key = scopedKvKey(scope, KEY_CONFLICTS);
+  const existing = (await kvGet<GreenConflictRecord[]>(key)) || [];
   const next = [...existing, record].slice(-100);
-  await kvSet(KEY_CONFLICTS, next);
+  await kvSet(key, next);
 }
 
-export async function getOfflineQueueCount(): Promise<number> {
-  return queueCount();
+export async function getOfflineQueueCount(scope?: GreenOfflineScope | null): Promise<number> {
+  const offlineScope = resolveScope(scope);
+  return offlineScope ? queueCount(offlineScope.key) : 0;
 }
 
-export async function getOfflineConflictCount(): Promise<number> {
-  const conflicts = (await kvGet<GreenConflictRecord[]>(KEY_CONFLICTS)) || [];
+export async function getOfflineLegacyQueueCount(): Promise<number> {
+  return queueCount(LEGACY_SCOPE_KEY);
+}
+
+export async function getOfflineConflictCount(scope?: GreenOfflineScope | null): Promise<number> {
+  const offlineScope = resolveScope(scope);
+  if (!offlineScope) return 0;
+  const conflicts = (await kvGet<GreenConflictRecord[]>(scopedKvKey(offlineScope, KEY_CONFLICTS))) || [];
   return conflicts.length;
 }
 
@@ -313,100 +456,121 @@ export async function registerGreenBackgroundSync(): Promise<void> {
   }
 }
 
-export async function cacheProjectsOffline(projects: any[]): Promise<void> {
-  await kvSet(KEY_PROJECTS, Array.isArray(projects) ? projects : []);
+export async function cacheProjectsOffline(projects: any[], scope?: GreenOfflineScope | null): Promise<void> {
+  const offlineScope = resolveScope(scope);
+  if (offlineScope) await kvSet(scopedKvKey(offlineScope, KEY_PROJECTS), Array.isArray(projects) ? projects : []);
 }
 
-export async function getCachedProjectsOffline(): Promise<any[]> {
-  return (await kvGet<any[]>(KEY_PROJECTS)) || [];
+export async function getCachedProjectsOffline(scope?: GreenOfflineScope | null): Promise<any[]> {
+  const offlineScope = resolveScope(scope);
+  return offlineScope ? (await kvGet<any[]>(scopedKvKey(offlineScope, KEY_PROJECTS))) || [] : [];
 }
 
-export async function cacheUsersOffline(users: any[]): Promise<void> {
-  await kvSet(KEY_USERS, Array.isArray(users) ? users : []);
+export async function cacheUsersOffline(users: any[], scope?: GreenOfflineScope | null): Promise<void> {
+  const offlineScope = resolveScope(scope);
+  if (offlineScope) await kvSet(scopedKvKey(offlineScope, KEY_USERS), Array.isArray(users) ? users : []);
 }
 
-export async function getCachedUsersOffline(): Promise<any[]> {
-  return (await kvGet<any[]>(KEY_USERS)) || [];
+export async function getCachedUsersOffline(scope?: GreenOfflineScope | null): Promise<any[]> {
+  const offlineScope = resolveScope(scope);
+  return offlineScope ? (await kvGet<any[]>(scopedKvKey(offlineScope, KEY_USERS))) || [] : [];
 }
 
-export async function cacheProjectDetailOffline(projectId: number, detail: any): Promise<void> {
-  await kvSet(kvKeyProjectDetail(projectId), detail || null);
+export async function cacheProjectDetailOffline(projectId: number, detail: any, scope?: GreenOfflineScope | null): Promise<void> {
+  const offlineScope = resolveScope(scope);
+  if (offlineScope) await kvSet(scopedKvKey(offlineScope, kvKeyProjectDetail(projectId)), detail || null);
 }
 
-export async function getCachedProjectDetailOffline(projectId: number): Promise<any | null> {
-  return kvGet<any>(kvKeyProjectDetail(projectId));
+export async function getCachedProjectDetailOffline(projectId: number, scope?: GreenOfflineScope | null): Promise<any | null> {
+  const offlineScope = resolveScope(scope);
+  return offlineScope ? kvGet<any>(scopedKvKey(offlineScope, kvKeyProjectDetail(projectId))) : null;
 }
 
-export async function cacheProjectTreesOffline(projectId: number, trees: any[]): Promise<void> {
+export async function cacheProjectTreesOffline(projectId: number, trees: any[], scope?: GreenOfflineScope | null): Promise<void> {
+  const offlineScope = resolveScope(scope);
+  if (!offlineScope) return;
   const normalized = Array.isArray(trees) ? trees : [];
-  await kvSet(kvKeyProjectTrees(projectId), normalized);
+  await kvSet(scopedKvKey(offlineScope, kvKeyProjectTrees(projectId)), normalized);
 }
 
-export async function getCachedProjectTreesOffline(projectId: number): Promise<any[]> {
-  return (await kvGet<any[]>(kvKeyProjectTrees(projectId))) || [];
+export async function getCachedProjectTreesOffline(projectId: number, scope?: GreenOfflineScope | null): Promise<any[]> {
+  const offlineScope = resolveScope(scope);
+  return offlineScope ? (await kvGet<any[]>(scopedKvKey(offlineScope, kvKeyProjectTrees(projectId)))) || [] : [];
 }
 
-export async function cacheTasksOffline(projectId: number, assigneeName: string, tasks: any[]): Promise<void> {
-  await kvSet(kvKeyTasks(projectId, normalizeAssignee(assigneeName)), Array.isArray(tasks) ? tasks : []);
+export async function cacheTasksOffline(projectId: number, assigneeName: string, tasks: any[], scope?: GreenOfflineScope | null): Promise<void> {
+  const offlineScope = resolveScope(scope);
+  if (offlineScope) await kvSet(scopedKvKey(offlineScope, kvKeyTasks(projectId, normalizeAssignee(assigneeName))), Array.isArray(tasks) ? tasks : []);
 }
 
-export async function getCachedTasksOffline(projectId: number, assigneeName: string): Promise<any[]> {
-  return (await kvGet<any[]>(kvKeyTasks(projectId, normalizeAssignee(assigneeName)))) || [];
+export async function getCachedTasksOffline(projectId: number, assigneeName: string, scope?: GreenOfflineScope | null): Promise<any[]> {
+  const offlineScope = resolveScope(scope);
+  return offlineScope ? (await kvGet<any[]>(scopedKvKey(offlineScope, kvKeyTasks(projectId, normalizeAssignee(assigneeName))))) || [] : [];
 }
 
-export async function cacheWorkOrdersOffline(projectId: number, assigneeName: string, rows: any[]): Promise<void> {
-  await kvSet(kvKeyWorkOrders(projectId, normalizeAssignee(assigneeName)), Array.isArray(rows) ? rows : []);
+export async function cacheWorkOrdersOffline(projectId: number, assigneeName: string, rows: any[], scope?: GreenOfflineScope | null): Promise<void> {
+  const offlineScope = resolveScope(scope);
+  if (offlineScope) await kvSet(scopedKvKey(offlineScope, kvKeyWorkOrders(projectId, normalizeAssignee(assigneeName))), Array.isArray(rows) ? rows : []);
 }
 
-export async function getCachedWorkOrdersOffline(projectId: number, assigneeName: string): Promise<any[]> {
-  return (await kvGet<any[]>(kvKeyWorkOrders(projectId, normalizeAssignee(assigneeName)))) || [];
+export async function getCachedWorkOrdersOffline(projectId: number, assigneeName: string, scope?: GreenOfflineScope | null): Promise<any[]> {
+  const offlineScope = resolveScope(scope);
+  return offlineScope ? (await kvGet<any[]>(scopedKvKey(offlineScope, kvKeyWorkOrders(projectId, normalizeAssignee(assigneeName))))) || [] : [];
 }
 
-export async function cacheProjectCustodiansOffline(projectId: number, custodians: any[]): Promise<void> {
-  await kvSet(kvKeyProjectCustodians(projectId), Array.isArray(custodians) ? custodians : []);
+export async function cacheProjectCustodiansOffline(projectId: number, custodians: any[], scope?: GreenOfflineScope | null): Promise<void> {
+  const offlineScope = resolveScope(scope);
+  if (offlineScope) await kvSet(scopedKvKey(offlineScope, kvKeyProjectCustodians(projectId)), Array.isArray(custodians) ? custodians : []);
 }
 
-export async function getCachedProjectCustodiansOffline(projectId: number): Promise<any[]> {
-  return (await kvGet<any[]>(kvKeyProjectCustodians(projectId))) || [];
+export async function getCachedProjectCustodiansOffline(projectId: number, scope?: GreenOfflineScope | null): Promise<any[]> {
+  const offlineScope = resolveScope(scope);
+  return offlineScope ? (await kvGet<any[]>(scopedKvKey(offlineScope, kvKeyProjectCustodians(projectId)))) || [] : [];
 }
 
-export async function cacheProjectAllocationsOffline(projectId: number, allocations: any[]): Promise<void> {
-  await kvSet(kvKeyProjectAllocations(projectId), Array.isArray(allocations) ? allocations : []);
+export async function cacheProjectAllocationsOffline(projectId: number, allocations: any[], scope?: GreenOfflineScope | null): Promise<void> {
+  const offlineScope = resolveScope(scope);
+  if (offlineScope) await kvSet(scopedKvKey(offlineScope, kvKeyProjectAllocations(projectId)), Array.isArray(allocations) ? allocations : []);
 }
 
-export async function getCachedProjectAllocationsOffline(projectId: number): Promise<any[]> {
-  return (await kvGet<any[]>(kvKeyProjectAllocations(projectId))) || [];
+export async function getCachedProjectAllocationsOffline(projectId: number, scope?: GreenOfflineScope | null): Promise<any[]> {
+  const offlineScope = resolveScope(scope);
+  return offlineScope ? (await kvGet<any[]>(scopedKvKey(offlineScope, kvKeyProjectAllocations(projectId)))) || [] : [];
 }
 
-export async function cacheTreeTasksOffline(treeId: number, tasks: any[]): Promise<void> {
-  await kvSet(kvKeyTreeTasks(treeId), Array.isArray(tasks) ? tasks : []);
+export async function cacheTreeTasksOffline(treeId: number, tasks: any[], scope?: GreenOfflineScope | null): Promise<void> {
+  const offlineScope = resolveScope(scope);
+  if (offlineScope) await kvSet(scopedKvKey(offlineScope, kvKeyTreeTasks(treeId)), Array.isArray(tasks) ? tasks : []);
 }
 
-export async function getCachedTreeTasksOffline(treeId: number): Promise<any[]> {
-  return (await kvGet<any[]>(kvKeyTreeTasks(treeId))) || [];
+export async function getCachedTreeTasksOffline(treeId: number, scope?: GreenOfflineScope | null): Promise<any[]> {
+  const offlineScope = resolveScope(scope);
+  return offlineScope ? (await kvGet<any[]>(scopedKvKey(offlineScope, kvKeyTreeTasks(treeId)))) || [] : [];
 }
 
-export async function cacheTreeTimelineOffline(treeId: number, timeline: any): Promise<void> {
-  await kvSet(kvKeyTreeTimeline(treeId), timeline || null);
+export async function cacheTreeTimelineOffline(treeId: number, timeline: any, scope?: GreenOfflineScope | null): Promise<void> {
+  const offlineScope = resolveScope(scope);
+  if (offlineScope) await kvSet(scopedKvKey(offlineScope, kvKeyTreeTimeline(treeId)), timeline || null);
 }
 
-export async function getCachedTreeTimelineOffline(treeId: number): Promise<any | null> {
-  return kvGet<any>(kvKeyTreeTimeline(treeId));
+export async function getCachedTreeTimelineOffline(treeId: number, scope?: GreenOfflineScope | null): Promise<any | null> {
+  const offlineScope = resolveScope(scope);
+  return offlineScope ? kvGet<any>(scopedKvKey(offlineScope, kvKeyTreeTimeline(treeId))) : null;
 }
 
-async function setTreeIdMap(tempTreeId: number, realTreeId: number): Promise<void> {
-  await kvSet(kvKeyTreeIdMap(tempTreeId), Number(realTreeId));
+async function setTreeIdMap(tempTreeId: number, realTreeId: number, scope: GreenOfflineScope): Promise<void> {
+  await kvSet(scopedKvKey(scope, kvKeyTreeIdMap(tempTreeId)), Number(realTreeId));
 }
 
-async function resolveTreeId(treeId: number): Promise<number> {
+async function resolveTreeId(treeId: number, scope: GreenOfflineScope): Promise<number> {
   if (!Number.isFinite(treeId)) return treeId;
   if (Number(treeId) >= 0) return Number(treeId);
-  const mapped = await kvGet<number>(kvKeyTreeIdMap(Number(treeId)));
+  const mapped = await kvGet<number>(scopedKvKey(scope, kvKeyTreeIdMap(Number(treeId))));
   return Number.isFinite(mapped || NaN) ? Number(mapped) : Number(treeId);
 }
 
-async function rewriteQueueTreeReferences(tempTreeId: number, realTreeId: number): Promise<void> {
-  const rows = await queueList();
+async function rewriteQueueTreeReferences(tempTreeId: number, realTreeId: number, scope: GreenOfflineScope): Promise<void> {
+  const rows = await queueList(scope.key);
   for (const row of rows) {
     if (!row.id) continue;
     let changed = false;
@@ -423,13 +587,13 @@ async function rewriteQueueTreeReferences(tempTreeId: number, realTreeId: number
       await queuePut({
         ...row,
         payload,
-      });
+      }, scope);
     }
   }
 }
 
-async function upsertTreeInCache(projectId: number, treeLike: any): Promise<void> {
-  const rows = await getCachedProjectTreesOffline(projectId);
+async function upsertTreeInCache(projectId: number, treeLike: any, scope?: GreenOfflineScope | null): Promise<void> {
+  const rows = await getCachedProjectTreesOffline(projectId, scope);
   const id = Number(treeLike?.id || 0);
   const existingIndex = rows.findIndex((row) => Number(row?.id) === id);
   if (existingIndex >= 0) {
@@ -437,13 +601,13 @@ async function upsertTreeInCache(projectId: number, treeLike: any): Promise<void
   } else {
     rows.unshift(treeLike);
   }
-  await cacheProjectTreesOffline(projectId, rows);
+  await cacheProjectTreesOffline(projectId, rows, scope);
 }
 
-async function replaceTempTreeInCache(projectId: number, tempTreeId: number, realTree: any): Promise<void> {
-  const rows = await getCachedProjectTreesOffline(projectId);
+async function replaceTempTreeInCache(projectId: number, tempTreeId: number, realTree: any, scope?: GreenOfflineScope | null): Promise<void> {
+  const rows = await getCachedProjectTreesOffline(projectId, scope);
   const next = rows.map((row) => (Number(row?.id) === Number(tempTreeId) ? { ...row, ...realTree } : row));
-  await cacheProjectTreesOffline(projectId, next);
+  await cacheProjectTreesOffline(projectId, next, scope);
 }
 
 async function mutateCachedTasks(
@@ -451,8 +615,9 @@ async function mutateCachedTasks(
   assigneeName: string,
   taskId: number,
   mutator: (task: any) => any,
+  scope?: GreenOfflineScope | null,
 ): Promise<void> {
-  const rows = await getCachedTasksOffline(projectId, assigneeName);
+  const rows = await getCachedTasksOffline(projectId, assigneeName, scope);
   let touched = false;
   const next = rows.map((task) => {
     if (Number(task?.id) !== Number(taskId)) return task;
@@ -460,12 +625,14 @@ async function mutateCachedTasks(
     return mutator(task);
   });
   if (touched) {
-    await cacheTasksOffline(projectId, assigneeName, next);
+    await cacheTasksOffline(projectId, assigneeName, next, scope);
   }
 }
 
-export async function getPendingTreeDraftsOffline(projectId: number): Promise<any[]> {
-  const rows = await queueList();
+export async function getPendingTreeDraftsOffline(projectId: number, scope?: GreenOfflineScope | null): Promise<any[]> {
+  const offlineScope = resolveScope(scope);
+  if (!offlineScope) return [];
+  const rows = await queueList(offlineScope.key);
   return rows
     .filter((row) => row.type === "create_tree" && Number(row.context?.projectId || 0) === Number(projectId))
     .map((row) => ({
@@ -482,10 +649,11 @@ export async function queueCreateTreeOffline(
   context: GreenQueueContext,
   photoFile?: File | null,
 ): Promise<{ tempTree: any; queuedPhoto: boolean }> {
+  const offlineScope = requireScope();
   const tempTreeId = -1 * (Date.now() + Math.floor(Math.random() * 1000));
   let photoRefId: number | null = null;
   if (photoFile) {
-    photoRefId = await photoAdd(photoFile);
+    photoRefId = await photoAdd(photoFile, offlineScope);
   }
   const payload = {
     tree: { ...treePayload },
@@ -496,14 +664,14 @@ export async function queueCreateTreeOffline(
     type: "create_tree",
     payload,
     context,
-  });
+  }, offlineScope);
   await upsertTreeInCache(Number(context.projectId || 0), {
     ...treePayload,
     id: tempTreeId,
     project_id: Number(context.projectId || treePayload.project_id || 0),
     lng: Number(treePayload.lng),
     lat: Number(treePayload.lat),
-  });
+  }, offlineScope);
   await registerGreenBackgroundSync();
   return {
     tempTree: {
@@ -522,15 +690,16 @@ export async function queueTaskUpdateOffline(
   edit: Record<string, any>,
   context: GreenQueueContext,
 ): Promise<void> {
+  const offlineScope = requireScope();
   await queueAdd({
     type: "update_task",
     payload: { taskId, edit },
     context,
-  });
+  }, offlineScope);
   const projectId = Number(context.projectId || 0);
   const assigneeName = normalizeAssignee(context.assigneeName);
   if (projectId > 0 && assigneeName) {
-    await mutateCachedTasks(projectId, assigneeName, taskId, (task) => ({ ...task, ...edit }));
+    await mutateCachedTasks(projectId, assigneeName, taskId, (task) => ({ ...task, ...edit }), offlineScope);
   }
   await registerGreenBackgroundSync();
 }
@@ -540,11 +709,12 @@ export async function queueTaskSubmitOffline(
   payload: Record<string, any>,
   context: GreenQueueContext,
 ): Promise<void> {
+  const offlineScope = requireScope();
   await queueAdd({
     type: "submit_task",
     payload: { taskId, body: payload },
     context,
-  });
+  }, offlineScope);
   const projectId = Number(context.projectId || 0);
   const assigneeName = normalizeAssignee(context.assigneeName);
   if (projectId > 0 && assigneeName) {
@@ -564,7 +734,7 @@ export async function queueTaskSubmitOffline(
           ? payload?.activity_lat
           : task?.activity_lat,
       activity_recorded_at: payload?.activity_recorded_at ?? task?.activity_recorded_at,
-    }));
+    }), offlineScope);
   }
   await registerGreenBackgroundSync();
 }
@@ -574,14 +744,15 @@ export async function queueTreeStatusOffline(
   status: string,
   context: GreenQueueContext,
 ): Promise<void> {
+  const offlineScope = requireScope();
   await queueAdd({
     type: "update_tree_status",
     payload: { treeId, status },
     context,
-  });
+  }, offlineScope);
   const projectId = Number(context.projectId || 0);
   if (projectId > 0) {
-    await upsertTreeInCache(projectId, { id: treeId, status });
+    await upsertTreeInCache(projectId, { id: treeId, status }, offlineScope);
   }
   await registerGreenBackgroundSync();
 }
@@ -592,18 +763,19 @@ export async function queuePhotoUploadOffline(
   link: { treeId?: number; taskId?: number },
   context: GreenQueueContext,
 ): Promise<{ queueId: number; localPreviewUrl: string }> {
-  const photoRefId = await photoAdd(file);
+  const offlineScope = requireScope();
+  const photoRefId = await photoAdd(file, offlineScope);
   const queueId = await queueAdd({
     type: "upload_photo",
     payload: { photoRefId, folder, link },
     context,
-  });
+  }, offlineScope);
   await registerGreenBackgroundSync();
   const localPreviewUrl = URL.createObjectURL(file instanceof Blob ? file : new Blob([file]));
   return { queueId, localPreviewUrl };
 }
 
-async function refreshContextFromServer(api: AxiosInstance, context?: GreenQueueContext): Promise<void> {
+async function refreshContextFromServer(api: AxiosInstance, context: GreenQueueContext | undefined, scope: GreenOfflineScope): Promise<void> {
   const projectId = Number(context?.projectId || 0);
   const assigneeName = normalizeAssignee(context?.assigneeName);
   if (projectId > 0) {
@@ -612,13 +784,13 @@ async function refreshContextFromServer(api: AxiosInstance, context?: GreenQueue
         api.get(`/green/projects/${projectId}`),
         api.get(`/green/projects/${projectId}/trees`),
       ]);
-      await cacheProjectDetailOffline(projectId, projectRes.data);
+      await cacheProjectDetailOffline(projectId, projectRes.data, scope);
       const normalizedTrees = (Array.isArray(treesRes.data) ? treesRes.data : []).map((tree: any) => ({
         ...tree,
         lng: Number(tree.lng),
         lat: Number(tree.lat),
       }));
-      await cacheProjectTreesOffline(projectId, normalizedTrees);
+      await cacheProjectTreesOffline(projectId, normalizedTrees, scope);
     } catch {
       // Keep stale cache if refresh fails.
     }
@@ -630,8 +802,8 @@ async function refreshContextFromServer(api: AxiosInstance, context?: GreenQueue
         api.get(`/green/tasks?project_id=${projectId}&assignee_name=${encodeURIComponent(assigneeName)}&_ts=${stamp}`),
         api.get(`/green/work-orders?project_id=${projectId}&assignee_name=${encodeURIComponent(assigneeName)}&_ts=${stamp}`),
       ]);
-      await cacheTasksOffline(projectId, assigneeName, Array.isArray(tasksRes.data) ? tasksRes.data : []);
-      await cacheWorkOrdersOffline(projectId, assigneeName, Array.isArray(ordersRes.data) ? ordersRes.data : []);
+      await cacheTasksOffline(projectId, assigneeName, Array.isArray(tasksRes.data) ? tasksRes.data : [], scope);
+      await cacheWorkOrdersOffline(projectId, assigneeName, Array.isArray(ordersRes.data) ? ordersRes.data : [], scope);
     } catch {
       // Keep stale cache if refresh fails.
     }
@@ -643,8 +815,10 @@ async function uploadPhotoWithApi(
   photoRefId: number,
   folder: "trees" | "tasks",
   link: { treeId?: number; taskId?: number } = {},
+  scope: GreenOfflineScope,
+  idempotencyKey: string,
 ): Promise<string> {
-  const photo = await photoGet(photoRefId);
+  const photo = await photoGet(photoRefId, scope);
   if (!photo) return "";
   const formData = new FormData();
   const ext = photo.fileName && photo.fileName.includes(".") ? "" : ".jpg";
@@ -654,51 +828,52 @@ async function uploadPhotoWithApi(
   if (link.treeId) formData.append("tree_id", String(link.treeId));
   if (link.taskId) formData.append("task_id", String(link.taskId));
   const res = await api.post("/green/uploads/photo", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
+    headers: { "Content-Type": "multipart/form-data", "X-Idempotency-Key": idempotencyKey },
   });
-  await photoDelete(photoRefId);
+  await photoDelete(photoRefId, scope);
   return String(res.data?.url || "");
 }
 
-async function processQueueAction(api: AxiosInstance, action: GreenQueueAction): Promise<void> {
+async function processQueueAction(api: AxiosInstance, action: GreenQueueAction, scope: GreenOfflineScope): Promise<void> {
   const payload = action.payload || {};
+  const requestConfig = { headers: { "X-Idempotency-Key": String(action.idempotencyKey || "") } };
   switch (action.type) {
     case "create_tree": {
       const tempTreeId = Number(payload.tempTreeId || 0);
       const tree = { ...(payload.tree || {}) };
-      const res = await api.post("/green/trees", tree);
+      const res = await api.post("/green/trees", tree, requestConfig);
       const realTreeId = Number(res.data?.id || 0);
       if (realTreeId > 0 && tempTreeId < 0) {
-        await setTreeIdMap(tempTreeId, realTreeId);
-        await rewriteQueueTreeReferences(tempTreeId, realTreeId);
+        await setTreeIdMap(tempTreeId, realTreeId, scope);
+        await rewriteQueueTreeReferences(tempTreeId, realTreeId, scope);
         await replaceTempTreeInCache(Number(action.context?.projectId || tree.project_id || 0), tempTreeId, {
           ...tree,
           ...res.data,
           id: realTreeId,
-        });
+        }, scope);
       }
       const photoRefId = Number(payload.photoRefId || 0);
       if (photoRefId > 0 && realTreeId > 0) {
-        await uploadPhotoWithApi(api, photoRefId, "trees", { treeId: realTreeId });
+        await uploadPhotoWithApi(api, photoRefId, "trees", { treeId: realTreeId }, scope, `${String(action.idempotencyKey || "green-tree")}-photo`);
       }
       return;
     }
     case "update_task": {
       const taskId = Number(payload.taskId || 0);
       const edit = payload.edit || {};
-      await api.patch(`/green/tasks/${taskId}`, edit);
+      await api.patch(`/green/tasks/${taskId}`, edit, requestConfig);
       return;
     }
     case "submit_task": {
       const taskId = Number(payload.taskId || 0);
       const body = payload.body || {};
-      await api.post(`/green/tasks/${taskId}/submit`, body);
+      await api.post(`/green/tasks/${taskId}/submit`, body, requestConfig);
       return;
     }
     case "update_tree_status": {
       const rawTreeId = Number(payload.treeId || 0);
-      const treeId = await resolveTreeId(rawTreeId);
-      await api.patch(`/green/trees/${treeId}`, { status: payload.status });
+      const treeId = await resolveTreeId(rawTreeId, scope);
+      await api.patch(`/green/trees/${treeId}`, { status: payload.status }, requestConfig);
       return;
     }
     case "upload_photo": {
@@ -707,19 +882,19 @@ async function processQueueAction(api: AxiosInstance, action: GreenQueueAction):
       const folder = payload.folder === "tasks" ? "tasks" : "trees";
       const link = { ...(payload.link || {}) };
       if (link.treeId) {
-        link.treeId = await resolveTreeId(Number(link.treeId));
+        link.treeId = await resolveTreeId(Number(link.treeId), scope);
       }
-      const uploadedUrl = await uploadPhotoWithApi(api, photoRefId, folder, link);
+      const uploadedUrl = await uploadPhotoWithApi(api, photoRefId, folder, link, scope, String(action.idempotencyKey || createOfflineId("green-photo")));
       const projectId = Number(action.context?.projectId || 0);
       const assigneeName = normalizeAssignee(action.context?.assigneeName);
       if (uploadedUrl && projectId > 0 && folder === "trees" && link.treeId) {
-        await upsertTreeInCache(projectId, { id: Number(link.treeId), photo_url: uploadedUrl });
+        await upsertTreeInCache(projectId, { id: Number(link.treeId), photo_url: uploadedUrl }, scope);
       }
       if (uploadedUrl && projectId > 0 && folder === "tasks" && link.taskId && assigneeName) {
         await mutateCachedTasks(projectId, assigneeName, Number(link.taskId), (task) => ({
           ...task,
           photo_url: uploadedUrl,
-        }));
+        }), scope);
       }
       return;
     }
@@ -728,12 +903,45 @@ async function processQueueAction(api: AxiosInstance, action: GreenQueueAction):
   }
 }
 
+async function claimSyncLease(scope: GreenOfflineScope): Promise<boolean> {
+  const key = `${SYNC_LOCK_KEY_PREFIX}${scope.key}`;
+  return withStore(STORE_SYNC_LOCKS, "readwrite", async (store) => {
+    const now = Date.now();
+    const existing = (await requestToPromise(store.get(key))) as { key: string; owner: string; expiresAt: number } | undefined;
+    if (existing && existing.owner !== TAB_OWNER_ID && Number(existing.expiresAt || 0) > now) return false;
+    await requestToPromise(store.put({ key, owner: TAB_OWNER_ID, expiresAt: now + SYNC_LEASE_MS }));
+    return true;
+  });
+}
+
+async function renewSyncLease(scope: GreenOfflineScope): Promise<void> {
+  const key = `${SYNC_LOCK_KEY_PREFIX}${scope.key}`;
+  await withStore(STORE_SYNC_LOCKS, "readwrite", async (store) => {
+    const existing = (await requestToPromise(store.get(key))) as { key: string; owner: string; expiresAt: number } | undefined;
+    if (existing?.owner === TAB_OWNER_ID) await requestToPromise(store.put({ ...existing, expiresAt: Date.now() + SYNC_LEASE_MS }));
+  });
+}
+
+async function releaseSyncLease(scope: GreenOfflineScope): Promise<void> {
+  const key = `${SYNC_LOCK_KEY_PREFIX}${scope.key}`;
+  await withStore(STORE_SYNC_LOCKS, "readwrite", async (store) => {
+    const existing = (await requestToPromise(store.get(key))) as { owner?: string } | undefined;
+    if (existing?.owner === TAB_OWNER_ID) await requestToPromise(store.delete(key));
+  });
+}
+
 export async function syncGreenQueueOffline(
   api: AxiosInstance,
+  requestedScope?: GreenOfflineScope | null,
 ): Promise<{ synced: number; failed: number; conflicts: number; pending: number }> {
+  const scope = resolveScope(requestedScope);
+  if (!scope) return { synced: 0, failed: 0, conflicts: 0, pending: 0 };
   if (syncPromise) return syncPromise;
+  if (!(await claimSyncLease(scope))) {
+    return { synced: 0, failed: 0, conflicts: 0, pending: await queueCount(scope.key) };
+  }
   syncPromise = (async () => {
-    const actions = await queueList();
+    const actions = await queueList(scope.key);
     let synced = 0;
     let failed = 0;
     let conflicts = 0;
@@ -742,9 +950,10 @@ export async function syncGreenQueueOffline(
     for (const action of actions) {
       if (!action.id) continue;
       try {
-        await processQueueAction(api, action);
+        await renewSyncLease(scope);
+        await processQueueAction(api, action, scope);
         touchedContexts.push(action.context || {});
-        await queueDelete(Number(action.id));
+        await queueDelete(Number(action.id), scope);
         synced += 1;
       } catch (error: any) {
         if (isLikelyNetworkError(error)) {
@@ -762,8 +971,8 @@ export async function syncGreenQueueOffline(
             createdAt: new Date().toISOString(),
             detail: detailText,
             payload: action.payload || {},
-          });
-          await queueDelete(Number(action.id));
+          }, scope);
+          await queueDelete(Number(action.id), scope);
           touchedContexts.push(action.context || {});
           conflicts += 1;
           continue;
@@ -776,7 +985,7 @@ export async function syncGreenQueueOffline(
             ...action,
             retries: nextRetries,
             lastError: detailText.slice(0, 500),
-          });
+          }, scope);
         } else {
           await pushConflict({
             id: Number(action.id),
@@ -784,8 +993,8 @@ export async function syncGreenQueueOffline(
             createdAt: new Date().toISOString(),
             detail: `Failed after retries: ${detailText}`,
             payload: action.payload || {},
-          });
-          await queueDelete(Number(action.id));
+          }, scope);
+          await queueDelete(Number(action.id), scope);
           conflicts += 1;
         }
         failed += 1;
@@ -794,13 +1003,14 @@ export async function syncGreenQueueOffline(
 
     // Refresh local cache from server for touched contexts.
     for (const context of touchedContexts) {
-      await refreshContextFromServer(api, context);
+      await refreshContextFromServer(api, context, scope);
     }
 
-    const pending = await queueCount();
+    const pending = await queueCount(scope.key);
     return { synced, failed, conflicts, pending };
   })().finally(() => {
     syncPromise = null;
+    void releaseSyncLease(scope);
   });
   return syncPromise;
 }

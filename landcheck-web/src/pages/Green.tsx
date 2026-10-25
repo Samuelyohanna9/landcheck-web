@@ -31,6 +31,7 @@ import {
   getOfflineConflictCount,
   getOfflineQueueCount,
   getPendingTreeDraftsOffline,
+  getCurrentGreenOfflineScope,
   isLikelyNetworkError,
   queueCreateTreeOffline,
   queuePhotoUploadOffline,
@@ -41,6 +42,15 @@ import {
   precacheMapTilesForArea,
 } from "../offline/greenOffline";
 import { usePrivacyConsentGate } from "../privacy/usePrivacyConsentGate";
+import {
+  fetchGreenJsonQuery,
+  getGreenQueryScope,
+  greenQueryKeys,
+  invalidateGreenProjectQueries,
+  useGreenProjectQueries,
+  useGreenProjectsQuery,
+  useGreenVisibilityAwarePolling,
+} from "../query/greenQueries";
 import "../styles/green.css";
 
 const TreeMap = lazyWithChunkRecovery(() => import("../components/TreeMap"));
@@ -913,6 +923,24 @@ export default function Green() {
   const [treeTimeline, setTreeTimeline] = useState<any | null>(null);
   const [users, setUsers] = useState<GreenUser[]>([]);
   const [activeUser, setActiveUser] = useState<string>(storedActiveUser);
+  const greenQueryScope = useMemo(
+    () => getGreenQueryScope(greenAuthSession, "green"),
+    [
+      greenAuthSession?.auth_mode,
+      greenAuthSession?.user?.id,
+      greenAuthSession?.user?.organization_id,
+      greenAuthSession?.user?.role,
+      greenAuthSession?.user?.role_key,
+    ],
+  );
+  const greenProjectsQuery = useGreenProjectsQuery(greenQueryScope, activeUser, Boolean(greenAuthSession));
+  const greenProjectQueries = useGreenProjectQueries(
+    greenQueryScope,
+    activeProject?.id,
+    activeUser,
+    Boolean(activeProject?.id && activeUser),
+  );
+  const greenProjectQueryLoading = greenProjectQueries.trees.isFetching;
   const [myTasks, setMyTasks] = useState<any[]>([]);
   const [taskEdits, setTaskEdits] = useState<Record<number, TaskEdit>>({});
   const [taskTreeMetaEdits, setTaskTreeMetaEdits] = useState<Record<number, TaskTreeMetaEdit>>({});
@@ -1711,16 +1739,23 @@ export default function Green() {
   };
 
   const loadProjects = async () => {
+    const offlineScope = getCurrentGreenOfflineScope();
     try {
-      const params = new URLSearchParams();
-      if (greenScopedOrganizationId) params.set("organization_id", String(greenScopedOrganizationId));
-      if (activeUser) params.set("assignee_name", activeUser);
-      const res = await api.get(`/green/projects${params.toString() ? `?${params.toString()}` : ""}`);
-      const list = Array.isArray(res.data) ? res.data : [];
+      const listPayload = await fetchGreenJsonQuery<any[]>({
+        key: greenQueryKeys.projects(greenQueryScope, activeUser),
+        path: "/green/projects",
+        params: {
+          organization_id: greenScopedOrganizationId || undefined,
+          assignee_name: activeUser || undefined,
+        },
+        staleTime: 60 * 1000,
+        force: true,
+      });
+      const list = Array.isArray(listPayload) ? listPayload : [];
       setProjects(list);
-      await cacheProjectsOffline(list).catch(() => {});
+      await cacheProjectsOffline(list, offlineScope).catch(() => {});
     } catch (error) {
-      const cached = await getCachedProjectsOffline().catch(() => []);
+      const cached = await getCachedProjectsOffline(offlineScope).catch(() => []);
       const scopedCached = greenScopedOrganizationId
         ? cached.filter((row: any) => Number(row?.organization_id || 0) === Number(greenScopedOrganizationId))
         : cached;
@@ -1733,15 +1768,16 @@ export default function Green() {
   };
 
   const loadUsers = async () => {
+    const offlineScope = getCurrentGreenOfflineScope();
     try {
       const res = await api.get(
         greenScopedOrganizationId ? `/green/users?organization_id=${greenScopedOrganizationId}` : "/green/users"
       );
       const list = Array.isArray(res.data) ? res.data : [];
       setUsers(list);
-      await cacheUsersOffline(list).catch(() => {});
+      await cacheUsersOffline(list, offlineScope).catch(() => {});
     } catch (error) {
-      const cached = await getCachedUsersOffline().catch(() => []);
+      const cached = await getCachedUsersOffline(offlineScope).catch(() => []);
       const scopedCached = greenScopedOrganizationId
         ? cached.filter((row: any) => Number(row?.organization_id || 0) === Number(greenScopedOrganizationId))
         : cached;
@@ -1754,40 +1790,60 @@ export default function Green() {
   };
 
   const loadProjectDetail = async (id: number) => {
+    const offlineScope = getCurrentGreenOfflineScope();
     try {
-      const scopedParams = new URLSearchParams();
-      if (activeUser) scopedParams.set("assignee_name", activeUser);
-      scopedParams.set("_ts", String(Date.now()));
-      const scopedQuery = scopedParams.toString() ? `?${scopedParams.toString()}` : "";
+      const scopedParams = activeUser ? { assignee_name: activeUser } : undefined;
       const [projectRes, treesRes, custodiansRes, allocationsRes] = await Promise.allSettled([
-        api.get(`/green/projects/${id}${scopedQuery}`),
-        api.get(`/green/projects/${id}/trees${scopedQuery}`),
-        api.get(`/green/projects/${id}/custodians`),
-        api.get(`/green/projects/${id}/distribution-allocations`),
+        fetchGreenJsonQuery<any>({
+          key: greenQueryKeys.project(greenQueryScope, id, "detail", activeUser),
+          path: `/green/projects/${id}`,
+          params: scopedParams,
+          staleTime: 30 * 1000,
+          force: true,
+        }),
+        fetchGreenJsonQuery<any[]>({
+          key: greenQueryKeys.project(greenQueryScope, id, "trees", activeUser),
+          path: `/green/projects/${id}/trees`,
+          params: scopedParams,
+          staleTime: 60 * 1000,
+          force: true,
+        }),
+        fetchGreenJsonQuery<any[]>({
+          key: greenQueryKeys.project(greenQueryScope, id, "custodians"),
+          path: `/green/projects/${id}/custodians`,
+          staleTime: 60 * 1000,
+          force: true,
+        }),
+        fetchGreenJsonQuery<any[]>({
+          key: greenQueryKeys.project(greenQueryScope, id, "distribution-allocations"),
+          path: `/green/projects/${id}/distribution-allocations`,
+          staleTime: 30 * 1000,
+          force: true,
+        }),
       ]);
 
       if (projectRes.status !== "fulfilled" || treesRes.status !== "fulfilled") {
         throw new Error("Failed to load required project data");
       }
 
-      setActiveProject(projectRes.value.data);
-      const normalized = mergeTreesById(Array.isArray(treesRes.value.data) ? treesRes.value.data : []);
+      setActiveProject(projectRes.value);
+      const normalized = mergeTreesById(Array.isArray(treesRes.value) ? treesRes.value : []);
       const custodians =
-        custodiansRes.status === "fulfilled" && Array.isArray(custodiansRes.value.data)
-          ? custodiansRes.value.data
+        custodiansRes.status === "fulfilled" && Array.isArray(custodiansRes.value)
+          ? custodiansRes.value
           : [];
       const allocations =
-        allocationsRes.status === "fulfilled" && Array.isArray(allocationsRes.value.data)
-          ? allocationsRes.value.data
+        allocationsRes.status === "fulfilled" && Array.isArray(allocationsRes.value)
+          ? allocationsRes.value
           : [];
       setProjectCustodians(custodians);
       setProjectAllocations(allocations);
       setTrees(normalized);
       await Promise.all([
-        cacheProjectDetailOffline(id, projectRes.value.data).catch(() => {}),
-        cacheProjectTreesOffline(id, normalized).catch(() => {}),
-        cacheProjectCustodiansOffline(id, custodians).catch(() => {}),
-        cacheProjectAllocationsOffline(id, allocations).catch(() => {}),
+        cacheProjectDetailOffline(id, projectRes.value, offlineScope).catch(() => {}),
+        cacheProjectTreesOffline(id, normalized, offlineScope).catch(() => {}),
+        cacheProjectCustodiansOffline(id, custodians, offlineScope).catch(() => {}),
+        cacheProjectAllocationsOffline(id, allocations, offlineScope).catch(() => {}),
       ]);
       // Pre-cache map tiles for the project area so the map remains usable offline.
       if (navigator.onLine) {
@@ -1804,11 +1860,11 @@ export default function Green() {
       }
     } catch (error) {
       const [cachedProject, cachedTrees, pendingDrafts, cachedCustodians, cachedAllocations] = await Promise.all([
-        getCachedProjectDetailOffline(id).catch(() => null),
-        getCachedProjectTreesOffline(id).catch(() => []),
-        getPendingTreeDraftsOffline(id).catch(() => []),
-        getCachedProjectCustodiansOffline(id).catch(() => []),
-        getCachedProjectAllocationsOffline(id).catch(() => []),
+        getCachedProjectDetailOffline(id, offlineScope).catch(() => null),
+        getCachedProjectTreesOffline(id, offlineScope).catch(() => []),
+        getPendingTreeDraftsOffline(id, offlineScope).catch(() => []),
+        getCachedProjectCustodiansOffline(id, offlineScope).catch(() => []),
+        getCachedProjectAllocationsOffline(id, offlineScope).catch(() => []),
       ]);
       const mergedTrees = mergeTreesById([...(cachedTrees || []), ...(pendingDrafts || [])]);
       if (cachedProject) {
@@ -1827,12 +1883,16 @@ export default function Green() {
   };
 
   const loadWorkOrders = async (projectId: number, assigneeName: string) => {
+    const offlineScope = getCurrentGreenOfflineScope();
     try {
-      const stamp = Date.now();
-      const res = await api.get(
-        `/green/work-orders?project_id=${projectId}&assignee_name=${encodeURIComponent(assigneeName)}&_ts=${stamp}`
-      );
-      const rows = (Array.isArray(res.data) ? res.data : []).map((row: any) => {
+      const payload = await fetchGreenJsonQuery<any[]>({
+        key: greenQueryKeys.project(greenQueryScope, projectId, "work-orders", assigneeName),
+        path: "/green/work-orders",
+        params: { project_id: projectId, assignee_name: assigneeName || undefined },
+        staleTime: 15 * 1000,
+        force: true,
+      });
+      const rows = (Array.isArray(payload) ? payload : []).map((row: any) => {
         const areaGeometry = normalizeOrderAreaGeometry(row?.area_geojson);
         return {
           ...row,
@@ -1869,7 +1929,7 @@ export default function Green() {
       seenOrderIdsRef.current = nextOrderIds;
       orderNotifyPrimedRef.current = true;
       setPlantingOrders(rows);
-      await cacheWorkOrdersOffline(projectId, assigneeName, rows).catch(() => {});
+      await cacheWorkOrdersOffline(projectId, assigneeName, rows, offlineScope).catch(() => {});
       if (navigator.onLine) {
         const orderAreaPoints = rows.flatMap((row: any) => extractAreaPoints(normalizeOrderAreaGeometry(row?.area_geojson)));
         if (orderAreaPoints.length > 0) {
@@ -1877,7 +1937,7 @@ export default function Green() {
         }
       }
     } catch (error) {
-      const cached = await getCachedWorkOrdersOffline(projectId, assigneeName).catch(() => []);
+      const cached = await getCachedWorkOrdersOffline(projectId, assigneeName, offlineScope).catch(() => []);
       if (cached.length > 0) {
         const normalized = cached.map((row: any) => {
           const areaGeometry = normalizeOrderAreaGeometry(row?.area_geojson);
@@ -1896,6 +1956,14 @@ export default function Green() {
       throw error;
     }
   };
+
+  useEffect(() => {
+    const payload = greenProjectsQuery.data;
+    if (!Array.isArray(payload)) return;
+    const rows = payload as Project[];
+    setProjects(rows);
+    cacheProjectsOffline(rows, getCurrentGreenOfflineScope()).catch(() => {});
+  }, [greenProjectsQuery.data]);
 
   useEffect(() => {
     loadProjects().catch(() => toast.error("Failed to load projects"));
@@ -1960,15 +2028,17 @@ export default function Green() {
     orderNotifyPrimedRef.current = false;
   }, [activeProject?.id, activeUser]);
 
-  useEffect(() => {
-    if (!activeProject || !activeUser) return;
-    const timer = window.setInterval(() => {
-      if (!navigator.onLine) return;
-      loadMyTasks().catch(() => {});
-      loadWorkOrders(activeProject.id, activeUser).catch(() => {});
-    }, 45000);
-    return () => window.clearInterval(timer);
-  }, [activeProject?.id, activeUser]);
+  useGreenVisibilityAwarePolling(
+    () => {
+      if (!activeProject || !activeUser) return;
+      return Promise.all([
+        loadMyTasks().catch(() => undefined),
+        loadWorkOrders(activeProject.id, activeUser).catch(() => undefined),
+      ]).then(() => undefined);
+    },
+    45 * 1000,
+    Boolean(activeProject?.id && activeUser),
+  );
 
   useEffect(() => {
     if (newTree.tree_origin === "existing_inventory") return;
@@ -2523,6 +2593,7 @@ export default function Green() {
   };
 
   const loadTreeDetails = async (treeId: number) => {
+    const offlineScope = getCurrentGreenOfflineScope();
     const allowedTree = userTrees.find((tree: any) => Number(tree.id) === Number(treeId));
     if (!allowedTree) {
       setSelectedTreeId(null);
@@ -2554,13 +2625,13 @@ export default function Green() {
       setTreeTasks(scopedTasks);
       setTreeTimeline(scopedTimeline);
       await Promise.all([
-        cacheTreeTasksOffline(treeId, tasks).catch(() => {}),
-        cacheTreeTimelineOffline(treeId, timelineRes.data).catch(() => {}),
+        cacheTreeTasksOffline(treeId, tasks, offlineScope).catch(() => {}),
+        cacheTreeTimelineOffline(treeId, timelineRes.data, offlineScope).catch(() => {}),
       ]);
     } catch (error) {
       const [cachedTasks, cachedTimeline] = await Promise.all([
-        getCachedTreeTasksOffline(treeId).catch(() => []),
-        getCachedTreeTimelineOffline(treeId).catch(() => null),
+        getCachedTreeTasksOffline(treeId, offlineScope).catch(() => []),
+        getCachedTreeTimelineOffline(treeId, offlineScope).catch(() => null),
       ]);
       const scopedTasks = (cachedTasks || []).filter((task: any) => !activeUser || task.assignee_name === activeUser);
       const scopedTimeline = scopeTimelineForActiveUser(cachedTimeline);
@@ -2577,16 +2648,20 @@ export default function Green() {
 
   const loadMyTasks = async () => {
     if (!activeProject || !activeUser) return;
+    const offlineScope = getCurrentGreenOfflineScope();
     let rows: any[] = [];
     try {
-      const stamp = Date.now();
-      const res = await api.get(
-        `/green/tasks?project_id=${activeProject.id}&assignee_name=${encodeURIComponent(activeUser)}&_ts=${stamp}`
-      );
-      rows = Array.isArray(res.data) ? res.data : [];
-      await cacheTasksOffline(activeProject.id, activeUser, rows).catch(() => {});
+      const payload = await fetchGreenJsonQuery<any[]>({
+        key: greenQueryKeys.project(greenQueryScope, activeProject.id, "tasks", activeUser),
+        path: "/green/tasks",
+        params: { project_id: activeProject.id, assignee_name: activeUser || undefined },
+        staleTime: 15 * 1000,
+        force: true,
+      });
+      rows = Array.isArray(payload) ? payload : [];
+      await cacheTasksOffline(activeProject.id, activeUser, rows, offlineScope).catch(() => {});
     } catch (error) {
-      rows = await getCachedTasksOffline(activeProject.id, activeUser).catch(() => []);
+      rows = await getCachedTasksOffline(activeProject.id, activeUser, offlineScope).catch(() => []);
       if (rows.length === 0) {
         setMyTasks([]);
         setTaskEdits({});
@@ -2752,6 +2827,9 @@ export default function Green() {
       tree_height_m: treeHeight,
       tree_age_months: normalizeTaskState(tree.tree_origin) === "existing_inventory" ? treeAgeMonths : null,
     });
+    if (activeProject) {
+      await invalidateGreenProjectQueries(greenQueryScope, activeProject.id, ["detail", "trees", "tasks", "carbon-summary", "kpi"]);
+    }
     setTrees((prev) =>
       prev.map((row) =>
         Number(row.id) === treeId
@@ -5067,7 +5145,7 @@ export default function Green() {
 
             {!activeUser ? (
               <p className="green-empty">Select a staff member or custodian to view their tree records.</p>
-            ) : loadingTrees ? (
+            ) : loadingTrees || greenProjectQueryLoading ? (
               <p className="green-empty">Loading trees...</p>
             ) : treeRecordSpeciesSummary.length === 0 ? (
               <p className="green-empty">{workflowLabels.emptyRecordsSubtitle}</p>

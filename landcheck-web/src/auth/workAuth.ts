@@ -1,4 +1,5 @@
 import { api } from "../api/client";
+import { clearGreenQueryCache } from "../query/greenQueries";
 
 export const WORK_AUTH_STORAGE_KEY = "landcheck_work_auth";
 
@@ -91,10 +92,12 @@ export const getWorkAuthSession = (): WorkAuthSession | null => {
       access_token: "",
     } as WorkAuthSession;
     if (isWorkSessionExpired(session)) {
+      clearGreenQueryCache();
       window.sessionStorage.removeItem(WORK_AUTH_STORAGE_KEY);
       return null;
     }
     if (session.auth_mode === "partner_user" && !Number.isFinite(Number(session.user?.organization_id))) {
+      clearGreenQueryCache();
       window.sessionStorage.removeItem(WORK_AUTH_STORAGE_KEY);
       return null;
     }
@@ -103,11 +106,13 @@ export const getWorkAuthSession = (): WorkAuthSession | null => {
       (session.user?.organization_is_active === false ||
         String(session.user?.organization_status || "").trim().toLowerCase() === "suspended")
     ) {
+      clearGreenQueryCache();
       window.sessionStorage.removeItem(WORK_AUTH_STORAGE_KEY);
       return null;
     }
     return session;
   } catch {
+    clearGreenQueryCache();
     window.sessionStorage.removeItem(WORK_AUTH_STORAGE_KEY);
     return null;
   }
@@ -118,6 +123,7 @@ export const isWorkAuthed = () => Boolean(getWorkAuthSession());
 export const setWorkAuthed = (session?: Partial<WorkAuthSession>) => {
   if (typeof window === "undefined") return;
   if (!session || !session.user) {
+    clearGreenQueryCache();
     window.sessionStorage.removeItem(WORK_AUTH_STORAGE_KEY);
     return;
   }
@@ -133,12 +139,14 @@ export const setWorkAuthed = (session?: Partial<WorkAuthSession>) => {
     mfa_verified: Boolean(session.mfa_verified),
     user: session.user as WorkAuthUser,
   };
+  clearGreenQueryCache();
   window.localStorage.removeItem(WORK_AUTH_STORAGE_KEY);
   window.sessionStorage.setItem(WORK_AUTH_STORAGE_KEY, JSON.stringify(normalized));
 };
 
 export const clearWorkAuthed = () => {
   if (typeof window === "undefined") return;
+  clearGreenQueryCache();
   revokeStoredWorkSession();
   window.localStorage.removeItem(WORK_AUTH_STORAGE_KEY);
   window.sessionStorage.removeItem(WORK_AUTH_STORAGE_KEY);

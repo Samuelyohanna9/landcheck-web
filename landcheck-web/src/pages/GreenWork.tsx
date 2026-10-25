@@ -9,6 +9,16 @@ import GreenLoadingAnimation from "../components/GreenLoadingAnimation";
 import { clearWorkAuthed, getWorkAuthSession } from "../auth/workAuth";
 import { usePrivacyConsentGate } from "../privacy/usePrivacyConsentGate";
 import {
+  fetchGreenJsonQuery,
+  getGreenQueryScope,
+  greenQueryKeys,
+  invalidateGreenProjectQueries,
+  useGreenProjectQueries,
+  useGreenProjectSummaryQueries,
+  useGreenProjectsQuery,
+  useGreenVisibilityAwarePolling,
+} from "../query/greenQueries";
+import {
   cacheProjectsOffline,
   cacheUsersOffline,
   cacheProjectDetailOffline,
@@ -17,6 +27,7 @@ import {
   getCachedUsersOffline,
   getCachedProjectDetailOffline,
   getCachedProjectTreesOffline,
+  getCurrentGreenOfflineScope,
   isLikelyNetworkError,
 } from "../offline/greenOffline";
 import {
@@ -3605,6 +3616,23 @@ export default function GreenWork() {
   const [activeProjectId, setActiveProjectId] = useState<number | null>(
     Number.isFinite(storedProjectId) && storedProjectId > 0 ? storedProjectId : null
   );
+  const workQueryScope = useMemo(
+    () => getGreenQueryScope(workAuthSession, "work"),
+    [
+      workAuthSession?.auth_mode,
+      workAuthSession?.user?.id,
+      workAuthSession?.user?.organization_id,
+      workAuthSession?.user?.role,
+      workAuthSession?.user?.role_key,
+    ],
+  );
+  const workProjectsQuery = useGreenProjectsQuery(workQueryScope, null, Boolean(workAuthSession));
+  const workProjectQueries = useGreenProjectQueries(
+    workQueryScope,
+    activeProjectId,
+    null,
+    Boolean(activeProjectId),
+  );
   const [orders, setOrders] = useState<WorkOrder[]>([]);
   const [cancellingWorkOrderId, setCancellingWorkOrderId] = useState<number | null>(null);
   const [trees, setTrees] = useState<Tree[]>([]);
@@ -4173,6 +4201,12 @@ export default function GreenWork() {
     if (storedForm === "logs" && !canAccessSystemLogs) return null;
     return storedForm;
   });
+  const workSummaryQueries = useGreenProjectSummaryQueries(
+    workQueryScope,
+    activeProjectId,
+    Boolean(activeProjectId && ["project_focus", "overview", "review_queue"].includes(String(activeForm || ""))),
+    activeForm === "review_queue",
+  );
   const activeFormHiddenInAgric = activeForm ? isHiddenInFieldProject(activeForm) : false;
   useEffect(() => {
     // /green-work is one route with two dozen internal screens (SeoRouteMeta gives the whole
@@ -4333,19 +4367,25 @@ export default function GreenWork() {
   );
 
   const loadProjects = async () => {
+    const offlineScope = getCurrentGreenOfflineScope();
     if (isPartnerWorkSession && !workScopedOrganizationId) {
       setProjects([]);
       return;
     }
     try {
-      const url = workScopedOrganizationId ? `/green/projects?organization_id=${workScopedOrganizationId}` : "/green/projects";
-      const res = await api.get(url);
-      const rows = Array.isArray(res.data) ? res.data : [];
+      const payload = await fetchGreenJsonQuery<any[]>({
+        key: greenQueryKeys.projects(workQueryScope),
+        path: "/green/projects",
+        params: { organization_id: workScopedOrganizationId || undefined },
+        staleTime: 60 * 1000,
+        force: true,
+      });
+      const rows = Array.isArray(payload) ? payload : [];
       setProjects(rows);
-      cacheProjectsOffline(rows).catch(() => {});
+      cacheProjectsOffline(rows, offlineScope).catch(() => {});
     } catch (error) {
       if (isLikelyNetworkError(error)) {
-        const cached = await getCachedProjectsOffline().catch(() => []);
+        const cached = await getCachedProjectsOffline(offlineScope).catch(() => []);
         const scopedCached = workScopedOrganizationId
           ? cached.filter((row: any) => Number(row?.organization_id || 0) === Number(workScopedOrganizationId))
           : cached;
@@ -4457,6 +4497,7 @@ export default function GreenWork() {
   }, []);
 
   const loadUsers = async () => {
+    const offlineScope = getCurrentGreenOfflineScope();
     if (isPartnerWorkSession && !workScopedOrganizationId) {
       setUsers([]);
       return;
@@ -4466,10 +4507,10 @@ export default function GreenWork() {
       const res = await api.get(url);
       const rows = Array.isArray(res.data) ? res.data : [];
       setUsers(rows);
-      cacheUsersOffline(rows).catch(() => {});
+      cacheUsersOffline(rows, offlineScope).catch(() => {});
     } catch (error) {
       if (isLikelyNetworkError(error)) {
-        const cached = await getCachedUsersOffline().catch(() => []);
+        const cached = await getCachedUsersOffline(offlineScope).catch(() => []);
         const scopedCached = workScopedOrganizationId
           ? cached.filter((row: any) => Number(row?.organization_id || 0) === Number(workScopedOrganizationId))
           : cached;
@@ -4971,7 +5012,7 @@ export default function GreenWork() {
   const workOrderUsesCustomDueDates = newOrderMultiAssignEnabled && newOrderMultiAssignDueMode === "custom";
 
   const loadProjectData = async (projectId: number) => {
-    const stamp = Date.now();
+    const offlineScope = getCurrentGreenOfflineScope();
     let projectRes: PromiseSettledResult<any>,
       ordersRes: PromiseSettledResult<any>,
       treesRes: PromiseSettledResult<any>,
@@ -4980,17 +5021,44 @@ export default function GreenWork() {
 
     try {
       [projectRes, ordersRes, treesRes, tasksRes, speciesMaturityRes] = await Promise.allSettled([
-        api.get(`/green/projects/${projectId}?_ts=${stamp}`),
-        api.get(`/green/work-orders?project_id=${projectId}&_ts=${stamp}`),
-        api.get(`/green/projects/${projectId}/trees?_ts=${stamp}`),
-        api.get(`/green/tasks?project_id=${projectId}&_ts=${stamp}`),
-        api.get(`/green/projects/${projectId}/species-maturity?_ts=${stamp}`),
+        fetchGreenJsonQuery<any>({
+          key: greenQueryKeys.project(workQueryScope, projectId, "detail"),
+          path: `/green/projects/${projectId}`,
+          staleTime: 30 * 1000,
+          force: true,
+        }),
+        fetchGreenJsonQuery<any[]>({
+          key: greenQueryKeys.project(workQueryScope, projectId, "work-orders"),
+          path: "/green/work-orders",
+          params: { project_id: projectId },
+          staleTime: 15 * 1000,
+          force: true,
+        }),
+        fetchGreenJsonQuery<any[]>({
+          key: greenQueryKeys.project(workQueryScope, projectId, "trees"),
+          path: `/green/projects/${projectId}/trees`,
+          staleTime: 60 * 1000,
+          force: true,
+        }),
+        fetchGreenJsonQuery<any[]>({
+          key: greenQueryKeys.project(workQueryScope, projectId, "tasks"),
+          path: "/green/tasks",
+          params: { project_id: projectId },
+          staleTime: 15 * 1000,
+          force: true,
+        }),
+        fetchGreenJsonQuery<any>({
+          key: greenQueryKeys.project(workQueryScope, projectId, "species-maturity"),
+          path: `/green/projects/${projectId}/species-maturity`,
+          staleTime: 10 * 60 * 1000,
+          force: true,
+        }),
       ]);
     } catch {
       // Total failure (unlikely with allSettled, but handle offline gracefully)
       const [cachedProject, cachedTrees] = await Promise.all([
-        getCachedProjectDetailOffline(projectId).catch(() => null),
-        getCachedProjectTreesOffline(projectId).catch(() => []),
+        getCachedProjectDetailOffline(projectId, offlineScope).catch(() => null),
+        getCachedProjectTreesOffline(projectId, offlineScope).catch(() => []),
       ]);
       if (cachedProject) {
         setProjects((prev) => {
@@ -5008,7 +5076,7 @@ export default function GreenWork() {
       return;
     }
     if (projectRes.status === "fulfilled") {
-      const projectDetail = projectRes.value.data || {};
+      const projectDetail = projectRes.value || {};
       setProjects((prev) => {
         const idx = prev.findIndex((item) => Number(item.id) === Number(projectId));
         if (idx < 0) return prev;
@@ -5016,7 +5084,7 @@ export default function GreenWork() {
         next[idx] = { ...next[idx], ...projectDetail };
         return next;
       });
-      cacheProjectDetailOffline(projectId, projectDetail).catch(() => {});
+      cacheProjectDetailOffline(projectId, projectDetail, offlineScope).catch(() => {});
       if (Array.isArray(projectDetail?.sponsor_accounts) && projectDetail.sponsor_accounts.length > 0) {
         setFallbackSponsorAccounts(projectDetail.sponsor_accounts.map((row: any) => normalizeSponsorAccountSummary(row)));
       }
@@ -5096,7 +5164,7 @@ export default function GreenWork() {
     }
 
     if (ordersRes.status === "fulfilled") {
-      const normalizedOrders = (Array.isArray(ordersRes.value.data) ? ordersRes.value.data : []).map((row: any) => ({
+      const normalizedOrders = (Array.isArray(ordersRes.value) ? ordersRes.value : []).map((row: any) => ({
         ...row,
         target_trees: Number(row?.target_trees || 0),
         planted_count: Number(row?.planted_count || 0),
@@ -5110,7 +5178,7 @@ export default function GreenWork() {
     }
 
     if (treesRes.status === "fulfilled") {
-      const normalizedTrees = (treesRes.value.data || [])
+      const normalizedTrees = (treesRes.value || [])
         .map((tree: any) => ({
           ...tree,
           lng: Number(tree.lng),
@@ -5138,21 +5206,21 @@ export default function GreenWork() {
         .filter((tree: any) => Number.isFinite(tree.lng) && Number.isFinite(tree.lat));
       const sequencedTrees = sequenceProjectTreesForDisplay(normalizedTrees);
       setTrees(sequencedTrees);
-      cacheProjectTreesOffline(projectId, sequencedTrees).catch(() => {});
+      cacheProjectTreesOffline(projectId, sequencedTrees, offlineScope).catch(() => {});
     } else {
       // Offline fallback for trees
-      const cachedTrees = await getCachedProjectTreesOffline(projectId).catch(() => []);
+      const cachedTrees = await getCachedProjectTreesOffline(projectId, offlineScope).catch(() => []);
       setTrees(cachedTrees.length > 0 ? sequenceProjectTreesForDisplay(cachedTrees) : []);
     }
 
     if (tasksRes.status === "fulfilled") {
-      setTasks(Array.isArray(tasksRes.value.data) ? tasksRes.value.data : []);
+      setTasks(Array.isArray(tasksRes.value) ? tasksRes.value : []);
     } else {
       setTasks([]);
     }
 
     if (speciesMaturityRes.status === "fulfilled") {
-      const serverMapRaw = speciesMaturityRes.value.data?.map || {};
+      const serverMapRaw = speciesMaturityRes.value?.map || {};
       const serverMap = Object.entries(serverMapRaw).reduce(
         (acc, [key, value]) => {
           const normalizedKey = normalizeName(key);
@@ -5171,49 +5239,68 @@ export default function GreenWork() {
     }
 
     const [reviewQueueRes, alertsRes, carbonRes, kpiRes] = await Promise.allSettled([
-      api.get(`/green/tasks/review-queue?project_id=${projectId}&_ts=${stamp}`),
-      api.get(`/green/projects/${projectId}/alerts?refresh=true&status=open&_ts=${stamp}`),
-      api.get(`/green/projects/${projectId}/carbon-summary?_ts=${stamp}`),
-      api.get(`/green/reports/kpi?project_id=${projectId}&days=180&snapshot=true&_ts=${stamp}`),
+      fetchGreenJsonQuery<any[]>({
+        key: greenQueryKeys.project(workQueryScope, projectId, "review-queue"),
+        path: "/green/tasks/review-queue",
+        params: { project_id: projectId },
+        staleTime: 10 * 1000,
+      }),
+      fetchGreenJsonQuery<any>({
+        key: greenQueryKeys.project(workQueryScope, projectId, "alerts"),
+        path: `/green/projects/${projectId}/alerts`,
+        params: { refresh: true, status: "open" },
+        staleTime: 10 * 1000,
+      }),
+      fetchGreenJsonQuery<any>({
+        key: greenQueryKeys.project(workQueryScope, projectId, "carbon-summary"),
+        path: `/green/projects/${projectId}/carbon-summary`,
+        staleTime: 60 * 1000,
+      }),
+      fetchGreenJsonQuery<any>({
+        key: greenQueryKeys.project(workQueryScope, projectId, "kpi"),
+        path: "/green/reports/kpi",
+        params: { project_id: projectId, days: 180, snapshot: true },
+        staleTime: 60 * 1000,
+      }),
     ]);
 
     if (reviewQueueRes.status === "fulfilled") {
-      setReviewQueue(Array.isArray(reviewQueueRes.value.data) ? reviewQueueRes.value.data : []);
+      setReviewQueue(Array.isArray(reviewQueueRes.value) ? reviewQueueRes.value : []);
     } else {
       setReviewQueue([]);
     }
 
     if (alertsRes.status === "fulfilled") {
-      setAlertsList(Array.isArray(alertsRes.value.data?.items) ? alertsRes.value.data.items : []);
+      setAlertsList(Array.isArray(alertsRes.value?.items) ? alertsRes.value.items : []);
       setAlertsSummary({
-        total: Number(alertsRes.value.data?.summary?.total || 0),
-        danger: Number(alertsRes.value.data?.summary?.danger || 0),
-        warning: Number(alertsRes.value.data?.summary?.warning || 0),
-        info: Number(alertsRes.value.data?.summary?.info || 0),
+        total: Number(alertsRes.value?.summary?.total || 0),
+        danger: Number(alertsRes.value?.summary?.danger || 0),
+        warning: Number(alertsRes.value?.summary?.warning || 0),
+        info: Number(alertsRes.value?.summary?.info || 0),
       });
     } else {
       setAlertsList([]);
       setAlertsSummary({ total: 0, danger: 0, warning: 0, info: 0 });
     }
 
-    if (carbonRes.status === "fulfilled" && carbonRes.value.data) {
+    if (carbonRes.status === "fulfilled" && carbonRes.value) {
       setCarbonSummary({
-        current_co2_tonnes: Number(carbonRes.value.data.current_co2_tonnes || 0),
-        annual_co2_tonnes: Number(carbonRes.value.data.annual_co2_tonnes || 0),
-        projected_lifetime_co2_tonnes: Number(carbonRes.value.data.projected_lifetime_co2_tonnes || 0),
-        co2_per_tree_avg_kg: Number(carbonRes.value.data.co2_per_tree_avg_kg || 0),
-        trees_missing_age_data: Number(carbonRes.value.data.trees_missing_age_data || 0),
-        trees_with_fallback_age: Number(carbonRes.value.data.trees_with_fallback_age || 0),
-        trees_pending_review: Number(carbonRes.value.data.trees_pending_review || 0),
-        top_species: Array.isArray(carbonRes.value.data.top_species) ? carbonRes.value.data.top_species : [],
+        current_co2_tonnes: Number(carbonRes.value.current_co2_tonnes || 0),
+        annual_co2_tonnes: Number(carbonRes.value.annual_co2_tonnes || 0),
+        projected_lifetime_co2_tonnes: Number(carbonRes.value.projected_lifetime_co2_tonnes || 0),
+        co2_per_tree_avg_kg: Number(carbonRes.value.co2_per_tree_avg_kg || 0),
+        trees_missing_age_data: Number(carbonRes.value.trees_missing_age_data || 0),
+        trees_with_fallback_age: Number(carbonRes.value.trees_with_fallback_age || 0),
+        trees_pending_review: Number(carbonRes.value.trees_pending_review || 0),
+        top_species: Array.isArray(carbonRes.value.top_species) ? carbonRes.value.top_species : [],
       });
     } else {
       setCarbonSummary(null);
     }
 
-    if (kpiRes.status === "fulfilled" && kpiRes.value.data) {
-      setKpiCurrent(kpiRes.value.data.current || null);
-      const speciesDailyPayload = kpiRes.value.data?.species_daily_survival;
+    if (kpiRes.status === "fulfilled" && kpiRes.value) {
+      setKpiCurrent(kpiRes.value.current || null);
+      const speciesDailyPayload = kpiRes.value?.species_daily_survival;
       setSpeciesDailyTrend(
         speciesDailyPayload && typeof speciesDailyPayload === "object" ? speciesDailyPayload : null,
       );
@@ -5223,6 +5310,78 @@ export default function GreenWork() {
     }
     lastLoadedProjectIdRef.current = projectId;
   };
+
+  useEffect(() => {
+    const payload = workProjectsQuery.data;
+    if (!Array.isArray(payload)) return;
+    const rows = payload as Project[];
+    setProjects(rows);
+    cacheProjectsOffline(rows, getCurrentGreenOfflineScope()).catch(() => {});
+  }, [workProjectsQuery.data]);
+
+  useEffect(() => {
+    const payload = workProjectQueries.workOrders.data;
+    if (!Array.isArray(payload)) return;
+    setOrders(
+      payload.map((row: any) => ({
+        ...row,
+        target_trees: Number(row?.target_trees || 0),
+        planted_count: Number(row?.planted_count || 0),
+        auto_assign_first_cycle_maintenance: Boolean(row?.auto_assign_first_cycle_maintenance),
+        allow_existing_tree_area_reuse: Boolean(row?.allow_existing_tree_area_reuse),
+        species_allocations: normalizeSpeciesAllocations(row?.species_allocations),
+      })),
+    );
+  }, [workProjectQueries.workOrders.data]);
+
+  useEffect(() => {
+    const payload = workProjectQueries.tasks.data;
+    if (!Array.isArray(payload)) return;
+    setTasks(payload as WorkTask[]);
+  }, [workProjectQueries.tasks.data]);
+
+  useEffect(() => {
+    const payload = workSummaryQueries.reviewQueue.data;
+    if (!Array.isArray(payload)) return;
+    setReviewQueue(payload as ReviewQueueTask[]);
+  }, [workSummaryQueries.reviewQueue.data]);
+
+  useEffect(() => {
+    const payload = workSummaryQueries.alerts.data;
+    if (!payload) return;
+    setAlertsList(Array.isArray(payload.items) ? payload.items : []);
+    setAlertsSummary({
+      total: Number(payload.summary?.total || 0),
+      danger: Number(payload.summary?.danger || 0),
+      warning: Number(payload.summary?.warning || 0),
+      info: Number(payload.summary?.info || 0),
+    });
+  }, [workSummaryQueries.alerts.data]);
+
+  useEffect(() => {
+    const payload = workSummaryQueries.carbon.data;
+    if (!payload) return;
+    setCarbonSummary({
+      current_co2_tonnes: Number(payload.current_co2_tonnes || 0),
+      annual_co2_tonnes: Number(payload.annual_co2_tonnes || 0),
+      projected_lifetime_co2_tonnes: Number(payload.projected_lifetime_co2_tonnes || 0),
+      co2_per_tree_avg_kg: Number(payload.co2_per_tree_avg_kg || 0),
+      trees_missing_age_data: Number(payload.trees_missing_age_data || 0),
+      trees_with_fallback_age: Number(payload.trees_with_fallback_age || 0),
+      trees_pending_review: Number(payload.trees_pending_review || 0),
+      top_species: Array.isArray(payload.top_species) ? payload.top_species : [],
+    });
+  }, [workSummaryQueries.carbon.data]);
+
+  useEffect(() => {
+    const payload = workSummaryQueries.kpi.data;
+    if (!payload) return;
+    setKpiCurrent(payload.current || null);
+    const speciesDailyPayload = payload.species_daily_survival;
+    setSpeciesDailyTrend(
+      speciesDailyPayload && typeof speciesDailyPayload === "object" ? speciesDailyPayload : null,
+    );
+  }, [workSummaryQueries.kpi.data]);
 
   const stopRemoteMonitoringProgress = useCallback(() => {
     if (remoteMonitoringProgressTimerRef.current) {
@@ -7135,6 +7294,7 @@ export default function GreenWork() {
         count_in_planting_kpis: draft.count_in_planting_kpis,
         count_in_carbon_scope: draft.count_in_carbon_scope,
       });
+      await invalidateGreenProjectQueries(workQueryScope, activeProjectId, ["detail", "trees", "carbon-summary", "kpi"]);
       setTrees((prev) =>
         prev.map((tree) =>
           Number(tree.id) === Number(treeId)
@@ -7191,6 +7351,7 @@ export default function GreenWork() {
         lng: Number(treePositionDraft.lng.toFixed(6)),
         lat: Number(treePositionDraft.lat.toFixed(6)),
       });
+      await invalidateGreenProjectQueries(workQueryScope, activeProjectId, ["detail", "trees", "carbon-summary", "kpi"]);
       setTrees((prev) =>
         prev.map((tree) =>
           Number(tree.id) === Number(treeId)
@@ -7464,22 +7625,16 @@ export default function GreenWork() {
   useEffect(() => {
     if (!activeProjectId || activeForm !== "live_table") return;
     void loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter, liveTreeScopeTab).catch(() => {});
-    const timer = window.setInterval(() => {
-      void Promise.all([
-        loadProjectData(activeProjectId),
-        loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter, liveTreeScopeTab),
-      ]).catch(() => {});
-    }, 20000);
-    return () => window.clearInterval(timer);
   }, [activeProjectId, activeForm, seasonMode, assigneeFilter, liveTreeScopeTab, loadServerLiveMaintenance]);
 
-  useEffect(() => {
-    if (!activeProjectId || activeForm !== "review_queue") return;
-    const timer = window.setInterval(() => {
-      void loadProjectData(activeProjectId).catch(() => {});
-    }, 12000);
-    return () => window.clearInterval(timer);
-  }, [activeProjectId, activeForm]);
+  useGreenVisibilityAwarePolling(
+    () => {
+      if (!activeProjectId || activeForm !== "live_table") return;
+      return loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter, liveTreeScopeTab);
+    },
+    20 * 1000,
+    Boolean(activeProjectId && activeForm === "live_table"),
+  );
 
   useEffect(() => {
     if (!activeProjectId || !publicSponsorshipProject) {
@@ -7496,12 +7651,20 @@ export default function GreenWork() {
     if (!["sponsors", "sponsorship_orders", "project_focus", "assign_work", "assign_task", "sponsor_payouts", "sponsor_feedback"].includes(String(activeForm || ""))) return;
     void loadSponsorshipOrders(activeProjectId);
     void loadSponsorAccounts();
-    const timer = window.setInterval(() => {
-      void loadSponsorshipOrders(activeProjectId, { silent: true });
-      void loadSponsorAccounts();
-    }, 15000);
-    return () => window.clearInterval(timer);
   }, [activeProjectId, activeForm, publicSponsorshipProject, loadSponsorshipOrders, loadSponsorAccounts]);
+
+  useGreenVisibilityAwarePolling(
+    () => {
+      if (!activeProjectId || !publicSponsorshipProject) return;
+      if (!["sponsors", "sponsorship_orders", "project_focus", "assign_work", "assign_task", "sponsor_payouts", "sponsor_feedback"].includes(String(activeForm || ""))) return;
+      return Promise.all([
+        loadSponsorshipOrders(activeProjectId, { silent: true }),
+        loadSponsorAccounts(),
+      ]).then(() => undefined);
+    },
+    15 * 1000,
+    Boolean(activeProjectId && publicSponsorshipProject),
+  );
 
   useEffect(() => {
     // Birthday-gift admin tooling isn't scoped to the currently-active project (the superadmin
@@ -7519,11 +7682,16 @@ export default function GreenWork() {
     }
     if (activeForm !== "sponsors") return;
     void loadSponsorQrStatus(activeProjectId, { forceSync: true });
-    const timer = window.setInterval(() => {
-      void loadSponsorQrStatus(activeProjectId, { silent: true, forceSync: false });
-    }, 15000);
-    return () => window.clearInterval(timer);
   }, [activeForm, activeProjectId, loadSponsorQrStatus, publicSponsorshipProject]);
+
+  useGreenVisibilityAwarePolling(
+    () => {
+      if (!activeProjectId || !publicSponsorshipProject || activeForm !== "sponsors") return;
+      return loadSponsorQrStatus(activeProjectId, { silent: true, forceSync: false });
+    },
+    15 * 1000,
+    Boolean(activeProjectId && publicSponsorshipProject && activeForm === "sponsors"),
+  );
 
   useEffect(() => {
     if (!activeProjectId || !publicSponsorshipProject) {
@@ -7533,11 +7701,16 @@ export default function GreenWork() {
     }
     if (activeForm !== "assign_work") return;
     void loadPublicSponsorDonors(activeProjectId);
-    const timer = window.setInterval(() => {
-      void loadPublicSponsorDonors(activeProjectId, { silent: true });
-    }, 15000);
-    return () => window.clearInterval(timer);
   }, [activeForm, activeProjectId, loadPublicSponsorDonors, publicSponsorshipProject]);
+
+  useGreenVisibilityAwarePolling(
+    () => {
+      if (!activeProjectId || !publicSponsorshipProject || activeForm !== "assign_work") return;
+      return loadPublicSponsorDonors(activeProjectId, { silent: true });
+    },
+    15 * 1000,
+    Boolean(activeProjectId && publicSponsorshipProject && activeForm === "assign_work"),
+  );
 
   useEffect(() => {
     if (!activeProjectId || !publicSponsorshipProject) {
@@ -7554,11 +7727,16 @@ export default function GreenWork() {
     // Opening the tab clears the unread badge — mirrors an inbox "mark as read on open".
     setAssistantUnreadCount(0);
     api.post("/green/admin/assistant-escalations/mark-seen").catch(() => {});
-    const timer = window.setInterval(() => {
-      void loadSponsorFeedback({ silent: true });
-    }, 15000);
-    return () => window.clearInterval(timer);
   }, [activeForm, activeProjectId, loadSponsorFeedback, publicSponsorshipProject]);
+
+  useGreenVisibilityAwarePolling(
+    () => {
+      if (!activeProjectId || !publicSponsorshipProject || activeForm !== "sponsor_feedback") return;
+      return loadSponsorFeedback({ silent: true });
+    },
+    15 * 1000,
+    Boolean(activeProjectId && publicSponsorshipProject && activeForm === "sponsor_feedback"),
+  );
 
   // Poll the unread assistant-escalation count regardless of which tab is open, so the
   // red badge on "Feedback & Nominations" shows up even while browsing elsewhere.
@@ -7568,17 +7746,18 @@ export default function GreenWork() {
       return;
     }
     if (activeForm === "sponsor_feedback") return; // already cleared/tracked by the effect above
-    let cancelled = false;
-    const poll = () => {
-      api
-        .get(`/green/admin/assistant-escalations/unread-count?_ts=${Date.now()}`)
-        .then((res) => { if (!cancelled) setAssistantUnreadCount(Number(res.data?.count || 0)); })
-        .catch(() => {});
-    };
-    poll();
-    const timer = window.setInterval(poll, 20000);
-    return () => { cancelled = true; window.clearInterval(timer); };
   }, [activeForm, activeProjectId, publicSponsorshipProject]);
+
+  useGreenVisibilityAwarePolling(
+    () => {
+      if (!activeProjectId || !publicSponsorshipProject || activeForm === "sponsor_feedback") return;
+      return api
+        .get("/green/admin/assistant-escalations/unread-count")
+        .then((res) => setAssistantUnreadCount(Number(res.data?.count || 0)));
+    },
+    20 * 1000,
+    Boolean(activeProjectId && publicSponsorshipProject && activeForm !== "sponsor_feedback"),
+  );
 
   useEffect(() => {
     if (!activeProjectId || !publicSponsorshipProject) {
@@ -7588,11 +7767,16 @@ export default function GreenWork() {
     }
     if (activeForm !== "sponsor_payouts") return;
     void loadSponsorAgentPayoutBoard(activeProjectId, { forceSync: true });
-    const timer = window.setInterval(() => {
-      void loadSponsorAgentPayoutBoard(activeProjectId, { silent: true, forceSync: false });
-    }, 15000);
-    return () => window.clearInterval(timer);
   }, [activeForm, activeProjectId, loadSponsorAgentPayoutBoard, publicSponsorshipProject]);
+
+  useGreenVisibilityAwarePolling(
+    () => {
+      if (!activeProjectId || !publicSponsorshipProject || activeForm !== "sponsor_payouts") return;
+      return loadSponsorAgentPayoutBoard(activeProjectId, { silent: true, forceSync: false });
+    },
+    15 * 1000,
+    Boolean(activeProjectId && publicSponsorshipProject && activeForm === "sponsor_payouts"),
+  );
 
   useEffect(() => {
     if (activeForm !== "merchants" || !canAccessSuperAdmin) {
@@ -7615,12 +7799,19 @@ export default function GreenWork() {
     void loadComplianceDashboard();
     void loadActivityLogs();
     void loadQrPrintsReport();
-    const timer = window.setInterval(() => {
-      void loadActivityLogs({ silent: true });
-      void loadQrPrintsReport();
-    }, 15000);
-    return () => window.clearInterval(timer);
   }, [activeForm, canAccessSystemLogs, loadActivityLogs, loadComplianceDashboard, loadQrPrintsReport]);
+
+  useGreenVisibilityAwarePolling(
+    () => {
+      if (!canAccessSystemLogs || activeForm !== "logs") return;
+      return Promise.all([
+        loadActivityLogs({ silent: true }),
+        loadQrPrintsReport(),
+      ]).then(() => undefined);
+    },
+    15 * 1000,
+    Boolean(canAccessSystemLogs && activeForm === "logs"),
+  );
 
   useEffect(() => {
     if (activeForm === "logs") return;

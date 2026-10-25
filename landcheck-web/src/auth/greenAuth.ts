@@ -1,4 +1,5 @@
 import { api } from "../api/client";
+import { clearGreenQueryCache } from "../query/greenQueries";
 
 export const GREEN_AUTH_STORAGE_KEY = "landcheck_green_auth";
 export type GreenAppMode = "green" | "green_sponsor";
@@ -135,6 +136,7 @@ export const getGreenAuthSession = (): GreenAuthSession | null => {
         access_token: "",
       };
       if (isSessionExpired(session)) {
+        clearGreenQueryCache();
         window.sessionStorage.removeItem(GREEN_AUTH_STORAGE_KEY);
         return null;
       }
@@ -143,12 +145,14 @@ export const getGreenAuthSession = (): GreenAuthSession | null => {
         (session.user?.organization_is_active === false ||
           String(session.user?.organization_status || "").trim().toLowerCase() === "suspended")
       ) {
+        clearGreenQueryCache();
         window.sessionStorage.removeItem(GREEN_AUTH_STORAGE_KEY);
         return null;
       }
       return session;
     }
   } catch {
+    clearGreenQueryCache();
     window.sessionStorage.removeItem(GREEN_AUTH_STORAGE_KEY);
     return null;
   }
@@ -161,12 +165,14 @@ export const isSponsorGreenSession = (session = getGreenAuthSession()) =>
 
 export const setGreenAuthed = (session: GreenAuthSession) => {
   if (typeof window === "undefined") return;
+  clearGreenQueryCache();
   window.localStorage.removeItem(GREEN_AUTH_STORAGE_KEY);
   window.sessionStorage.setItem(GREEN_AUTH_STORAGE_KEY, JSON.stringify({ ...session, access_token: "" }));
 };
 
 export const clearGreenAuthed = () => {
   if (typeof window === "undefined") return;
+  clearGreenQueryCache();
   revokeStoredGreenSession();
   window.localStorage.removeItem(GREEN_AUTH_STORAGE_KEY);
   window.sessionStorage.removeItem(GREEN_AUTH_STORAGE_KEY);

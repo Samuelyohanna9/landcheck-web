@@ -1,3 +1,5 @@
+import { getAnonymousSurveyLocalScope, getSurveyLocalScope, surveyLocalStorageKey } from "./surveyLocalScope";
+
 type DraftEnvelope<T = any> = {
   id: string;
   updatedAt: string;
@@ -6,7 +8,7 @@ type DraftEnvelope<T = any> = {
 
 const DB_NAME = "landcheck-local-first";
 const STORE_NAME = "survey-plan-drafts";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const FALLBACK_KEY = "landcheck_survey_plan_drafts_v1";
 
 function supportsIndexedDb() {
@@ -16,10 +18,26 @@ function supportsIndexedDb() {
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event) => {
       const db = request.result;
+      const oldVersion = (event as IDBVersionChangeEvent).oldVersion;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME, { keyPath: "id" });
+      }
+      if (oldVersion < 2) {
+        const store = request.transaction?.objectStore(STORE_NAME);
+        if (store) {
+          const cursorRequest = store.openCursor();
+          cursorRequest.onsuccess = () => {
+            const cursor = cursorRequest.result;
+            if (!cursor) return;
+            const row = cursor.value as DraftEnvelope;
+            if (row?.id && !String(row.id).includes("::")) {
+              store.put({ ...row, id: surveyLocalStorageKey(String(row.id), getAnonymousSurveyLocalScope()) });
+            }
+            cursor.continue();
+          };
+        }
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -73,33 +91,69 @@ function writeFallbackMap(next: Record<string, DraftEnvelope>) {
   localStorage.setItem(FALLBACK_KEY, JSON.stringify(next));
 }
 
+const scopedDraftId = (id: string) => surveyLocalStorageKey(id, getSurveyLocalScope());
+
+const readLegacyAnonymousDraft = <T = any>(id: string): DraftEnvelope<T> | null => {
+  if (getSurveyLocalScope().startsWith("user:")) return null;
+  const fallback = readFallbackMap();
+  return (fallback[id] as DraftEnvelope<T>) || null;
+};
+
 export async function loadSurveyPlanDraft<T = any>(id = "active"): Promise<DraftEnvelope<T> | null> {
+  const storageId = scopedDraftId(id);
   if (!supportsIndexedDb()) {
     const fallback = readFallbackMap();
-    return (fallback[id] as DraftEnvelope<T>) || null;
+    const scoped = (fallback[storageId] as DraftEnvelope<T>) || null;
+    if (scoped) return scoped;
+    const legacy = readLegacyAnonymousDraft<T>(id);
+    if (legacy) {
+      fallback[storageId] = { ...legacy, id } as DraftEnvelope;
+      writeFallbackMap(fallback);
+    }
+    return legacy;
   }
 
   try {
     return await withStore("readonly", (store) => {
       return new Promise<DraftEnvelope<T> | null>((resolve, reject) => {
-        const request = store.get(id);
-        request.onsuccess = () => resolve((request.result as DraftEnvelope<T>) || null);
+        const request = store.get(storageId);
+        request.onsuccess = () => {
+          const scoped = (request.result as DraftEnvelope<T>) || null;
+          if (scoped || getSurveyLocalScope().startsWith("user:")) {
+            resolve(scoped);
+            return;
+          }
+          const legacyRequest = store.get(id);
+          legacyRequest.onsuccess = () => {
+            const legacy = (legacyRequest.result as DraftEnvelope<T>) || null;
+            resolve(legacy);
+          };
+          legacyRequest.onerror = () => reject(legacyRequest.error);
+        };
         request.onerror = () => reject(request.error);
       });
     });
   } catch {
     const fallback = readFallbackMap();
-    return (fallback[id] as DraftEnvelope<T>) || null;
+    const scoped = (fallback[storageId] as DraftEnvelope<T>) || null;
+    if (scoped) return scoped;
+    const legacy = readLegacyAnonymousDraft<T>(id);
+    if (legacy) {
+      fallback[storageId] = { ...legacy, id } as DraftEnvelope;
+      writeFallbackMap(fallback);
+    }
+    return legacy;
   }
 }
 
 export async function saveSurveyPlanDraft<T = any>(id: string, state: T): Promise<string> {
   const updatedAt = new Date().toISOString();
   const record: DraftEnvelope<T> = { id, updatedAt, state };
+  const storageId = scopedDraftId(id);
 
   if (!supportsIndexedDb()) {
     const fallback = readFallbackMap();
-    fallback[id] = record as DraftEnvelope;
+    fallback[storageId] = record as DraftEnvelope;
     writeFallbackMap(fallback);
     return updatedAt;
   }
@@ -107,14 +161,14 @@ export async function saveSurveyPlanDraft<T = any>(id: string, state: T): Promis
   try {
     await withStore("readwrite", (store) => {
       return new Promise<void>((resolve, reject) => {
-        const request = store.put(record);
+        const request = store.put({ ...record, id: storageId });
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
       });
     });
   } catch {
     const fallback = readFallbackMap();
-    fallback[id] = record as DraftEnvelope;
+    fallback[storageId] = record as DraftEnvelope;
     writeFallbackMap(fallback);
   }
 
@@ -122,9 +176,10 @@ export async function saveSurveyPlanDraft<T = any>(id: string, state: T): Promis
 }
 
 export async function clearSurveyPlanDraft(id = "active"): Promise<void> {
+  const storageId = scopedDraftId(id);
   if (!supportsIndexedDb()) {
     const fallback = readFallbackMap();
-    delete fallback[id];
+    delete fallback[storageId];
     writeFallbackMap(fallback);
     return;
   }
@@ -132,14 +187,14 @@ export async function clearSurveyPlanDraft(id = "active"): Promise<void> {
   try {
     await withStore("readwrite", (store) => {
       return new Promise<void>((resolve, reject) => {
-        const request = store.delete(id);
+        const request = store.delete(storageId);
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
       });
     });
   } catch {
     const fallback = readFallbackMap();
-    delete fallback[id];
+    delete fallback[storageId];
     writeFallbackMap(fallback);
   }
 }

@@ -9,6 +9,16 @@ import {
   isSurveyAuthed,
   type PendingSurveyDownload,
 } from "../auth/surveyAuth";
+import { surveyLocalStorageKey } from "../offline/surveyLocalScope";
+import {
+  fetchSurveyJsonQuery,
+  getSurveyQueryScope,
+  invalidateSurveyGeoreferenceQuery,
+  invalidateSurveyQueries,
+  surveyQueryKeys,
+  SURVEY_QUERY_STALE_TIMES,
+  waitForSurveyReadiness,
+} from "../query/surveyQueries";
 import {
   fromWGS84,
   isProjectedCoordinateSystem,
@@ -353,6 +363,27 @@ const DEFAULT_TECHNICAL_REPORT_COMPUTATION_SOFTWARE = "AutoCAD software";
 const DEFAULT_TECHNICAL_REPORT_PLOTTING_SOFTWARE = "AutoCAD software";
 const DEFAULT_TECHNICAL_REPORT_GENERAL_OBSERVATION = "The work was hitch-free.";
 const ACTIVE_SURVEY_DRAFT_ID = "active";
+
+type SurveyWorkspacePayload = {
+  coordinates: ManualPoint[];
+  plot_id: number;
+  meta?: Partial<PlotMeta>;
+};
+
+type SurveyGeoreferencePayload = {
+  session?: GeoreferenceSession;
+};
+
+type SurveyPlotReportPayload = {
+  area_m2?: number | string | null;
+};
+
+type SurveyExportJobPayload = {
+  id: string;
+  status: string;
+  error_text?: string | null;
+  download_url?: string | null;
+};
 
 // The shared `api` client's default timeout (30s) suits quick calls, but anything that renders a
 // plan (which, for templates like Site Plan, chains through several satellite-imagery fallback
@@ -758,7 +789,39 @@ function SurveyThemeToggle({ theme, onToggle }: { theme: WorkspaceTheme; onToggl
 export default function SurveyPlan() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const surveyUser = getSurveyAuthSession()?.user;
+  const surveyAuthSession = getSurveyAuthSession();
+  const surveyUser = surveyAuthSession?.user;
+  const surveyUserId = surveyUser?.id ?? null;
+  const surveyOrganizationId = surveyUser?.organization_id ?? null;
+  const surveyRole = surveyUser?.role ?? null;
+  const surveyRoleKey = surveyUser?.role_key ?? null;
+  const surveyPermissionScope = Array.isArray(surveyUser?.permissions)
+    ? surveyUser.permissions.map(String).sort().join(",")
+    : "";
+  const surveyIsAuthenticated = Boolean(surveyUser);
+  const surveyQueryScope = useMemo(
+    () => getSurveyQueryScope(
+      surveyIsAuthenticated
+        ? {
+            user: {
+              id: surveyUserId,
+              organization_id: surveyOrganizationId,
+              role: surveyRole,
+              role_key: surveyRoleKey,
+              permissions: surveyPermissionScope ? surveyPermissionScope.split(",") : [],
+            },
+          }
+        : null,
+    ),
+    [
+      surveyIsAuthenticated,
+      surveyUserId,
+      surveyOrganizationId,
+      surveyRole,
+      surveyRoleKey,
+      surveyPermissionScope,
+    ],
+  );
   const surveyUserInitials = initialsForUser(surveyUser?.full_name, surveyUser?.email);
   const [theme, setTheme] = useState<WorkspaceTheme>(getWorkspaceTheme);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -1186,8 +1249,12 @@ export default function SurveyPlan() {
     async (sessionId: string, options?: { preferredControlPointId?: string | null; silent?: boolean }) => {
       setGeorefSessionLoading(true);
       try {
-        const res = await api.get(`/survey-georeference/sessions/${encodeURIComponent(sessionId)}`);
-        const session = res.data?.session as GeoreferenceSession;
+        const payload = await fetchSurveyJsonQuery<SurveyGeoreferencePayload>({
+          key: surveyQueryKeys.georeference(surveyQueryScope, sessionId),
+          path: `/survey-georeference/sessions/${encodeURIComponent(sessionId)}`,
+          staleTime: SURVEY_QUERY_STALE_TIMES.georeferenceSession,
+        });
+        const session = payload?.session as GeoreferenceSession;
         applyGeoreferenceSession(session, options?.preferredControlPointId);
         await loadGeoreferenceRaster(sessionId);
         return session;
@@ -1201,7 +1268,7 @@ export default function SurveyPlan() {
         setGeorefSessionLoading(false);
       }
     },
-    [applyGeoreferenceSession, isEstateLayoutImport, loadGeoreferenceRaster]
+    [applyGeoreferenceSession, isEstateLayoutImport, loadGeoreferenceRaster, surveyQueryScope]
   );
 
   useEffect(() => {
@@ -1350,8 +1417,11 @@ export default function SurveyPlan() {
     const requestedPlotId = Number(rawPlotId);
     if (!Number.isInteger(requestedPlotId) || requestedPlotId <= 0) return;
     estateWorkspaceLoadedRef.current = rawPlotId;
-    api.get(`/plots/${requestedPlotId}/workspace`).then((response) => {
-      const workspace = response.data;
+    fetchSurveyJsonQuery<SurveyWorkspacePayload>({
+      key: surveyQueryKeys.plot(surveyQueryScope, requestedPlotId, "workspace"),
+      path: `/plots/${requestedPlotId}/workspace`,
+      staleTime: SURVEY_QUERY_STALE_TIMES.workspace,
+    }).then((workspace) => {
       if (!Array.isArray(workspace.coordinates) || workspace.coordinates.length < 3) {
         throw new Error("Survey plot has no usable boundary coordinates.");
       }
@@ -1384,7 +1454,7 @@ export default function SurveyPlan() {
       estateWorkspaceLoadedRef.current = null;
       toast.error("The Estate parcel could not be opened in this Survey account.");
     });
-  }, [draftHydrated, searchParams]);
+  }, [draftHydrated, searchParams, startsFresh, surveyQueryScope]);
 
   // Dashboard "Continue" links for a specific georeference session with
   // ?mode=georeference&session=<id> - loads that exact session instead of whatever's in this
@@ -2573,7 +2643,7 @@ export default function SurveyPlan() {
 
   // Save plot to localStorage for dashboard
   const savePlotToStorage = (id: number) => {
-    const STORAGE_KEY = "landcheck_plots";
+    const STORAGE_KEY = surveyLocalStorageKey("landcheck_plots");
     const stored = localStorage.getItem(STORAGE_KEY);
     const plots = stored ? JSON.parse(stored) : [];
 
@@ -2601,7 +2671,7 @@ export default function SurveyPlan() {
   // (surveyAuth.ts) reads this list right after sign-in to attach any session id started here
   // anonymously to the now-known user account.
   const saveGeorefSessionToStorage = (id: string) => {
-    const STORAGE_KEY = "landcheck_georef_sessions";
+    const STORAGE_KEY = surveyLocalStorageKey("landcheck_georef_sessions");
     const stored = localStorage.getItem(STORAGE_KEY);
     const sessions: { id: string }[] = stored ? JSON.parse(stored) : [];
     if (sessions.some((s) => s.id === id)) return;
@@ -2612,11 +2682,15 @@ export default function SurveyPlan() {
 
   const fetchPlotFeatures = useCallback(async (id: number) => {
     const planGeneration = planGenerationRef.current;
-    const featureRes = await api.get(`/plots/${id}/features`);
+    const featureData = await fetchSurveyJsonQuery<unknown>({
+      key: surveyQueryKeys.plot(surveyQueryScope, id, "features"),
+      path: `/plots/${id}/features`,
+      staleTime: SURVEY_QUERY_STALE_TIMES.features,
+    });
     if (planGeneration === planGenerationRef.current) {
-      setFeatures(featureRes.data);
+      setFeatures(featureData);
     }
-  }, []);
+  }, [surveyQueryScope]);
 
   const markServerSynced = useCallback(() => {
     const now = new Date().toISOString();
@@ -2690,6 +2764,14 @@ export default function SurveyPlan() {
           assertCurrentPlan();
         }
 
+        await invalidateSurveyQueries(surveyQueryScope, activePlotId, [
+          "workspace",
+          "features",
+          "report",
+          "subdivision-batches",
+        ]);
+        assertCurrentPlan();
+
         if (options?.fetchFeatures && !features) {
           await fetchPlotFeatures(activePlotId);
           assertCurrentPlan();
@@ -2714,6 +2796,7 @@ export default function SurveyPlan() {
       plotId,
       plotMetaPayload,
       serverSyncSignature,
+      surveyQueryScope,
     ]
   );
 
@@ -3306,6 +3389,7 @@ export default function SurveyPlan() {
       });
       const session = res.data?.session as GeoreferenceSession;
       applyGeoreferenceSession(session, georefSelectedControlPointId);
+      await invalidateSurveyGeoreferenceQuery(surveyQueryScope, georefSession.id);
       if (!options?.silent) toast.success("Raster anchored. You can now digitize boundaries and points.");
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
@@ -3313,7 +3397,7 @@ export default function SurveyPlan() {
     } finally {
       setGeorefSolving(false);
     }
-  }, [applyGeoreferenceSession, georefSelectedControlPointId, georefSession, georefTargetCoordinateSystem]);
+  }, [applyGeoreferenceSession, georefSelectedControlPointId, georefSession, georefTargetCoordinateSystem, surveyQueryScope]);
 
   // Editing/adding a control point clears the previous transform (it's now stale - see
   // invalidateGeoreferenceSolve) so the map overlay correctly stops showing an outdated raster
@@ -3357,13 +3441,14 @@ export default function SurveyPlan() {
     }
     try {
       await api.delete(`/survey-georeference/sessions/${encodeURIComponent(georefSession.id)}`);
+      await invalidateSurveyGeoreferenceQuery(surveyQueryScope, georefSession.id);
       clearGeorefLocalState();
       toast.success("Georeference session removed.");
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
       toast.error(typeof detail === "string" ? detail : "Unable to delete this session.");
     }
-  }, [clearGeorefLocalState, georefSession?.id]);
+  }, [clearGeorefLocalState, georefSession?.id, surveyQueryScope]);
 
   const handleSaveGeoreferenceFeatures = useCallback(async () => {
     if (!georefSession?.id) {
@@ -3381,6 +3466,7 @@ export default function SurveyPlan() {
       });
       const session = res.data?.session as GeoreferenceSession;
       applyGeoreferenceSession(session, georefSelectedControlPointId);
+      await invalidateSurveyGeoreferenceQuery(surveyQueryScope, georefSession.id);
       setGeorefLastSavedAt(new Date());
       toast.success("Digitized features saved.");
     } catch (err: any) {
@@ -3389,7 +3475,7 @@ export default function SurveyPlan() {
     } finally {
       setGeorefSavingFeatures(false);
     }
-  }, [applyGeoreferenceSession, georefFeatures, georefSelectedControlPointId, georefSession?.id]);
+  }, [applyGeoreferenceSession, georefFeatures, georefSelectedControlPointId, georefSession?.id, surveyQueryScope]);
 
   const handleFinishEstateGeoreference = useCallback(async () => {
     if (!isEstateLayoutImport || !georefSession?.id || !returnEstateId || !returnImportReviewId) return;
@@ -3773,14 +3859,20 @@ export default function SurveyPlan() {
       const startedAt = Date.now();
       while (Date.now() - startedAt < timeoutMs) {
         await new Promise((resolve) => window.setTimeout(resolve, intervalMs));
+        await waitForSurveyReadiness();
 
         // A single dropped request over a flaky connection shouldn't throw away everything the
         // user has already waited for - retry the status check itself a few times before giving
         // up on it. The server-side render keeps going regardless of one missed check-in.
-        let statusRes: any = null;
+        let job: SurveyExportJobPayload | null = null;
         for (let pollAttempt = 0; pollAttempt < 3; pollAttempt += 1) {
           try {
-            statusRes = await api.get(`/plots/export-jobs/${encodeURIComponent(jobId)}`);
+            job = await fetchSurveyJsonQuery<SurveyExportJobPayload>({
+              key: surveyQueryKeys.exportJob(surveyQueryScope, jobId),
+              path: `/plots/export-jobs/${encodeURIComponent(jobId)}`,
+              staleTime: SURVEY_QUERY_STALE_TIMES.exportJob,
+              force: true,
+            });
             break;
           } catch {
             if (pollAttempt < 2) {
@@ -3788,11 +3880,10 @@ export default function SurveyPlan() {
             }
           }
         }
-        if (!statusRes) {
+        if (!job) {
           continue;
         }
 
-        const job = statusRes?.data || {};
         const status = String(job.status || "").trim().toLowerCase();
         if (status === "completed") {
           return job;
@@ -3806,7 +3897,7 @@ export default function SurveyPlan() {
       }
       throw new Error("Export job is still preparing. Try again in a moment.");
     },
-    []
+    [surveyQueryScope]
   );
 
   // Download function for PDF endpoints that need JSON body
@@ -3902,6 +3993,8 @@ export default function SurveyPlan() {
         ? resolvedUrl.replace("/report/pdf", "/export-jobs/survey-plan.pdf")
         : resolvedUrl.endsWith("/orthophoto/pdf")
           ? resolvedUrl.replace("/orthophoto/pdf", useTopoMap ? "/export-jobs/topomap.pdf" : "/export-jobs/orthophoto.pdf")
+          : resolvedUrl.endsWith("/back-computation/pdf")
+            ? resolvedUrl.replace("/back-computation/pdf", "/export-jobs/back-computation.pdf")
           : "";
       if (exportJobPath) {
         const created = await api.post(exportJobPath, payload, { timeout: SLOW_NETWORK_TIMEOUT_MS });
@@ -4136,8 +4229,12 @@ export default function SurveyPlan() {
     if (!activePlotId) return;
     setSubdivisionBatchLoading(true);
     try {
-      const res = await api.get(`/plots/${activePlotId}/subdivision/batches`);
-      const rows = Array.isArray(res.data) ? (res.data as SubdivisionBatchRow[]) : [];
+      const payload = await fetchSurveyJsonQuery<unknown>({
+        key: surveyQueryKeys.plot(surveyQueryScope, activePlotId, "subdivision-batches"),
+        path: `/plots/${activePlotId}/subdivision/batches`,
+        staleTime: SURVEY_QUERY_STALE_TIMES.subdivisionBatches,
+      });
+      const rows = Array.isArray(payload) ? (payload as SubdivisionBatchRow[]) : [];
       setSubdivisionBatches(rows);
       setLatestSubdivisionBatchId((prev) => prev ?? (rows[0]?.id ?? null));
     } catch (err) {
@@ -4145,15 +4242,18 @@ export default function SurveyPlan() {
     } finally {
       setSubdivisionBatchLoading(false);
     }
-  }, [plotId]);
+  }, [plotId, surveyQueryScope]);
 
   const loadSubdivisionCleanCopyBatchDetails = useCallback(
     async (batchId: number) => {
       if (!Number.isFinite(batchId) || batchId <= 0) return;
       setSubdivisionCleanCopyLoadingBatchId(batchId);
       try {
-        const res = await api.get(`/plots/subdivision/batches/${batchId}`);
-        const payload = (res?.data || {}) as SubdivisionBatchDetailResponse;
+        const payload = await fetchSurveyJsonQuery<SubdivisionBatchDetailResponse>({
+          key: [...surveyQueryKeys.scope(surveyQueryScope), "subdivision-batch", String(batchId)],
+          path: `/plots/subdivision/batches/${batchId}`,
+          staleTime: SURVEY_QUERY_STALE_TIMES.subdivisionBatch,
+        });
         const items = Array.isArray(payload.items) ? payload.items : [];
         setSubdivisionCleanCopyItems(items);
         setSubdivisionCleanCopyAreaDrafts((prev) => {
@@ -4178,7 +4278,7 @@ export default function SurveyPlan() {
         setSubdivisionCleanCopyLoadingBatchId((prev) => (prev === batchId ? null : prev));
       }
     },
-    [defaultSubdivisionAreaLabel, meta.title_text, subdivisionAreaDraftKey]
+    [defaultSubdivisionAreaLabel, meta.title_text, subdivisionAreaDraftKey, surveyQueryScope]
   );
 
   useEffect(() => {
@@ -4210,11 +4310,14 @@ export default function SurveyPlan() {
     if (!plotId || workflowMode !== "subdivision" || currentStep < 2) return;
     let cancelled = false;
     setSubdivisionParentAreaLoading(true);
-    api
-      .get(`/plots/${plotId}/report`)
-      .then((res) => {
+    fetchSurveyJsonQuery<SurveyPlotReportPayload>({
+      key: surveyQueryKeys.plot(surveyQueryScope, plotId, "report"),
+      path: `/plots/${plotId}/report`,
+      staleTime: SURVEY_QUERY_STALE_TIMES.report,
+    })
+      .then((payload) => {
         if (cancelled) return;
-        const area = Number(res?.data?.area_m2);
+        const area = Number(payload?.area_m2);
         setSubdivisionParentAreaM2(Number.isFinite(area) && area > 0 ? area : null);
       })
       .catch(() => {
@@ -4229,7 +4332,7 @@ export default function SurveyPlan() {
     return () => {
       cancelled = true;
     };
-  }, [plotId, workflowMode, currentStep]);
+  }, [plotId, workflowMode, currentStep, surveyQueryScope]);
 
   useEffect(() => {
     if (subdivisionMethod !== "by_custom_area") return;
@@ -4479,6 +4582,7 @@ export default function SurveyPlan() {
             geojson: segment.geojson.geometry,
           });
         }
+        await invalidateSurveyQueries(surveyQueryScope, plotId, ["features", "report", "subdivision-batches"]);
         featureEditsPendingRef.current = true;
         toast.success("Road removed.");
         setSelectedRoadSegmentId((prev) => (prev === segment.id ? null : prev));
@@ -4490,7 +4594,7 @@ export default function SurveyPlan() {
         setSubdivisionRoadSegmentDeletingId(null);
       }
     },
-    [plotId, previewSubdivision]
+    [plotId, previewSubdivision, surveyQueryScope]
   );
 
   const scheduleSubdivisionLivePreview = useCallback(() => {
@@ -4515,6 +4619,11 @@ export default function SurveyPlan() {
       if (batchId) {
         setLatestSubdivisionBatchId(batchId);
       }
+      await invalidateSurveyQueries(surveyQueryScope, activePlotId, [
+        "subdivision-batches",
+        "report",
+        "workspace",
+      ]);
       await loadSubdivisionBatches(activePlotId);
       const generated = Number(res?.data?.generated_count || 0);
       markServerSynced();
@@ -4924,6 +5033,7 @@ export default function SurveyPlan() {
       const client_request_id =
         typeof window.crypto?.randomUUID === "function" ? window.crypto.randomUUID() : undefined;
       await api.post(`/plots/${plotId}/feature-overrides`, { ...payload, client_request_id });
+      await invalidateSurveyQueries(surveyQueryScope, plotId, ["features", "report", "subdivision-batches"]);
       featureEditsPendingRef.current = true;
       return true;
     } catch (err) {

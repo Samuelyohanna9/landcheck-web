@@ -1,4 +1,6 @@
 import { api } from "../api/client";
+import { getAnonymousSurveyLocalScope, surveyLocalStorageKey } from "../offline/surveyLocalScope";
+import { clearSurveyQueryCache } from "../query/surveyQueries";
 
 export const SURVEY_AUTH_STORAGE_KEY = "landcheck_survey_auth";
 
@@ -7,7 +9,10 @@ export type SurveyAuthUser = {
   email: string;
   full_name?: string | null;
   role?: string | null;
+  role_key?: string | null;
   role_name?: string | null;
+  organization_id?: number | null;
+  permissions?: string[];
   organization_name?: string | null;
   plan_name?: string | null;
   credits_remaining?: number | null;
@@ -64,12 +69,14 @@ export const getSurveyAuthSession = (): SurveyAuthSession | null => {
     const parsed = JSON.parse(raw) as SurveyAuthSession;
     if (parsed?.authed && parsed.user) {
       if (isSessionExpired(parsed)) {
+        clearSurveyQueryCache();
         window.sessionStorage.removeItem(SURVEY_AUTH_STORAGE_KEY);
         return null;
       }
       return parsed;
     }
   } catch {
+    clearSurveyQueryCache();
     window.sessionStorage.removeItem(SURVEY_AUTH_STORAGE_KEY);
     return null;
   }
@@ -80,12 +87,14 @@ export const isSurveyAuthed = () => Boolean(getSurveyAuthSession());
 
 export const setSurveyAuthSession = (session: SurveyAuthSession) => {
   if (typeof window === "undefined") return;
+  clearSurveyQueryCache();
   window.localStorage.removeItem(SURVEY_AUTH_STORAGE_KEY);
   window.sessionStorage.setItem(SURVEY_AUTH_STORAGE_KEY, JSON.stringify({ ...session, access_token: "" }));
 };
 
 export const clearSurveyAuthSession = () => {
   if (typeof window === "undefined") return;
+  clearSurveyQueryCache();
   window.localStorage.removeItem(SURVEY_AUTH_STORAGE_KEY);
   window.sessionStorage.removeItem(SURVEY_AUTH_STORAGE_KEY);
   void api.post("/survey/auth/logout", {}).catch(() => undefined);
@@ -169,7 +178,7 @@ export type PendingSurveyDownload =
 // survive in localStorage (shared across tabs, unlike sessionStorage).
 export const setPendingSurveyDownload = (action: PendingSurveyDownload) => {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(PENDING_ACTION_KEY, JSON.stringify({ action, createdAt: Date.now() }));
+  window.localStorage.setItem(surveyLocalStorageKey(PENDING_ACTION_KEY, getAnonymousSurveyLocalScope()), JSON.stringify({ action, createdAt: Date.now() }));
 };
 
 // Non-destructive check used by the auth verify/callback pages to decide where to redirect,
@@ -177,13 +186,14 @@ export const setPendingSurveyDownload = (action: PendingSurveyDownload) => {
 // should consume it.
 export const hasPendingSurveyDownload = (): boolean => {
   if (typeof window === "undefined") return false;
-  return Boolean(window.localStorage.getItem(PENDING_ACTION_KEY));
+  return Boolean(window.localStorage.getItem(surveyLocalStorageKey(PENDING_ACTION_KEY, getAnonymousSurveyLocalScope())));
 };
 
 export const consumePendingSurveyDownload = (): PendingSurveyDownload | null => {
   if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(PENDING_ACTION_KEY);
-  window.localStorage.removeItem(PENDING_ACTION_KEY);
+  const storageKey = surveyLocalStorageKey(PENDING_ACTION_KEY, getAnonymousSurveyLocalScope());
+  const raw = window.localStorage.getItem(storageKey);
+  window.localStorage.removeItem(storageKey);
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as { action?: PendingSurveyDownload; createdAt?: number };
@@ -218,7 +228,8 @@ const PLOTS_DRAFT_STORAGE_KEY = "landcheck_plots";
 const readDraftPlotIds = (): number[] => {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(PLOTS_DRAFT_STORAGE_KEY);
+    const raw = window.localStorage.getItem(surveyLocalStorageKey(PLOTS_DRAFT_STORAGE_KEY, getAnonymousSurveyLocalScope()))
+      || window.localStorage.getItem(PLOTS_DRAFT_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as { id?: number }[];
     return parsed.map((p) => Number(p.id)).filter((id) => Number.isFinite(id));
@@ -250,7 +261,8 @@ const GEOREF_DRAFT_STORAGE_KEY = "landcheck_georef_sessions";
 const readDraftGeorefSessionIds = (): string[] => {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(GEOREF_DRAFT_STORAGE_KEY);
+    const raw = window.localStorage.getItem(surveyLocalStorageKey(GEOREF_DRAFT_STORAGE_KEY, getAnonymousSurveyLocalScope()))
+      || window.localStorage.getItem(GEOREF_DRAFT_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as { id?: string }[];
     return parsed.map((s) => String(s.id || "")).filter(Boolean);
@@ -284,18 +296,19 @@ export type PendingHazardRun = {
 
 export const setPendingHazardRun = (run: PendingHazardRun) => {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(PENDING_HAZARD_RUN_KEY, JSON.stringify({ run, createdAt: Date.now() }));
+  window.localStorage.setItem(surveyLocalStorageKey(PENDING_HAZARD_RUN_KEY, getAnonymousSurveyLocalScope()), JSON.stringify({ run, createdAt: Date.now() }));
 };
 
 export const hasPendingHazardRun = (): boolean => {
   if (typeof window === "undefined") return false;
-  return Boolean(window.localStorage.getItem(PENDING_HAZARD_RUN_KEY));
+  return Boolean(window.localStorage.getItem(surveyLocalStorageKey(PENDING_HAZARD_RUN_KEY, getAnonymousSurveyLocalScope())));
 };
 
 export const consumePendingHazardRun = (): PendingHazardRun | null => {
   if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(PENDING_HAZARD_RUN_KEY);
-  window.localStorage.removeItem(PENDING_HAZARD_RUN_KEY);
+  const storageKey = surveyLocalStorageKey(PENDING_HAZARD_RUN_KEY, getAnonymousSurveyLocalScope());
+  const raw = window.localStorage.getItem(storageKey);
+  window.localStorage.removeItem(storageKey);
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as { run?: PendingHazardRun; createdAt?: number };
@@ -330,7 +343,8 @@ const HAZARD_ANON_JOBS_STORAGE_KEY = "landcheck_hazard_anon_jobs";
 const readDraftHazardJobIds = (): string[] => {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(HAZARD_ANON_JOBS_STORAGE_KEY);
+    const raw = window.localStorage.getItem(surveyLocalStorageKey(HAZARD_ANON_JOBS_STORAGE_KEY, getAnonymousSurveyLocalScope()))
+      || window.localStorage.getItem(HAZARD_ANON_JOBS_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as string[];
     return parsed.filter((id) => typeof id === "string" && id);
@@ -349,5 +363,5 @@ export const rememberAnonymousHazardJob = (jobId: string) => {
   if (typeof window === "undefined" || !jobId) return;
   const existing = readDraftHazardJobIds();
   if (existing.includes(jobId)) return;
-  window.localStorage.setItem(HAZARD_ANON_JOBS_STORAGE_KEY, JSON.stringify([...existing, jobId]));
+  window.localStorage.setItem(surveyLocalStorageKey(HAZARD_ANON_JOBS_STORAGE_KEY, getAnonymousSurveyLocalScope()), JSON.stringify([...existing, jobId]));
 };
