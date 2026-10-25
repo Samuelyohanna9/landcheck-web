@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   defaultCookiePreferences,
@@ -36,28 +36,51 @@ export default function CookieConsentManager() {
   const { ready, hasDecision, preferences, acceptAll, acceptEssentialOnly, saveConsent } = useCookieConsent();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [draft, setDraft] = useState<DraftPreferences>(defaultCookiePreferences);
-
-  useEffect(() => {
-    setDraft({
-      essential: true,
-      experience: preferences.experience,
-      measurement: preferences.measurement,
-    });
-  }, [preferences.experience, preferences.measurement]);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const modalCloseRef = useRef<HTMLButtonElement>(null);
+  const preferencesButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!isModalOpen) return undefined;
     const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const fallbackFocus = preferencesButtonRef.current;
     document.body.style.overflow = "hidden";
-    const handleEscape = (event: KeyboardEvent) => {
+    modalCloseRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setIsModalOpen(false);
+        return;
+      }
+      if (event.key !== "Tab" || !modalRef.current) return;
+
+      const focusable = Array.from(
+        modalRef.current.querySelectorAll<HTMLElement>(
+          "button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex=\"-1\"])",
+        ),
+      ).filter((element) => element.offsetParent !== null);
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
       }
     };
-    window.addEventListener("keydown", handleEscape);
+
+    window.addEventListener("keydown", handleKeyDown);
     return () => {
       document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.requestAnimationFrame(() => {
+        if (previousFocus && document.contains(previousFocus)) previousFocus.focus();
+        else fallbackFocus?.focus();
+      });
     };
   }, [isModalOpen]);
 
@@ -71,7 +94,14 @@ export default function CookieConsentManager() {
 
   if (!ready) return null;
 
-  const openPreferences = () => setIsModalOpen(true);
+  const openPreferences = () => {
+    setDraft({
+      essential: true,
+      experience: preferences.experience,
+      measurement: preferences.measurement,
+    });
+    setIsModalOpen(true);
+  };
   const closePreferences = () => setIsModalOpen(false);
   const handleAcceptAll = () => {
     acceptAll();
@@ -95,15 +125,20 @@ export default function CookieConsentManager() {
   return (
     <>
       {!hasDecision && (
-        <aside className="cookie-banner" role="dialog" aria-labelledby="cookie-banner-title" aria-modal="false">
+        <aside
+          className="cookie-banner"
+          role="dialog"
+          aria-labelledby="cookie-banner-title"
+          aria-describedby="cookie-banner-description"
+          aria-modal="false"
+        >
           <div className="cookie-banner__glow" aria-hidden="true" />
           <div className="cookie-banner__copy">
             <span className="cookie-banner__eyebrow">{pathLabel}</span>
-            <h2 id="cookie-banner-title">Cookies and browser storage preferences</h2>
-            <p>
-              LandCheck uses cookies and similar browser storage to keep the site secure, remember preferences, and
-              optionally enable richer media and measurement. You can accept all, keep essential only, or customize
-              your choices.
+            <h2 id="cookie-banner-title">Cookies and browser storage</h2>
+            <p id="cookie-banner-description">
+              Essential storage keeps LandCheck secure and remembers your choices. Optional experience and measurement
+              storage stay off until you choose.
             </p>
             <div className="cookie-banner__meta">
               <Link to={PRIVACY_POLICY_PATH}>Privacy policy</Link>
@@ -111,11 +146,11 @@ export default function CookieConsentManager() {
             </div>
           </div>
           <div className="cookie-banner__actions">
-            <button type="button" className="cookie-btn cookie-btn--ghost" onClick={openPreferences}>
-              Customize
+            <button ref={preferencesButtonRef} type="button" className="cookie-btn cookie-btn--ghost" onClick={openPreferences}>
+              Preferences
             </button>
             <button type="button" className="cookie-btn cookie-btn--subtle" onClick={acceptEssentialOnly}>
-              Essential only
+              Reject optional
             </button>
             <button type="button" className="cookie-btn cookie-btn--primary" onClick={acceptAll}>
               Accept all
@@ -127,19 +162,27 @@ export default function CookieConsentManager() {
       {isModalOpen && (
         <div className="cookie-modal-backdrop" role="presentation" onClick={closePreferences}>
           <div
+            ref={modalRef}
             className="cookie-modal"
             role="dialog"
             aria-modal="true"
             aria-labelledby="cookie-modal-title"
+            aria-describedby="cookie-modal-description"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="cookie-modal__header">
               <span className="cookie-modal__eyebrow">Privacy controls</span>
-              <button type="button" className="cookie-modal__close" onClick={closePreferences} aria-label="Close">
-                ×
+              <button
+                type="button"
+                className="cookie-modal__close"
+                onClick={closePreferences}
+                aria-label="Close"
+                autoFocus
+              >
+                <span aria-hidden="true">x</span>
               </button>
               <h2 id="cookie-modal-title">Choose how LandCheck uses browser storage</h2>
-              <p>
+              <p id="cookie-modal-description">
                 Essential storage stays on because it is required for secure access and core site functions. Optional
                 categories help with richer presentation and future measurement, but they are your choice.
               </p>
@@ -160,6 +203,7 @@ export default function CookieConsentManager() {
                           type="checkbox"
                           checked={checked}
                           disabled={category.locked}
+                          aria-label={`${category.title}${category.locked ? " always active" : ""}`}
                           onChange={(event) => {
                             if (category.locked) return;
                             const nextChecked = event.target.checked;
@@ -183,9 +227,7 @@ export default function CookieConsentManager() {
             </div>
 
             <div className="cookie-modal__footnote">
-              <p>
-                You can update these preferences at any time from the cookie settings button shown across the site.
-              </p>
+              <p>You can update these preferences at any time from the cookie settings button shown across the site.</p>
               <Link to={PRIVACY_POLICY_PATH} onClick={closePreferences}>
                 Read the privacy policy
               </Link>
