@@ -142,6 +142,23 @@ const deliveryRoutes = [
   },
 ] as const;
 
+const workScreenshots = [
+  {
+    imageSrc: photoAsset("green-work-dasbord.jpg"),
+    label: "LandCheck Work dashboard",
+    title: "Run every project from one connected workspace.",
+    body: "Review map coverage, AI tree health, live maintenance, planting orders, and field evidence in one operational view.",
+    alt: "LandCheck Work dashboard showing project navigation, map coverage, and AI tree health details",
+  },
+  {
+    imageSrc: photoAsset("greenwork-remote-monitorin.jpg"),
+    label: "Remote monitoring",
+    title: "Spot health changes before they become programme losses.",
+    body: "Track site signals, review vegetation health, and prioritise maintenance with a clear view of what needs attention next.",
+    alt: "LandCheck Work remote monitoring dashboard showing vegetation health and maintenance priorities",
+  },
+] as const;
+
 const workflowSteps = [
   {
     step: "Plan",
@@ -465,6 +482,33 @@ export default function GreenPartnersLanding() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="gp-work-dashboard-stage" style={DEFERRED_SECTION_STYLE}>
+        <div className="gp-shell">
+          <div className="gp-section-intro gp-section-intro--center">
+            <span className="gp-section-eyebrow">LandCheck Work</span>
+            <h2>Operational clarity for every planting programme.</h2>
+            <p>
+              Give programme teams the same connected view as field teams, from the first planting order to ongoing tree-health review.
+            </p>
+          </div>
+
+          <div className="gp-work-dashboard-grid">
+            {workScreenshots.map((screenshot) => (
+              <figure key={screenshot.imageSrc} className="gp-work-dashboard-card">
+                <div className="gp-work-dashboard-card__media">
+                  <img src={screenshot.imageSrc} alt={screenshot.alt} loading="lazy" decoding="async" />
+                </div>
+                <figcaption>
+                  <span>{screenshot.label}</span>
+                  <h3>{screenshot.title}</h3>
+                  <p>{screenshot.body}</p>
+                </figcaption>
+              </figure>
+            ))}
           </div>
         </div>
       </section>
