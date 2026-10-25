@@ -65,6 +65,13 @@ function relativeTime(value: string) {
   return new Date(value).toLocaleDateString();
 }
 
+function estateWelcomeGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
 function addCalendarMonths(value: string, months: number) {
   const date = new Date(`${value}T12:00:00`);
   if (!value || !Number.isFinite(date.getTime()) || !Number.isInteger(months) || months < 1) return null;
@@ -3397,6 +3404,11 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
   }
 
   if (!estateId) {
+    const companyName = organizations.length === 1 && typeof organizations[0]?.name === "string"
+      ? organizations[0].name
+      : "Estate company";
+    const welcomeMessage = `${estateWelcomeGreeting()}, ${companyName} - welcome to LandCheck Estates. For a more certain tomorrow.`;
+
     return (
       <div className="edash-onboard">
         <div className="edash-onboard-topbar">
@@ -3519,6 +3531,13 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
           )}
 
           {message && message !== "Loading estates..." && <p className={`edash-onboard-hint${messageTone === "danger" ? " tone-danger" : ""}`}>{message}</p>}
+        </div>
+
+        <div className="edash-onboard-welcome" role="status" aria-label={welcomeMessage}>
+          <div className="edash-onboard-welcome-track" aria-hidden="true">
+            <span>{welcomeMessage}</span>
+            <span>{welcomeMessage}</span>
+          </div>
         </div>
 
         {deleteEstateTarget && (
