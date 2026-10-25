@@ -287,7 +287,7 @@ await writeFile(path.join(DIST_DIR, "sitemap.xml"), renderSitemap(uniqueIndexabl
 
 const existingRedirects = await readFile(path.join(DIST_DIR, "_redirects"), "utf8").catch(() => "");
 const articleRedirects = articlePages
-  .map((page) => `${page.path} ${page.canonicalPath} 301`)
+  .map((page) => `${page.path} ${page.canonicalPath} 301!`)
   .join("\n");
 await writeFile(path.join(DIST_DIR, "_redirects"), `${articleRedirects}\n${existingRedirects}`);
 
