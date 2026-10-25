@@ -3910,7 +3910,7 @@
   inset: 0 0 0 auto;
   z-index: -1;
   width: min(26%, 250px);
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.56)), url("/background-sponsor.png") center / cover no-repeat;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.56)), url("/background-sponsor.webp") center / cover no-repeat;
   opacity: 0.42;
   pointer-events: none;
 }

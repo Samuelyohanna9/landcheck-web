@@ -271,7 +271,7 @@ export default function SurveyPlanLanding() {
       <main>
         <section className="spl-hero" aria-labelledby="spl-hero-title">
           <div className="spl-hero-device" aria-hidden="true">
-            <img className="spl-hero-laptop" src="/survey-laptop-hand.png" alt="" />
+            <img className="spl-hero-laptop" src="/survey-laptop-hand.webp" alt="" />
           </div>
           <div className="spl-hero-screen" aria-hidden="true">
             <img src={asset("survey  plan preview.jpg")} alt="" />

@@ -1,0 +1,472 @@
+{
+  "/": {
+    "title": "LandCheck Nigeria | Survey Plans, Estate Management & Flood Risk",
+    "description": "LandCheck brings together survey plan production, estate planning and plot management with built-in WhatsApp, SMS, and Facebook/Instagram marketing, flood and erosion analysis, and GPS-verified tree monitoring for teams in Nigeria.",
+    "keywords": "survey plan Nigeria, estate management software Nigeria, real estate development software Nigeria, plot management Nigeria, estate marketing software Nigeria, flood risk analysis Nigeria, tree monitoring app Nigeria, geospatial platform Nigeria, LandCheck Nigeria",
+    "canonicalPath": "/",
+    "ogType": "website",
+    "ogImage": "https://landcheck.online/ecf-partnership.jpeg",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      "name": "LandCheck Products",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "LandCheck Green \u2014 Free Tree & Agric Monitoring App",
+          "url": "https://landcheck.online/green-partners/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Survey Plan Production Nigeria",
+          "url": "https://landcheck.online/survey/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Flood Risk & Land Hazard Analysis Nigeria",
+          "url": "https://landcheck.online/flood/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 4,
+          "name": "LandCheck Estates | Estate Planning & Plot Management",
+          "url": "https://landcheck.online/estates/"
+        }
+      ]
+    }
+  },
+  "/estates": {
+    "title": "LandCheck Estates | Estate Management, Sales & Marketing Software Nigeria",
+    "description": "Plan and manage property developments in Nigeria with LandCheck Estates - GPS-verified plots, staff-checked title badges, and a government approvals tracker that help prevent land scams. Buyers can verify a plot or agent before paying, join a GPS-verified live video inspection from abroad, reserve online, and get WhatsApp, SMS and Facebook/Instagram marketing - all from one dashboard.",
+    "keywords": "estate management software Nigeria, real estate development software Nigeria, estate layout design Nigeria, plot management software, estate plot sales, land development platform Nigeria, estate mapping, georeference estate layout, scanned survey plan digitizing, CAD DXF estate import, estate road and open space mapping, UTM coordinate system Nigeria, customer allocation, plot payment tracking, survey plan software, DGPS staking coordinates, estate development tracking, estate audit trail, estate WhatsApp inbox, Facebook Instagram posting software Nigeria, real estate social media automation, SMS notifications real estate Nigeria, estate marketing software Nigeria, QR code lead tracking real estate, soil analysis Nigeria, bearing capacity estimate Nigeria, water table tendency Nigeria, geotechnical survey request Nigeria, prevent land scams Nigeria, avoid land fraud Nigeria, Omo-Onile fraud prevention, verify land agent Nigeria, verify plot before payment, land title verification Nigeria, GPS verified plot inspection, live video land inspection Nigeria, GPS verified land purchase, diaspora land buying Nigeria, buy land safely Nigeria, government approval tracker real estate, Certificate of Occupancy tracker, Governor's Consent tracker Nigeria, survey plan approval tracker",
+    "canonicalPath": "/estates/",
+    "ogType": "website",
+    "ogImage": "https://landcheck.online/estates.jpg",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://landcheck.online/estates/#software",
+          "name": "LandCheck Estates",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "url": "https://landcheck.online/estates/",
+          "description": "A web workspace for property developers to bring in estate layouts from CSV, GIS, CAD, or scanned plans, digitize plots and layout features, review and manage plots and customers, track payments, message leads over WhatsApp, run Facebook and Instagram marketing, and prepare survey and staking outputs.",
+          "provider": {
+            "@id": "https://landcheck.online/#organization"
+          },
+          "areaServed": {
+            "@type": "Country",
+            "name": "Nigeria"
+          },
+          "featureList": [
+            "Import estate layouts from CSV, GIS/GeoJSON, CAD (DXF), or scanned paper plans",
+            "Georeference scanned plans and digitize plot boundaries, roads, drainage, and open space",
+            "Support for multiple Nigerian coordinate systems and UTM zones",
+            "Automatic estate layout design",
+            "Map-based plot register and availability tracking",
+            "Customer reservations and allocations",
+            "Payment, receipt, statement, and commission tracking",
+            "Survey plan and DGPS staking outputs",
+            "Estate and plot-level terrain, flood, and erosion screening",
+            "Indicative soil analysis: presumptive bearing-capacity range, water-table tendency, and 0-2m soil texture profile, with a one-click request for a licensed geotechnical survey",
+            "Development progress tracking and full audit trail",
+            "WhatsApp inbox to message buyers and leads directly from the dashboard",
+            "Automatic Facebook and Instagram post scheduling with in-dashboard comment replies and likes",
+            "SMS and email customer notifications",
+            "QR-coded marketing campaigns to track leads by channel",
+            "\"Verified by LandCheck\" staff-checked title badges to help buyers trust a plot",
+            "Government approvals tracker covering Survey Plan approval, Layout approval, Governor's Consent, and Certificate of Occupancy",
+            "Public plot and agent verification check so buyers can confirm a listing is genuine before paying",
+            "GPS-verified live video site inspections for diaspora and remote buyers (Enterprise plan)"
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://landcheck.online/estates/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What does LandCheck Estates do?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "LandCheck Estates is a web workspace for Nigerian property developers to plan estate layouts, digitize and manage plots, handle buyer reservations and payments, screen sites for flood/erosion/soil risk, and market the estate - all from one dashboard."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I import an existing estate layout into LandCheck Estates?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. You can bring in a layout from a CSV file, GIS/GeoJSON data, a CAD (DXF) drawing, or even a scanned paper plan, then georeference and digitize the plots, roads, drainage, and open space."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does LandCheck Estates support WhatsApp and social media marketing?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. It includes a built-in WhatsApp inbox to message buyers and leads, automatic Facebook and Instagram post scheduling with in-dashboard comment replies and likes, SMS/email customer notifications, and QR-coded marketing campaigns to track leads by channel."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does LandCheck Estates screen for flood risk and soil conditions?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. Every estate and plot can be screened for flood and erosion risk, plus an indicative soil analysis covering a presumptive bearing-capacity range, a water-table tendency, and a 0-2m soil texture profile - with a one-click option to request a licensed geotechnical survey for any foundation decision."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How does LandCheck Estates help prevent land scams?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "A buyer can check any plot number or agent code against the developer's own public Estate page before paying anyone, staff can mark a plot's title as verified once they've reviewed the documents, and every estate can show live progress on its government approvals - Survey Plan, Layout, Governor's Consent, and Certificate of Occupancy - so nothing is taken on trust."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can intending buyers verify a plot's GPS location remotely?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. On the Enterprise plan, a site agent opens a live video call with a remote buyer and shares their GPS position in real time, verified against the plot's actual boundary, so diaspora and out-of-town buyers can confirm the agent is really standing on the right plot without travelling."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "/green-partners": {
+    "title": "LandCheck Green Platform | Organisation Ops, CSR Delivery & Public Tree Sponsorship",
+    "description": "LandCheck Green combines partner organisation field operations, CSR and ESG programme delivery, and premium public tree sponsorship in one GPS-verified platform for Nigeria.",
+    "keywords": "tree monitoring software Nigeria, CSR tree planting software Nigeria, ESG reporting dashboard Nigeria, public tree sponsorship Nigeria, environmental project monitoring software, GPS verification tree planting, NGO monitoring dashboard Nigeria, field operations platform Nigeria",
+    "canonicalPath": "/green-partners/",
+    "ogType": "website",
+    "ogImage": "https://landcheck.online/ecf-partnership.jpeg",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@context": "https://schema.org",
+          "@type": "MobileApplication",
+          "@id": "https://landcheck.online/#android-app",
+          "name": "LandCheck Green",
+          "operatingSystem": "ANDROID",
+          "applicationCategory": "EnvironmentalApp",
+          "downloadUrl": "https://play.google.com/store/apps/details?id=online.landcheck.mobile",
+          "installUrl": "https://play.google.com/store/apps/details?id=online.landcheck.mobile",
+          "identifier": "online.landcheck.mobile",
+          "url": "https://landcheck.online/green-partners/",
+          "description": "Free Android app for GPS tree inventory, agricultural farm health monitoring, humanitarian relief site assessment, and program reporting. Used by NGOs and field teams in Nigeria.",
+          "author": {
+            "@id": "https://landcheck.online/#organization"
+          },
+          "featureList": [
+            "GPS tree planting and inventory records",
+            "Agricultural farm health monitoring with NDVI satellite analysis",
+            "Humanitarian relief and recovery site assessment",
+            "Photo evidence capture with GPS timestamps",
+            "Offline field data collection with automatic background sync",
+            "Maintenance and field visit tracking",
+            "Farmer and beneficiary management",
+            "Carbon reporting and donor impact reports"
+          ]
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://landcheck.online/green-partners/#csr-software",
+          "name": "LandCheck Green Platform",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web, Android",
+          "url": "https://landcheck.online/green-partners/",
+          "description": "A multi-route green operations platform for partner organisations, CSR and ESG implementation teams, and public tree sponsorship programmes with GPS verification and reporting.",
+          "featureList": [
+            "Partner organisation field operations",
+            "CSR programme planning and implementation control",
+            "Public tree sponsorship and donor storytelling",
+            "GPS evidence capture and review",
+            "QR-coded field workflow support",
+            "Maintenance and field visit monitoring",
+            "Board-ready PDF and CSV reporting exports"
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://landcheck.online/green-partners/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What are the three routes inside LandCheck Green?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "LandCheck Green supports three routes: partner organisation field operations, CSR and ESG programme delivery, and public tree sponsorship with online payments and evidence-backed updates."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What does LandCheck Green help CSR managers do?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It helps CSR managers design programmes, assign field work, verify GPS and photo evidence, monitor maintenance, and prepare stakeholder-ready reporting from one dashboard."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can the same platform support public sponsorship as well as organisation delivery?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. The platform supports partner organisation workflows, CSR programme management, and a premium public sponsorship route where sponsors can pay online and track verified tree updates."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "/sponsor": {
+    "title": "Sponsor a Tree Online in Nigeria \u2014 No Sign-Up, GPS-Verified | LandCheck Green",
+    "description": "Sponsor a real, GPS-verified tree in Nigeria from anywhere in the world \u2014 pay in NGN or USD, no account required. Get a digital certificate instantly, plus map proof, photo evidence, and email updates as your tree grows.",
+    "keywords": "sponsor a tree online, sponsor a tree Nigeria, plant a tree online Nigeria, tree sponsorship no signup, donate trees Nigeria, adopt a tree Africa, carbon offset Nigeria, gift a tree, plant trees for climate change, verified tree planting donation, diaspora tree donation Nigeria",
+    "canonicalPath": "/sponsor/",
+    "ogType": "website",
+    "ogImage": "https://landcheck.online/ecf-partnership.jpeg",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "@id": "https://landcheck.online/sponsor/#service",
+          "name": "Tree Sponsorship \u2014 LandCheck Green",
+          "serviceType": "Tree Planting Sponsorship",
+          "provider": {
+            "@id": "https://landcheck.online/#organization"
+          },
+          "areaServed": {
+            "@type": "Country",
+            "name": "Nigeria"
+          },
+          "audience": {
+            "@type": "Audience",
+            "audienceType": "Global donors and diaspora"
+          },
+          "description": "Sponsor a GPS-verified tree planted and maintained in Nigeria by LandCheck field agents. No account required \u2014 pay online in NGN or USD and receive a digital certificate, GPS map location, and photo evidence by email.",
+          "url": "https://landcheck.online/sponsor/"
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://landcheck.online/sponsor/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Do I need to create an account to sponsor a tree?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. You can sponsor a tree as a guest with just your name, email, and phone number. You can optionally set up an account afterward to track your trees over time."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How does my certificate and tracking work?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The moment your payment is confirmed, you receive a digital sponsorship certificate by email. As your tree is planted and cared for, you get its GPS map location, photo evidence, and maintenance updates \u2014 no account required to check on it."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What is the climate impact of sponsoring a tree?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Each sponsored tree absorbs roughly 21 kg of CO2 per year and helps retain around 120 liters of water, adding up to measurable climate impact over time."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Are the tree planting sites approved and monitored?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. Every project has full land-rights and planting approval on record, and LandCheck field agents are on the ground to plant and maintain the trees."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I sponsor a tree from outside Nigeria?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. LandCheck Green accepts payment in NGN or USD, so donors and diaspora anywhere in the world can sponsor a verified tree in Nigeria online."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "/sponsor/calculator": {
+    "title": "CO2 Footprint Calculator \u2014 How Many Trees Should You Sponsor? | LandCheck Green",
+    "description": "Estimate your annual carbon footprint from travel, home energy, and diet, and find out how many verified trees in Nigeria would offset it. Free, quick, works for anyone worldwide.",
+    "keywords": "carbon footprint calculator, CO2 calculator trees, how many trees to offset carbon, tree offset calculator, personal carbon footprint, climate calculator",
+    "canonicalPath": "/sponsor/calculator/",
+    "ogType": "website",
+    "ogImage": "https://landcheck.online/ecf-partnership.jpeg"
+  },
+  "/privacy": {
+    "title": "Privacy Policy | LandCheck Geospatial Technologies",
+    "description": "LandCheck privacy policy \u2014 how we collect, use, and protect your personal data across our survey plan, flood risk, and tree monitoring services in Nigeria.",
+    "keywords": "LandCheck privacy policy, data protection Nigeria, LandCheck data policy",
+    "canonicalPath": "/privacy/",
+    "robots": "index,follow",
+    "ogType": "website",
+    "ogImage": "https://landcheck.online/ecf-partnership.jpeg"
+  },
+  "/estates/data-processing-agreement": {
+    "title": "Data Processing Agreement | LandCheck Estates",
+    "description": "The Data Processing Agreement between LandCheck and each Estate company, covering how customer, agent and staff personal data is handled on the platform.",
+    "keywords": "LandCheck data processing agreement, NDPA compliance Nigeria, estate software data protection",
+    "canonicalPath": "/estates/data-processing-agreement/",
+    "robots": "index,follow",
+    "ogType": "website",
+    "ogImage": "https://landcheck.online/ecf-partnership.jpeg"
+  },
+  "/flood": {
+    "title": "Flood Risk & Land Hazard Analysis Nigeria | Free Report | LandCheck",
+    "description": "Screen any Nigerian land parcel for flood risk, erosion hazard, soil stability, and land use / land cover. Instant free PDF risk report with site-specific analysis for any location in Nigeria.",
+    "keywords": "flood risk analysis Nigeria, land hazard screening Nigeria, flood risk map Nigeria, erosion risk Nigeria, soil stability analysis Nigeria, land use land cover Nigeria, land cover analysis Nigeria, flood PDF report, land hazard Nigeria, free flood risk report",
+    "canonicalPath": "/flood/",
+    "ogType": "website",
+    "ogImage": "https://landcheck.online/flood-background.jpg",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@type": "Service",
+      "@id": "https://landcheck.online/flood/#service",
+      "name": "Flood Risk & Land Hazard Analysis",
+      "serviceType": "Land Hazard Screening",
+      "provider": {
+        "@id": "https://landcheck.online/#organization"
+      },
+      "areaServed": {
+        "@type": "Country",
+        "name": "Nigeria"
+      },
+      "description": "Instant flood risk, erosion, soil stability, and land use / land cover screening for any land parcel in Nigeria. Generates a professional PDF hazard report.",
+      "url": "https://landcheck.online/flood/"
+    }
+  },
+  "/hazard-analysis": {
+    "title": "Flood Risk Hazard Analysis Tool | LandCheck",
+    "description": "Analyze land and site flood risks, erosion, and land use / land cover across Nigeria with map-based hazard tools for better planning and resilient project execution.",
+    "keywords": "hazard analysis tool Nigeria, flood analysis tool, land cover analysis tool",
+    "canonicalPath": "/flood/",
+    "robots": "noindex,follow",
+    "ogType": "website",
+    "ogImage": "https://landcheck.online/flood-background.jpg"
+  },
+  "/survey": {
+    "title": "Survey Plan Production Nigeria | Professional Survey Plans Online | LandCheck",
+    "description": "Generate true-scale professional survey plans in Nigeria from coordinate input. Export PDF, DWG, orthophoto, computation sheets, and topographic maps. No CAD software required.",
+    "keywords": "survey plan Nigeria, survey plan production Nigeria, digital survey plan Nigeria, online survey plan generator, professional survey plan PDF Nigeria, DWG survey plan Nigeria, survey plan coordinates",
+    "canonicalPath": "/survey/",
+    "ogType": "website",
+    "ogImage": "https://landcheck.online/Digital-Land-Survey.jpg",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@type": "Service",
+      "@id": "https://landcheck.online/survey/#service",
+      "name": "Survey Plan Production",
+      "serviceType": "Geospatial Survey Planning",
+      "provider": {
+        "@id": "https://landcheck.online/#organization"
+      },
+      "areaServed": {
+        "@type": "Country",
+        "name": "Nigeria"
+      },
+      "description": "Professional survey plan production for Nigeria. Generate true-scale PDF, DWG, orthophoto, and computation sheets from coordinate input. No CAD required.",
+      "url": "https://landcheck.online/survey/"
+    }
+  },
+  "/survey/guides": {
+    "title": "Survey Plan & Land Analysis Guides Nigeria | LandCheck",
+    "description": "Learn how to create survey plans, subdivide parcels, georeference scanned layouts, digitise boundaries, and review flood, erosion, and land-cover analysis.",
+    "keywords": "survey plan guide Nigeria, land subdivision guide, georeference scanned plan, digitise estate layout, flood analysis guide Nigeria",
+    "canonicalPath": "/survey/guides/",
+    "ogType": "article",
+    "ogImage": "https://landcheck.online/Digital-Land-Survey.jpg",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "@id": "https://landcheck.online/survey/guides/#article",
+      "headline": "Survey Plan and Land Analysis Guides",
+      "description": "Practical guides for survey plan production, parcel subdivision, georeferencing, digitisation, flood, erosion, and land-cover analysis.",
+      "url": "https://landcheck.online/survey/guides/",
+      "author": {
+        "@id": "https://landcheck.online/#organization"
+      },
+      "publisher": {
+        "@id": "https://landcheck.online/#organization"
+      },
+      "inLanguage": "en-NG"
+    }
+  },
+  "/survey-plan": {
+    "title": "Survey Plan Tool | LandCheck",
+    "description": "Create professional survey plans for Nigeria from coordinate input with map editing and export-ready outputs.",
+    "keywords": "survey plan tool Nigeria",
+    "canonicalPath": "/survey/",
+    "robots": "noindex,follow",
+    "ogType": "website",
+    "ogImage": "https://landcheck.online/Digital-Land-Survey.jpg"
+  },
+  "/feedback": {
+    "title": "Feedback | LandCheck",
+    "description": "Share product feedback with the LandCheck team.",
+    "keywords": "LandCheck feedback",
+    "canonicalPath": "/feedback",
+    "robots": "noindex,nofollow",
+    "ogType": "website",
+    "ogImage": "https://landcheck.online/ecf-partnership.jpeg"
+  },
+  "/career": {
+    "title": "Careers at LandCheck | Geospatial & Tech Jobs in Nigeria",
+    "description": "Join LandCheck Geospatial Technologies. We hire engineers, GIS specialists, product designers, and partnership professionals building land intelligence tools for Nigeria.",
+    "keywords": "LandCheck careers, geospatial jobs Nigeria, GIS jobs Nigeria, tech jobs Nigeria, LandCheck Geospatial Technologies careers, remote sensing jobs Nigeria",
+    "canonicalPath": "/career/",
+    "ogType": "website",
+    "ogImage": "https://landcheck.online/ecf-partnership.jpeg",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "@id": "https://landcheck.online/career/#page",
+      "name": "Careers at LandCheck",
+      "description": "Job openings and career opportunities at LandCheck Geospatial Technologies Limited in Nigeria.",
+      "url": "https://landcheck.online/career/",
+      "isPartOf": {
+        "@id": "https://landcheck.online/#website"
+      }
+    }
+  },
+  "/news": {
+    "title": "CSR Reporting, ESG & Environmental Monitoring Insights | LandCheck",
+    "description": "Read LandCheck insights on CSR reporting, GPS verification, environmental project monitoring, ESG workflow support, and tree-planting programme delivery in Nigeria.",
+    "keywords": "CSR reporting checklist, ESG reporting Nigeria, GPS verification environmental projects, tree planting project management, environmental monitoring software, LandCheck insights",
+    "canonicalPath": "/news/",
+    "ogType": "article",
+    "ogImage": "https://landcheck.online/ecf-partnership.jpeg",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@type": "Blog",
+      "@id": "https://landcheck.online/news/#blog",
+      "name": "LandCheck Insights",
+      "description": "Articles and updates about CSR reporting, ESG workflows, GPS verification, and environmental project monitoring from LandCheck.",
+      "url": "https://landcheck.online/news/",
+      "publisher": {
+        "@id": "https://landcheck.online/#organization"
+      }
+    }
+  }
+}

@@ -64,7 +64,7 @@ function precacheBuildAssets() {
   // Also cache the logo
   urls.push("/logo-icon-192.png");
   urls.push("/logo-icon-512.png");
-  urls.push("/background-sponsor.png");
+  urls.push("/background-sponsor.webp");
 
   if (urls.length > 0 && navigator.serviceWorker.controller) {
     navigator.serviceWorker.controller.postMessage({

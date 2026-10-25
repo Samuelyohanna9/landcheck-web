@@ -82,7 +82,7 @@ type SchoolNomState = {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const GREEN_LOGO_SRC = "/logo-icon-192.png";
-const SPONSOR_BACKGROUND = "/background-sponsor.png";
+const SPONSOR_BACKGROUND = "/background-sponsor.webp";
 const TAB_STORAGE_KEY = "landcheck_green_sponsor_tab";
 const BUILT_IN_BORDERS = ["Golden Canopy Border", "Emerald Glow", "3D Pine Frame"];
 

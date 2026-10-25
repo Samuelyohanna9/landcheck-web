@@ -736,9 +736,21 @@ export default function GreenPublicSponsor() {
                 Every project below is field-managed, GPS-linked, and built to give you certificate delivery, map proof,
                 and follow-up updates after payment.
               </p>
-              {error && !loadingProjects && projects.length === 0 && <p className="gps-error">{error}</p>}
+              {error && !loadingProjects && projects.length === 0 && (
+                <p className="gps-error" role="alert">
+                  {error} Please try again shortly; no project availability is inferred from this temporary error.
+                </p>
+              )}
               {loadingProjects ? (
                 <p className="gps-loading">Loading projects...</p>
+              ) : error && projects.length === 0 ? (
+                <div className="gps-empty gps-empty--error">
+                  <strong>Live projects are temporarily unavailable.</strong>
+                  <span>Refresh the list to check current sponsorship availability.</span>
+                  <button type="button" className="gps-secondary-btn" onClick={() => window.location.reload()}>
+                    Try again
+                  </button>
+                </div>
               ) : projects.length === 0 ? (
                 <div className="gps-empty">No public projects are open for sponsorship right now. Please check back soon.</div>
               ) : (

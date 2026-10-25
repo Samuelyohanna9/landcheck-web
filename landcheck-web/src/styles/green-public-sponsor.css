@@ -552,6 +552,16 @@
   color: var(--gps-text-muted);
 }
 
+.gps-empty--error {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.gps-empty--error strong {
+  color: var(--gps-text);
+}
+
 .gps-project-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
