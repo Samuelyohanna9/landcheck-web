@@ -2571,7 +2571,7 @@
 .green-partners-page .gp-section-intro--center {
   max-width: 760px;
   margin: 0 auto 2.75rem;
-  text-align: left;
+  text-align: center;
 }
 
 .green-partners-page .gp-section-intro h2 {
@@ -2583,6 +2583,8 @@
 
 .green-partners-page .gp-section-intro p {
   max-width: 42rem;
+  margin-left: auto;
+  margin-right: auto;
   color: #526b5d;
   font-size: 0.95rem;
 }
