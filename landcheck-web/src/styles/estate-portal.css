@@ -50,6 +50,7 @@
 .estate-portal-nav-links .estate-nav-login { color: var(--estate-ink); }
 .estate-portal-nav-links .estate-nav-cta { padding: 11px 15px; background: #167c60; color: #fff; }
 .estate-portal-nav-links .estate-nav-cta:hover { background: #1b9271; }
+.estate-portal-nav-links button.estate-nav-cta { border: 0; font: inherit; cursor: pointer; }
 
 /* Mobile nav: a hamburger opens a slide-in drawer instead of the desktop links wrapping onto
    several cramped rows - same pattern (overlay + right-hand drawer) as the main site's NavBar. */

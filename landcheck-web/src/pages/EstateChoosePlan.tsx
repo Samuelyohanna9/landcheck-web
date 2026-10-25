@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../api/client";
+import { trackConversion } from "../analytics/conversionEvents";
 import { getEstateAuthSession } from "../auth/estateAuth";
 import EstatePricingCards, { ESTATE_TRIAL_DAYS, type EstateBillingCycle, type EstatePaymentProvider, type EstatePlanKey } from "../components/estates/EstatePricingCards";
 import "../styles/estate-portal.css";
@@ -53,6 +54,11 @@ export default function EstateChoosePlan() {
       );
       const checkoutUrl = response.data?.checkout_url;
       if (!checkoutUrl) throw new Error("No checkout link was returned.");
+      trackConversion(
+        "estate_trial_start",
+        { plan: planKey, billing_cycle: billingCycle, provider },
+        `checkout:${organizationId}:${planKey}:${billingCycle}`,
+      );
       window.location.href = checkoutUrl;
     } catch (err) {
       setError(await extractApiErrorMessage(err, "Could not start checkout. Please try again."));

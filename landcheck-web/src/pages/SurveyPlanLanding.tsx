@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
+import { trackConversion } from "../analytics/conversionEvents";
 import { isSurveyAuthed } from "../auth/surveyAuth";
 import { NAV_GROUPS } from "../components/NavBar";
 import SocialLinks from "../components/SocialLinks";
@@ -181,6 +182,7 @@ export default function SurveyPlanLanding() {
 
   const openWorkspace = () => {
     warmSurveyEntry();
+    trackConversion("survey_workspace_open", { source: "survey_landing" }, "survey-workspace-open");
     navigate("/survey-plan");
   };
 

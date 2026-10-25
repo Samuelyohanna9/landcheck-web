@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import SocialLinks from "../components/SocialLinks";
-import EstatePricingCards, { type EstateBillingCycle, type EstatePlanKey } from "../components/estates/EstatePricingCards";
+import EstatePricingCards from "../components/estates/EstatePricingCards";
+import EstateDemoRequestModal from "../components/EstateDemoRequestModal";
 import "../styles/estate-portal.css";
 import "../styles/public-landing.css";
-
-const DEMO_MAILTO = "mailto:admin@landcheck.online?subject=LandCheck%20Estates%20demo%20request";
 
 type IncludedItem = string | { text: string; tag: string };
 
@@ -60,6 +59,7 @@ export default function EstateLanding() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = () => setMenuOpen(false);
+  const [demoOpen, setDemoOpen] = useState(false);
   const [activeScreen, setActiveScreen] = useState(0);
 
   // Cycles the phone mockup's screenshots automatically - a static image doesn't show that the
@@ -73,7 +73,11 @@ export default function EstateLanding() {
 
   // Picking a plan from the landing page (not yet signed in) sends a new visitor to register
   // first - registration itself hands off to /estates/choose-plan once the account exists.
-  const selectPlanFromLanding = (_plan: EstatePlanKey, _cycle: EstateBillingCycle) => navigate("/estates/register");
+  const selectPlanFromLanding = () => navigate("/estates/register");
+
+  const openDemo = () => {
+    setDemoOpen(true);
+  };
 
   // Escape closes the mobile drawer, matching the dismissal convention used everywhere else in
   // the app (modals, the dashboard's own sidebar drawer).
@@ -106,7 +110,7 @@ export default function EstateLanding() {
           <a href="#solutions">Solutions</a>
           <a href="#pricing">Pricing</a>
           <Link to="/estates/login" className="estate-nav-login">Sign in</Link>
-          <a href={DEMO_MAILTO} className="estate-nav-cta">Request a demo</a>
+          <button type="button" className="estate-nav-cta" onClick={openDemo}>Request a demo</button>
         </nav>
       </header>
 
@@ -121,7 +125,7 @@ export default function EstateLanding() {
           <a href="#solutions" className="estate-mobile-item" onClick={closeMenu}>Solutions</a>
           <a href="#pricing" className="estate-mobile-item" onClick={closeMenu}>Pricing</a>
           <Link to="/estates/login" className="estate-mobile-item" onClick={closeMenu}>Sign in</Link>
-          <a href={DEMO_MAILTO} className="estate-mobile-cta" onClick={closeMenu}>Request a demo</a>
+          <button type="button" className="estate-mobile-cta" onClick={() => { closeMenu(); openDemo(); }}>Request a demo</button>
         </nav>
       </div>
 
@@ -130,7 +134,7 @@ export default function EstateLanding() {
         <h1 id="estate-intro-title">Manage every estate from one place.</h1>
         <p className="estate-hero-summary">Design layouts, manage plots and buyers, track payments and commissions, and generate professional survey plans.</p>
         <div className="estate-intro-actions estate-intro-actions--centered">
-          <a href={DEMO_MAILTO} className="estate-button">Request a demo</a>
+          <button type="button" className="estate-button" onClick={openDemo}>Request a demo</button>
           <a href="#platform" className="estate-button estate-button--outline-light">View platform</a>
         </div>
         <p className="estate-hero-caption">One connected record for every plot.</p>
@@ -251,7 +255,7 @@ export default function EstateLanding() {
       <section className="estate-centered-section" id="demo">
         <h2>See LandCheck on your estate.</h2>
         <p>Book a practical demonstration using your own layout.</p>
-        <a href={DEMO_MAILTO} className="estate-button">Request a demo</a>
+        <button type="button" className="estate-button" onClick={openDemo}>Request a demo</button>
       </section>
 
       <footer className="estate-site-footer">
@@ -304,6 +308,7 @@ export default function EstateLanding() {
           <Link to="/estates/login">Sign in to Estates</Link>
         </div>
       </footer>
+      {demoOpen && <EstateDemoRequestModal onClose={() => setDemoOpen(false)} />}
     </main>
   );
 }

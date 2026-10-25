@@ -1,0 +1,52 @@
+.estate-demo-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(16, 42, 39, .52);
+  backdrop-filter: blur(5px);
+}
+
+.estate-demo-dialog {
+  width: min(100%, 620px);
+  max-height: min(92dvh, 760px);
+  overflow: auto;
+  padding: clamp(24px, 4vw, 38px);
+  color: var(--estate-ink, #102a27);
+  background: var(--estate-paper, #f5f3eb);
+  border: 1px solid rgba(16, 42, 39, .16);
+  box-shadow: 0 28px 80px rgba(5, 29, 25, .28);
+}
+
+.estate-demo-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding-bottom: 20px; border-bottom: 1px solid rgba(16, 42, 39, .14); }
+.estate-demo-header h2 { margin: 7px 0 0; font-family: var(--public-font-display, Georgia, serif); font-size: clamp(1.75rem, 4vw, 2.5rem); font-weight: 500; letter-spacing: -.035em; }
+.estate-demo-close { width: 36px; height: 36px; flex: 0 0 auto; border: 1px solid rgba(16, 42, 39, .18); background: transparent; color: var(--estate-ink, #102a27); font-size: 1.5rem; line-height: 1; cursor: pointer; }
+.estate-demo-close:hover { background: rgba(16, 42, 39, .07); }
+.estate-demo-form { display: grid; gap: 16px; padding-top: 22px; }
+.estate-demo-intro { margin: 0; color: var(--estate-slate, #5d6f69); line-height: 1.65; }
+.estate-demo-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.estate-demo-form label { display: grid; gap: 7px; color: var(--estate-ink, #102a27); font: 700 .72rem/1.2 "Aptos", "Segoe UI", Arial, sans-serif; letter-spacing: .05em; text-transform: uppercase; }
+.estate-demo-form label em { color: var(--estate-slate, #5d6f69); font-style: normal; font-weight: 400; letter-spacing: 0; text-transform: none; }
+.estate-demo-form input, .estate-demo-form textarea { width: 100%; box-sizing: border-box; border: 1px solid rgba(16, 42, 39, .22); border-radius: 0; padding: 12px 13px; color: var(--estate-ink, #102a27); background: #fffdf8; font: 400 .95rem/1.4 "Aptos", "Segoe UI", Arial, sans-serif; letter-spacing: 0; text-transform: none; }
+.estate-demo-form textarea { resize: vertical; min-height: 100px; }
+.estate-demo-form input:focus, .estate-demo-form textarea:focus, .estate-demo-close:focus-visible { outline: 3px solid rgba(22, 129, 110, .25); outline-offset: 2px; border-color: #16816e; }
+.estate-demo-error { margin: 0; padding: 11px 13px; color: #8c2431; background: #fff0f0; border: 1px solid #e4b4ba; line-height: 1.45; }
+.estate-demo-privacy { margin: -1px 0 0; color: var(--estate-slate, #5d6f69); font-size: .76rem; line-height: 1.55; }
+.estate-demo-privacy a { color: var(--estate-ink, #102a27); font-weight: 700; }
+.estate-demo-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 4px; }
+.estate-demo-actions .estate-button { min-height: 44px; }
+.estate-demo-honeypot { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.estate-demo-success { display: grid; justify-items: start; gap: 12px; padding-top: 28px; }
+.estate-demo-success-mark { display: grid; place-items: center; width: 46px; height: 46px; color: #fff; background: #16816e; border-radius: 50%; font-size: 1.5rem; }
+.estate-demo-success h3 { margin: 0; font-family: var(--public-font-display, Georgia, serif); font-size: 2rem; font-weight: 500; }
+.estate-demo-success p { margin: 0 0 8px; color: var(--estate-slate, #5d6f69); line-height: 1.65; }
+
+@media (max-width: 560px) {
+  .estate-demo-overlay { padding: 12px; align-items: end; }
+  .estate-demo-dialog { max-height: 94dvh; padding: 22px 18px; }
+  .estate-demo-grid { grid-template-columns: 1fr; }
+  .estate-demo-actions { justify-content: stretch; }
+  .estate-demo-actions .estate-button { flex: 1; }
+}

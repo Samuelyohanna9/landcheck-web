@@ -2,6 +2,7 @@ import { Suspense, startTransition, useEffect, useMemo, useState, useCallback, u
 import { lazyWithChunkRecovery } from "../utils/lazyWithChunkRecovery";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, withRetry, extractApiErrorMessage } from "../api/client";
+import { trackConversion } from "../analytics/conversionEvents";
 import toast, { Toaster } from "react-hot-toast";
 import {
   consumePendingSurveyDownload,
@@ -2753,6 +2754,11 @@ export default function SurveyPlan() {
           setSubdivisionPreview(null);
           setSubdivisionBatches([]);
           setLatestSubdivisionBatchId(null);
+          trackConversion(
+            "survey_project_created",
+            { workflow: workflowMode === "subdivision" ? "subdivision" : "survey_plan" },
+            `plot:${activePlotId}`,
+          );
           toast.success("Server plot created from local draft.");
         } else if (!serverDraftCurrent) {
           await withRetry(() =>
@@ -2797,6 +2803,7 @@ export default function SurveyPlan() {
       plotMetaPayload,
       serverSyncSignature,
       surveyQueryScope,
+      workflowMode,
     ]
   );
 
@@ -3796,6 +3803,16 @@ export default function SurveyPlan() {
     URL.revokeObjectURL(downloadUrl);
   };
 
+  const getSurveyExportType = (url: string, useTopoMap = false) => {
+    if (useTopoMap) return "topographic_pdf";
+    if (url.includes("/back-computation/")) return "back_computation_pdf";
+    if (url.includes("/orthophoto/")) return "orthophoto_pdf";
+    if (url.includes("/report/")) return "survey_plan_pdf";
+    if (url.includes("/survey-plan/dwg")) return "survey_plan_dxf";
+    if (url.includes("/survey-plan/shapefile")) return "survey_plan_shapefile";
+    return "survey_export";
+  };
+
   const subdivisionAreaDraftKey = useCallback((item: Pick<SubdivisionBatchItem, "child_plot_id" | "lot_no">) => {
     return `${Number(item.child_plot_id || 0)}::${String(item.lot_no || "").trim().toLowerCase()}`;
   }, []);
@@ -3915,6 +3932,9 @@ export default function SurveyPlan() {
     if (downloadLoadingKey) return;
     setDownloadLoadingKey(loadingKey);
     setDownloadProgress(0);
+    const exportType = getSurveyExportType(url, useTopoMap);
+    const workflow = workflowMode === "subdivision" ? "subdivision" : "survey_plan";
+    trackConversion("survey_export_started", { format: exportType, workflow }, `start:${exportType}:${loadingKey}`);
     const stopRamp = startDownloadProgressRamp(90);
     try {
       const activePlotId = await ensureServerPlot("Syncing draft before export...");
@@ -4039,6 +4059,7 @@ export default function SurveyPlan() {
         triggerBlobDownload(res.data, res.headers["content-type"], resolvedFilename);
       }
 
+      trackConversion("survey_export_completed", { format: exportType, workflow }, `complete:${exportType}:${loadingKey}`);
       setDownloadProgress(100);
       markServerSynced();
       toast.success(`Downloaded ${resolvedFilename}`);
@@ -4060,6 +4081,8 @@ export default function SurveyPlan() {
     }
     setGeneratingTechnicalReport(true);
     setDownloadProgress(0);
+    const workflow = workflowMode === "subdivision" ? "subdivision" : "survey_plan";
+    trackConversion("survey_export_started", { format: "technical_report_docx", workflow }, "start:technical-report");
     const stopRamp = startDownloadProgressRamp(90);
     try {
       const activePlotId = await ensureServerPlot("Syncing draft before export...");
@@ -4114,6 +4137,7 @@ export default function SurveyPlan() {
       });
       triggerBlobDownload(res.data, res.headers["content-type"], resolvedFilename);
 
+      trackConversion("survey_export_completed", { format: "technical_report_docx", workflow }, "complete:technical-report");
       setDownloadProgress(100);
       markServerSynced();
       toast.success(`Downloaded ${resolvedFilename}`);
@@ -4137,6 +4161,9 @@ export default function SurveyPlan() {
     if (downloadLoadingKey) return;
     setDownloadLoadingKey(loadingKey);
     setDownloadProgress(0);
+    const exportType = getSurveyExportType(url);
+    const workflow = workflowMode === "subdivision" ? "subdivision" : "survey_plan";
+    trackConversion("survey_export_started", { format: exportType, workflow }, `start:${exportType}:${loadingKey}`);
     const stopRamp = startDownloadProgressRamp(90);
     try {
       const activePlotId = await ensureServerPlot("Syncing draft before export...");
@@ -4187,6 +4214,7 @@ export default function SurveyPlan() {
         stopRamp();
         triggerBlobDownload(res.data, res.headers["content-type"], resolvedFilename);
       }
+      trackConversion("survey_export_completed", { format: exportType, workflow }, `complete:${exportType}:${loadingKey}`);
       setDownloadProgress(100);
       markServerSynced();
       toast.success(`Downloaded ${resolvedFilename}`);
@@ -4743,6 +4771,7 @@ export default function SurveyPlan() {
     }
     if (subdivisionDownloadBatchId !== null) return;
     setSubdivisionDownloadBatchId(batchId);
+    trackConversion("survey_export_started", { format: "subdivision_batch_zip", workflow: "subdivision" }, `start:subdivision-batch:${batchId}`);
     try {
       const createJobRes = await withRetry(() =>
         api.post(`/plots/subdivision/batches/${batchId}/export-jobs/survey-plans`, undefined, {
@@ -4769,6 +4798,7 @@ export default function SurveyPlan() {
         res.headers["content-type"],
         buildExportFilename([subdivisionEstateName, meta.location_text], "Subdivision_Plans", "zip")
       );
+      trackConversion("survey_export_completed", { format: "subdivision_batch_zip", workflow: "subdivision" }, `complete:subdivision-batch:${batchId}`);
       toast.success("Batch survey plans ZIP downloaded.");
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
@@ -4791,6 +4821,7 @@ export default function SurveyPlan() {
     if (subdivisionCleanCopyDownloadBatchId !== null) return;
 
     setSubdivisionCleanCopyDownloadBatchId(batchId);
+    trackConversion("survey_export_started", { format: "subdivision_clean_copy_pdf", workflow: "subdivision" }, `start:subdivision-clean-copy:${batchId}`);
     try {
       const payload = {
         title_text: String(subdivisionCleanCopyTitle || "").trim(),
@@ -4849,6 +4880,7 @@ export default function SurveyPlan() {
           "pdf"
         )
       );
+      trackConversion("survey_export_completed", { format: "subdivision_clean_copy_pdf", workflow: "subdivision" }, `complete:subdivision-clean-copy:${batchId}`);
       toast.success("Clean copy PDF downloaded.");
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
