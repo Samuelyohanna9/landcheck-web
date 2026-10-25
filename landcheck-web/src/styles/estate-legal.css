@@ -1,13 +1,12 @@
-/* Icon mark only (/logo-icon-192.png), not the wordmark - the brand logo's "Land" text is
-   dark ink, meant for a light background, with no reversed/light-text variant for a dark
-   surface (see estate-dashboard.css for the fuller explanation). This page's header/footer
-   brand marks get their own dark-green chip to sit on for the same reason. */
+/* Legal pages use the same full LandCheck wordmark as the Estate landing page. */
 .privacy-policy-page.estate-portal .privacy-policy-brand img,
 .privacy-policy-page.estate-portal .privacy-policy-footer-brand img {
-  background: #0f6e44;
-  border-radius: 8px;
-  padding: 7px 10px;
-  box-sizing: content-box;
+  display: block;
+  width: auto;
+  height: 34px;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
 }
 
 /* ─── Legal & compliance (Data Processing Agreement) ─── */

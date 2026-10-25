@@ -625,7 +625,8 @@
   }
 
   .privacy-policy-brand img {
-    width: 104px;
+    width: auto;
+    height: 30px;
   }
 
   .privacy-policy-heading {

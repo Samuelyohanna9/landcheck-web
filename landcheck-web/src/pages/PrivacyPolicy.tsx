@@ -111,7 +111,7 @@ export default function PrivacyPolicy() {
       <header className="privacy-policy-header">
         <div className="privacy-policy-nav">
           <Link to="/estates" className="privacy-policy-brand" aria-label="LandCheck Estates home">
-            <img src="/logo-icon-192.png" alt="LandCheck" width="120" height="33" />
+            <img src="/logo-wordmark-web.png" alt="LandCheck" width="182" height="58" />
             <span>PRIVACY</span>
           </Link>
           <button type="button" className="privacy-back-btn" onClick={() => navigate(-1)}>
@@ -160,7 +160,7 @@ export default function PrivacyPolicy() {
 
       <footer className="privacy-policy-footer">
         <Link to="/estates" className="privacy-policy-footer-brand" aria-label="LandCheck Estates home">
-          <img src="/logo-icon-192.png" alt="LandCheck" width="100" height="34" loading="lazy" />
+          <img src="/logo-wordmark-web.png" alt="LandCheck" width="140" height="44" loading="lazy" />
           <span>ESTATES</span>
         </Link>
         <span>LandCheck Geospatial Technologies Limited</span>
