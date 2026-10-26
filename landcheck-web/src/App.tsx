@@ -59,6 +59,8 @@ const EstateLogin = lazyWithChunkRecovery(() => import("./pages/EstateLogin"));
 const EstateRegister = lazyWithChunkRecovery(() => import("./pages/EstateRegister"));
 const AgentEstateDashboard = lazyWithChunkRecovery(() => import("./pages/AgentEstateDashboard"));
 const AgentEstatePropertyPage = lazyWithChunkRecovery(() => import("./pages/AgentEstatePropertyPage"));
+const AgentEstateInspectionsPage = lazyWithChunkRecovery(() => import("./pages/AgentEstateInspectionsPage"));
+const AgentEstateSmsPage = lazyWithChunkRecovery(() => import("./pages/AgentEstateSmsPage"));
 const EstateForgotPassword = lazyWithChunkRecovery(() => import("./pages/EstateForgotPassword"));
 const EstateEmailVerified = lazyWithChunkRecovery(() => import("./pages/EstateEmailVerified"));
 const EstateSetNewPassword = lazyWithChunkRecovery(() => import("./pages/EstateSetNewPassword"));
@@ -417,6 +419,8 @@ export default function App() {
               <Route path="/agents/forgot-password" element={<EstateForgotPassword />} />
               <Route path="/agents" element={<AgentProtectedRoute element={<AgentEstateDashboard />} />} />
               <Route path="/agents/dashboard" element={<AgentProtectedRoute element={<AgentEstateDashboard />} />} />
+              <Route path="/agents/properties/:estateId/inspections" element={<AgentProtectedRoute element={<AgentEstateInspectionsPage />} />} />
+              <Route path="/agents/properties/:estateId/sms" element={<AgentProtectedRoute element={<AgentEstateSmsPage />} />} />
               <Route path="/agents/properties/:estateId" element={<AgentProtectedRoute element={<AgentEstatePropertyPage />} />} />
               <Route path="/estates/choose-plan" element={<EstateProtectedRoute element={<EstateChoosePlan />} />} />
               <Route path="/estates/billing" element={<EstateProtectedRoute element={<EstateBillingPage />} />} />

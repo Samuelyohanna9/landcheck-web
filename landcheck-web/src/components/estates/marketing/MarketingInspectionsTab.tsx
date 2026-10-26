@@ -22,7 +22,7 @@ function defaultStart() {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-export default function MarketingInspectionsTab({ estateId, canManage, hasMeetingPoint, published }: { estateId: string; canManage: boolean; hasMeetingPoint: boolean; published: boolean }) {
+export default function MarketingInspectionsTab({ estateId, canManage, hasMeetingPoint, published, agentMode = false }: { estateId: string; canManage: boolean; hasMeetingPoint: boolean; published: boolean; agentMode?: boolean }) {
   const [slots, setSlots] = useState<Slot[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,11 +98,11 @@ export default function MarketingInspectionsTab({ estateId, canManage, hasMeetin
     <div className="edash-mk-stack">
       {!hasMeetingPoint && (
         <div className="edash-mk-banner">
-          <div><strong>Add a meeting point so visitors can find you</strong>Set the gate or landmark in Settings. It is included in booking emails with a directions link.</div>
-          <Link to={`/estates/${estateId}/settings`}>Open settings</Link>
+          <div><strong>Add a meeting point so visitors can find you</strong>{agentMode ? "Add the gate or landmark from your property workspace. It is included in booking emails with a directions link." : "Set the gate or landmark in Settings. It is included in booking emails with a directions link."}</div>
+          <Link to={agentMode ? `/agents/properties/${estateId}#tools` : `/estates/${estateId}/settings`}>{agentMode ? "Open property tools" : "Open settings"}</Link>
         </div>
       )}
-      {!published && <div className="edash-mk-banner"><div><strong>Your public page is not published</strong>Visitors book inspection times from the public Estate page.</div><Link to={`/estates/${estateId}/settings`}>Publish it</Link></div>}
+      {!published && <div className="edash-mk-banner"><div><strong>Your public page is not published</strong>Visitors book inspection times from the public Estate page.</div><Link to={agentMode ? `/agents/properties/${estateId}#tools` : `/estates/${estateId}/settings`}>{agentMode ? "Open property tools" : "Publish it"}</Link></div>}
 
       <div className="edash-mk-grid-2">
         <div className="edash-mk-stack">

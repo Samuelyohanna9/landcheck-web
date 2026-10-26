@@ -307,6 +307,21 @@
 .agent-detail-mobile-back svg { width: 17px; height: 17px; }
 .agent-detail-stale-note { display: flex; align-items: center; gap: 6px; margin: 16px 0 0; color: var(--edash-muted); font-size: .72rem; }
 .agent-detail-stale-note > svg { width: 15px; color: var(--edash-warn); }
+.agent-inspection-tabs { margin: 22px 0 0; }
+.agent-inspections-page .agent-property-detail-card { margin-top: 14px; }
+.agent-inspections-page .agent-property-detail-card > .edash-mk-stack,
+.agent-inspections-page .agent-property-detail-card > .edash-mk-grid-2 { margin-top: 16px; }
+.agent-live-session-list { display: grid; gap: 10px; margin-top: 16px; }
+.agent-live-session { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--edash-border); border-radius: var(--edash-radius-md); background: #fbfdfc; }
+.agent-live-session-main { display: grid; gap: 5px; }
+.agent-live-session-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.agent-live-session-head strong { font-size: .78rem; }
+.agent-live-session small { color: var(--edash-muted); font-size: .68rem; }
+.agent-live-session > .edash-btn-outline { width: fit-content; }
+.agent-live-proposals { display: grid; gap: 8px; padding: 11px; border-radius: var(--edash-radius-sm); background: var(--edash-warn-tint); color: var(--edash-ink); }
+.agent-live-proposals > strong { font-size: .72rem; }
+.agent-live-proposals .edash-field { max-width: 260px; }
+.agent-live-proposal-buttons { display: flex; flex-wrap: wrap; gap: 7px; }
 
 @media (max-width: 820px) {
   .agent-property-hero { align-items: flex-start; }
@@ -314,6 +329,7 @@
   .agent-detail-grid { grid-template-columns: 1fr; }
   .agent-detail-mobile-back { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; }
   .agent-property-page .estate-agent-topbar { gap: 9px; }
+  .agent-live-session-head { align-items: flex-start; flex-direction: column; }
 }
 
 @media (max-width: 520px) {
