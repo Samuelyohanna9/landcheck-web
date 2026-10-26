@@ -894,7 +894,10 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     if (plotInputClosure === "self-intersecting") { toast.error("Order the boundary points before setting the boundary."); return; }
     try {
       const geometry = { type: "Polygon", coordinates: [[...ring, ring[0]]] };
-      if (estateDetail?.boundary) {
+      // Re-read the Estate before deciding whether this is the first boundary or an
+      // additional layer. Local detail can be briefly stale after an approved layout exists.
+      const currentEstate = (await api.get(`/estates/${estateId}`)).data;
+      if (currentEstate?.boundary) {
         await api.post(`/estates/${estateId}/layers`, { feature_type: "boundary", name: "Additional boundary", geometry });
         await invalidateEstateMutation(estateQueryScope, estateId, "layer");
         stashPendingNotice("Additional boundary added to map layers.");
@@ -3202,7 +3205,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
               <p className="edash-field-note" style={{ marginBottom: 12 }}>
                 {addPlotRepresents === "plot"
                   ? "This creates one plot record for the area you outline. To turn a large area into many smaller plots afterwards, open \"Design Layout\" and subdivide it."
-                  : estateDetail?.boundary
+                  : (estateDetail?.boundary || estateQueries.detail.data?.boundary)
                     ? "This saves another boundary as a map layer without replacing the Estate boundary already used for layout and analysis."
                     : "This sets the Estate's overall boundary - no plot is created yet. Afterwards, open \"Design Layout\" to subdivide it or design a layout automatically."}
               </p>
@@ -3228,7 +3231,11 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
                 disabled={plotInputMapPoints.length < 3 || plotInputClosure === "self-intersecting"}
                 onClick={() => void (addPlotRepresents === "boundary" ? createEstateBoundaryFromInput() : createPlotFromInput())}
               >
-                {plotInputClosure === "self-intersecting" ? "Fix boundary first" : addPlotRepresents === "boundary" ? "Set as Estate boundary" : "Create plot"}
+                {plotInputClosure === "self-intersecting"
+                  ? "Fix boundary first"
+                  : addPlotRepresents === "boundary"
+                    ? (estateDetail?.boundary || estateQueries.detail.data?.boundary ? "Add boundary layer" : "Set as Estate boundary")
+                    : "Create plot"}
               </button>
             </>
           ) : (
@@ -3354,7 +3361,9 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
               </p>
               {MAPBOX_TOKEN ? <MapViewEnhanced coordinates={parseCoordinateTextToPoints(layerCoordinates)} onCoordinatesDrawn={handleLayerCoordinatesDrawn} coordinateSystem="wgs84" showToolbar drawShape={layerType === "open_space" || layerType === "boundary" ? "polygon" : "line"} /> : <p className="edash-tab-empty">Map drawing is unavailable right now.</p>}
             </div>
-            <button type="button" className="edash-btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => void createLayer()}>Add layer</button>
+            <button type="button" className="edash-btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => void createLayer()}>
+              {layerType === "boundary" ? "Add boundary layer" : "Add layer"}
+            </button>
           </div>
           {layerGeojson.features.length > 0 && (
             <div className="edash-form-grid">
