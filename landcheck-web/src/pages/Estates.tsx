@@ -258,16 +258,18 @@ function estatePlotColor(status: string | null | undefined) {
 
 function EstatePlotMapFallback({
   features,
+  layers = [],
   boundary,
   message,
   onSelect,
 }: {
   features: any[];
+  layers?: any[];
   boundary?: any;
   message?: string;
   onSelect: (plotId: number) => void;
 }) {
-  const bounds = mapBoundsFor(features, boundary);
+  const bounds = mapBoundsFor([...features, ...layers], boundary);
   if (!bounds) {
     return <div className="edash-map-fallback">{message || "No plot geometry is available for this Estate yet."}</div>;
   }
@@ -277,6 +279,18 @@ function EstatePlotMapFallback({
         <rect width="1000" height="620" fill="#edf3ee" />
         <path d="M0 80H1000 M0 180H1000 M0 280H1000 M0 380H1000 M0 480H1000 M120 0V620 M280 0V620 M440 0V620 M600 0V620 M760 0V620 M920 0V620" stroke="#d6e3da" strokeWidth="1" />
         {polygonRings(boundary).map((ring, index) => <polygon key={`boundary-${index}`} points={svgMapPoints(ring, bounds)} fill="none" stroke="#087f76" strokeWidth="3" strokeDasharray="9 7" />)}
+        {layers.flatMap((feature) => {
+          const type = String(feature.properties?.type || "");
+          const color = type === "boundary" ? "#d1332b" : type === "road" ? "#2b2f36" : type === "drainage" ? "#287cb4" : type === "open_space" ? "#3f7a2c" : "#b77c2d";
+          const geometry = feature.geometry;
+          if (geometry?.type === "Polygon" || geometry?.type === "MultiPolygon") {
+            return polygonRings(geometry).map((ring, ringIndex) => <polygon key={`layer-${feature.id}-${ringIndex}`} points={svgMapPoints(ring, bounds)} fill={type === "boundary" ? "none" : color} fillOpacity={type === "boundary" ? 0 : 0.18} stroke={color} strokeWidth={type === "boundary" ? 2.5 : 2} strokeDasharray={type === "boundary" ? "8 6" : undefined} />);
+          }
+          if (geometry?.type === "LineString") {
+            return [<polyline key={`layer-${feature.id}`} points={svgMapPoints(geometry.coordinates, bounds)} fill="none" stroke={color} strokeWidth="3" />];
+          }
+          return [];
+        })}
         {features.flatMap((feature) => polygonRings(feature.geometry).map((ring, ringIndex) => {
           const plotId = Number(feature.properties?.id ?? feature.id);
           const center = getRingCentroid(ring);
@@ -356,7 +370,7 @@ function buildPlotLabelFeatures(features: any[], allocations: any[]) {
   });
 }
 
-const LAYER_TYPE_FALLBACK_LABEL: Record<string, string> = { road: "Road", drainage: "Drainage", open_space: "Open space", infrastructure: "Infrastructure" };
+const LAYER_TYPE_FALLBACK_LABEL: Record<string, string> = { boundary: "Boundary", road: "Road", drainage: "Drainage", open_space: "Open space", infrastructure: "Infrastructure" };
 
 function buildLayerLabelFeatures(features: any[]) {
   // A manually drawn road/layer left unnamed still needs to read as a road on the map, not vanish
@@ -416,12 +430,12 @@ function attachEstateMapLayers(map: any) {
   addLayerOnce({ id: "estate-plots-outline", type: "line", source: "estate-plots", paint: { "line-color": "#ffffff", "line-width": 0.75, "line-opacity": 0.65 } });
   addSourceOnce("estate-layers", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
   addLayerOnce({ id: "estate-layers-line-casing", type: "line", source: "estate-layers", filter: ["!=", ["geometry-type"], "Polygon"], paint: { "line-color": "#ffffff", "line-width": 5, "line-opacity": 0.9 } });
-  addLayerOnce({ id: "estate-layers-line", type: "line", source: "estate-layers", filter: ["!=", ["geometry-type"], "Polygon"], paint: { "line-color": ["match", ["get", "type"], "road", "#2b2f36", "drainage", "#287cb4", "#b77c2d"], "line-width": 3 } });
+  addLayerOnce({ id: "estate-layers-line", type: "line", source: "estate-layers", filter: ["!=", ["geometry-type"], "Polygon"], paint: { "line-color": ["match", ["get", "type"], "boundary", "#d1332b", "road", "#2b2f36", "drainage", "#287cb4", "#b77c2d"], "line-width": ["match", ["get", "type"], "boundary", 2.2, 3] } });
   // A hand-drawn road is often stored as a Polygon (a buffered corridor, not a bare centerline),
   // so it must be matched here too - without an explicit "road" case it fell through to the same
   // default blue as drainage, reading as water on the map instead of a road.
-  addLayerOnce({ id: "estate-layers-fill", type: "fill", source: "estate-layers", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": ["match", ["get", "type"], "road", "#2b2f36", "open_space", "#78a85d", "drainage", "#287cb4", "infrastructure", "#b77c2d", "#287cb4"], "fill-opacity": ["match", ["get", "type"], "road", 0.85, 0.4] } });
-  addLayerOnce({ id: "estate-layers-fill-outline", type: "line", source: "estate-layers", filter: ["==", ["geometry-type"], "Polygon"], paint: { "line-color": ["match", ["get", "type"], "road", "#0f1216", "open_space", "#3f7a2c", "drainage", "#1c5aa8", "infrastructure", "#8a4f16", "#1c5aa8"], "line-width": 1.6 } });
+  addLayerOnce({ id: "estate-layers-fill", type: "fill", source: "estate-layers", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": ["match", ["get", "type"], "boundary", "#d1332b", "road", "#2b2f36", "open_space", "#78a85d", "drainage", "#287cb4", "infrastructure", "#b77c2d", "#287cb4"], "fill-opacity": ["match", ["get", "type"], "boundary", 0.05, "road", 0.85, 0.4] } });
+  addLayerOnce({ id: "estate-layers-fill-outline", type: "line", source: "estate-layers", filter: ["==", ["geometry-type"], "Polygon"], paint: { "line-color": ["match", ["get", "type"], "boundary", "#d1332b", "road", "#0f1216", "open_space", "#3f7a2c", "drainage", "#1c5aa8", "infrastructure", "#8a4f16", "#1c5aa8"], "line-width": ["match", ["get", "type"], "boundary", 2.2, 1.6] } });
   addSourceOnce("estate-layer-labels", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
   addLayerOnce({
     id: "estate-layer-labels",
@@ -865,7 +879,20 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     const ring = plotInputMapPoints.map((point) => [point.lng, point.lat]);
     if (ring.length < 3 || ring.some((point) => point.some((value) => !Number.isFinite(value)))) { toast.error("Check the coordinate values before setting the boundary."); return; }
     if (plotInputClosure === "self-intersecting") { toast.error("Order the boundary points before setting the boundary."); return; }
-    try { await api.patch(`/estates/${estateId}`, { boundary: { type: "Polygon", coordinates: [[...ring, ring[0]]] } }); await invalidateEstateMutation(estateQueryScope, estateId, "settings"); await invalidateEstateQueries(estateQueryScope, estateId, ["plots", "dashboard"]); stashPendingNotice("Estate boundary set."); window.location.reload(); }
+    try {
+      const geometry = { type: "Polygon", coordinates: [[...ring, ring[0]]] };
+      if (estateDetail?.boundary) {
+        await api.post(`/estates/${estateId}/layers`, { feature_type: "boundary", name: "Additional boundary", geometry });
+        await invalidateEstateMutation(estateQueryScope, estateId, "layer");
+        stashPendingNotice("Additional boundary added to map layers.");
+      } else {
+        await api.patch(`/estates/${estateId}`, { boundary: geometry });
+        await invalidateEstateMutation(estateQueryScope, estateId, "settings");
+        await invalidateEstateQueries(estateQueryScope, estateId, ["plots", "dashboard"]);
+        stashPendingNotice("Estate boundary set.");
+      }
+      window.location.reload();
+    }
     catch (error) { toast.error(await extractApiErrorMessage(error, "Estate boundary could not be set.")); }
   };
   const useAsEstateBoundary = async (plotId: number) => {
@@ -1112,8 +1139,8 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
   const createLayer = async () => {
     if (!estateId) return;
     const coordinates=layerCoordinates.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => line.split(/[\s,]+/).map(Number)).filter((point) => point.length >= 2 && point.every(Number.isFinite)).map(([lng,lat]) => [lng,lat]);
-    if (coordinates.length < 2) { toast.error("Enter at least two longitude, latitude rows for the layer."); return; }
-    const polygon=layerType === "open_space";
+    const polygon=layerType === "open_space" || layerType === "boundary";
+    if (coordinates.length < (polygon ? 3 : 2)) { toast.error(`Enter at least ${polygon ? "three" : "two"} longitude, latitude rows for the layer.`); return; }
     const geometry=polygon ? {type:"Polygon",coordinates:[[...coordinates,coordinates[0]]]} : {type:"LineString",coordinates};
     try { await api.post(`/estates/${estateId}/layers`, {feature_type:layerType,name:layerName || null,geometry}); await invalidateEstateMutation(estateQueryScope, estateId, "layer"); stashPendingNotice("Layer added."); window.location.reload(); }
     catch (error) { toast.error(await extractApiErrorMessage(error,"Layer could not be saved.")); }
@@ -1308,7 +1335,8 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
   };
   const archiveLayer = async () => {
     if (!estateId || !selectedLayerId) return;
-    try { await api.delete(`/estates/${estateId}/layers/${selectedLayerId}`); setLayerGeojson((current: any) => ({ ...current, features: current.features.filter((item: any) => item.id !== Number(selectedLayerId)) })); setSelectedLayerId(""); setLayerEditCoordinates(""); await invalidateEstateQueries(estateQueryScope, estateId, ["layers", "activity"]); toast.success("Layer archived."); }
+    const feature = (layerGeojson.features || []).find((item: any) => item.id === Number(selectedLayerId));
+    try { await api.delete(`/estates/${estateId}/layers/${selectedLayerId}`); setLayerGeojson((current: any) => ({ ...current, features: current.features.filter((item: any) => item.id !== Number(selectedLayerId)) })); setSelectedLayerId(""); setLayerEditCoordinates(""); await invalidateEstateQueries(estateQueryScope, estateId, ["layers", "activity"]); toast.success(feature?.properties?.type === "boundary" ? "Boundary deleted." : "Layer archived."); }
     catch (error) { toast.error(await extractApiErrorMessage(error, "Layer could not be archived.")); }
   };
   useEffect(() => {
@@ -1504,6 +1532,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
       const bounds = new mapboxgl.LngLatBounds();
       if (mapBoundary) extendMapBounds(bounds, mapBoundary);
       mapPlotGeojson.features.forEach((feature: any) => extendMapBounds(bounds, feature.geometry));
+      layerGeojson.features.forEach((feature: any) => extendMapBounds(bounds, feature.geometry));
       if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 46, maxZoom: 17 });
     });
     return () => { cancelled = true; };
@@ -1916,16 +1945,8 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
 
   function fitMapToEstate() {
     if (!mapRef.current) return;
-    const bounds = mapPlotGeojson.features.reduce((acc: number[][] | null, feature: any) => {
-      const ring = feature.geometry?.type === "Polygon" ? feature.geometry.coordinates[0] : [];
-      return ring.reduce((box: number[][] | null, coord: number[]) => {
-        if (!box) return [[coord[0], coord[1]], [coord[0], coord[1]]];
-        box[0][0] = Math.min(box[0][0], coord[0]); box[0][1] = Math.min(box[0][1], coord[1]);
-        box[1][0] = Math.max(box[1][0], coord[0]); box[1][1] = Math.max(box[1][1], coord[1]);
-        return box;
-      }, acc);
-    }, null);
-    if (bounds) mapRef.current.fitBounds(bounds, { padding: 46, maxZoom: 17 });
+    const bounds = mapBoundsFor([...mapPlotGeojson.features, ...layerGeojson.features], mapBoundary);
+    if (bounds) mapRef.current.fitBounds([[bounds.minLng, bounds.minLat], [bounds.maxLng, bounds.maxLat]], { padding: 46, maxZoom: 17 });
   }
 
   function toggleMapFullscreen() {
@@ -1974,7 +1995,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
         <div className="edash-map-canvas-wrap">
           {MAPBOX_TOKEN ? (
             <>
-              {!mapReady && <EstatePlotMapFallback features={mapPlotGeojson.features} boundary={mapBoundary} message="Loading the interactive map..." onSelect={(plotId) => {
+              {!mapReady && <EstatePlotMapFallback features={mapPlotGeojson.features} layers={layersVisible ? layerGeojson.features : []} boundary={mapBoundary} message="Loading the interactive map..." onSelect={(plotId) => {
                 setSelectedPlotId(plotId);
                 setDrawerTab("overview");
                 const allocation = allocations.find((item) => item.plot_id === plotId);
@@ -1987,6 +2008,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
           ) : (
             <EstatePlotMapFallback
               features={mapPlotGeojson.features}
+              layers={layersVisible ? layerGeojson.features : []}
               boundary={mapBoundary}
               message={mapError || undefined}
               onSelect={(plotId) => {
@@ -2006,7 +2028,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
             <button type="button" className="edash-map-controls-group edash-map-ctrl-btn" title="Fit to estate" onClick={fitMapToEstate}>
               <EstateIcon name="locate" />
             </button>
-            <button type="button" className={`edash-map-controls-group edash-map-ctrl-btn${layersVisible ? " active" : ""}`} title="Toggle roads & open space" onClick={() => setLayersVisible((value) => !value)}>
+            <button type="button" className={`edash-map-controls-group edash-map-ctrl-btn${layersVisible ? " active" : ""}`} title="Toggle map layers" onClick={() => setLayersVisible((value) => !value)}>
               <EstateIcon name="layers" />
             </button>
             <button type="button" className="edash-map-controls-group edash-map-ctrl-btn" title="Fullscreen" onClick={toggleMapFullscreen}>
@@ -2911,7 +2933,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
             key: "layer-toggle",
             label: "Layers",
             buttons: [
-              { key: "roads", label: "Roads & Open Space", icon: "layers", onClick: () => setLayersVisible((value) => !value), active: layersVisible },
+              { key: "roads", label: "Map Layers", icon: "layers", onClick: () => setLayersVisible((value) => !value), active: layersVisible },
             ],
           },
         ],
@@ -3162,7 +3184,9 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
               <p className="edash-field-note" style={{ marginBottom: 12 }}>
                 {addPlotRepresents === "plot"
                   ? "This creates one plot record for the area you outline. To turn a large area into many smaller plots afterwards, open \"Design Layout\" and subdivide it."
-                  : "This sets the Estate's overall boundary - no plot is created yet. Afterwards, open \"Design Layout\" to subdivide it or design a layout automatically."}
+                  : estateDetail?.boundary
+                    ? "This saves another boundary as a map layer without replacing the Estate boundary already used for layout and analysis."
+                    : "This sets the Estate's overall boundary - no plot is created yet. Afterwards, open \"Design Layout\" to subdivide it or design a layout automatically."}
               </p>
               {addPlotMethod === "draw" ? (
                 <div>
@@ -3301,16 +3325,16 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
         <>
           <div className="edash-form-grid" style={{ marginBottom: 20 }}>
             <div className="edash-form-row">
-              <label className="edash-field"><span>Layer type</span><select value={layerType} onChange={(event) => setLayerType(event.target.value)}><option value="road">Road</option><option value="drainage">Drainage</option><option value="open_space">Open space</option><option value="infrastructure">Infrastructure</option></select></label>
+              <label className="edash-field"><span>Layer type</span><select value={layerType} onChange={(event) => setLayerType(event.target.value)}><option value="boundary">Boundary</option><option value="road">Road</option><option value="drainage">Drainage</option><option value="open_space">Open space</option><option value="infrastructure">Infrastructure</option></select></label>
               <label className="edash-field"><span>Layer name</span><input value={layerName} onChange={(event) => setLayerName(event.target.value)} placeholder="Optional" /></label>
             </div>
             <label className="edash-field"><span>Coordinates</span><textarea value={layerCoordinates} onChange={(event) => setLayerCoordinates(event.target.value)} placeholder="longitude, latitude per line" /></label>
             <div>
               <div className="edash-card-head"><h3 className="edash-card-title" style={{ fontSize: "0.8rem" }}>Or draw it on the map</h3></div>
               <p className="edash-field-note" style={{ marginBottom: 8 }}>
-                {layerType === "open_space" ? "Draws a closed polygon (an area)." : "Draws an open line (a centreline) - use this for a road, drainage run or infrastructure corridor."}
+                {layerType === "boundary" ? "Draws a closed polygon and keeps the existing Estate boundary unchanged." : layerType === "open_space" ? "Draws a closed polygon (an area)." : "Draws an open line (a centreline) - use this for a road, drainage run or infrastructure corridor."}
               </p>
-              {MAPBOX_TOKEN ? <MapViewEnhanced coordinates={parseCoordinateTextToPoints(layerCoordinates)} onCoordinatesDrawn={handleLayerCoordinatesDrawn} coordinateSystem="wgs84" showToolbar drawShape={layerType === "open_space" ? "polygon" : "line"} /> : <p className="edash-tab-empty">Map drawing is unavailable right now.</p>}
+              {MAPBOX_TOKEN ? <MapViewEnhanced coordinates={parseCoordinateTextToPoints(layerCoordinates)} onCoordinatesDrawn={handleLayerCoordinatesDrawn} coordinateSystem="wgs84" showToolbar drawShape={layerType === "open_space" || layerType === "boundary" ? "polygon" : "line"} /> : <p className="edash-tab-empty">Map drawing is unavailable right now.</p>}
             </div>
             <button type="button" className="edash-btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => void createLayer()}>Add layer</button>
           </div>
@@ -3338,7 +3362,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
                   })()}
                   <div style={{ display: "flex", gap: 8 }}>
                     <button type="button" className="edash-btn-primary" onClick={() => void updateLayer()}>Save geometry</button>
-                    <button type="button" className="edash-btn-outline" onClick={() => void archiveLayer()}>Archive layer</button>
+                    <button type="button" className="edash-btn-outline" onClick={() => void archiveLayer()}>{layerGeojson.features.find((feature: any) => String(feature.id) === selectedLayerId)?.properties?.type === "boundary" ? "Delete boundary" : "Archive layer"}</button>
                   </div>
                 </>
               )}
