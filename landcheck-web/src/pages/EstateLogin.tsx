@@ -31,9 +31,10 @@ export default function EstateLogin() {
     setError("");
     setBusy(true);
     try {
-      const session = await loginEstate(email, password);
+      const session = await loginEstate(email, password, agentMode ? "agent" : "estate");
       window.sessionStorage.removeItem("landcheck_estate_auth_entry");
-      navigate(session.needs_plan ? "/estates/choose-plan" : from, { replace: true });
+      const agentSession = session.user.workspace_type === "agent";
+      navigate(agentSession ? (from.startsWith("/agents") ? from : "/agents") : session.needs_plan ? "/estates/choose-plan" : from, { replace: true });
     } catch (err) {
       setError(await extractApiErrorMessage(err, "Sign-in failed. Check your email and password."));
     } finally {
@@ -82,11 +83,14 @@ export default function EstateLogin() {
             {error && <div className="estate-auth-error" role="alert">{error}</div>}
             <button className="estate-button" type="submit" disabled={busy}>{busy ? "Signing in..." : "Sign in"}</button>
           </form>
+          <Link className="estate-button estate-button--outline estate-auth-register-link" to={agentMode ? "/agents/register" : "/estates/register"}>
+            {agentMode ? "Create an agent account" : "Register your company"}
+          </Link>
           <p className="estate-auth-trust">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="1.5" stroke="currentColor" strokeWidth="1.6" /><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="currentColor" strokeWidth="1.6" /></svg>
             Secure, encrypted connection
           </p>
-          <p className="estate-auth-switch">{agentMode ? "New to LandCheck Agents?" : "New to LandCheck Estates?"} <Link to={agentMode ? "/agents/register" : "/estates/register"}>{agentMode ? "Create your workspace" : "Register your company"}</Link></p>
+          <p className="estate-auth-switch">{agentMode ? "Already have an agent account? Sign in above." : "Already have a company account? Sign in above."}</p>
         </div>
         <div className="estate-auth-visual" aria-hidden="true">
           <span className="estate-auth-visual-box estate-auth-visual-box--a" />

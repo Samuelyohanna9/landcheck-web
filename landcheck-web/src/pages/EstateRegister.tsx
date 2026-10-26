@@ -36,7 +36,7 @@ export default function EstateRegister() {
     setBusy(true);
     try {
       window.sessionStorage.setItem("landcheck_estate_auth_entry", agentMode ? "agents" : "estates");
-      const result = await registerEstate({ organization_name: company, organization_slug: slug, full_name: fullName, email, password, accept_dpa: acceptDpa });
+      const result = await registerEstate({ organization_name: company, organization_slug: slug, full_name: fullName, email, password, accept_dpa: acceptDpa, workspace_type: agentMode ? "agent" : "estate" });
       if ("verification_required" in result) {
         setVerificationSent(true);
         return;
@@ -83,7 +83,7 @@ export default function EstateRegister() {
               <input value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" required />
             </label>
             <label>
-              Company email
+              {agentMode ? "Your email" : "Company email"}
               <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required />
             </label>
             <label>
@@ -110,7 +110,7 @@ export default function EstateRegister() {
             </label>
             <label className="estate-auth-checkbox">
               <input type="checkbox" checked={acceptDpa} onChange={(event) => setAcceptDpa(event.target.checked)} required />
-              <span>I accept the <Link to="/estates/data-processing-agreement" target="_blank" rel="noreferrer">Data Processing Agreement</Link> on behalf of my company.</span>
+              <span>I accept the <Link to="/estates/data-processing-agreement" target="_blank" rel="noreferrer">Data Processing Agreement</Link> {agentMode ? "for my agent workspace." : "on behalf of my company."}</span>
             </label>
             {error && <div className="estate-auth-error" role="alert">{error}</div>}
             <button className="estate-button" type="submit" disabled={busy || !acceptDpa}>{busy ? "Creating workspace..." : agentMode ? "Create Agent workspace" : "Create Estate workspace"}</button>

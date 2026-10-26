@@ -280,6 +280,7 @@
 .estate-password-toggle svg { width: 19px; height: 19px; }
 
 .estate-auth-error { padding: 11px 12px; background: #fff0eb; border-left: 3px solid #c5533e; color: #9b392a; font: 600 .76rem Arial, sans-serif; line-height: 1.4; }
+.estate-auth-register-link { width: 100%; margin-top: 12px; box-sizing: border-box; }
 .estate-auth-trust { display: flex; align-items: center; gap: 7px; margin: 18px 0 0; color: #8b99a2; font: 600 .68rem Arial, sans-serif; letter-spacing: .04em; }
 .estate-auth-trust svg { width: 13px; height: 13px; flex-shrink: 0; }
 .estate-auth-switch { margin: 23px 0 0 !important; color: #74828c !important; font: 600 .74rem Arial, sans-serif !important; }

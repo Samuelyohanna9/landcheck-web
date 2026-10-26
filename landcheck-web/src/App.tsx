@@ -407,6 +407,7 @@ export default function App() {
               <Route path="/estates/forgot-password" element={<EstateForgotPassword />} />
               <Route path="/estates/reset-password" element={<PasswordResetPage defaultProduct="estates" />} />
               <Route path="/estates/email-verified" element={<EstateEmailVerified />} />
+              <Route path="/agents/email-verified" element={<EstateEmailVerified />} />
               <Route path="/estates/set-new-password" element={<EstateSetNewPassword />} />
               <Route path="/agents/login" element={<EstateLogin />} />
               <Route path="/agents/register" element={<EstateRegister />} />

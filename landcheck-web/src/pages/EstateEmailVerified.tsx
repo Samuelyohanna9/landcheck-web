@@ -3,7 +3,7 @@ import "../styles/estate-portal.css";
 import "../styles/estate-auth.css";
 
 export default function EstateEmailVerified() {
-  const agentMode = typeof window !== "undefined" && window.sessionStorage.getItem("landcheck_estate_auth_entry") === "agents";
+  const agentMode = typeof window !== "undefined" && (window.location.pathname.startsWith("/agents") || window.sessionStorage.getItem("landcheck_estate_auth_entry") === "agents");
   return (
     <main className="estate-auth-page">
       <div className="estate-auth-shell">
@@ -20,7 +20,7 @@ export default function EstateEmailVerified() {
           </span>
           <p className="estate-kicker">{agentMode ? "Agent registration" : "Company registration"}</p>
           <h1>Email verified successfully</h1>
-          <p>Your address is confirmed. Log in to choose a plan and start your workspace.</p>
+          <p>{agentMode ? "Your address is confirmed. Log in to publish professional land and property listings from your free agent workspace." : "Your address is confirmed. Log in to choose a plan and start your workspace."}</p>
           <Link to={agentMode ? "/agents/login" : "/estates/login"} className="estate-button">Log in</Link>
         </div>
       </div>

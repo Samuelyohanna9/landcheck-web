@@ -15,6 +15,7 @@ export type EstateAuthUser = {
   organization_id: number;
   organization_name?: string | null;
   organization_slug?: string | null;
+  workspace_type?: "estate" | "agent";
 };
 
 export type EstateAuthSession = {
@@ -106,8 +107,8 @@ export const clearEstateAuthSession = () => {
   void api.post("/estates/auth/logout", {}).catch(() => undefined);
 };
 
-export const loginEstate = async (email: string, password: string) => {
-  const response = await api.post<EstateAuthResponse>("/estates/auth/login", { email: email.trim(), password });
+export const loginEstate = async (email: string, password: string, workspaceType: "estate" | "agent" = "estate") => {
+  const response = await api.post<EstateAuthResponse>("/estates/auth/login", { email: email.trim(), password, workspace_type: workspaceType });
   const session = normalizeSession(response.data || {});
   setEstateAuthSession(session);
   // needs_plan reflects whether the organization has an active subscription at this exact login
@@ -126,7 +127,7 @@ export const changeEstatePassword = async (currentPassword: string, newPassword:
   setEstateAuthSession({ ...session, user: { ...session.user, must_change_password: false } });
 };
 
-export const registerEstate = async (params: { organization_name: string; organization_slug?: string; full_name: string; email: string; password: string; accept_dpa: boolean }): Promise<EstateRegistrationResult> => {
+export const registerEstate = async (params: { organization_name: string; organization_slug?: string; full_name: string; email: string; password: string; accept_dpa: boolean; workspace_type?: "estate" | "agent" }): Promise<EstateRegistrationResult> => {
   const response = await api.post<EstateAuthResponse>("/estates/auth/register", {
     ...params,
     organization_name: params.organization_name.trim(),

@@ -86,6 +86,7 @@ const resolveWebClientLabel = (pathname: string, greenSession: StoredSession | n
   const sponsorSession = greenSession?.auth_mode === "sponsor_user" || greenSession?.appMode === "green_sponsor";
   if (cleanPath.startsWith("/green-work")) return "green-work-web";
   if (cleanPath.startsWith("/survey-plan") || cleanPath.startsWith("/survey")) return "survey-plan-web";
+  if (cleanPath.startsWith("/agents")) return "agents-web";
   if (cleanPath.startsWith("/estates")) return "estates-web";
   if (cleanPath.startsWith("/hazard-analysis") || cleanPath.startsWith("/flood")) return "flood-web";
   if (cleanPath.startsWith("/feedback")) return "feedback-web";
