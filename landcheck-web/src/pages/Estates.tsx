@@ -753,6 +753,10 @@ export default function Estates() {
       geometry: normalizeEstateMapGeometry(feature.geometry, estateDetail?.crs),
     })),
   }), [visiblePlotGeojson, estateDetail?.crs]);
+  const allPlotMapFeatures = useMemo(() => (plotGeojson.features || []).map((feature: any) => ({
+    ...feature,
+    geometry: normalizeEstateMapGeometry(feature.geometry, estateDetail?.crs),
+  })), [plotGeojson, estateDetail?.crs]);
   const mapBoundary = useMemo(() => normalizeEstateMapGeometry(estateDetail?.boundary, estateDetail?.crs), [estateDetail?.boundary, estateDetail?.crs]);
   const layerLegendItems = useMemo(() => {
     const items: Array<{ key: string; type: string; label: string }> = [];
@@ -3272,16 +3276,24 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
               </p>
               {addPlotMethod === "draw" ? (
                 <div>
-                  <p className="edash-status-row-desc" style={{ marginBottom: 8 }}>Trace the plot boundary directly on the satellite image, then confirm below.</p>
-                  {MAPBOX_TOKEN ? <MapViewEnhanced coordinates={plotInputMapPoints} onCoordinatesDrawn={handlePlotCoordinatesDrawn} coordinateSystem="wgs84" showToolbar /> : <p className="edash-tab-empty">Map drawing is unavailable right now. Switch to "Enter coordinates manually" instead.</p>}
+                  <p className="edash-status-row-desc" style={{ marginBottom: 8 }}>
+                    {addPlotRepresents === "boundary" && allPlotMapFeatures.length > 0
+                      ? "The existing plot layout is shown as a reference. Trace the overall boundary around it; the plots will not be changed."
+                      : "Trace the plot boundary directly on the satellite image, then confirm below."}
+                  </p>
+                  {MAPBOX_TOKEN ? <MapViewEnhanced coordinates={plotInputMapPoints} referenceFeatures={allPlotMapFeatures} onCoordinatesDrawn={handlePlotCoordinatesDrawn} coordinateSystem="wgs84" showToolbar /> : <p className="edash-tab-empty">Map drawing is unavailable right now. Switch to "Enter coordinates manually" instead.</p>}
                 </div>
               ) : (
                 <div className="edash-content-row edash-content-row--split">
                   <CoordinateInput title="Plot boundary coordinates" subtitle="Enter one row for each boundary corner." points={plotInputPoints} onUpdatePoint={updatePlotInputPoint} onRemovePoint={removePlotInputPoint} onAddPoint={addPlotInputPoint} onBulkUpload={importPlotInputPoints} disabled={false} coordinateSystem={plotInputCoordinateSystem} onCoordinateSystemChange={setPlotInputCoordinateSystem} onReorderPoints={reorderPlotInputPoints} manualEntryOnly />
                   <div>
                     <div className="edash-card-head"><h3 className="edash-card-title" style={{ fontSize: "0.84rem" }}>Map preview</h3></div>
-                    <p className="edash-status-row-desc" style={{ marginBottom: 8 }}>Edit the boundary on the map or use the table.</p>
-                    {MAPBOX_TOKEN ? <MapViewEnhanced coordinates={plotInputMapPoints} onCoordinatesDrawn={handlePlotCoordinatesDrawn} coordinateSystem="wgs84" showToolbar /> : <p className="edash-tab-empty">Map preview is unavailable right now. You can still review the coordinates above.</p>}
+                    <p className="edash-status-row-desc" style={{ marginBottom: 8 }}>
+                      {addPlotRepresents === "boundary" && allPlotMapFeatures.length > 0
+                        ? "The existing plot layout is shown behind the draft. Use it to place the boundary accurately, or edit the coordinates in the table."
+                        : "Edit the boundary on the map or use the table."}
+                    </p>
+                    {MAPBOX_TOKEN ? <MapViewEnhanced coordinates={plotInputMapPoints} referenceFeatures={allPlotMapFeatures} onCoordinatesDrawn={handlePlotCoordinatesDrawn} coordinateSystem="wgs84" showToolbar /> : <p className="edash-tab-empty">Map preview is unavailable right now. You can still review the coordinates above.</p>}
                   </div>
                 </div>
               )}
@@ -3430,7 +3442,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
               <p className="edash-field-note" style={{ marginBottom: 8 }}>
                 {layerType === "boundary" ? "Draws a closed polygon and keeps the existing Estate boundary unchanged." : layerType === "open_space" ? "Draws a closed polygon (an area)." : "Draws an open line (a centreline) - use this for a road, drainage run or infrastructure corridor."}
               </p>
-              {MAPBOX_TOKEN ? <MapViewEnhanced coordinates={parseCoordinateTextToPoints(layerCoordinates)} onCoordinatesDrawn={handleLayerCoordinatesDrawn} coordinateSystem="wgs84" showToolbar drawShape={layerType === "open_space" || layerType === "boundary" ? "polygon" : "line"} /> : <p className="edash-tab-empty">Map drawing is unavailable right now.</p>}
+              {MAPBOX_TOKEN ? <MapViewEnhanced coordinates={parseCoordinateTextToPoints(layerCoordinates)} referenceFeatures={allPlotMapFeatures} onCoordinatesDrawn={handleLayerCoordinatesDrawn} coordinateSystem="wgs84" showToolbar drawShape={layerType === "open_space" || layerType === "boundary" ? "polygon" : "line"} /> : <p className="edash-tab-empty">Map drawing is unavailable right now.</p>}
             </div>
             <button type="button" className="edash-btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => void createLayer()}>
               {layerType === "boundary" ? "Add boundary layer" : "Add layer"}
@@ -3455,7 +3467,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
                     return (
                       <div>
                         <div className="edash-card-head"><h3 className="edash-card-title" style={{ fontSize: "0.8rem" }}>Or edit vertices on the map</h3></div>
-                        {MAPBOX_TOKEN ? <MapViewEnhanced coordinates={parseCoordinateTextToPoints(layerEditCoordinates)} onCoordinatesDrawn={handleLayerEditCoordinatesDrawn} coordinateSystem="wgs84" showToolbar drawShape={editingGeometryType === "Polygon" ? "polygon" : "line"} /> : <p className="edash-tab-empty">Map editing is unavailable right now.</p>}
+                        {MAPBOX_TOKEN ? <MapViewEnhanced coordinates={parseCoordinateTextToPoints(layerEditCoordinates)} referenceFeatures={allPlotMapFeatures} onCoordinatesDrawn={handleLayerEditCoordinatesDrawn} coordinateSystem="wgs84" showToolbar drawShape={editingGeometryType === "Polygon" ? "polygon" : "line"} /> : <p className="edash-tab-empty">Map editing is unavailable right now.</p>}
                       </div>
                     );
                   })()}

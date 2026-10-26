@@ -20,6 +20,9 @@ type SpotHeightPoint = Point & {
 type Props = {
   coordinates: Point[];
   onCoordinatesDrawn?: (coords: Point[]) => void;
+  // Optional read-only context shown behind the geometry being drawn. Estate boundary and
+  // layer editors use this to keep the existing plot layout visible while a new shape is traced.
+  referenceFeatures?: any[];
   disabled?: boolean;
   lightweight?: boolean;
   coordinateSystem?: string;
@@ -186,6 +189,7 @@ const drawStyles = [
 function MapViewEnhanced({
   coordinates,
   onCoordinatesDrawn,
+  referenceFeatures = [],
   disabled = false,
   lightweight = false,
   coordinateSystem,
@@ -411,6 +415,49 @@ function MapViewEnhanced({
       map.addControl(draw, "top-left");
 
       map.on("load", () => {
+        map.addSource("reference-layout", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
+
+        map.addLayer({
+          id: "reference-layout-fill",
+          type: "fill",
+          source: "reference-layout",
+          paint: {
+            "fill-color": "#7bbf8d",
+            "fill-opacity": 0.12,
+          },
+        });
+
+        map.addLayer({
+          id: "reference-layout-outline",
+          type: "line",
+          source: "reference-layout",
+          paint: {
+            "line-color": "#ffffff",
+            "line-width": 1.4,
+            "line-opacity": 0.95,
+          },
+        });
+
+        map.addLayer({
+          id: "reference-layout-labels",
+          type: "symbol",
+          source: "reference-layout",
+          layout: {
+            "text-field": ["coalesce", ["get", "plot_number"], ""],
+            "text-size": ["interpolate", ["linear"], ["zoom"], 10, 8, 16, 11],
+            "text-allow-overlap": false,
+            "text-ignore-placement": false,
+          },
+          paint: {
+            "text-color": "#f8fff9",
+            "text-halo-color": "#214d2d",
+            "text-halo-width": 1.2,
+          },
+        });
+
         map.addSource("plot-polygon", {
           type: "geojson",
           data: {
@@ -582,6 +629,24 @@ function MapViewEnhanced({
       setMapReady(false);
     };
   }, [applySpotHeightVisibility, basemapStyle, handleDrawUpdate, onCoordinatesDrawn, showToolbar, updateZoneBadgePosition]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const applyReferenceData = () => {
+      const source = map.getSource("reference-layout") as any;
+      if (!source) return;
+      source.setData({
+        type: "FeatureCollection",
+        features: (referenceFeatures || []).filter((feature) => feature?.geometry),
+      });
+    };
+    if (map.isStyleLoaded() && map.getSource("reference-layout")) {
+      applyReferenceData();
+    } else {
+      map.once("load", applyReferenceData);
+    }
+  }, [referenceFeatures]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -910,6 +975,26 @@ function MapViewEnhanced({
       }
     }
   }, [coordinates, mapReady, drawShape]);
+
+  // When the editor opens with no draft vertices, frame the existing estate layout rather than
+  // the Nigeria-wide default view. Once the user starts drawing, the normal draft-boundary effect
+  // owns the camera and this reference fit no longer moves it.
+  useEffect(() => {
+    const map = mapRef.current;
+    const mapboxgl = mapboxglRef.current;
+    if (!map || !mapboxgl || !mapReady || coordinates.some((point) => isPlottableLngLat(point.lng, point.lat))) return;
+
+    const bounds = new mapboxgl.LngLatBounds();
+    const extend = (value: any): void => {
+      if (Array.isArray(value) && typeof value[0] === "number" && typeof value[1] === "number") {
+        if (isPlottableLngLat(value[0], value[1])) bounds.extend(value);
+        return;
+      }
+      if (Array.isArray(value)) value.forEach(extend);
+    };
+    (referenceFeatures || []).forEach((feature) => extend(feature?.geometry?.coordinates));
+    if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 70, maxZoom: 17, duration: 0 });
+  }, [coordinates, mapReady, referenceFeatures]);
 
   // Manual re-trigger for the same fitBounds the [coordinates] effect above already does
   // automatically on every import/edit - useful after a surveyor has panned/zoomed away and wants
