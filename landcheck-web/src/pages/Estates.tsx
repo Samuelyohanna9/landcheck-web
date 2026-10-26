@@ -751,14 +751,17 @@ export default function Estates() {
     })),
   }), [visiblePlotGeojson, estateDetail?.crs]);
   const mapBoundary = useMemo(() => normalizeEstateMapGeometry(estateDetail?.boundary, estateDetail?.crs), [estateDetail?.boundary, estateDetail?.crs]);
-  const layerLegendTypes = useMemo(() => {
-    const types = new Set<string>();
-    if (mapBoundary) types.add("boundary");
-    (layerGeojson.features || []).forEach((feature: any) => {
+  const layerLegendItems = useMemo(() => {
+    const items: Array<{ key: string; type: string; label: string }> = [];
+    if (mapBoundary) items.push({ key: "estate-boundary", type: "boundary", label: "Estate boundary" });
+    (layerGeojson.features || []).forEach((feature: any, index: number) => {
       const type = String(feature.properties?.type || "");
-      if (LAYER_TYPE_FALLBACK_LABEL[type]) types.add(type);
+      if (!LAYER_TYPE_FALLBACK_LABEL[type]) return;
+      const id = feature.id ?? feature.properties?.id ?? index + 1;
+      const label = String(feature.properties?.name || LAYER_TYPE_FALLBACK_LABEL[type]);
+      items.push({ key: `estate-layer-${id}`, type, label: `${label} #${id}` });
     });
-    return ["boundary", "road", "drainage", "open_space", "infrastructure"].filter((type) => types.has(type));
+    return items;
   }, [mapBoundary, layerGeojson]);
   const boundaryAreaSqm = useMemo(() => {
     const calculated = geometryAreaSqm(mapBoundary);
@@ -2106,11 +2109,14 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
                     ))}
                   </div>
                 )}
-                {layerLegendTypes.map((type) => (
-                  <label key={type} className="edash-map-legend-item">
+                {estateQueries.layers.isLoading && <span className="edash-map-legend-item">Loading map layers...</span>}
+                {estateQueries.layers.isError && <span className="edash-map-legend-item">Map layers could not be loaded. Refresh and try again.</span>}
+                {!estateQueries.layers.isLoading && !estateQueries.layers.isError && layerLegendItems.length === 0 && <span className="edash-map-legend-item">No additional map layers yet.</span>}
+                {layerLegendItems.map((item) => (
+                  <label key={item.key} className="edash-map-legend-item">
                     <input type="checkbox" checked={layersVisible} onChange={() => setLayersVisible((value) => !value)} />
-                    <span className="edash-map-legend-line" style={{ background: LAYER_TYPE_COLORS[type] }} />
-                    {LAYER_TYPE_FALLBACK_LABEL[type]}
+                    <span className="edash-map-legend-line" style={{ background: LAYER_TYPE_COLORS[item.type] }} />
+                    {item.label}
                   </label>
                 ))}
               </div>
