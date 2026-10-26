@@ -668,6 +668,9 @@ export default function Estates() {
   const [deletePlotConfirmText, setDeletePlotConfirmText] = useState("");
   const [showDeletePlotConfirm, setShowDeletePlotConfirm] = useState(false);
   const [deletePlotBusy, setDeletePlotBusy] = useState(false);
+  const [deleteBoundaryConfirmText, setDeleteBoundaryConfirmText] = useState("");
+  const [showDeleteBoundaryConfirm, setShowDeleteBoundaryConfirm] = useState(false);
+  const [deleteBoundaryBusy, setDeleteBoundaryBusy] = useState(false);
   const [showEditPlotBoundary, setShowEditPlotBoundary] = useState(false);
   const [editPlotPoints, setEditPlotPoints] = useState<Array<{ station: string; lng: number; lat: number }>>([]);
   const [editPlotBusy, setEditPlotBusy] = useState(false);
@@ -1346,26 +1349,63 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
   };
   const selectLayerForEdit = (id: string) => {
     setSelectedLayerId(id);
-    const feature = (layerGeojson.features || []).find((item: any) => String(item.id) === id);
+    const feature = id === "primary" ? { geometry: mapBoundary } : (layerGeojson.features || []).find((item: any) => String(item.id) === id);
     const coordinates = feature?.geometry?.coordinates || [];
     const rows = feature?.geometry?.type === "Polygon" ? coordinates[0] : coordinates;
     setLayerEditCoordinates((rows || []).map((point: number[]) => point.join(", ")).join("\n"));
   };
   const updateLayer = async () => {
     if (!estateId || !selectedLayerId) return;
-    const feature = (layerGeojson.features || []).find((item: any) => String(item.id) === selectedLayerId);
+    const feature = selectedLayerId === "primary" ? { geometry: mapBoundary } : (layerGeojson.features || []).find((item: any) => String(item.id) === selectedLayerId);
     const points = layerEditCoordinates.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => line.split(/[\s,]+/).map(Number)).filter((point) => point.length >= 2 && point.every(Number.isFinite)).map(([lng, lat]) => [lng, lat]);
-    if (!feature || points.length < 2) { toast.error("Enter at least two valid coordinate rows."); return; }
+    if (!feature || points.length < (selectedLayerId === "primary" ? 3 : 2)) { toast.error(`Enter at least ${selectedLayerId === "primary" ? "three" : "two"} valid coordinate rows.`); return; }
     const isPolygon = feature.geometry.type === "Polygon";
     const ring = isPolygon && points[0].join() !== points[points.length - 1].join() ? [...points, points[0]] : points;
-    try { await api.patch(`/estates/${estateId}/layers/${selectedLayerId}`, { geometry: isPolygon ? { type: "Polygon", coordinates: [ring] } : { type: "LineString", coordinates: points } }); setLayerGeojson((current: any) => ({ ...current, features: current.features.map((item: any) => item.id === Number(selectedLayerId) ? { ...item, geometry: isPolygon ? { type: "Polygon", coordinates: [ring] } : { type: "LineString", coordinates: points } } : item) })); await invalidateEstateQueries(estateQueryScope, estateId, ["layers", "activity"]); toast.success("Layer geometry updated."); }
+    try {
+      const geometry = isPolygon ? { type: "Polygon", coordinates: [ring] } : { type: "LineString", coordinates: points };
+      if (selectedLayerId === "primary") {
+        await api.patch(`/estates/${estateId}`, { boundary: geometry });
+        await invalidateEstateMutation(estateQueryScope, estateId, "settings");
+        await invalidateEstateQueries(estateQueryScope, estateId, ["plots", "dashboard"]);
+        setEstateDetail((current: any) => current ? { ...current, boundary: geometry } : current);
+      } else {
+        await api.patch(`/estates/${estateId}/layers/${selectedLayerId}`, { geometry });
+        setLayerGeojson((current: any) => ({ ...current, features: current.features.map((item: any) => item.id === Number(selectedLayerId) ? { ...item, geometry } : item) }));
+        await invalidateEstateQueries(estateQueryScope, estateId, ["layers", "activity"]);
+      }
+      toast.success(selectedLayerId === "primary" ? "Primary Estate boundary updated." : "Layer geometry updated.");
+    }
     catch (error) { toast.error(await extractApiErrorMessage(error, "Layer could not be updated.")); }
   };
   const archiveLayer = async () => {
     if (!estateId || !selectedLayerId) return;
+    if (selectedLayerId === "primary") {
+      setDeleteBoundaryConfirmText("");
+      setShowDeleteBoundaryConfirm(true);
+      return;
+    }
     const feature = (layerGeojson.features || []).find((item: any) => item.id === Number(selectedLayerId));
     try { await api.delete(`/estates/${estateId}/layers/${selectedLayerId}`); setLayerGeojson((current: any) => ({ ...current, features: current.features.filter((item: any) => item.id !== Number(selectedLayerId)) })); setSelectedLayerId(""); setLayerEditCoordinates(""); await invalidateEstateQueries(estateQueryScope, estateId, ["layers", "activity"]); toast.success(feature?.properties?.type === "boundary" ? "Boundary deleted." : "Layer archived."); }
     catch (error) { toast.error(await extractApiErrorMessage(error, "Layer could not be archived.")); }
+  };
+  const deletePrimaryBoundary = async () => {
+    if (!estateId || deleteBoundaryConfirmText.trim() !== "DELETE BOUNDARY") return;
+    setDeleteBoundaryBusy(true);
+    try {
+      await api.patch(`/estates/${estateId}`, { boundary: null });
+      await invalidateEstateMutation(estateQueryScope, estateId, "settings");
+      await invalidateEstateQueries(estateQueryScope, estateId, ["plots", "dashboard"]);
+      setEstateDetail((current: any) => current ? { ...current, boundary: null } : current);
+      setShowDeleteBoundaryConfirm(false);
+      setDeleteBoundaryConfirmText("");
+      setSelectedLayerId("");
+      setLayerEditCoordinates("");
+      toast.success("Primary Estate boundary deleted. Plots and map layers were kept.");
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "Primary Estate boundary could not be deleted."));
+    } finally {
+      setDeleteBoundaryBusy(false);
+    }
   };
   useEffect(() => {
     if (!estateId) return;
@@ -3396,12 +3436,13 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
               {layerType === "boundary" ? "Add boundary layer" : "Add layer"}
             </button>
           </div>
-          {layerGeojson.features.length > 0 && (
+          {(layerGeojson.features.length > 0 || mapBoundary) && (
             <div className="edash-form-grid">
               <div className="edash-card-head"><h3 className="edash-card-title" style={{ fontSize: "0.86rem" }}>Spatial layer editor</h3></div>
               <label className="edash-field"><span>Layer</span>
                 <select value={selectedLayerId} onChange={(event) => selectLayerForEdit(event.target.value)}>
                   <option value="">Select a layer</option>
+                  {mapBoundary && <option value="primary">Primary Estate boundary</option>}
                   {layerGeojson.features.map((feature: any) => <option key={feature.id} value={feature.id}>{feature.properties?.type === "boundary" ? "Additional boundary" : (feature.properties.name || feature.properties.type)} #{feature.id}</option>)}
                 </select>
               </label>
@@ -3420,7 +3461,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
                   })()}
                   <div style={{ display: "flex", gap: 8 }}>
                     <button type="button" className="edash-btn-primary" onClick={() => void updateLayer()}>Save geometry</button>
-                    <button type="button" className="edash-btn-outline" onClick={() => void archiveLayer()}>{layerGeojson.features.find((feature: any) => String(feature.id) === selectedLayerId)?.properties?.type === "boundary" ? "Delete boundary" : "Archive layer"}</button>
+                    <button type="button" className="edash-btn-outline" onClick={() => void archiveLayer()}>{selectedLayerId === "primary" ? "Delete primary boundary" : layerGeojson.features.find((feature: any) => String(feature.id) === selectedLayerId)?.properties?.type === "boundary" ? "Delete boundary" : "Archive layer"}</button>
                   </div>
                 </>
               )}
@@ -3794,6 +3835,20 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
               {resetLayoutBusy ? <><Spinner size={14} /> Resetting...</> : "Reset layout"}
             </button>
             <button type="button" className="edash-btn-outline" onClick={() => { setShowResetLayoutConfirm(false); setResetLayoutConfirmText(""); }}>Cancel</button>
+          </div>
+        </EstateModal>
+      )}
+      {showDeleteBoundaryConfirm && (
+        <EstateModal title="Delete the primary Estate boundary?" subtitle="This removes only the primary boundary geometry. Plots, customers, payments and additional map layers will remain, but boundary-based layout and analysis tools will need a new boundary." onClose={() => { setShowDeleteBoundaryConfirm(false); setDeleteBoundaryConfirmText(""); }}>
+          <div className="edash-form-grid">
+            <p className="edash-field-note">Type <strong>DELETE BOUNDARY</strong> to confirm.</p>
+            <input value={deleteBoundaryConfirmText} onChange={(event) => setDeleteBoundaryConfirmText(event.target.value)} placeholder="DELETE BOUNDARY" autoFocus />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="button" className="edash-btn-primary" style={{ background: "var(--edash-danger)" }} disabled={deleteBoundaryBusy || deleteBoundaryConfirmText.trim() !== "DELETE BOUNDARY"} onClick={() => void deletePrimaryBoundary()}>
+                {deleteBoundaryBusy ? <><Spinner size={13} /> Deleting...</> : "Delete primary boundary"}
+              </button>
+              <button type="button" className="edash-btn-outline" onClick={() => { setShowDeleteBoundaryConfirm(false); setDeleteBoundaryConfirmText(""); }}>Cancel</button>
+            </div>
           </div>
         </EstateModal>
       )}
