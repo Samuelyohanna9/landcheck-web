@@ -110,7 +110,7 @@ export default function EstatePricingCards({
               {PLAN_BADGE[key] && <span className="estate-pricing-badge">{PLAN_BADGE[key]}</span>}
               <h3>{plan.label}</h3>
               <p className="estate-pricing-price">{naira(price)}<span>/{billingCycle === "monthly" ? "month" : "year"}</span></p>
-              <p className="estate-pricing-trial">{ESTATE_TRIAL_DAYS}-day free trial &middot; card or bank transfer &middot; cancel anytime</p>
+              <p className="estate-pricing-trial">{ESTATE_TRIAL_DAYS}-day trial &middot; card or bank transfer verification &middot; NGN50 refundable verification &middot; cancel anytime</p>
               <ul className="estate-pricing-features">
                 {PLAN_FEATURES[key].map((feature) => <li key={feature}>{feature}</li>)}
               </ul>

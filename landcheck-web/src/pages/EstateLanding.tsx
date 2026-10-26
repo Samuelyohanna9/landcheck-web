@@ -17,8 +17,8 @@ const includedGroups: Array<{ title: string; items: IncludedItem[] }> = [
       "Live satellite map of approved plots",
       "Field-ready coordinates",
       "Professional survey plans",
-      "Hazard analysis - flood and erosion screening",
-      "Soil analysis - indicative bearing capacity, water table and drainage",
+      { text: "Hazard analysis - flood and erosion screening", tag: "Plus" },
+      { text: "Soil analysis - indicative bearing capacity, water table and drainage", tag: "Pro" },
     ],
   },
   {
@@ -29,13 +29,12 @@ const includedGroups: Array<{ title: string; items: IncludedItem[] }> = [
       "Reservation alerts for your team",
       "Customers and allocations",
       "Payments and commissions",
-      "SMS and email updates for customers",
-      "WhatsApp inbox for buyer and lead chats",
-      "Facebook and Instagram auto-posting with comments and likes",
-      "QR-coded marketing campaigns by channel",
-      "“Verified by LandCheck” title badges buyers can trust",
-      "Government approvals tracker - Survey Plan, Layout, Governor's Consent, C of O",
-      "Plot and agent fraud checks, right on your public page",
+      { text: "Email updates for customers; SMS on Pro", tag: "Pro" },
+      { text: "WhatsApp inbox for buyer and lead chats", tag: "Pro" },
+      { text: "Facebook and Instagram posting with comment and like replies", tag: "Pro" },
+      { text: "QR-coded marketing campaigns by channel", tag: "Pro" },
+      "Staff-reviewed title status and government approvals tracker",
+      "Plot and agent verification checks on your public page",
       { text: "Live video inspections for diaspora and out-of-town buyers, GPS-verified in real time", tag: "Enterprise" },
     ],
   },
@@ -52,7 +51,7 @@ const publicSiteScreens = [
 const publicSiteBullets = [
   "Live pricing and availability",
   "Reserve a plot in one tap",
-  "Growth outlook buyers can trust",
+  "Published development outlook",
 ];
 
 export default function EstateLanding() {
@@ -133,20 +132,20 @@ export default function EstateLanding() {
 
       <section className="estate-hero" aria-labelledby="estate-intro-title" role="img" aria-label="A planned residential estate with plots, homes and internal roads">
         <p className="estate-kicker estate-hero-kicker">LandCheck Estates</p>
-        <h1 id="estate-intro-title">Manage every estate from one place.</h1>
-        <p className="estate-hero-summary">Design layouts, manage plots and buyers, track payments and commissions, and generate professional survey plans.</p>
+        <h1 id="estate-intro-title">Run your estate from layout to allocation.</h1>
+        <p className="estate-hero-summary">LandCheck Estates connects layouts, plots, customers, reservations, sales, instalments, allocations and survey documents for Nigerian real estate developers.</p>
         <div className="estate-intro-actions estate-intro-actions--centered">
           <button type="button" className="estate-button" onClick={openDemo}>Request a demo</button>
           <a href="#platform" className="estate-button estate-button--outline-light">View platform</a>
         </div>
-        <p className="estate-hero-caption">One connected record for every plot.</p>
+        <p className="estate-hero-caption">Every plot. One connected record.</p>
       </section>
 
       <section className="estate-video-section" id="overview-video" aria-labelledby="estate-video-title">
         <div className="estate-video-copy">
           <p className="estate-kicker">See it in action</p>
           <h2 id="estate-video-title">One connected workspace for every plot.</h2>
-          <p>See how LandCheck Estates brings layout design, plot sales, marketing, payments, surveying and estate delivery together.</p>
+          <p>See how LandCheck Estates connects estate layouts, plot availability, customer records, reservations, payments, allocations and survey documents.</p>
         </div>
         <div className="estate-video-frame">
           <iframe
@@ -178,7 +177,7 @@ export default function EstateLanding() {
       </section>
 
       <section className="estate-content-section" id="features">
-        <h2 className="estate-centered-heading">Everything included.</h2>
+        <h2 className="estate-centered-heading">Tools for the whole estate workflow.</h2>
         <div className="estate-included-grid">
           {includedGroups.map((group) => (
             <div className="estate-included-card" key={group.title}>
@@ -194,14 +193,13 @@ export default function EstateLanding() {
       </section>
 
       <section className="estate-centered-section" id="trust">
-        <h2>Give buyers a reason to trust you.</h2>
+        <h2>Give buyers a clearer record to work from.</h2>
         <p>
-          Land fraud is what makes buyers hesitate. Put a GPS-verified boundary, a staff-checked title badge, and a
-          live government-approvals record on every plot you publish, so buyers can confirm a plot or agent is
-          genuinely yours before they pay anyone - and, on Enterprise, let your agents close distant and diaspora
-          buyers with a GPS-verified live video walkthrough instead of losing the sale to "I need to see it first."
+          Publish a public estate page with a map, plot information, availability and configured verification details.
+          Keep customer, reservation, payment and survey records in the same workspace. Enterprise teams can add
+          GPS-verified live video inspections for remote buyers.
         </p>
-        <Link to="/estates/register" className="estate-button">Start free trial</Link>
+        <Link to="/estates/register" className="estate-button">Start a 14-day trial</Link>
       </section>
 
       <section className="estate-content-section estate-feature-section" id="public-site">
@@ -233,20 +231,20 @@ export default function EstateLanding() {
       </section>
 
       <section className="estate-solutions-section" id="solutions">
-        <h2>One platform for your entire estate operation.</h2>
+        <h2>One platform for development, sales, finance and survey.</h2>
         <ul className="estate-solutions-pills">
           {solutionAreas.map((item) => <li key={item}>{item}</li>)}
         </ul>
       </section>
 
       <section className="estate-content-section" id="pricing">
-        <h2 className="estate-centered-heading">Simple, transparent pricing.</h2>
-        <EstatePricingCards onSelectPlan={selectPlanFromLanding} ctaLabel={() => "Start free trial"} />
+        <h2 className="estate-centered-heading">Plans for the size of your estate operation.</h2>
+        <EstatePricingCards onSelectPlan={selectPlanFromLanding} ctaLabel={() => "Start a 14-day trial"} />
       </section>
 
       <section className="estate-centered-section">
-        <h2>From raw land to sale-ready plots.</h2>
-        <p>LandCheck keeps the layout, buyer, payment, commission and survey documents together.</p>
+        <h2>From layout to allocation.</h2>
+        <p>Keep the layout, plot, customer, payment, commission and survey records together.</p>
         <Link to="/estates/register" className="estate-button">Explore the platform</Link>
       </section>
 
