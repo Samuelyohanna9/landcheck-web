@@ -58,6 +58,7 @@ const EstateLanding = lazyWithChunkRecovery(() => import("./pages/EstateLanding"
 const EstateLogin = lazyWithChunkRecovery(() => import("./pages/EstateLogin"));
 const EstateRegister = lazyWithChunkRecovery(() => import("./pages/EstateRegister"));
 const AgentEstateDashboard = lazyWithChunkRecovery(() => import("./pages/AgentEstateDashboard"));
+const AgentEstatePropertyPage = lazyWithChunkRecovery(() => import("./pages/AgentEstatePropertyPage"));
 const EstateForgotPassword = lazyWithChunkRecovery(() => import("./pages/EstateForgotPassword"));
 const EstateEmailVerified = lazyWithChunkRecovery(() => import("./pages/EstateEmailVerified"));
 const EstateSetNewPassword = lazyWithChunkRecovery(() => import("./pages/EstateSetNewPassword"));
@@ -227,7 +228,9 @@ function EstateEntryRoute() {
 
 function AgentProtectedRoute({ element }: { element: ReactElement }) {
   if (!isEstateAuthed()) return <Navigate to="/agents/login" state={{ from: window.location.pathname }} replace />;
-  if (getEstateAuthSession()?.user.must_change_password) return <Navigate to="/estates/set-new-password" replace />;
+  const session = getEstateAuthSession();
+  if (session?.user.workspace_type !== "agent") return <Navigate to="/estates/workspace" replace />;
+  if (session.user.must_change_password) return <Navigate to="/estates/set-new-password" replace />;
   return element;
 }
 
@@ -414,6 +417,7 @@ export default function App() {
               <Route path="/agents/forgot-password" element={<EstateForgotPassword />} />
               <Route path="/agents" element={<AgentProtectedRoute element={<AgentEstateDashboard />} />} />
               <Route path="/agents/dashboard" element={<AgentProtectedRoute element={<AgentEstateDashboard />} />} />
+              <Route path="/agents/properties/:estateId" element={<AgentProtectedRoute element={<AgentEstatePropertyPage />} />} />
               <Route path="/estates/choose-plan" element={<EstateProtectedRoute element={<EstateChoosePlan />} />} />
               <Route path="/estates/billing" element={<EstateProtectedRoute element={<EstateBillingPage />} />} />
               <Route path="/estates/legal" element={<EstateProtectedRoute element={<EstateLegalPage />} />} />
