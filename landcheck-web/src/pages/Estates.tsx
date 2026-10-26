@@ -1161,6 +1161,18 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     try { await api.post(`/estates/${estateId}/layers`, {feature_type:layerType,name:layerName || null,geometry}); await invalidateEstateMutation(estateQueryScope, estateId, "layer"); stashPendingNotice("Layer added."); window.location.reload(); }
     catch (error) { toast.error(await extractApiErrorMessage(error,"Layer could not be saved.")); }
   };
+  const refreshEstateLayers = async () => {
+    if (!estateId) return;
+    try {
+      const response = await estateQueries.layers.refetch();
+      const data = response.data || { type: "FeatureCollection", features: [] };
+      setLayerGeojson(data);
+      const boundaryCount = (data.features || []).filter((feature: any) => feature.properties?.type === "boundary").length;
+      toast.success(`${data.features?.length || 0} active map layer${data.features?.length === 1 ? "" : "s"} loaded${boundaryCount ? `, including ${boundaryCount} boundary layer${boundaryCount === 1 ? "" : "s"}` : ""}.`);
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "Map layers could not be refreshed."));
+    }
+  };
   const createBlock = async () => {
     if (!estateId || !blockLabel.trim()) { toast.error("Enter a block label first."); return; }
     try {
@@ -1432,6 +1444,15 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     estateQueries.documents.data, estateQueries.documents.isError,
     estateQueries.publicSettings.data, estateQueries.publicSettings.isError,
   ]);
+  useEffect(() => {
+    if (activeTool !== "layers" || !estateId) return;
+    // The layer editor must read the authoritative list when it opens. A cached list can be
+    // older than a boundary approved/imported in another Estate workflow or browser tab.
+    void queryClient.refetchQueries({
+      queryKey: estateQueryKeys.estate(estateQueryScope, estateId, "layers"),
+      type: "active",
+    });
+  }, [activeTool, estateId, estateQueryScope.organizationId, estateQueryScope.userId, estateQueryScope.roleKey, estateQueryScope.permissions, queryClient]);
   // Builds the mapboxgl.Map exactly ONCE per estate, guarded by mapRef.current the same way the
   // already-reliable MapViewEnhanced/ProjectMap components do it - this is a stronger guarantee
   // than a dependency array, since it physically refuses to construct a second map even if the
@@ -3348,6 +3369,16 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     if (activeTool === "layers") {
       return renderToolModal("Map layers", "Add or correct roads, drainage, open space and infrastructure.", (
         <>
+          <div className="edash-info-card" style={{ marginBottom: 16, alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <div>
+              <strong>Active map layers: {layerGeojson.features.length}</strong>
+              <p className="edash-status-row-desc" style={{ margin: "4px 0 0" }}>
+                Boundary layers are separate from the primary Estate boundary and can be edited or deleted below.
+                {(layerGeojson.features || []).some((feature: any) => feature.properties?.type === "boundary") ? " Boundary layer loaded." : " No additional boundary layer is in the current response."}
+              </p>
+            </div>
+            <button type="button" className="edash-btn-outline" onClick={() => void refreshEstateLayers()}>Refresh layers</button>
+          </div>
           <div className="edash-form-grid" style={{ marginBottom: 20 }}>
             <div className="edash-form-row">
               <label className="edash-field"><span>Layer type</span><select value={layerType} onChange={(event) => setLayerType(event.target.value)}><option value="boundary">Boundary</option><option value="road">Road</option><option value="drainage">Drainage</option><option value="open_space">Open space</option><option value="infrastructure">Infrastructure</option></select></label>
@@ -3371,7 +3402,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
               <label className="edash-field"><span>Layer</span>
                 <select value={selectedLayerId} onChange={(event) => selectLayerForEdit(event.target.value)}>
                   <option value="">Select a layer</option>
-                  {layerGeojson.features.map((feature: any) => <option key={feature.id} value={feature.id}>{feature.properties.name || feature.properties.type} #{feature.id}</option>)}
+                  {layerGeojson.features.map((feature: any) => <option key={feature.id} value={feature.id}>{feature.properties?.type === "boundary" ? "Additional boundary" : (feature.properties.name || feature.properties.type)} #{feature.id}</option>)}
                 </select>
               </label>
               {selectedLayerId && (
