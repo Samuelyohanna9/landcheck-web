@@ -18,12 +18,13 @@ function EyeIcon({ off }: { off: boolean }) {
 export default function EstateLogin() {
   const navigate = useNavigate();
   const location = useLocation();
+  const agentMode = location.pathname.startsWith("/agents");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const from = String((location.state as { from?: string } | null)?.from || "/estates/workspace");
+  const from = String((location.state as { from?: string } | null)?.from || (agentMode ? "/agents" : "/estates/workspace"));
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -31,6 +32,7 @@ export default function EstateLogin() {
     setBusy(true);
     try {
       const session = await loginEstate(email, password);
+      window.sessionStorage.removeItem("landcheck_estate_auth_entry");
       navigate(session.needs_plan ? "/estates/choose-plan" : from, { replace: true });
     } catch (err) {
       setError(await extractApiErrorMessage(err, "Sign-in failed. Check your email and password."));
@@ -43,16 +45,16 @@ export default function EstateLogin() {
     <main className="estate-auth-page">
       <div className="estate-auth-shell estate-auth-shell--login">
         <div className="estate-auth-card">
-          <Link to="/estates" className="estate-auth-brand estate-auth-brand--login" aria-label="LandCheck Estates home">
+          <Link to={agentMode ? "/agents" : "/estates"} className="estate-auth-brand estate-auth-brand--login" aria-label={agentMode ? "LandCheck Agents home" : "LandCheck Estates home"}>
             <img src="/logo-wordmark-web.png" alt="LandCheck" width="182" height="58" />
-            <span>ESTATES</span>
+            <span>{agentMode ? "AGENTS" : "ESTATES"}</span>
           </Link>
-          <p className="estate-kicker">Company workspace</p>
-          <h1>Sign in to Estates</h1>
-          <p>Manage your land register, buyers and delivery workflow from one workspace.</p>
+          <p className="estate-kicker">{agentMode ? "Independent property workspace" : "Company workspace"}</p>
+          <h1>{agentMode ? "Sign in to Agents" : "Sign in to Estates"}</h1>
+          <p>{agentMode ? "Publish your properties, reach buyers and manage every enquiry from one workspace." : "Manage your land register, buyers and delivery workflow from one workspace."}</p>
           <form onSubmit={submit}>
             <label>
-              Company email
+              {agentMode ? "Email" : "Company email"}
               <input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
             </label>
             <label>
@@ -76,7 +78,7 @@ export default function EstateLogin() {
                 </button>
               </div>
             </label>
-            <Link to="/estates/forgot-password" className="estate-text-link" style={{ justifySelf: "start" }}>Forgot password?</Link>
+            <Link to={agentMode ? "/agents/forgot-password" : "/estates/forgot-password"} className="estate-text-link" style={{ justifySelf: "start" }}>Forgot password?</Link>
             {error && <div className="estate-auth-error" role="alert">{error}</div>}
             <button className="estate-button" type="submit" disabled={busy}>{busy ? "Signing in..." : "Sign in"}</button>
           </form>
@@ -84,7 +86,7 @@ export default function EstateLogin() {
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="1.5" stroke="currentColor" strokeWidth="1.6" /><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="currentColor" strokeWidth="1.6" /></svg>
             Secure, encrypted connection
           </p>
-          <p className="estate-auth-switch">New to LandCheck Estates? <Link to="/estates/register">Register your company</Link></p>
+          <p className="estate-auth-switch">{agentMode ? "New to LandCheck Agents?" : "New to LandCheck Estates?"} <Link to={agentMode ? "/agents/register" : "/estates/register"}>{agentMode ? "Create your workspace" : "Register your company"}</Link></p>
         </div>
         <div className="estate-auth-visual" aria-hidden="true">
           <span className="estate-auth-visual-box estate-auth-visual-box--a" />

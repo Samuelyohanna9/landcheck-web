@@ -3,12 +3,13 @@ import "../styles/estate-portal.css";
 import "../styles/estate-auth.css";
 
 export default function EstateEmailVerified() {
+  const agentMode = typeof window !== "undefined" && window.sessionStorage.getItem("landcheck_estate_auth_entry") === "agents";
   return (
     <main className="estate-auth-page">
       <div className="estate-auth-shell">
-        <Link to="/estates" className="estate-auth-brand" aria-label="LandCheck Estates home">
+        <Link to={agentMode ? "/agents" : "/estates"} className="estate-auth-brand" aria-label={agentMode ? "LandCheck Agents home" : "LandCheck Estates home"}>
           <span className="estate-auth-brand-logo"><img src="/logo-icon-192.png" alt="LandCheck" width="40" height="40" /></span>
-          <span className="estate-auth-brand-tag">Estates</span>
+          <span className="estate-auth-brand-tag">{agentMode ? "Agents" : "Estates"}</span>
         </Link>
         <div className="estate-auth-card estate-verified-card">
           <span className="estate-verified-icon">
@@ -17,10 +18,10 @@ export default function EstateEmailVerified() {
               <path d="M7.5 12.5 10.3 15.3 16.5 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </span>
-          <p className="estate-kicker">Company registration</p>
+          <p className="estate-kicker">{agentMode ? "Agent registration" : "Company registration"}</p>
           <h1>Email verified successfully</h1>
           <p>Your address is confirmed. Log in to choose a plan and start your workspace.</p>
-          <Link to="/estates/login" className="estate-button">Log in</Link>
+          <Link to={agentMode ? "/agents/login" : "/estates/login"} className="estate-button">Log in</Link>
         </div>
       </div>
     </main>

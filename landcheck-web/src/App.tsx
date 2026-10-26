@@ -57,6 +57,7 @@ const EstateFinance = lazyWithChunkRecovery(() => import("./pages/EstateFinance"
 const EstateLanding = lazyWithChunkRecovery(() => import("./pages/EstateLanding"));
 const EstateLogin = lazyWithChunkRecovery(() => import("./pages/EstateLogin"));
 const EstateRegister = lazyWithChunkRecovery(() => import("./pages/EstateRegister"));
+const AgentEstateDashboard = lazyWithChunkRecovery(() => import("./pages/AgentEstateDashboard"));
 const EstateForgotPassword = lazyWithChunkRecovery(() => import("./pages/EstateForgotPassword"));
 const EstateEmailVerified = lazyWithChunkRecovery(() => import("./pages/EstateEmailVerified"));
 const EstateSetNewPassword = lazyWithChunkRecovery(() => import("./pages/EstateSetNewPassword"));
@@ -224,6 +225,12 @@ function EstateEntryRoute() {
   return isEstateAuthed() ? <Navigate to="/estates/workspace" replace /> : <EstateLanding />;
 }
 
+function AgentProtectedRoute({ element }: { element: ReactElement }) {
+  if (!isEstateAuthed()) return <Navigate to="/agents/login" state={{ from: window.location.pathname }} replace />;
+  if (getEstateAuthSession()?.user.must_change_password) return <Navigate to="/estates/set-new-password" replace />;
+  return element;
+}
+
 function MerchantProtectedRoute({ element }: { element: ReactElement }) {
   const session = getGreenAuthSession();
   if (!session || !isSponsorGreenSession(session)) {
@@ -306,7 +313,7 @@ function RouteLoadingFallback() {
   }, [pathname]);
 
   const path = pathname.toLowerCase().replace(/\/+$/, "") || "/";
-  const isEstateRoute = path.startsWith("/estates") || path.startsWith("/estate-admin");
+  const isEstateRoute = path.startsWith("/estates") || path.startsWith("/estate-admin") || path.startsWith("/agents");
   const isGreenWorkRoute = path.startsWith("/green-work");
   const isSurveyRoute = path.startsWith("/survey") || path.startsWith("/dashboard");
   const useCompactMark = isEstateRoute || isGreenWorkRoute || isSurveyRoute;
@@ -401,6 +408,11 @@ export default function App() {
               <Route path="/estates/reset-password" element={<PasswordResetPage defaultProduct="estates" />} />
               <Route path="/estates/email-verified" element={<EstateEmailVerified />} />
               <Route path="/estates/set-new-password" element={<EstateSetNewPassword />} />
+              <Route path="/agents/login" element={<EstateLogin />} />
+              <Route path="/agents/register" element={<EstateRegister />} />
+              <Route path="/agents/forgot-password" element={<EstateForgotPassword />} />
+              <Route path="/agents" element={<AgentProtectedRoute element={<AgentEstateDashboard />} />} />
+              <Route path="/agents/dashboard" element={<AgentProtectedRoute element={<AgentEstateDashboard />} />} />
               <Route path="/estates/choose-plan" element={<EstateProtectedRoute element={<EstateChoosePlan />} />} />
               <Route path="/estates/billing" element={<EstateProtectedRoute element={<EstateBillingPage />} />} />
               <Route path="/estates/legal" element={<EstateProtectedRoute element={<EstateLegalPage />} />} />

@@ -17,6 +17,7 @@ function EyeIcon({ off }: { off: boolean }) {
 
 export default function EstateRegister() {
   const navigate = useNavigate();
+  const agentMode = window.location.pathname.startsWith("/agents");
   const [company, setCompany] = useState("");
   const [slug, setSlug] = useState("");
   const [fullName, setFullName] = useState("");
@@ -34,12 +35,13 @@ export default function EstateRegister() {
     setError("");
     setBusy(true);
     try {
+      window.sessionStorage.setItem("landcheck_estate_auth_entry", agentMode ? "agents" : "estates");
       const result = await registerEstate({ organization_name: company, organization_slug: slug, full_name: fullName, email, password, accept_dpa: acceptDpa });
       if ("verification_required" in result) {
         setVerificationSent(true);
         return;
       }
-      navigate("/estates/choose-plan", { replace: true });
+      navigate(agentMode ? "/agents" : "/estates/choose-plan", { replace: true });
     } catch (err) {
       setError(await extractApiErrorMessage(err, "Registration failed. Please review the details and try again."));
     } finally {
@@ -51,25 +53,25 @@ export default function EstateRegister() {
     <main className="estate-auth-page">
       <div className="estate-auth-shell estate-auth-shell--register">
         <div className="estate-register-intro">
-          <Link to="/estates" className="estate-auth-brand" aria-label="LandCheck Estates home">
+          <Link to={agentMode ? "/agents" : "/estates"} className="estate-auth-brand" aria-label={agentMode ? "LandCheck Agents home" : "LandCheck Estates home"}>
             <span className="estate-auth-brand-logo"><img src="/logo-icon-192.png" alt="LandCheck" width="40" height="40" /></span>
-            <span className="estate-auth-brand-tag">Estates</span>
+            <span className="estate-auth-brand-tag">{agentMode ? "Agents" : "Estates"}</span>
           </Link>
-          <p className="estate-kicker">Start with the land</p>
-          <h1>Your company's estate workspace.</h1>
-          <p>Register once, then invite your operating team around a shared parcel register. Your first account is the company owner.</p>
+          <p className="estate-kicker">{agentMode ? "Start selling with proof" : "Start with the land"}</p>
+          <h1>{agentMode ? "Your property sales workspace." : "Your company's estate workspace."}</h1>
+          <p>{agentMode ? "Create a professional listing for every property you sell, share it everywhere, and keep buyer enquiries in one place." : "Register once, then invite your operating team around a shared parcel register. Your first account is the company owner."}</p>
           <div className="estate-register-points">
-            <span><b>01</b> Import your layout</span>
-            <span><b>02</b> Publish approved plots</span>
-            <span><b>03</b> Manage customers and delivery</span>
+            <span><b>01</b> {agentMode ? "Add a property" : "Import your layout"}</span>
+            <span><b>02</b> {agentMode ? "Publish your mini web page" : "Publish approved plots"}</span>
+            <span><b>03</b> {agentMode ? "Follow up every buyer" : "Manage customers and delivery"}</span>
           </div>
         </div>
         <div className="estate-auth-card">
-          <p className="estate-kicker">Company registration</p>
+          <p className="estate-kicker">{agentMode ? "Agent registration" : "Company registration"}</p>
           <h2>Create your workspace</h2>
           <form onSubmit={submit}>
             <label>
-              Company / developer name
+              {agentMode ? "Your agency or trading name" : "Company / developer name"}
               <input value={company} onChange={(event) => setCompany(event.target.value)} autoComplete="organization" required />
             </label>
             <label>
@@ -111,13 +113,13 @@ export default function EstateRegister() {
               <span>I accept the <Link to="/estates/data-processing-agreement" target="_blank" rel="noreferrer">Data Processing Agreement</Link> on behalf of my company.</span>
             </label>
             {error && <div className="estate-auth-error" role="alert">{error}</div>}
-            <button className="estate-button" type="submit" disabled={busy || !acceptDpa}>{busy ? "Creating workspace..." : "Create Estate workspace"}</button>
+            <button className="estate-button" type="submit" disabled={busy || !acceptDpa}>{busy ? "Creating workspace..." : agentMode ? "Create Agent workspace" : "Create Estate workspace"}</button>
           </form>
           <p className="estate-auth-trust">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="1.5" stroke="currentColor" strokeWidth="1.6" /><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="currentColor" strokeWidth="1.6" /></svg>
             Secure, encrypted connection
           </p>
-          <p className="estate-auth-switch">Already registered? <Link to="/estates/login">Sign in</Link></p>
+          <p className="estate-auth-switch">Already registered? <Link to={agentMode ? "/agents/login" : "/estates/login"}>Sign in</Link></p>
         </div>
       </div>
       {verificationSent && (
@@ -129,11 +131,11 @@ export default function EstateRegister() {
                 <path d="M3.5 6.5 12 13l8.5-6.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </span>
-            <p className="estate-kicker">Company registration</p>
+            <p className="estate-kicker">{agentMode ? "Agent registration" : "Company registration"}</p>
             <h2>Check your email</h2>
             <p>We sent a verification link to <strong>{email}</strong>. Open it, then sign in to continue.</p>
             <p className="estate-verify-overlay-hint">Can't find it? Check your spam or junk folder — it can take a minute or two to arrive.</p>
-            <Link to="/estates/login" className="estate-button">Go to sign in</Link>
+            <Link to={agentMode ? "/agents/login" : "/estates/login"} className="estate-button">Go to sign in</Link>
           </div>
         </div>
       )}

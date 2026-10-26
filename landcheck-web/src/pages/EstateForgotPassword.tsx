@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../api/client";
 import "../styles/estate-portal.css";
 import "../styles/estate-auth.css";
 
 export default function EstateForgotPassword() {
+  const agentMode = useLocation().pathname.startsWith("/agents");
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -27,21 +28,21 @@ export default function EstateForgotPassword() {
   return (
     <main className="estate-auth-page">
       <div className="estate-auth-shell">
-        <Link to="/estates" className="estate-auth-brand" aria-label="LandCheck Estates home">
+        <Link to={agentMode ? "/agents" : "/estates"} className="estate-auth-brand" aria-label={agentMode ? "LandCheck Agents home" : "LandCheck Estates home"}>
           <span className="estate-auth-brand-logo"><img src="/logo-icon-192.png" alt="LandCheck" width="40" height="40" /></span>
-          <span className="estate-auth-brand-tag">Estates</span>
+          <span className="estate-auth-brand-tag">{agentMode ? "Agents" : "Estates"}</span>
         </Link>
         <div className="estate-auth-card">
-          <p className="estate-kicker">Company workspace</p>
+          <p className="estate-kicker">{agentMode ? "Independent property workspace" : "Company workspace"}</p>
           <h1>Reset your password</h1>
           {sent ? (
             <p>If an account exists for <strong>{email}</strong>, we've sent a link to reset your password. It expires in 1 hour.</p>
           ) : (
             <>
-              <p>Enter your company email and we'll send you a link to reset your password.</p>
+              <p>Enter your {agentMode ? "account" : "company"} email and we'll send you a link to reset your password.</p>
               <form onSubmit={submit}>
                 <label>
-                  Company email
+                  {agentMode ? "Email" : "Company email"}
                   <input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
                 </label>
                 {error && <div className="estate-auth-error" role="alert">{error}</div>}
@@ -49,7 +50,7 @@ export default function EstateForgotPassword() {
               </form>
             </>
           )}
-          <p className="estate-auth-switch">Remembered it? <Link to="/estates/login">Sign in</Link></p>
+          <p className="estate-auth-switch">Remembered it? <Link to={agentMode ? "/agents/login" : "/estates/login"}>Sign in</Link></p>
         </div>
         <Link to="/" className="estate-auth-back">Return to LandCheck</Link>
       </div>

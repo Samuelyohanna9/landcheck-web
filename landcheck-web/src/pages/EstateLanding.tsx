@@ -109,6 +109,7 @@ export default function EstateLanding() {
           <a href="#overview-video">Watch overview</a>
           <a href="#solutions">Solutions</a>
           <a href="#pricing">Pricing</a>
+          <Link to="/agents/login">For property agents</Link>
           <Link to="/estates/login" className="estate-nav-login">Sign in</Link>
           <button type="button" className="estate-nav-cta" onClick={openDemo}>Request a demo</button>
         </nav>
@@ -124,6 +125,7 @@ export default function EstateLanding() {
           <a href="#overview-video" className="estate-mobile-item" onClick={closeMenu}>Watch overview</a>
           <a href="#solutions" className="estate-mobile-item" onClick={closeMenu}>Solutions</a>
           <a href="#pricing" className="estate-mobile-item" onClick={closeMenu}>Pricing</a>
+          <Link to="/agents/login" className="estate-mobile-item" onClick={closeMenu}>For property agents</Link>
           <Link to="/estates/login" className="estate-mobile-item" onClick={closeMenu}>Sign in</Link>
           <button type="button" className="estate-mobile-cta" onClick={() => { closeMenu(); openDemo(); }}>Request a demo</button>
         </nav>
@@ -277,6 +279,7 @@ export default function EstateLanding() {
             <h2>Products</h2>
             <ul>
               <li><Link to="/estates/login">LandCheck Estates</Link></li>
+              <li><Link to="/agents/login">LandCheck Agents</Link></li>
               <li><Link to="/green-partners">LandCheck Green</Link></li>
               <li><Link to="/survey">Survey Plan</Link></li>
               <li><Link to="/flood">Flood Risk Analysis</Link></li>
@@ -305,7 +308,7 @@ export default function EstateLanding() {
 
         <div className="estate-site-footer-bottom">
           <span>All rights reserved. &copy; {new Date().getFullYear()} LandCheck Geospatial Technologies Limited</span>
-          <Link to="/estates/login">Sign in to Estates</Link>
+          <span className="estate-site-footer-bottom-links"><Link to="/agents/login">Agent workspace</Link><Link to="/estates/login">Sign in to Estates</Link></span>
         </div>
       </footer>
       {demoOpen && <EstateDemoRequestModal onClose={() => setDemoOpen(false)} />}
