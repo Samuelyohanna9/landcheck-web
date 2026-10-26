@@ -368,7 +368,7 @@ export default function AgentEstateDashboard() {
         <nav className="estate-agent-nav" aria-label="Agent workspace">
           {navItems.map(([key, label, icon]) => <button type="button" className={section === key ? "is-active" : ""} key={key} onClick={() => navigateSection(key)}><EstateIcon name={icon} />{label}{key === "buyers" && insight.new_reservations ? <b>{insight.new_reservations}</b> : null}</button>)}
         </nav>
-        <div className="estate-agent-sidebar-bottom"><Link to="/estates/workspace"><EstateIcon name="globe" />Open Estates</Link><button type="button" onClick={signOut}><EstateIcon name="close" />Sign out</button></div>
+        <div className="estate-agent-sidebar-bottom"><Link to="/agents"><EstateIcon name="house" />My properties</Link><button type="button" onClick={signOut}><EstateIcon name="close" />Sign out</button></div>
       </aside>
 
       <section className="estate-agent-main">

@@ -77,7 +77,8 @@ export default function AgentEstateSmsPage() {
   useEffect(() => { void loadCustomers(); }, [loadCustomers]);
   useEffect(() => { void loadHistory(); }, [loadHistory]);
 
-  if (!session || session.user.workspace_type !== "agent") return <Navigate to="/estates/workspace" replace />;
+  if (!session) return <Navigate to="/agents/login" replace />;
+  if (session.user.workspace_type !== "agent") return <Navigate to="/agents" replace />;
   if (!estateId || !/^\d+$/.test(estateId)) return <Navigate to="/agents" replace />;
 
   const toggle = (id: number, selectedNow: boolean) => setSelected((current) => selectedNow ? [...current.filter((value) => value !== id), id] : current.filter((value) => value !== id));

@@ -68,9 +68,8 @@ export default function AgentEstatePropertyPage() {
     }));
   }, [plotsQuery.data]);
 
-  if (!session || session.user.workspace_type !== "agent") {
-    return <Navigate to="/estates/workspace" replace />;
-  }
+  if (!session) return <Navigate to="/agents/login" replace />;
+  if (session.user.workspace_type !== "agent") return <Navigate to="/agents" replace />;
   if (!estateId || !/^\d+$/.test(estateId)) {
     return <Navigate to="/agents" replace />;
   }

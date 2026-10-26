@@ -109,7 +109,8 @@ export default function AgentEstateInspectionsPage() {
 
   useEffect(() => { void load(); }, [load]);
 
-  if (!session || session.user.workspace_type !== "agent") return <Navigate to="/estates/workspace" replace />;
+  if (!session) return <Navigate to="/agents/login" replace />;
+  if (session.user.workspace_type !== "agent") return <Navigate to="/agents" replace />;
   if (!estateId || !/^\d+$/.test(estateId)) return <Navigate to="/agents" replace />;
 
   const canManage = ["owner", "manager"].includes(String(session.user.role_key || "").toLowerCase());
