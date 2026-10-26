@@ -120,7 +120,7 @@
     <div id="landcheck-boot-fallback" class="landcheck-boot-fallback">
       <div class="landcheck-boot-fallback-card">
         <div class="landcheck-boot-fallback-kicker">LandCheck</div>
-        <h1>Something went wrong loading this page.</h1>
+        <div class="landcheck-boot-fallback-title" role="heading" aria-level="1">Something went wrong loading this page.</div>
         <p>This can happen after a new version is released, or from a temporary glitch. Reloading usually fixes it.</p>
         <button type="button" onclick="window.__landcheckRetry()">Reload LandCheck</button>
         <p class="landcheck-boot-fallback-footer">
@@ -160,7 +160,7 @@
         color: #16816e;
         margin-bottom: 0.9rem;
       }
-      .landcheck-boot-fallback-card h1 {
+      .landcheck-boot-fallback-title {
         margin: 0 0 0.7rem;
         font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
         font-weight: 500;
@@ -194,6 +194,59 @@
         color: #102a27;
         font-weight: 700;
         text-decoration: underline;
+      }
+      .lc-seo-shell {
+        min-height: 100vh;
+        padding: clamp(5rem, 12vw, 9rem) 1.25rem;
+        background: #f7f7f2;
+        color: #102a27;
+        font-family: "Aptos", "Segoe UI", Arial, sans-serif;
+      }
+      .lc-seo-shell__inner {
+        width: min(100%, 760px);
+        margin: 0 auto;
+        padding: clamp(1.5rem, 5vw, 3.25rem);
+        border: 1px solid rgba(16, 42, 39, 0.12);
+        border-radius: 1rem;
+        background: #ffffff;
+        box-shadow: 0 20px 50px rgba(16, 42, 39, 0.08);
+      }
+      .lc-seo-shell__eyebrow {
+        margin: 0 0 1rem;
+        color: #16816e;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+      .lc-seo-shell h1 {
+        max-width: 18ch;
+        margin: 0;
+        font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+        font-size: clamp(2rem, 5vw, 4rem);
+        font-weight: 500;
+        line-height: 1.05;
+        letter-spacing: -0.035em;
+      }
+      .lc-seo-shell__intro {
+        max-width: 64ch;
+        margin: 1.25rem 0 0;
+        color: #4f655f;
+        font-size: clamp(1rem, 2vw, 1.15rem);
+        line-height: 1.7;
+      }
+      .lc-seo-shell__links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem 0.8rem;
+        margin-top: 1.75rem;
+        font-size: 0.92rem;
+        font-weight: 700;
+      }
+      .lc-seo-shell__links a {
+        color: #0f735f;
+        text-decoration: underline;
+        text-underline-offset: 0.16em;
       }
     </style>
     <script>
@@ -305,7 +358,7 @@
         window.addEventListener("load", function () {
           window.setTimeout(function () {
             var root = document.getElementById("root");
-            if (root && root.children.length === 0) {
+            if (root && root.dataset.landcheckReactMounted !== "true") {
               showFallback();
             } else {
               // Allow a later deploy to use the one-shot recovery again after this tab has

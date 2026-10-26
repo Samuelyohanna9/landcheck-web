@@ -530,7 +530,8 @@
   gap: 32px;
 }
 
-.gps-projects-section h2 {
+.gps-projects-section h2,
+.gps-projects-section .gps-public-page-title {
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: -0.01em;

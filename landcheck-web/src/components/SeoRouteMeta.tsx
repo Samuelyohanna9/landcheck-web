@@ -83,6 +83,10 @@ const upsertAlternateLinks = (href: string) => {
   }
 };
 
+const removeAlternateLinks = () => {
+  document.head.querySelectorAll('link[rel="alternate"][hreflang]').forEach((link) => link.remove());
+};
+
 const upsertPageJsonLd = (data: object | null) => {
   const existing = document.head.querySelector('script[data-lc-page-schema]') as HTMLScriptElement | null;
   if (!data) {
@@ -259,12 +263,13 @@ export default function SeoRouteMeta() {
       upsertMetaByName("keywords", seo.keywords);
     }
 
-    if (isNoIndex && seo.canonicalPath === normalizePath(location.pathname)) {
+    if (isNoIndex && normalizePath(seo.canonicalPath) === normalizePath(location.pathname)) {
       removeCanonical();
     } else {
       upsertCanonical(canonicalUrl);
     }
-    upsertAlternateLinks(canonicalUrl);
+    if (isNoIndex) removeAlternateLinks();
+    else upsertAlternateLinks(canonicalUrl);
 
     upsertMetaByProperty("og:locale", "en_NG");
     upsertMetaByProperty("og:title", seo.title);

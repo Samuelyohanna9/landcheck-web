@@ -15,11 +15,25 @@ if (typeof document !== "undefined") {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
+const rootElement = document.getElementById("root")!;
+
+ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>
 );
+
+// The SEO shell occupies #root until React commits. Mark the real app mount separately so the
+// entry-bundle watchdog can still distinguish a mounted app from an untouched static shell.
+if (typeof window !== "undefined") {
+  const markReactMounted = () => {
+    if (!rootElement.querySelector('[data-lc-seo-shell="true"]')) {
+      rootElement.dataset.landcheckReactMounted = "true";
+    }
+  };
+  if (typeof window.requestAnimationFrame === "function") window.requestAnimationFrame(markReactMounted);
+  else markReactMounted();
+}
 
 const canRegisterSiteSw =
   typeof window !== "undefined" &&

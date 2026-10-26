@@ -203,6 +203,26 @@ const buildSchema = (page) => {
   return { "@context": "https://schema.org", "@graph": graph };
 };
 
+const renderSeoShell = (page) => {
+  const shell = page.seoShell || {};
+  const heading = shell.heading || String(page.title || "LandCheck").split("|")[0].trim();
+  const intro = shell.intro || page.description || "LandCheck geospatial tools for Nigeria.";
+  const links = Array.isArray(shell.links) ? shell.links : [];
+  const linkHtml = links
+    .filter((link) => link && link.href && link.label)
+    .map((link) => `<a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a>`)
+    .join('<span aria-hidden="true">&middot;</span>');
+
+  return `<main class="lc-seo-shell" data-lc-seo-shell="true" aria-labelledby="lc-seo-shell-heading">
+  <div class="lc-seo-shell__inner">
+    <p class="lc-seo-shell__eyebrow">LandCheck Geospatial Technologies</p>
+    <h1 id="lc-seo-shell-heading">${escapeHtml(heading)}</h1>
+    <p class="lc-seo-shell__intro">${escapeHtml(intro)}</p>
+    ${linkHtml ? `<nav class="lc-seo-shell__links" aria-label="Related LandCheck pages">${linkHtml}</nav>` : ""}
+  </div>
+</main>`;
+};
+
 const buildSiteSchema = () => ({
   "@context": "https://schema.org",
   "@type": "Organization",
@@ -252,12 +272,16 @@ const renderPage = (template, page) => {
 
   html = html.replace(/\s*<link rel="canonical"[^>]*>/gi, "");
   html = html.replace(/\s*<link rel="alternate" hreflang="[^"]+"[^>]*>/gi, "");
-  const hreflang = String(page.robots || "").includes("noindex")
+  const isNoIndex = String(page.robots || "").includes("noindex");
+  const isSelfCanonical = canonicalPath(page.path) === page.canonicalPath;
+  const canonicalTag = !isNoIndex || !isSelfCanonical ? `<link rel="canonical" href="${url}" />` : "";
+  const hreflang = isNoIndex
     ? ""
     : `\n<link rel="alternate" hreflang="en-ng" href="${url}" />\n<link rel="alternate" hreflang="en" href="${url}" />\n<link rel="alternate" hreflang="x-default" href="${url}" />`;
-  html = html.replace("</head>", `<link rel="canonical" href="${url}" />${hreflang}\n</head>`);
-  if (page.bodyHtml) {
-    html = html.replace('<div id="root"></div>', `<div id="root">${page.bodyHtml}</div>`);
+  html = html.replace("</head>", `${canonicalTag}${hreflang}\n</head>`);
+  const bodyHtml = page.bodyHtml || (!String(page.robots || "").includes("noindex") ? renderSeoShell(page) : "");
+  if (bodyHtml) {
+    html = html.replace('<div id="root"></div>', `<div id="root">${bodyHtml}</div>`);
   }
   return html;
 };

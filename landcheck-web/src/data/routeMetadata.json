@@ -6,6 +6,16 @@
     "canonicalPath": "/",
     "ogType": "website",
     "ogImage": "https://landcheck.online/ecf-partnership.jpeg",
+    "seoShell": {
+      "heading": "Geospatial intelligence for development projects",
+      "intro": "Environmental monitoring, tree planting sponsorship, field operations, survey plans, and flood risk analysis in one platform for Nigeria.",
+      "links": [
+        { "href": "/estates/", "label": "Explore LandCheck Estates" },
+        { "href": "/survey/", "label": "Create a survey plan" },
+        { "href": "/flood/", "label": "Check flood and land risk" },
+        { "href": "/green-partners/", "label": "Explore LandCheck Green" }
+      ]
+    },
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "ItemList",
@@ -45,6 +55,14 @@
     "canonicalPath": "/estates/",
     "ogType": "website",
     "ogImage": "https://landcheck.online/estates.jpg",
+    "seoShell": {
+      "heading": "Manage every estate from one place.",
+      "intro": "Design layouts, manage plots and buyers, track payments and commissions, and generate professional survey plans with LandCheck Estates.",
+      "links": [
+        { "href": "/survey/", "label": "See LandCheck Survey" },
+        { "href": "/flood/", "label": "Screen land hazards" }
+      ]
+    },
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -149,6 +167,14 @@
     "canonicalPath": "/green-partners/",
     "ogType": "website",
     "ogImage": "https://landcheck.online/ecf-partnership.jpeg",
+    "seoShell": {
+      "heading": "Tree programmes with proof built in.",
+      "intro": "LandCheck Green gives NGOs, CSR teams, and sponsors one verified system for field delivery, GPS evidence, maintenance tracking, and export-ready reporting.",
+      "links": [
+        { "href": "/sponsor/", "label": "Sponsor a verified tree" },
+        { "href": "/news/", "label": "Read LandCheck stories" }
+      ]
+    },
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -236,6 +262,14 @@
     "canonicalPath": "/sponsor/",
     "ogType": "website",
     "ogImage": "https://landcheck.online/ecf-partnership.jpeg",
+    "seoShell": {
+      "heading": "Sponsor a GPS-verified tree in Nigeria.",
+      "intro": "Choose a public tree project, pay in NGN or USD without creating an account, and receive certificate, map, photo, and maintenance evidence by email.",
+      "links": [
+        { "href": "/green-partners/", "label": "See the Green platform" },
+        { "href": "/sponsor/calculator/", "label": "Calculate a tree sponsorship" }
+      ]
+    },
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
@@ -313,7 +347,14 @@
     "keywords": "carbon footprint calculator, CO2 calculator trees, how many trees to offset carbon, tree offset calculator, personal carbon footprint, climate calculator",
     "canonicalPath": "/sponsor/calculator/",
     "ogType": "website",
-    "ogImage": "https://landcheck.online/ecf-partnership.jpeg"
+    "ogImage": "https://landcheck.online/ecf-partnership.jpeg",
+    "seoShell": {
+      "heading": "Estimate the trees for your climate impact.",
+      "intro": "Use the LandCheck Green calculator to estimate a tree sponsorship quantity from your project, household, or organisation footprint.",
+      "links": [
+        { "href": "/sponsor/", "label": "Choose a sponsorship project" }
+      ]
+    }
   },
   "/privacy": {
     "title": "Privacy Policy | LandCheck Geospatial Technologies",
@@ -322,7 +363,14 @@
     "canonicalPath": "/privacy/",
     "robots": "index,follow",
     "ogType": "website",
-    "ogImage": "https://landcheck.online/ecf-partnership.jpeg"
+    "ogImage": "https://landcheck.online/ecf-partnership.jpeg",
+    "seoShell": {
+      "heading": "Privacy and data, clearly handled.",
+      "intro": "Read how LandCheck handles personal data across survey plans, estate management, flood analysis, and tree-monitoring services in Nigeria.",
+      "links": [
+        { "href": "/", "label": "Return to LandCheck" }
+      ]
+    }
   },
   "/estates/data-processing-agreement": {
     "title": "Data Processing Agreement | LandCheck Estates",
@@ -331,7 +379,14 @@
     "canonicalPath": "/estates/data-processing-agreement/",
     "robots": "index,follow",
     "ogType": "website",
-    "ogImage": "https://landcheck.online/ecf-partnership.jpeg"
+    "ogImage": "https://landcheck.online/ecf-partnership.jpeg",
+    "seoShell": {
+      "heading": "Data processing for LandCheck Estates.",
+      "intro": "Review how LandCheck and estate companies handle customer, agent, and staff personal data when using the platform.",
+      "links": [
+        { "href": "/estates/", "label": "Explore LandCheck Estates" }
+      ]
+    }
   },
   "/flood": {
     "title": "Flood Risk & Land Hazard Analysis Nigeria | Free Report | LandCheck",
@@ -340,6 +395,14 @@
     "canonicalPath": "/flood/",
     "ogType": "website",
     "ogImage": "https://landcheck.online/flood-background.jpg",
+    "seoShell": {
+      "heading": "Land Hazard Screening for Any Site in Nigeria",
+      "intro": "Get flood risk assessment, erosion analysis, soil stability, and land use or land cover classification with a downloadable report for a Nigerian land parcel.",
+      "links": [
+        { "href": "/survey/", "label": "Create a survey plan" },
+        { "href": "/estates/", "label": "Explore estate management" }
+      ]
+    },
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Service",
@@ -362,7 +425,7 @@
     "description": "Analyze land and site flood risks, erosion, and land use / land cover across Nigeria with map-based hazard tools for better planning and resilient project execution.",
     "keywords": "hazard analysis tool Nigeria, flood analysis tool, land cover analysis tool",
     "canonicalPath": "/flood/",
-    "robots": "noindex,follow",
+    "robots": "noindex,nofollow,noarchive",
     "ogType": "website",
     "ogImage": "https://landcheck.online/flood-background.jpg"
   },
@@ -373,6 +436,14 @@
     "canonicalPath": "/survey/",
     "ogType": "website",
     "ogImage": "https://landcheck.online/Digital-Land-Survey.jpg",
+    "seoShell": {
+      "heading": "Professional survey plans. Ready in minutes.",
+      "intro": "Convert coordinates or scanned layouts into accurate, export-ready survey plans from one connected workspace.",
+      "links": [
+        { "href": "/survey/guides/", "label": "Read the Survey guides" },
+        { "href": "/flood/", "label": "Run land hazard screening" }
+      ]
+    },
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Service",
@@ -397,6 +468,14 @@
     "canonicalPath": "/survey/guides/",
     "ogType": "article",
     "ogImage": "https://landcheck.online/Digital-Land-Survey.jpg",
+    "seoShell": {
+      "heading": "From raw coordinates to review-ready land records.",
+      "intro": "Practical guidance for creating survey plans, designing subdivisions, aligning scanned layouts, and screening sites for flood, erosion, and land-cover risk.",
+      "links": [
+        { "href": "/survey/", "label": "Open LandCheck Survey" },
+        { "href": "/flood/", "label": "Explore hazard screening" }
+      ]
+    },
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "TechArticle",
@@ -426,8 +505,8 @@
     "title": "Feedback | LandCheck",
     "description": "Share product feedback with the LandCheck team.",
     "keywords": "LandCheck feedback",
-    "canonicalPath": "/feedback",
-    "robots": "noindex,nofollow",
+    "canonicalPath": "/feedback/",
+    "robots": "noindex,nofollow,noarchive",
     "ogType": "website",
     "ogImage": "https://landcheck.online/ecf-partnership.jpeg"
   },
@@ -438,6 +517,13 @@
     "canonicalPath": "/career/",
     "ogType": "website",
     "ogImage": "https://landcheck.online/ecf-partnership.jpeg",
+    "seoShell": {
+      "heading": "Build better land and environmental decisions.",
+      "intro": "Explore career opportunities with LandCheck Geospatial Technologies as we build practical geospatial tools for Nigeria.",
+      "links": [
+        { "href": "/", "label": "Learn about LandCheck" }
+      ]
+    },
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "WebPage",
@@ -457,6 +543,14 @@
     "canonicalPath": "/news/",
     "ogType": "article",
     "ogImage": "https://landcheck.online/ecf-partnership.jpeg",
+    "seoShell": {
+      "heading": "Real trees, real places, real stories of impact.",
+      "intro": "Field stories from LandCheck Green's public sponsors, plus practical guides on running verified, audit-ready environmental programmes in Nigeria.",
+      "links": [
+        { "href": "/green-partners/", "label": "Explore LandCheck Green" },
+        { "href": "/sponsor/", "label": "Sponsor a verified tree" }
+      ]
+    },
     "jsonLd": {
       "@context": "https://schema.org",
       "@type": "Blog",

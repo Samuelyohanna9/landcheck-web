@@ -731,7 +731,7 @@ export default function GreenPublicSponsor() {
             {/* ─── Project grid ─── */}
             {!selectedProject && (
             <section className="gps-projects-section" id="gps-projects" style={DEFERRED_SECTION_STYLE}>
-              <h2>Choose the project you want to support</h2>
+              <h1 className="gps-public-page-title">Choose the project you want to support</h1>
               <p className="gps-section-sub">
                 Every project below is field-managed, GPS-linked, and built to give you certificate delivery, map proof,
                 and follow-up updates after payment.
