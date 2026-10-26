@@ -371,6 +371,7 @@ function buildPlotLabelFeatures(features: any[], allocations: any[]) {
 }
 
 const LAYER_TYPE_FALLBACK_LABEL: Record<string, string> = { boundary: "Boundary", road: "Road", drainage: "Drainage", open_space: "Open space", infrastructure: "Infrastructure" };
+const LAYER_TYPE_COLORS: Record<string, string> = { boundary: "#d1332b", road: "#2b2f36", drainage: "#287cb4", open_space: "#3f7a2c", infrastructure: "#b77c2d" };
 
 function buildLayerLabelFeatures(features: any[]) {
   // A manually drawn road/layer left unnamed still needs to read as a road on the map, not vanish
@@ -750,6 +751,15 @@ export default function Estates() {
     })),
   }), [visiblePlotGeojson, estateDetail?.crs]);
   const mapBoundary = useMemo(() => normalizeEstateMapGeometry(estateDetail?.boundary, estateDetail?.crs), [estateDetail?.boundary, estateDetail?.crs]);
+  const layerLegendTypes = useMemo(() => {
+    const types = new Set<string>();
+    if (mapBoundary) types.add("boundary");
+    (layerGeojson.features || []).forEach((feature: any) => {
+      const type = String(feature.properties?.type || "");
+      if (LAYER_TYPE_FALLBACK_LABEL[type]) types.add(type);
+    });
+    return ["boundary", "road", "drainage", "open_space", "infrastructure"].filter((type) => types.has(type));
+  }, [mapBoundary, layerGeojson]);
   const boundaryAreaSqm = useMemo(() => {
     const calculated = geometryAreaSqm(mapBoundary);
     if (calculated && calculated > 0) return calculated;
@@ -2096,11 +2106,13 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
                     ))}
                   </div>
                 )}
-                <label className="edash-map-legend-item">
-                  <input type="checkbox" checked={layersVisible} onChange={() => setLayersVisible((value) => !value)} />
-                  <span className="edash-map-legend-line" />
-                  Road
-                </label>
+                {layerLegendTypes.map((type) => (
+                  <label key={type} className="edash-map-legend-item">
+                    <input type="checkbox" checked={layersVisible} onChange={() => setLayersVisible((value) => !value)} />
+                    <span className="edash-map-legend-line" style={{ background: LAYER_TYPE_COLORS[type] }} />
+                    {LAYER_TYPE_FALLBACK_LABEL[type]}
+                  </label>
+                ))}
               </div>
             )}
           </div>
