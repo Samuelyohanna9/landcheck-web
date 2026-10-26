@@ -190,8 +190,10 @@ export default function EstateShell({
   const [renameValue, setRenameValue] = useState(estateName || "");
   const [displayEstateName, setDisplayEstateName] = useState(estateName || "Estate");
   const [estateSession, setEstateSession] = useState(getEstateAuthSession());
+  const agentWorkspace = estateSession?.user.workspace_type === "agent";
+  const billingGateDisabled = skipBillingGate || agentWorkspace;
   const [subscriptionStatus, setSubscriptionStatus] = useState<EstateSubscriptionStatus | null>(null);
-  const [billingLoading, setBillingLoading] = useState(!skipBillingGate);
+  const [billingLoading, setBillingLoading] = useState(!billingGateDisabled);
   const queryClient = useQueryClient();
   const activeItem = estateNavItems.find((item) => item.key === activeKey);
   // Which nav items with sub-views (Marketing, ...) have their sub-view list expanded - starts
@@ -272,7 +274,7 @@ export default function EstateShell({
   const canAcceptDpa = String(estateSession?.user.role_key || "").toLowerCase() === "owner";
   const dpaPromptStorageKey = `edash_dpa_prompt_seen_${organizationId || "org"}_${estateSession?.user.id || "user"}`;
   const estateQueryScope = getEstateQueryScope(estateSession);
-  const shellQueries = useEstateShellQueries(estateQueryScope, estateId, skipBillingGate);
+  const shellQueries = useEstateShellQueries(estateQueryScope, estateId, billingGateDisabled);
 
   const latestDeliveryTimestamp = deliveryRows.reduce<string | null>(
     (latest, row) => (!latest || row.created_at > latest ? row.created_at : latest),
@@ -304,7 +306,7 @@ export default function EstateShell({
     // A one-time-per-login nudge for companies that registered before this agreement existed -
     // only the owner can accept it (same permission as billing), and never on the dedicated Legal
     // page itself, which already shows the same prompt inline.
-    if (!organizationId || !canAcceptDpa || window.location.pathname.startsWith("/estates/legal")) return;
+    if (!organizationId || !canAcceptDpa || agentWorkspace || window.location.pathname.startsWith("/estates/legal")) return;
     let seen = false;
     try { seen = window.sessionStorage.getItem(dpaPromptStorageKey) === "1"; } catch { /* ask again this time */ }
     if (seen) return;
@@ -319,7 +321,7 @@ export default function EstateShell({
       })
       .catch(() => undefined);
     return () => { mounted = false; };
-  }, [organizationId, canAcceptDpa, dpaPromptStorageKey]);
+  }, [organizationId, canAcceptDpa, agentWorkspace, dpaPromptStorageKey]);
 
   const acceptDpaPrompt = async () => {
     if (!organizationId) return;
@@ -436,13 +438,11 @@ export default function EstateShell({
     setSeenTimestamp(latestActivityTimestamp);
   };
 
-  // Every Estates page renders inside this shell. An organisation that never subscribed still
-  // needs to choose a plan before entering the workspace. An organisation whose trial or paid
-  // period has lapsed must stay in the workspace in read-only mode so its records remain useful
-  // and can be exported/reviewed while renewal is pending. The API independently blocks every
-  // write, so this client state is UX only and never a security boundary.
+  // Company Estates pages still use the billing gate. Agent workspaces are intentionally free,
+  // so their existing inspection, SMS, settings and marketing routes must not be redirected to
+  // the company plan picker. The API remains authoritative for every protected operation.
   useEffect(() => {
-    if (skipBillingGate) {
+    if (billingGateDisabled) {
       setBillingLoading(false);
       setSubscriptionStatus(null);
       return;
@@ -464,7 +464,7 @@ export default function EstateShell({
       setBillingLoading(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [skipBillingGate, estateSession?.user.organization_id, shellQueries.billingStatus.data, shellQueries.billingStatus.isError]);
+  }, [billingGateDisabled, estateSession?.user.organization_id, shellQueries.billingStatus.data, shellQueries.billingStatus.isError]);
 
   const readOnly = !billingLoading && ["past_due", "canceled", "expired"].includes(String(subscriptionStatus));
   const readOnlyMessage = subscriptionStatus === "past_due"
