@@ -371,7 +371,9 @@ function buildPlotLabelFeatures(features: any[], allocations: any[]) {
 }
 
 const LAYER_TYPE_FALLBACK_LABEL: Record<string, string> = { boundary: "Boundary", road: "Road", drainage: "Drainage", open_space: "Open space", infrastructure: "Infrastructure" };
+const LAYER_TYPE_LEGEND_LABEL: Record<string, string> = { boundary: "Additional boundary", road: "Road", drainage: "Drainage", open_space: "Open space", infrastructure: "Infrastructure" };
 const LAYER_TYPE_COLORS: Record<string, string> = { boundary: "#d1332b", road: "#2b2f36", drainage: "#287cb4", open_space: "#3f7a2c", infrastructure: "#b77c2d" };
+const LAYER_TYPE_ORDER = ["boundary", "road", "open_space", "drainage", "infrastructure"];
 
 function buildLayerLabelFeatures(features: any[]) {
   // A manually drawn road/layer left unnamed still needs to read as a road on the map, not vanish
@@ -650,9 +652,16 @@ export default function Estates() {
   const [mapStyleMode, setMapStyleMode] = useState<"map" | "satellite">("satellite");
   const [blockFilterId, setBlockFilterId] = useState("all");
   const [layersVisible, setLayersVisible] = useState(true);
+  const [primaryBoundaryVisible, setPrimaryBoundaryVisible] = useState(true);
+  const [hiddenLayerTypes, setHiddenLayerTypes] = useState<Set<string>>(() => new Set());
   const [visibleStatuses, setVisibleStatuses] = useState<Set<string>>(
     () => new Set(["available", "reserved", "allocated", "on_hold", "under_survey", "under_staking", "developed"]),
   );
+  useEffect(() => {
+    setLayersVisible(true);
+    setPrimaryBoundaryVisible(true);
+    setHiddenLayerTypes(new Set());
+  }, [estateId]);
   const [legendPanelExpanded, setLegendPanelExpanded] = useState(true);
   const [legendStatusGroupExpanded, setLegendStatusGroupExpanded] = useState(true);
   const [drawerTab, setDrawerTab] = useState<"overview" | "customer" | "survey" | "staking" | "documents" | "hazards" | "soil" | "timeline">("overview");
@@ -758,16 +767,27 @@ export default function Estates() {
     geometry: normalizeEstateMapGeometry(feature.geometry, estateDetail?.crs),
   })), [plotGeojson, estateDetail?.crs]);
   const mapBoundary = useMemo(() => normalizeEstateMapGeometry(estateDetail?.boundary, estateDetail?.crs), [estateDetail?.boundary, estateDetail?.crs]);
+  const visibleLayerGeojson = useMemo(() => ({
+    ...layerGeojson,
+    features: layersVisible
+      ? (layerGeojson.features || []).filter((feature: any) => !hiddenLayerTypes.has(String(feature.properties?.type || "")))
+      : [],
+  }), [hiddenLayerTypes, layerGeojson, layersVisible]);
+  const visibleMapBoundary = layersVisible && primaryBoundaryVisible ? mapBoundary : null;
   const layerLegendItems = useMemo(() => {
     const items: Array<{ key: string; type: string; label: string }> = [];
     if (mapBoundary) items.push({ key: "estate-boundary", type: "boundary", label: "Estate boundary" });
-    (layerGeojson.features || []).forEach((feature: any, index: number) => {
+    const types = new Set<string>();
+    (layerGeojson.features || []).forEach((feature: any) => {
       const type = String(feature.properties?.type || "");
       if (!LAYER_TYPE_FALLBACK_LABEL[type]) return;
-      const id = feature.id ?? feature.properties?.id ?? index + 1;
-      const label = String(feature.properties?.name || LAYER_TYPE_FALLBACK_LABEL[type]);
-      items.push({ key: `estate-layer-${id}`, type, label: `${label} #${id}` });
+      types.add(type);
     });
+    Array.from(types).sort((a, b) => {
+      const aIndex = LAYER_TYPE_ORDER.indexOf(a);
+      const bIndex = LAYER_TYPE_ORDER.indexOf(b);
+      return (aIndex < 0 ? LAYER_TYPE_ORDER.length : aIndex) - (bIndex < 0 ? LAYER_TYPE_ORDER.length : bIndex);
+    }).forEach((type) => items.push({ key: `estate-layer-type-${type}`, type, label: LAYER_TYPE_LEGEND_LABEL[type] || type }));
     return items;
   }, [mapBoundary, layerGeojson]);
   const boundaryAreaSqm = useMemo(() => {
@@ -1602,10 +1622,10 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     const map = mapRef.current;
     if (!map || !mapReady) return;
     let cancelled = false;
-    (map.getSource("estate-boundary") as any)?.setData(mapBoundary ? { type: "Feature", properties: {}, geometry: mapBoundary } : { type: "FeatureCollection", features: [] });
+    (map.getSource("estate-boundary") as any)?.setData(visibleMapBoundary ? { type: "Feature", properties: {}, geometry: visibleMapBoundary } : { type: "FeatureCollection", features: [] });
     (map.getSource("estate-plots") as any)?.setData(mapPlotGeojson);
-    (map.getSource("estate-layers") as any)?.setData(layersVisible ? layerGeojson : { type: "FeatureCollection", features: [] });
-    (map.getSource("estate-layer-labels") as any)?.setData({ type: "FeatureCollection", features: layersVisible ? buildLayerLabelFeatures(layerGeojson.features || []) : [] } as any);
+    (map.getSource("estate-layers") as any)?.setData(visibleLayerGeojson);
+    (map.getSource("estate-layer-labels") as any)?.setData({ type: "FeatureCollection", features: buildLayerLabelFeatures(visibleLayerGeojson.features || []) } as any);
     (map.getSource("estate-block-labels") as any)?.setData({ type: "FeatureCollection", features: buildBlockLabelFeatures(mapPlotGeojson.features, blocks) } as any);
     (map.getSource("estate-plot-labels") as any)?.setData({ type: "FeatureCollection", features: buildPlotLabelFeatures(mapPlotGeojson.features, allocations) } as any);
     void loadMapboxGl().then((mapboxgl) => {
@@ -1613,11 +1633,11 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
       const bounds = new mapboxgl.LngLatBounds();
       if (mapBoundary) extendMapBounds(bounds, mapBoundary);
       mapPlotGeojson.features.forEach((feature: any) => extendMapBounds(bounds, feature.geometry));
-      layerGeojson.features.forEach((feature: any) => extendMapBounds(bounds, feature.geometry));
+      visibleLayerGeojson.features.forEach((feature: any) => extendMapBounds(bounds, feature.geometry));
       if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 46, maxZoom: 17 });
     });
     return () => { cancelled = true; };
-  }, [mapReady, styleGeneration, mapBoundary, mapPlotGeojson, layerGeojson, allocations, blocks, layersVisible]);
+  }, [mapReady, styleGeneration, mapBoundary, mapPlotGeojson, visibleLayerGeojson, visibleMapBoundary, allocations, blocks]);
   const selectAllocation = async (id: string) => {
     setAllocationId(id); setFinancial(null);
     if (!id) return;
@@ -2045,6 +2065,16 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     );
   }
 
+  function toggleLayerType(type: string) {
+    setLayersVisible(true);
+    setHiddenLayerTypes((current) => {
+      const next = new Set(current);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  }
+
   function renderMapPanel() {
     return (
       <div className="edash-card edash-map-card">
@@ -2076,7 +2106,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
         <div className="edash-map-canvas-wrap">
           {MAPBOX_TOKEN ? (
             <>
-              {!mapReady && <EstatePlotMapFallback features={mapPlotGeojson.features} layers={layersVisible ? layerGeojson.features : []} boundary={mapBoundary} message="Loading the interactive map..." onSelect={(plotId) => {
+              {!mapReady && <EstatePlotMapFallback features={mapPlotGeojson.features} layers={visibleLayerGeojson.features} boundary={visibleMapBoundary} message="Loading the interactive map..." onSelect={(plotId) => {
                 setSelectedPlotId(plotId);
                 setDrawerTab("overview");
                 const allocation = allocations.find((item) => item.plot_id === plotId);
@@ -2089,8 +2119,8 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
           ) : (
             <EstatePlotMapFallback
               features={mapPlotGeojson.features}
-              layers={layersVisible ? layerGeojson.features : []}
-              boundary={mapBoundary}
+              layers={visibleLayerGeojson.features}
+              boundary={visibleMapBoundary}
               message={mapError || undefined}
               onSelect={(plotId) => {
                 setSelectedPlotId(plotId);
@@ -2182,7 +2212,18 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
                 {!estateQueries.layers.isLoading && !estateQueries.layers.isError && layerLegendItems.length === 0 && <span className="edash-map-legend-item"><span className="edash-map-legend-label">No additional map layers yet.</span></span>}
                 {layerLegendItems.map((item) => (
                   <label key={item.key} className="edash-map-legend-item">
-                    <input type="checkbox" checked={layersVisible} onChange={() => setLayersVisible((value) => !value)} />
+                    <input
+                      type="checkbox"
+                      checked={layersVisible && (item.key === "estate-boundary" ? primaryBoundaryVisible : !hiddenLayerTypes.has(item.type))}
+                      onChange={() => {
+                        if (item.key === "estate-boundary") {
+                          setLayersVisible(true);
+                          setPrimaryBoundaryVisible((value) => !value);
+                        } else {
+                          toggleLayerType(item.type);
+                        }
+                      }}
+                    />
                     <span className="edash-map-legend-line" style={{ background: LAYER_TYPE_COLORS[item.type] }} />
                     <span className="edash-map-legend-label">{item.label}</span>
                   </label>
