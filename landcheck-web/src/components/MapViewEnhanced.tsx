@@ -646,7 +646,7 @@ function MapViewEnhanced({
     } else {
       map.once("load", applyReferenceData);
     }
-  }, [referenceFeatures]);
+  }, [mapReady, referenceFeatures]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -982,7 +982,10 @@ function MapViewEnhanced({
   useEffect(() => {
     const map = mapRef.current;
     const mapboxgl = mapboxglRef.current;
-    if (!map || !mapboxgl || !mapReady || coordinates.some((point) => isPlottableLngLat(point.lng, point.lat))) return;
+    const hasDraftCoordinates = coordinates.some((point) =>
+      (point.lng !== 0 || point.lat !== 0) && isPlottableLngLat(point.lng, point.lat),
+    );
+    if (!map || !mapboxgl || !mapReady || hasDraftCoordinates) return;
 
     const bounds = new mapboxgl.LngLatBounds();
     const extend = (value: any): void => {

@@ -123,8 +123,14 @@ function targetFromEvent(event: Event): HTMLElement | null {
 
 function positionFor(target: HTMLElement): Omit<TooltipState, "text"> {
   const rect = target.getBoundingClientRect();
-  const center = Math.min(Math.max(rect.left + rect.width / 2, 170), window.innerWidth - 170);
-  const placement: TooltipPlacement = rect.top >= 86 ? "top" : "bottom";
+  const horizontalInset = Math.min(172, Math.max(84, (window.innerWidth - 24) / 2));
+  const center = Math.min(
+    Math.max(rect.left + rect.width / 2, horizontalInset),
+    window.innerWidth - horizontalInset,
+  );
+  // Leave enough room for the tooltip body and arrow. Controls near the top edge should get a
+  // bottom tooltip instead of one that is clipped or covers the panel heading.
+  const placement: TooltipPlacement = rect.top >= 132 ? "top" : "bottom";
   return {
     left: center,
     top: placement === "top" ? rect.top - 10 : rect.bottom + 10,

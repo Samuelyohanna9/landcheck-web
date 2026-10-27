@@ -2172,19 +2172,19 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
                           }
                         />
                         <span className="edash-map-legend-dot" style={{ background: item.color }} />
-                        {item.label}
+                        <span className="edash-map-legend-label">{item.label}</span>
                       </label>
                     ))}
                   </div>
                 )}
-                {estateQueries.layers.isLoading && <span className="edash-map-legend-item">Loading map layers...</span>}
-                {estateQueries.layers.isError && <span className="edash-map-legend-item">Map layers could not be loaded. Refresh and try again.</span>}
-                {!estateQueries.layers.isLoading && !estateQueries.layers.isError && layerLegendItems.length === 0 && <span className="edash-map-legend-item">No additional map layers yet.</span>}
+                {estateQueries.layers.isLoading && <span className="edash-map-legend-item"><span className="edash-map-legend-label">Loading map layers...</span></span>}
+                {estateQueries.layers.isError && <span className="edash-map-legend-item"><span className="edash-map-legend-label">Map layers could not be loaded. Refresh and try again.</span></span>}
+                {!estateQueries.layers.isLoading && !estateQueries.layers.isError && layerLegendItems.length === 0 && <span className="edash-map-legend-item"><span className="edash-map-legend-label">No additional map layers yet.</span></span>}
                 {layerLegendItems.map((item) => (
                   <label key={item.key} className="edash-map-legend-item">
                     <input type="checkbox" checked={layersVisible} onChange={() => setLayersVisible((value) => !value)} />
                     <span className="edash-map-legend-line" style={{ background: LAYER_TYPE_COLORS[item.type] }} />
-                    {item.label}
+                    <span className="edash-map-legend-label">{item.label}</span>
                   </label>
                 ))}
               </div>
