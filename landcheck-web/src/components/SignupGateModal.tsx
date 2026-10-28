@@ -8,6 +8,7 @@ import {
   claimDraftHazardJobs,
   claimDraftSurveyPlots,
   hasPendingSurveyDownload,
+  migratePendingSurveyDraft,
   requestSurveyMagicLink,
   setPendingSurveyDownload,
   startSurveyGoogleSignIn,
@@ -78,6 +79,7 @@ export default function SignupGateModal({
   };
 
   const finishSignIn = async () => {
+    await migratePendingSurveyDraft();
     await Promise.all([claimDraftSurveyPlots(), claimDraftHazardJobs()]);
     onClose();
     if (hasPendingAction != null) {

@@ -5,6 +5,7 @@ import {
   claimDraftSurveyPlots,
   hasPendingHazardRun,
   hasPendingSurveyDownload,
+  migratePendingSurveyDraft,
   verifySurveyMagicLink,
 } from "../auth/surveyAuth";
 import "../styles/signup-gate-modal.css";
@@ -26,6 +27,7 @@ export default function SurveyAuthVerify() {
     (async () => {
       try {
         await verifySurveyMagicLink(token);
+        await migratePendingSurveyDraft();
         await Promise.all([claimDraftSurveyPlots(), claimDraftHazardJobs()]);
         navigate(
           hasPendingSurveyDownload()

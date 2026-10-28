@@ -1033,6 +1033,7 @@ export default function SurveyPlan() {
   // the user explicitly asks for it via "Load Map Now".
   const showDraftMap = forceShowDraftMap || (!isLowBandwidth && deferredDraftMap);
   const previewRequestId = useRef(0);
+  const pendingResolvedPreviewSyncRef = useRef<{ scaleText: string; paperSize: string } | null>(null);
   const orthophotoRequestId = useRef(0);
   const topoRequestId = useRef(0);
   const planGenerationRef = useRef(0);
@@ -2700,6 +2701,14 @@ export default function SurveyPlan() {
     setHasUnsyncedServerChanges(false);
   }, [serverSyncSignature]);
 
+  useEffect(() => {
+    const pending = pendingResolvedPreviewSyncRef.current;
+    if (!pending) return;
+    if (effectiveRenderScaleText !== pending.scaleText || meta.paper_size !== pending.paperSize) return;
+    pendingResolvedPreviewSyncRef.current = null;
+    markServerSynced();
+  }, [effectiveRenderScaleText, markServerSynced, meta.paper_size]);
+
   const ensureServerPlot = useCallback(
     async (_reason: string, options?: { fetchFeatures?: boolean }) => {
       const planGeneration = planGenerationRef.current;
@@ -2893,14 +2902,30 @@ export default function SurveyPlan() {
 
       const url = URL.createObjectURL(res.data);
       const resolvedScale = String(res.headers["x-landcheck-resolved-scale"] || "").trim();
+      const renderedScale = resolvedScale || String(payload.scale_text || "").trim();
       setPreviewUrl((prev) => {
         if (prev) URL.revokeObjectURL(prev);
         return url;
       });
-      if (resolvedScale) {
-        setMeta((prev) => (prev.scale_text === resolvedScale ? prev : { ...prev, scale_text: resolvedScale }));
+      if (renderedScale && !isAutoScaleText(renderedScale)) {
+        // Keep the exact denominator rendered by the preview. Sending "auto" to a later PDF
+        // export would make that renderer fit the parcel independently and can produce a
+        // different scale than the image the user approved.
+        setHasManualScaleOverride(true);
+        setScaleDraft(String(parseScaleDenominator(renderedScale)));
+        setScaleDraftDirty(false);
+        setMeta((prev) => ({
+          ...prev,
+          scale_text: renderedScale,
+          paper_size: String(payload.paper_size || prev.paper_size) as PlotMeta["paper_size"],
+        }));
+        pendingResolvedPreviewSyncRef.current = {
+          scaleText: renderedScale,
+          paperSize: String(payload.paper_size || meta.paper_size),
+        };
+      } else {
+        markServerSynced();
       }
-      markServerSynced();
     } catch (err) {
       if (controller.signal.aborted || planGeneration !== planGenerationRef.current) return;
       console.error("Preview error:", err);
@@ -2964,6 +2989,7 @@ export default function SurveyPlan() {
           coordinate_system: effectiveCoordinateSystem,
           paper_size: meta.paper_size,
           use_topo_map: false, // Always satellite for orthophoto
+          building_hatch_type: buildingHatchType,
           north_arrow_style: northArrowStyle,
           north_arrow_color: northArrowColor,
         }, {
@@ -2998,6 +3024,7 @@ export default function SurveyPlan() {
     stationNames,
     effectiveCoordinateSystem,
     meta.paper_size,
+    buildingHatchType,
     northArrowStyle,
     northArrowColor,
     ensureServerPlot,
@@ -3708,6 +3735,7 @@ export default function SurveyPlan() {
     previewAbortRef.current?.abort();
     orthophotoAbortRef.current?.abort();
     topoAbortRef.current?.abort();
+    pendingResolvedPreviewSyncRef.current = null;
     previewAbortRef.current = null;
     orthophotoAbortRef.current = null;
     topoAbortRef.current = null;
@@ -3956,6 +3984,7 @@ export default function SurveyPlan() {
         station_names: stationNames,
         coordinate_system: effectiveCoordinateSystem,
         paper_size: meta.paper_size,
+        survey_input_coordinates: surveyInputCoordinatesPayload,
         use_topo_map: useTopoMap,
         // The topo map's own data-source/contour-interval/building-style picks (set in the Topo
         // Map preview tab) are otherwise invisible to this shared PDF-export payload, which was

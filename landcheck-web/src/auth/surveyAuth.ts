@@ -1,5 +1,6 @@
 import { api } from "../api/client";
 import { getAnonymousSurveyLocalScope, surveyLocalStorageKey } from "../offline/surveyLocalScope";
+import { migrateAnonymousSurveyPlanDraft } from "../offline/surveyPlanDraft";
 import { clearSurveyQueryCache } from "../query/surveyQueries";
 
 export const SURVEY_AUTH_STORAGE_KEY = "landcheck_survey_auth";
@@ -187,6 +188,13 @@ export const setPendingSurveyDownload = (action: PendingSurveyDownload) => {
 export const hasPendingSurveyDownload = (): boolean => {
   if (typeof window === "undefined") return false;
   return Boolean(window.localStorage.getItem(surveyLocalStorageKey(PENDING_ACTION_KEY, getAnonymousSurveyLocalScope())));
+};
+
+// The export gate can authenticate in another tab, which changes the local-storage namespace
+// from anonymous to user-scoped. Migrate the exact draft only for that explicit pending export.
+export const migratePendingSurveyDraft = async (): Promise<boolean> => {
+  if (!hasPendingSurveyDownload()) return false;
+  return migrateAnonymousSurveyPlanDraft();
 };
 
 export const consumePendingSurveyDownload = (): PendingSurveyDownload | null => {

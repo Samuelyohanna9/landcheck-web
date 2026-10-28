@@ -5,6 +5,7 @@ import {
   claimDraftSurveyPlots,
   hasPendingHazardRun,
   hasPendingSurveyDownload,
+  migratePendingSurveyDraft,
   exchangeSurveyGoogleCode,
 } from "../auth/surveyAuth";
 import "../styles/signup-gate-modal.css";
@@ -26,6 +27,7 @@ export default function SurveyAuthCallback() {
     (async () => {
       try {
         await exchangeSurveyGoogleCode(code);
+        await migratePendingSurveyDraft();
         await Promise.all([claimDraftSurveyPlots(), claimDraftHazardJobs()]);
         navigate(
           hasPendingSurveyDownload()

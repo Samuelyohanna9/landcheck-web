@@ -91,21 +91,21 @@ function writeFallbackMap(next: Record<string, DraftEnvelope>) {
   localStorage.setItem(FALLBACK_KEY, JSON.stringify(next));
 }
 
-const scopedDraftId = (id: string) => surveyLocalStorageKey(id, getSurveyLocalScope());
+const scopedDraftId = (id: string, scope = getSurveyLocalScope()) => surveyLocalStorageKey(id, scope);
 
-const readLegacyAnonymousDraft = <T = any>(id: string): DraftEnvelope<T> | null => {
-  if (getSurveyLocalScope().startsWith("user:")) return null;
+const readLegacyAnonymousDraft = <T = any>(id: string, scope = getSurveyLocalScope()): DraftEnvelope<T> | null => {
+  if (scope.startsWith("user:")) return null;
   const fallback = readFallbackMap();
   return (fallback[id] as DraftEnvelope<T>) || null;
 };
 
-export async function loadSurveyPlanDraft<T = any>(id = "active"): Promise<DraftEnvelope<T> | null> {
-  const storageId = scopedDraftId(id);
+export async function loadSurveyPlanDraft<T = any>(id = "active", scope = getSurveyLocalScope()): Promise<DraftEnvelope<T> | null> {
+  const storageId = scopedDraftId(id, scope);
   if (!supportsIndexedDb()) {
     const fallback = readFallbackMap();
     const scoped = (fallback[storageId] as DraftEnvelope<T>) || null;
     if (scoped) return scoped;
-    const legacy = readLegacyAnonymousDraft<T>(id);
+    const legacy = readLegacyAnonymousDraft<T>(id, scope);
     if (legacy) {
       fallback[storageId] = { ...legacy, id } as DraftEnvelope;
       writeFallbackMap(fallback);
@@ -119,7 +119,7 @@ export async function loadSurveyPlanDraft<T = any>(id = "active"): Promise<Draft
         const request = store.get(storageId);
         request.onsuccess = () => {
           const scoped = (request.result as DraftEnvelope<T>) || null;
-          if (scoped || getSurveyLocalScope().startsWith("user:")) {
+          if (scoped || scope.startsWith("user:")) {
             resolve(scoped);
             return;
           }
@@ -137,7 +137,7 @@ export async function loadSurveyPlanDraft<T = any>(id = "active"): Promise<Draft
     const fallback = readFallbackMap();
     const scoped = (fallback[storageId] as DraftEnvelope<T>) || null;
     if (scoped) return scoped;
-    const legacy = readLegacyAnonymousDraft<T>(id);
+    const legacy = readLegacyAnonymousDraft<T>(id, scope);
     if (legacy) {
       fallback[storageId] = { ...legacy, id } as DraftEnvelope;
       writeFallbackMap(fallback);
@@ -146,10 +146,10 @@ export async function loadSurveyPlanDraft<T = any>(id = "active"): Promise<Draft
   }
 }
 
-export async function saveSurveyPlanDraft<T = any>(id: string, state: T): Promise<string> {
+export async function saveSurveyPlanDraft<T = any>(id: string, state: T, scope = getSurveyLocalScope()): Promise<string> {
   const updatedAt = new Date().toISOString();
   const record: DraftEnvelope<T> = { id, updatedAt, state };
-  const storageId = scopedDraftId(id);
+  const storageId = scopedDraftId(id, scope);
 
   if (!supportsIndexedDb()) {
     const fallback = readFallbackMap();
@@ -175,8 +175,8 @@ export async function saveSurveyPlanDraft<T = any>(id: string, state: T): Promis
   return updatedAt;
 }
 
-export async function clearSurveyPlanDraft(id = "active"): Promise<void> {
-  const storageId = scopedDraftId(id);
+export async function clearSurveyPlanDraft(id = "active", scope = getSurveyLocalScope()): Promise<void> {
+  const storageId = scopedDraftId(id, scope);
   if (!supportsIndexedDb()) {
     const fallback = readFallbackMap();
     delete fallback[storageId];
@@ -197,4 +197,24 @@ export async function clearSurveyPlanDraft(id = "active"): Promise<void> {
     delete fallback[storageId];
     writeFallbackMap(fallback);
   }
+}
+
+// A pending export is an explicit handoff from the anonymous workspace to the account that just
+// authenticated. Copy, rather than delete, the anonymous record so a failed or abandoned sign-in
+// can never destroy unsynchronized survey work. Ordinary sign-in does not call this function.
+export async function migrateAnonymousSurveyPlanDraft(id = "active"): Promise<boolean> {
+  const authenticatedScope = getSurveyLocalScope();
+  if (!authenticatedScope.startsWith("user:")) return false;
+
+  const anonymousScope = getAnonymousSurveyLocalScope();
+  const anonymousDraft = await loadSurveyPlanDraft<unknown>(id, anonymousScope);
+  if (!anonymousDraft) return false;
+
+  const authenticatedDraft = await loadSurveyPlanDraft<unknown>(id, authenticatedScope);
+  const sourceTime = Date.parse(anonymousDraft.updatedAt || "") || 0;
+  const targetTime = Date.parse(authenticatedDraft?.updatedAt || "") || 0;
+  if (!authenticatedDraft || sourceTime >= targetTime) {
+    await saveSurveyPlanDraft(id, anonymousDraft.state, authenticatedScope);
+  }
+  return true;
 }
