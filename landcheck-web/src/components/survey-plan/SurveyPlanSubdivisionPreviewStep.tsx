@@ -305,6 +305,8 @@ type Props = {
 
 function SurveyPlanSubdivisionPreviewStep(props: Props) {
   const rendering = props.previewLoading || props.orthophotoLoading || props.topoMapLoading || props.serverSyncing;
+  const previewSettingsLocked = !props.hasRenderedCurrentPreview;
+  const canContinueToExport = props.hasRenderedCurrentPreview && !props.previewNeedsRender && !rendering;
   const templateSelectRef = useRef<HTMLSelectElement>(null);
   const [templateError, setTemplateError] = useState(false);
 
@@ -649,7 +651,7 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
             )}
             {props.meta.template_name && (
               <>
-                <div className="form-group scale-group">
+                <div className={`form-group scale-group${previewSettingsLocked ? " preview-settings-locked" : ""}`}>
                   <label>Scale</label>
                   <div className="scale-input-wrapper">
                     <span className="scale-prefix">1 :</span>
@@ -669,10 +671,13 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                       className="scale-number-input"
                       placeholder="1000"
                       aria-label="Scale denominator"
+                      disabled={previewSettingsLocked}
                     />
                   </div>
                   <span className="scale-helper">
-                    Leave blank for auto-fit on first render, or type only the number after `1 :` (example: `1000`).
+                    {previewSettingsLocked
+                      ? "Preview first — LandCheck will choose the best scale automatically. You can adjust it after preview."
+                      : "Type only the number after `1 :` (example: `1000`) to override the recommended scale."}
                   </span>
                   <div className="scale-presets">
                     {props.scalePresets.map((s) => (
@@ -681,13 +686,14 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                         type="button"
                         className={`scale-preset-btn ${!props.isAutoScaleText(props.currentScaleText) && props.parseScaleDenominator(props.currentScaleText) === s ? "active" : ""}`}
                         onClick={() => props.applyScalePreset(s)}
+                        disabled={previewSettingsLocked}
                       >
                         1:{s}
                       </button>
                     ))}
                   </div>
                 </div>
-                <div className="form-group paper-size-group">
+                <div className={`form-group paper-size-group${previewSettingsLocked ? " preview-settings-locked" : ""}`}>
                   <label>Paper Size</label>
                   <div className="paper-size-presets">
                     {["A4", "A3", "A2", "A1", "A0"].map((size) => (
@@ -696,6 +702,7 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                         type="button"
                         className={`paper-size-btn ${props.meta.paper_size === size ? "active" : ""}`}
                         onClick={() => props.setMeta((m) => ({ ...m, paper_size: size }))}
+                        disabled={previewSettingsLocked}
                       >
                         {size}
                       </button>
@@ -1155,7 +1162,20 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
               "Generate Batch"
             )}
           </button>
-          <button className="btn-primary" onClick={() => requireTemplate(props.onContinue)} disabled={props.subdivisionBatches.length === 0}>
+          <button
+            className="btn-primary"
+            onClick={() => requireTemplate(props.onContinue)}
+            disabled={props.subdivisionBatches.length === 0 || !canContinueToExport}
+            title={
+              !props.hasRenderedCurrentPreview
+                ? "Preview the survey plan first before exporting."
+                : props.previewNeedsRender
+                  ? "Preview the latest changes before exporting."
+                  : props.subdivisionBatches.length === 0
+                    ? "Generate a subdivision batch before exporting."
+                    : undefined
+            }
+          >
             Continue to Batch Export
             <svg viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />

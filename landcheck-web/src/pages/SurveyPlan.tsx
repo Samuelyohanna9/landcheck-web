@@ -2841,7 +2841,9 @@ export default function SurveyPlan() {
         fetchFeatures: true,
       });
       if (requestId !== previewRequestId.current || planGeneration !== planGenerationRef.current) return;
-      if (!acceptedRecommendation && !hasManualScaleOverride && isAutoScaleText(effectiveRenderScaleText)) {
+      // The first survey-plan render always gets the server's automatic scale/paper
+      // recommendation. Manual values from an older local draft must not bypass that step.
+      if (!acceptedRecommendation && !previewUrl) {
         const recommendationResponse = await api.post<ScaleRecommendation>(
           `/plots/${activePlotId}/scale-recommendation`,
           {
@@ -2936,6 +2938,7 @@ export default function SurveyPlan() {
     ensureServerPlot,
     hasManualScaleOverride,
     effectiveRenderScaleText,
+    previewUrl,
     effectiveCoordinateSystem,
     meta.paper_size,
     meta.template_name,
@@ -6437,7 +6440,7 @@ export default function SurveyPlan() {
             )}
             <div className="scale-recommendation-actions">
               <button type="button" className="btn-outline" onClick={() => setScaleRecommendation(null)}>
-                Cancel and choose manually
+                Not now — keep automatic choice
               </button>
               <button type="button" className="btn-primary" onClick={acceptScaleRecommendation}>
                 Yes, render this plan

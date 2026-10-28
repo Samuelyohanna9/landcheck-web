@@ -3055,9 +3055,20 @@ select.field-error {
   font-size: 0.64rem;
 }
 
-.scale-preset-btn:hover {
+.scale-preset-btn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.1);
   color: var(--survey-text-primary);
+}
+
+.preview-settings-locked .scale-input-wrapper,
+.preview-settings-locked .scale-presets,
+.preview-settings-locked .paper-size-presets {
+  opacity: 0.58;
+}
+
+.scale-preset-btn:disabled,
+.paper-size-btn:disabled {
+  cursor: not-allowed;
 }
 
 .scale-preset-btn.active {
@@ -3101,7 +3112,7 @@ select.field-error {
   font-size: 0.76rem;
 }
 
-.paper-size-btn:hover {
+.paper-size-btn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.1);
   color: var(--survey-text-primary);
 }

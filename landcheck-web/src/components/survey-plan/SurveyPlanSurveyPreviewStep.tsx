@@ -288,6 +288,8 @@ function SurveyPlanSurveyPreviewStep({
   hasHeightData,
 }: Props) {
   const rendering = previewLoading || orthophotoLoading || topoMapLoading || serverSyncing;
+  const previewSettingsLocked = !hasRenderedCurrentPreview;
+  const canContinueToExport = hasRenderedCurrentPreview && !previewNeedsRender && !rendering;
   const templateSelectRef = useRef<HTMLSelectElement>(null);
   const [templateError, setTemplateError] = useState(false);
 
@@ -660,7 +662,7 @@ function SurveyPlanSurveyPreviewStep({
             )}
             {meta.template_name && (
               <>
-                <div className="form-group scale-group">
+                <div className={`form-group scale-group${previewSettingsLocked ? " preview-settings-locked" : ""}`}>
                   <label>Scale</label>
                   <div className="scale-input-wrapper">
                     <span className="scale-prefix">1 :</span>
@@ -683,10 +685,13 @@ function SurveyPlanSurveyPreviewStep({
                       className="scale-number-input"
                       placeholder="1000"
                       aria-label="Scale denominator"
+                      disabled={previewSettingsLocked}
                     />
                   </div>
                   <span className="scale-helper">
-                    Leave blank for auto-fit on first render, or type only the number after `1 :` (example: `1000`).
+                    {previewSettingsLocked
+                      ? "Preview first — LandCheck will choose the best scale automatically. You can adjust it after preview."
+                      : "Type only the number after `1 :` (example: `1000`) to override the recommended scale."}
                   </span>
                   <div className="scale-presets">
                     {scalePresets.map((s) => (
@@ -695,13 +700,14 @@ function SurveyPlanSurveyPreviewStep({
                         type="button"
                         className={`scale-preset-btn ${!isAutoScaleText(currentScaleText) && parseScaleDenominator(currentScaleText) === s ? "active" : ""}`}
                         onClick={() => applyScalePreset(s)}
+                        disabled={previewSettingsLocked}
                       >
                         1:{s}
                       </button>
                     ))}
                   </div>
                 </div>
-                <div className="form-group paper-size-group">
+                <div className={`form-group paper-size-group${previewSettingsLocked ? " preview-settings-locked" : ""}`}>
                   <label>Paper Size</label>
                   <div className="paper-size-presets">
                     {["A4", "A3", "A2", "A1", "A0"].map((size) => (
@@ -710,6 +716,7 @@ function SurveyPlanSurveyPreviewStep({
                         type="button"
                         className={`paper-size-btn ${meta.paper_size === size ? "active" : ""}`}
                         onClick={() => setMeta((m) => ({ ...m, paper_size: size }))}
+                        disabled={previewSettingsLocked}
                       >
                         {size}
                       </button>
@@ -818,7 +825,18 @@ function SurveyPlanSurveyPreviewStep({
               Back to Coordinates
             </button>
           )}
-          <button className="btn-primary" onClick={() => requireTemplate(onContinue)}>
+          <button
+            className="btn-primary"
+            onClick={() => requireTemplate(onContinue)}
+            disabled={!canContinueToExport}
+            title={
+              !hasRenderedCurrentPreview
+                ? "Preview the survey plan first before exporting."
+                : previewNeedsRender
+                  ? "Preview the latest changes before exporting."
+                  : undefined
+            }
+          >
             Continue to Export
             <svg viewBox="0 0 20 20" fill="currentColor">
               <path
