@@ -1,5 +1,5 @@
-var SHELL_CACHE_NAME = "landcheck-shell-v16";
-var STATIC_CACHE_NAME = "landcheck-static-v16";
+var SHELL_CACHE_NAME = "landcheck-shell-v17";
+var STATIC_CACHE_NAME = "landcheck-static-v17";
 var IMAGE_CACHE_NAME = "landcheck-images-v3";
 var MAP_CACHE_NAME = "landcheck-map-v8";
 var SYNC_TAG = "green-sync-queue";

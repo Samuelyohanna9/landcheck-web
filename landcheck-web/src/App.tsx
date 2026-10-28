@@ -171,7 +171,11 @@ class ChunkLoadBoundary extends Component<ChunkLoadBoundaryProps, ChunkLoadBound
           </p>
           <button
             type="button"
-            onClick={() => window.location.reload()}
+            onClick={() => {
+              const retry = (window as Window & { __landcheckRetry?: () => void }).__landcheckRetry;
+              if (retry) retry();
+              else window.location.reload();
+            }}
             style={{
               width: "100%",
               minHeight: "46px",
@@ -351,6 +355,16 @@ function RouteLoadingFallback() {
 }
 
 export default function App() {
+  useEffect(() => {
+    const root = document.getElementById("root");
+    if (!root) return;
+    // Signal the boot watchdog only after React has committed App. The old requestAnimationFrame
+    // marker could run before a concurrent React commit and show the fatal fallback over a healthy
+    // app on slower devices.
+    root.dataset.landcheckReactMounted = "true";
+    document.getElementById("landcheck-boot-fallback")?.classList.remove("is-visible");
+  }, []);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     // This effect fires the instant <App> itself mounts - the lazy route content below it is a

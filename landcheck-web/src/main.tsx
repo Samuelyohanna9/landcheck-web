@@ -23,18 +23,6 @@ ReactDOM.createRoot(rootElement).render(
   </React.StrictMode>
 );
 
-// The SEO shell occupies #root until React commits. Mark the real app mount separately so the
-// entry-bundle watchdog can still distinguish a mounted app from an untouched static shell.
-if (typeof window !== "undefined") {
-  const markReactMounted = () => {
-    if (!rootElement.querySelector('[data-lc-seo-shell="true"]')) {
-      rootElement.dataset.landcheckReactMounted = "true";
-    }
-  };
-  if (typeof window.requestAnimationFrame === "function") window.requestAnimationFrame(markReactMounted);
-  else markReactMounted();
-}
-
 const canRegisterSiteSw =
   typeof window !== "undefined" &&
   "serviceWorker" in navigator &&
@@ -42,9 +30,15 @@ const canRegisterSiteSw =
 
 if (canRegisterSiteSw) {
   window.addEventListener("load", () => {
+    // The entry module filename changes on every production build. Carry that identity into the
+    // worker URL so browsers and edge caches cannot keep an older worker script after a release.
+    const workerUrl = `/sw.js?build=${encodeURIComponent(new URL(import.meta.url).pathname)}`;
     navigator.serviceWorker
-      .register("/sw.js", { scope: "/" })
+      .register(workerUrl, { scope: "/" })
       .then((registration) => {
+        // Check immediately as well as periodically so a released worker can replace an older
+        // cached asset set before the next navigation.
+        void registration.update().catch(() => {});
         // Auto-check for SW updates every 30 minutes
         setInterval(() => registration.update(), 30 * 60 * 1000);
 
