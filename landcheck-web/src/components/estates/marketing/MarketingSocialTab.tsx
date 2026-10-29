@@ -21,6 +21,7 @@ type Optins = {
 };
 type Campaign = { id: number; name: string; channel: string };
 type PlotOption = { id: number; plot_number: string };
+type CanvaDesignOption = { id: number; title: string; imported: boolean; status: string };
 
 // Instagram's publish is a create-container -> poll-until-processed -> publish round trip that can
 // legitimately take longer than the api client's default 30s timeout, especially on a cold image
@@ -29,23 +30,23 @@ type PlotOption = { id: number; plot_number: string };
 const PUBLISH_TIMEOUT_MS = 90000;
 
 
-function PreviewImage({ estateId, params, alt }: { estateId: string; params: Record<string, unknown>; alt: string }) {
+function PreviewImage({ estateId, params, alt, canvaDesignId }: { estateId: string; params: Record<string, unknown>; alt: string; canvaDesignId: number | null }) {
   const [url, setUrl] = useState<string | null>(null);
   const [failedReason, setFailedReason] = useState<string | null>(null);
-  const key = JSON.stringify(params);
+  const key = JSON.stringify([params, canvaDesignId]);
   useEffect(() => {
     let cancelled = false;
     let created: string | null = null;
     setUrl(null);
     setFailedReason(null);
-    fetchBlobUrl(`/estates/${estateId}/marketing/social/image.png`, params).then((value) => {
+    fetchBlobUrl(canvaDesignId ? `/estates/${estateId}/marketing/canva/designs/${canvaDesignId}/image` : `/estates/${estateId}/marketing/social/image.png`, canvaDesignId ? undefined : params).then((value) => {
       if (cancelled) { URL.revokeObjectURL(value); return; }
       created = value;
       setUrl(value);
     }).catch(async (error) => { if (!cancelled) setFailedReason(await extractApiErrorMessage(error, "Preview unavailable.")); });
     return () => { cancelled = true; if (created) URL.revokeObjectURL(created); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [estateId, key]);
+  }, [estateId, key, canvaDesignId]);
   return <div className="edash-mk-preview edash-sp-preview">{url ? <img src={url} alt={alt} /> : failedReason ? <span>{failedReason}</span> : <span>Preparing preview...</span>}</div>;
 }
 
@@ -57,6 +58,7 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
   const [waProfile, setWaProfile] = useState<{ configured: boolean; about?: string; description?: string; address?: string; email?: string; websites?: string[] } | null>(null);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [plots, setPlots] = useState<PlotOption[]>([]);
+  const [canvaDesign, setCanvaDesign] = useState<CanvaDesignOption | null>(null);
 
   const [templateKey, setTemplateKey] = useState("new_plots");
   const [caption, setCaption] = useState("");
@@ -95,6 +97,18 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
     api.get(`/estates/${estateId}/marketing/share-links`).then((response) => setPlots((response.data?.plots || []).map((plot: PlotOption) => ({ id: plot.id, plot_number: plot.plot_number })))).catch(() => setPlots([]));
     api.get(`/estates/${estateId}/marketing/social/whatsapp/profile`).then((response) => setWaProfile(response.data)).catch(() => setWaProfile(null));
   }, [estateId, loadOverview, loadOptins]);
+
+  useEffect(() => {
+    const id = Number(searchParams.get("canva_design") || 0);
+    if (!id) { setCanvaDesign(null); return; }
+    api.get<{ items: CanvaDesignOption[] }>(`/estates/${estateId}/marketing/canva/designs`)
+      .then((response) => {
+        const selected = (response.data.items || []).find((item) => item.id === id && item.imported && item.status === "imported") || null;
+        setCanvaDesign(selected);
+        if (!selected) toast.error("Import that Canva design into LandCheck before using it in a post.");
+      })
+      .catch(() => { setCanvaDesign(null); });
+  }, [estateId, searchParams]);
 
   // Templates depend on the chosen plot and tracked link (they carry that link).
   useEffect(() => {
@@ -145,11 +159,20 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
   const toggleChannel = (key: string) => setChannels((current) => (current.includes(key) ? current.filter((entry) => entry !== key) : [...current, key]));
   const toggleIncludeMedia = (value: boolean) => {
     setIncludeMedia(value);
+    if (!value && canvaDesign) {
+      setCanvaDesign(null);
+      const next = new URLSearchParams(searchParams);
+      next.delete("canva_design");
+      setSearchParams(next, { replace: true });
+    }
     // Instagram has no text-only post type, so turning media off drops it from "Post to" rather than
     // leaving a combination that would fail when sent.
     if (!value) setChannels((current) => current.filter((key) => key !== "instagram" && key !== "instagram_story"));
   };
   const safeName = estateName.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "") || "estate";
+  const composerImageRequest = (shape: "post" | "status") => canvaDesign
+    ? { path: `/estates/${estateId}/marketing/canva/designs/${canvaDesign.id}/image`, params: undefined }
+    : { path: `/estates/${estateId}/marketing/social/image.png`, params: { ...imageParams, channel: shape === "status" ? "whatsapp_status" : "facebook" } };
 
   // ── Quick actions that need no approval or connection ──
   const copyCaption = async () => {
@@ -159,7 +182,8 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
   const downloadImage = async (shape: "post" | "status") => {
     setBusy(`download-${shape}`);
     try {
-      const blob = (await api.get(`/estates/${estateId}/marketing/social/image.png`, { responseType: "blob", params: { ...imageParams, channel: shape === "status" ? "whatsapp_status" : "facebook", download: true } })).data as Blob;
+      const image = composerImageRequest(shape);
+      const blob = (await api.get(image.path, { responseType: "blob", params: image.params })).data as Blob;
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url; link.download = `${safeName}-${shape}.png`; link.click();
@@ -169,7 +193,8 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
   const shareToStatus = async () => {
     setBusy("share");
     try {
-      const blob = (await api.get(`/estates/${estateId}/marketing/social/image.png`, { responseType: "blob", params: { ...imageParams, channel: "whatsapp_status" } })).data as Blob;
+      const image = composerImageRequest("status");
+      const blob = (await api.get(image.path, { responseType: "blob", params: image.params })).data as Blob;
       const file = new File([blob], `${safeName}-status.png`, { type: "image/png" });
       const nav = navigator as Navigator & { canShare?: (data: ShareData) => boolean };
       if (nav.canShare && nav.canShare({ files: [file] }) && navigator.share) {
@@ -220,20 +245,26 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
         if (when === "now") {
           const response = await api.post(`/estates/marketing/social/posts/${editingId}/publish`, undefined, { timeout: PUBLISH_TIMEOUT_MS });
           const outcome = describePublishResult(response.data, channels);
-          outcome.ok ? toast.success(outcome.message) : toast.error(outcome.message);
+          if (outcome.ok) toast.success(outcome.message); else toast.error(outcome.message);
         } else {
           toast.success("Post updated.");
         }
       } else {
-        const response = await api.post(`/estates/${estateId}/marketing/social/posts`, { template_key: templateKey, caption, channels, image_style: style, include_media: includeMedia, plot_id: plotId ? Number(plotId) : null, campaign_id: campaignId ? Number(campaignId) : null, scheduled_at: iso, publish_now: when === "now" }, when === "now" ? { timeout: PUBLISH_TIMEOUT_MS } : undefined);
+        const response = await api.post(`/estates/${estateId}/marketing/social/posts`, { template_key: templateKey, caption, channels, image_style: style, include_media: includeMedia, plot_id: plotId ? Number(plotId) : null, campaign_id: campaignId ? Number(campaignId) : null, canva_design_id: canvaDesign?.id ?? null, scheduled_at: iso, publish_now: when === "now" }, when === "now" ? { timeout: PUBLISH_TIMEOUT_MS } : undefined);
         if (when === "now") {
           const outcome = describePublishResult(response.data, channels);
-          outcome.ok ? toast.success(outcome.message) : toast.error(outcome.message);
+          if (outcome.ok) toast.success(outcome.message); else toast.error(outcome.message);
         } else {
           toast.success(when === "later" ? "Scheduled." : "Saved as a draft.");
         }
       }
       resetComposer();
+      if (canvaDesign) {
+        const next = new URLSearchParams(searchParams);
+        next.delete("canva_design");
+        setSearchParams(next, { replace: true });
+        setCanvaDesign(null);
+      }
     } catch (error) { toast.error(await extractApiErrorMessage(error, "The post could not be saved.")); } finally { setBusy(null); }
   };
 
@@ -276,7 +307,7 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
       form.append("channels", customChannels.join(","));
       const response = await api.post(`/estates/${estateId}/marketing/social/custom-post`, form, { timeout: PUBLISH_TIMEOUT_MS });
       const outcome = describePublishResult(response.data, customChannels);
-      outcome.ok ? toast.success(outcome.message) : toast.error(outcome.message);
+      if (outcome.ok) toast.success(outcome.message); else toast.error(outcome.message);
       setCustomFile(null);
       setCustomCaption("");
       if (customFileInputRef.current) customFileInputRef.current.value = "";
@@ -438,7 +469,8 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
                   <button type="button" className={previewShape === "status" ? "is-active" : ""} onClick={() => setPreviewShape("status")}>Story / Status</button>
                   <button type="button" className={previewShape === "post" ? "is-active" : ""} onClick={() => setPreviewShape("post")}>Feed post</button>
                 </div>
-                <PreviewImage estateId={estateId} params={imageParams} alt="Post preview" />
+                {canvaDesign && <p className="edash-mk-hint" style={{ margin: "8px 0" }}>Using imported Canva design: <strong>{canvaDesign.title}</strong></p>}
+                <PreviewImage estateId={estateId} params={imageParams} canvaDesignId={canvaDesign?.id ?? null} alt="Post preview" />
                 <div className="edash-sp-actions">
                   <button type="button" className="edash-btn-outline" disabled={busy === "download-status"} onClick={() => void downloadImage("status")}><EstateIcon name="download" />Story image</button>
                   <button type="button" className="edash-btn-outline" disabled={busy === "download-post"} onClick={() => void downloadImage("post")}><EstateIcon name="download" />Feed image</button>

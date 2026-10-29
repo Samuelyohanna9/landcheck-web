@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../../../api/client";
 import { AD_STYLES, adFormatsFor, copyText, downloadFile, fetchBlobUrl, naira, whatsappShareHref, type AdFormat, type AdStyle, type ShareLinks } from "../../../utils/estateMarketing";
 import EstateIcon from "../EstateIcon";
 
 type Campaign = { id: number; code: string; name: string; channel: string; assigned_agent_subject_id?: string | null };
+type CanvaDesign = { id: number; title: string; status: string; imported: boolean; source_format: string; source_style: string; r2_content_type?: string | null; created_at?: string; imported_at?: string | null; last_error?: string | null };
+type CanvaState = { configured: boolean; connection: { connected: boolean; id?: number; status?: string; last_error?: string | null }; designs: CanvaDesign[] };
 
 function AdPreview({ path, params, alt, className = "edash-mk-preview" }: { path: string; params?: Record<string, unknown>; alt: string; className?: string }) {
   const [url, setUrl] = useState<string | null>(null);
@@ -27,6 +30,8 @@ function AdPreview({ path, params, alt, className = "edash-mk-preview" }: { path
 }
 
 export default function MarketingMaterialsTab({ estateId, estateName, published }: { estateId: string; estateName: string; published: boolean }) {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [campaignId, setCampaignId] = useState<string>("");
   const [share, setShare] = useState<ShareLinks | null>(null);
@@ -38,6 +43,7 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
   const [linkName, setLinkName] = useState("");
   const [linkChannel, setLinkChannel] = useState("whatsapp");
   const [creating, setCreating] = useState(false);
+  const [canva, setCanva] = useState<CanvaState | null>(null);
 
   const loadCampaigns = useCallback(async () => {
     try {
@@ -47,6 +53,24 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
   }, [estateId]);
 
   useEffect(() => { void loadCampaigns(); }, [loadCampaigns]);
+
+  const loadCanva = useCallback(async () => {
+    try { setCanva((await api.get<CanvaState>(`/estates/${estateId}/marketing/canva`)).data); }
+    catch { setCanva(null); }
+  }, [estateId]);
+
+  useEffect(() => { if (published) void loadCanva(); }, [loadCanva, published]);
+
+  useEffect(() => {
+    if (!searchParams.get("canva_return")) return;
+    toast.success("Canva returned you to LandCheck. Import the finished image when ready.");
+    const next = new URLSearchParams(searchParams);
+    next.delete("canva_return");
+    setSearchParams(next, { replace: true });
+    void loadCanva();
+    // The return marker is consumed once after the API-backed page loads.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!published) return;
@@ -96,6 +120,48 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
     } finally {
       setCreating(false);
     }
+  };
+
+  const connectCanva = async () => {
+    setBusy("canva-connect");
+    try {
+      const response = await api.post<{ url: string }>(`/estates/${estateId}/marketing/canva/connect`);
+      window.location.assign(response.data.url);
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "Canva could not be connected."));
+      setBusy(null);
+    }
+  };
+
+  const disconnectCanva = async () => {
+    const id = canva?.connection?.id;
+    if (!id || !window.confirm("Disconnect this Canva account from LandCheck Estates?")) return;
+    try {
+      await api.delete(`/estates/marketing/canva/connections/${id}`);
+      await loadCanva();
+      toast.success("Canva disconnected.");
+    } catch (error) { toast.error(await extractApiErrorMessage(error, "Canva could not be disconnected.")); }
+  };
+
+  const editWithCanva = async () => {
+    setBusy("canva-edit");
+    try {
+      const response = await api.post<{ edit_url: string }>(`/estates/${estateId}/marketing/canva/designs`, { format: "post", style });
+      window.location.assign(response.data.edit_url);
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "The flyer could not be opened in Canva."));
+      setBusy(null);
+    }
+  };
+
+  const importCanvaDesign = async (designId: number, format: "png" | "jpg") => {
+    setBusy(`canva-import-${format}-${designId}`);
+    try {
+      await api.post(`/estates/${estateId}/marketing/canva/designs/${designId}/import`, { format });
+      await loadCanva();
+      toast.success(`${format.toUpperCase()} imported into LandCheck. You can now use it in Social posts.`);
+    } catch (error) { toast.error(await extractApiErrorMessage(error, "The Canva design could not be imported.")); }
+    finally { setBusy(null); }
   };
 
   const copy = async (value: string, label: string) => {
@@ -159,7 +225,41 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
             </div>
           ))}
         </div>
+        <div className="edash-mk-canva" style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--edash-line, #dce6e1)" }}>
+          <div className="edash-card-head" style={{ marginBottom: 6 }}>
+            <div><strong>Edit a flyer in Canva</strong><p className="edash-mk-hint" style={{ margin: "4px 0 0" }}>LandCheck sends the generated flyer to Canva as one editable image. You can move, resize or replace it, then return a PNG for your social posts.</p></div>
+            {canva?.connection?.connected ? <span className="edash-status-pill tone-good">Canva connected</span> : null}
+          </div>
+          {!canva?.connection?.connected ? (
+            <button type="button" className="edash-btn-outline" disabled={!canva?.configured || busy === "canva-connect"} onClick={() => void connectCanva()}>{busy === "canva-connect" ? "Opening Canva..." : canva?.configured ? "Connect Canva" : "Canva setup required"}</button>
+          ) : (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button type="button" className="edash-btn-primary" disabled={busy === "canva-edit"} onClick={() => void editWithCanva()}>{busy === "canva-edit" ? "Opening Canva..." : "Edit current flyer with Canva"}</button>
+              <button type="button" className="edash-btn-outline" onClick={() => void disconnectCanva()}>Disconnect Canva</button>
+            </div>
+          )}
+          {canva?.connection?.status === "needs_reconnect" && <p className="edash-mk-hint" style={{ color: "#a25b00" }}>Canva needs to be connected again before a design can be opened. {canva.connection.last_error || ""}</p>}
+        </div>
       </div></div>
+
+      {canva?.connection?.connected && canva.designs.length > 0 && (
+        <div className="edash-card"><div className="edash-card-inner">
+          <div className="edash-card-head"><h3 className="edash-card-title">Canva designs returned to LandCheck</h3></div>
+          <p className="edash-mk-hint">Import the finished PNG, then open Social posts to write, schedule or publish it through the existing Facebook and Instagram workflow.</p>
+          <div className="edash-mk-stack">
+            {canva.designs.map((design) => (
+              <div key={design.id} className="edash-sp-account">
+                <div><strong>{design.title}</strong><small>{design.status === "imported" ? `${design.r2_content_type === "image/jpeg" ? "JPG" : "PNG"} imported` : design.status === "import_failed" ? (design.last_error || "Import failed") : "Ready to import"}</small></div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginLeft: "auto" }}>
+                  <button type="button" className={design.imported ? "edash-btn-outline" : "edash-btn-primary"} disabled={busy === `canva-import-png-${design.id}`} onClick={() => void importCanvaDesign(design.id, "png")}>{busy === `canva-import-png-${design.id}` ? "Importing..." : "Import PNG"}</button>
+                  <button type="button" className="edash-btn-outline" disabled={busy === `canva-import-jpg-${design.id}`} onClick={() => void importCanvaDesign(design.id, "jpg")}>{busy === `canva-import-jpg-${design.id}` ? "Importing..." : "Import JPG"}</button>
+                  {design.imported && <button type="button" className="edash-btn-outline" onClick={() => navigate(`/estates/${estateId}/marketing?tab=social&canva_design=${design.id}`)}>Use in Social posts</button>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div></div>
+      )}
 
       <div className="edash-card"><div className="edash-card-inner">
         <div className="edash-card-head"><h3 className="edash-card-title">3. Share a single plot</h3><span className="edash-field-note">Rich WhatsApp preview with satellite crop, price and status</span></div>
