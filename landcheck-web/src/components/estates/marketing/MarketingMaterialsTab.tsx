@@ -9,6 +9,10 @@ type Campaign = { id: number; code: string; name: string; channel: string; assig
 type CanvaDesign = { id: number; title: string; status: string; imported: boolean; source_format: string; source_style: string; r2_content_type?: string | null; created_at?: string; imported_at?: string | null; last_error?: string | null };
 type CanvaState = { configured: boolean; connection: { connected: boolean; id?: number; status?: string; last_error?: string | null }; designs: CanvaDesign[] };
 
+function CanvaMark() {
+  return <img src="/canva-icon.svg" alt="" aria-hidden="true" style={{ width: 20, height: 20, marginRight: 8, flex: "0 0 auto" }} />;
+}
+
 function AdPreview({ path, params, alt, className = "edash-mk-preview" }: { path: string; params?: Record<string, unknown>; alt: string; className?: string }) {
   const [url, setUrl] = useState<string | null>(null);
   const [failedReason, setFailedReason] = useState<string | null>(null);
@@ -231,10 +235,10 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
             {canva?.connection?.connected ? <span className="edash-status-pill tone-good">Canva connected</span> : null}
           </div>
           {!canva?.connection?.connected ? (
-            <button type="button" className="edash-btn-outline" disabled={!canva?.configured || busy === "canva-connect"} onClick={() => void connectCanva()}>{busy === "canva-connect" ? "Opening Canva..." : canva?.configured ? "Connect Canva" : "Canva setup required"}</button>
+            <button type="button" className="edash-btn-outline" disabled={!canva?.configured || busy === "canva-connect"} onClick={() => void connectCanva()}><CanvaMark />{busy === "canva-connect" ? "Opening Canva..." : canva?.configured ? "Connect Canva" : "Canva setup required"}</button>
           ) : (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button type="button" className="edash-btn-primary" disabled={busy === "canva-edit"} onClick={() => void editWithCanva()}>{busy === "canva-edit" ? "Opening Canva..." : "Edit current flyer with Canva"}</button>
+              <button type="button" className="edash-btn-primary" disabled={busy === "canva-edit"} onClick={() => void editWithCanva()}><CanvaMark />{busy === "canva-edit" ? "Opening Canva..." : "Edit current flyer with Canva"}</button>
               <button type="button" className="edash-btn-outline" onClick={() => void disconnectCanva()}>Disconnect Canva</button>
             </div>
           )}
