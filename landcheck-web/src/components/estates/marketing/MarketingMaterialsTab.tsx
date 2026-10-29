@@ -4,13 +4,14 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../../../api/client";
 import { AD_STYLES, adFormatsFor, copyText, downloadFile, fetchBlobUrl, naira, whatsappShareHref, type AdFormat, type AdStyle, type ShareLinks } from "../../../utils/estateMarketing";
 import EstateIcon from "../EstateIcon";
+import canvaIcon from "../../../assets/canva-icon.svg";
 
 type Campaign = { id: number; code: string; name: string; channel: string; assigned_agent_subject_id?: string | null };
 type CanvaDesign = { id: number; title: string; status: string; imported: boolean; source_format: string; source_style: string; r2_content_type?: string | null; created_at?: string; imported_at?: string | null; last_error?: string | null };
 type CanvaState = { configured: boolean; connection: { connected: boolean; id?: number; status?: string; last_error?: string | null }; designs: CanvaDesign[] };
 
 function CanvaMark() {
-  return <img src="/canva-icon.svg" alt="" aria-hidden="true" style={{ width: 20, height: 20, marginRight: 8, flex: "0 0 auto" }} />;
+  return <img src={canvaIcon} alt="" aria-hidden="true" style={{ width: 20, height: 20, marginRight: 8, flex: "0 0 auto" }} />;
 }
 
 function AdPreview({ path, params, alt, className = "edash-mk-preview" }: { path: string; params?: Record<string, unknown>; alt: string; className?: string }) {
