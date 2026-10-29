@@ -8191,3 +8191,9 @@ button.geo-h-step:focus-visible {
     border-radius: 16px;
   }
 }
+
+/* Keep Survey Plan controls rectangular across the full workspace, including the newer
+   georeference controls and older export/tool buttons that have their own component rules. */
+.survey-container button {
+  border-radius: 6px !important;
+}
