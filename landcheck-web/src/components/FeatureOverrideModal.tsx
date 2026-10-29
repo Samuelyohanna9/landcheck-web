@@ -1637,7 +1637,7 @@ export default function FeatureOverrideModal({
     }
     if (map.getLayer("rivers-line")) {
       map.setPaintProperty("rivers-line", "line-color", plotting ? "#38bdf8" : "#60a5fa");
-      map.setPaintProperty("rivers-line", "line-width", plotting ? 2.2 : 2.5);
+      map.setPaintProperty("rivers-line", "line-width", plotting ? 1.4 : 1.6);
     }
     if (map.getLayer("fences-line")) {
       map.setPaintProperty("fences-line", "line-color", plotting ? "#fda4af" : "#fca5a5");
@@ -1764,7 +1764,7 @@ export default function FeatureOverrideModal({
           id: "rivers-line",
           type: "line",
           source: "rivers-src",
-          paint: { "line-color": "#60a5fa", "line-width": 2.5, "line-opacity": 0.95 },
+          paint: { "line-color": "#60a5fa", "line-width": 1.6, "line-opacity": 0.95 },
         });
       } else {
         (map.getSource("rivers-src") as any).setData(riversData as any);

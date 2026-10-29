@@ -4549,44 +4549,50 @@ select.field-error {
   display: grid;
   place-items: center;
   padding: 1.25rem;
-  background: rgba(11, 29, 27, 0.62);
-  backdrop-filter: blur(5px);
+  background: rgba(2, 8, 15, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .scale-recommendation-modal {
   width: min(100%, 32rem);
   padding: 1.75rem;
-  border: 1px solid rgba(210, 172, 84, 0.45);
-  border-radius: 20px;
-  background: #fffdf7;
-  box-shadow: 0 24px 70px rgba(8, 30, 26, 0.32);
-  color: #17362e;
+  border: 1px solid #334155;
+  border-radius: 18px;
+  background: #0b1724;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.54);
+  color: #f3f6f8;
 }
 
 .scale-recommendation-eyebrow {
   display: block;
   margin-bottom: 0.45rem;
-  color: #856329;
+  color: #6ee7b7;
   font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
 }
 
 .scale-recommendation-modal h2 {
   margin: 0 0 0.7rem;
-  font-size: 1.45rem;
+  color: #f3f6f8;
+  font-family: var(--survey-font-body);
+  font-size: clamp(1.15rem, 2vw, 1.4rem);
+  font-weight: 750;
+  letter-spacing: -0.025em;
 }
 
 .scale-recommendation-modal p {
   margin: 0;
+  color: #9aaaba;
   line-height: 1.55;
 }
 
 .scale-recommendation-detail,
 .scale-recommendation-footnote {
   margin-top: 0.75rem !important;
-  color: #5d6f69;
+  color: #9aaaba;
   font-size: 0.9rem;
 }
 
@@ -5246,30 +5252,69 @@ select.field-error {
   display: grid;
   place-items: center;
   padding: 1.25rem;
-  background: rgba(11, 29, 27, 0.62);
-  backdrop-filter: blur(5px);
+  background: rgba(2, 8, 15, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .draft-recovery-modal {
   width: min(100%, 34rem);
   padding: 1.75rem;
-  border: 1px solid rgba(210, 172, 84, 0.45);
-  border-radius: 20px;
-  background: #fffdf7;
-  box-shadow: 0 24px 70px rgba(8, 30, 26, 0.32);
-  color: #17362e;
+  border: 1px solid #334155;
+  border-radius: 18px;
+  background: #0b1724;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.54);
+  color: #f3f6f8;
 }
 
 .draft-recovery-modal h2 {
   margin: 0.7rem 0 0;
-  font-size: clamp(1.35rem, 3vw, 1.7rem);
+  color: #f3f6f8;
+  font-family: var(--survey-font-body);
+  font-size: clamp(1.15rem, 2vw, 1.4rem);
+  font-weight: 750;
   line-height: 1.2;
+  letter-spacing: -0.025em;
 }
 
 .draft-recovery-modal p {
   margin: 0.8rem 0 0;
-  color: #5d6f69;
+  color: #9aaaba;
   line-height: 1.55;
+}
+
+.draft-recovery-modal .survey-restore-kicker {
+  border-color: rgba(33, 199, 122, 0.42);
+  background: rgba(33, 199, 122, 0.11);
+  color: #6ee7b7;
+}
+
+.scale-recommendation-modal .btn-outline,
+.draft-recovery-modal .draft-banner-btn--ghost {
+  border-color: #475569;
+  background: rgba(148, 163, 184, 0.08);
+  color: #cbd5e1;
+}
+
+.scale-recommendation-modal .btn-outline:hover,
+.draft-recovery-modal .draft-banner-btn--ghost:hover {
+  border-color: rgba(33, 199, 122, 0.5);
+  background: rgba(33, 199, 122, 0.12);
+  color: #f3f6f8;
+}
+
+.scale-recommendation-modal .btn-primary,
+.draft-recovery-modal .draft-banner-btn--primary {
+  border-color: #21c77a;
+  background: #21c77a;
+  color: #062e1c;
+  box-shadow: 0 12px 24px rgba(33, 199, 122, 0.2);
+}
+
+.scale-recommendation-modal .btn-primary:hover,
+.draft-recovery-modal .draft-banner-btn--primary:hover {
+  background: #32d48b;
+  box-shadow: 0 16px 28px rgba(33, 199, 122, 0.28);
 }
 
 .draft-recovery-actions {
@@ -5291,6 +5336,55 @@ select.field-error {
   .draft-recovery-actions button {
     width: 100%;
   }
+}
+
+/* Keep the Survey dialogs visually aligned with the dashboard workflow chooser in light mode. */
+:root[data-workspace-theme="light"] .scale-recommendation-backdrop,
+:root[data-workspace-theme="light"] .draft-recovery-backdrop {
+  background: rgba(15, 23, 42, 0.28);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+:root[data-workspace-theme="light"] .scale-recommendation-modal,
+:root[data-workspace-theme="light"] .draft-recovery-modal {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.22);
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .scale-recommendation-eyebrow,
+:root[data-workspace-theme="light"] .draft-recovery-modal .survey-restore-kicker {
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .scale-recommendation-modal h2,
+:root[data-workspace-theme="light"] .draft-recovery-modal h2 {
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .scale-recommendation-modal p,
+:root[data-workspace-theme="light"] .draft-recovery-modal p,
+:root[data-workspace-theme="light"] .scale-recommendation-detail,
+:root[data-workspace-theme="light"] .scale-recommendation-footnote {
+  color: #475569;
+}
+
+:root[data-workspace-theme="light"] .scale-recommendation-modal .btn-outline,
+:root[data-workspace-theme="light"] .draft-recovery-modal .draft-banner-btn--ghost {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  color: #475569;
+}
+
+:root[data-workspace-theme="light"] .scale-recommendation-modal .btn-outline:hover,
+:root[data-workspace-theme="light"] .draft-recovery-modal .draft-banner-btn--ghost:hover {
+  border-color: #6ee7b7;
+  background: #d1fae5;
+  color: #065f46;
 }
 
 .draft-banner-btn,

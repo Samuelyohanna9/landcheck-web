@@ -310,6 +310,213 @@ img {
   background: #050b1a;
 }
 
+/* Product-aware route skeletons. These render before a lazy workspace page resolves, so they
+   reserve the same broad regions users will see next without making another API request. */
+.workspace-skeleton {
+  align-self: stretch;
+  min-height: 100vh;
+  width: 100%;
+  color: #0f172a;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+
+.workspace-skeleton-page {
+  --skeleton-bg: #f8fafc;
+  --skeleton-surface: #ffffff;
+  --skeleton-line: #e2e8f0;
+  --skeleton-strong-line: #cbd5e1;
+  --skeleton-accent: #16816e;
+  min-height: 100vh;
+  background: var(--skeleton-bg);
+}
+
+.workspace-skeleton-page--survey { --skeleton-accent: #0f766e; }
+.workspace-skeleton-page--estate { --skeleton-accent: #16816e; }
+.workspace-skeleton-page--green { --skeleton-accent: #16a34a; }
+.workspace-skeleton-page--work { --skeleton-accent: #047857; }
+.workspace-skeleton-page--hazard { --skeleton-accent: #2563eb; }
+
+.workspace-skeleton-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 72px;
+  padding: 14px clamp(18px, 3vw, 40px);
+  border-bottom: 1px solid var(--skeleton-line);
+  background: var(--skeleton-surface);
+}
+
+.workspace-skeleton-brand,
+.workspace-skeleton-topbar-actions,
+.workspace-skeleton-button-row,
+.workspace-skeleton-preview-toolbar,
+.workspace-skeleton-action-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.workspace-skeleton-brand-title { width: 118px; height: 12px; }
+.workspace-skeleton-brand-subtitle { width: 82px; height: 8px; margin-top: 7px; }
+.workspace-skeleton-logo { width: 42px; height: 42px; border-radius: 12px; }
+.workspace-skeleton-topbar-pill { width: 104px; height: 30px; border-radius: 7px; }
+.workspace-skeleton-avatar { width: 34px; height: 34px; border-radius: 50%; }
+
+.workspace-skeleton-workspace {
+  display: flex;
+  gap: 22px;
+  width: min(1480px, 100%);
+  margin: 0 auto;
+  padding: clamp(18px, 3vw, 36px);
+  box-sizing: border-box;
+}
+
+.workspace-skeleton-sidebar {
+  display: flex;
+  width: 220px;
+  min-width: 220px;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 14px;
+  border: 1px solid var(--skeleton-line);
+  border-radius: 16px;
+  background: var(--skeleton-surface);
+}
+
+.workspace-skeleton-sidebar-heading { width: 132px; height: 12px; margin: 4px 8px 18px; }
+.workspace-skeleton-nav-row { width: 100%; height: 36px; border-radius: 8px; }
+.workspace-skeleton-nav-row.is-active { width: 92%; background: color-mix(in srgb, var(--skeleton-accent) 16%, var(--skeleton-surface)); }
+.workspace-skeleton-sidebar-footer { width: 82%; height: 10px; margin: auto 8px 4px; }
+
+.workspace-skeleton-main { flex: 1; min-width: 0; }
+.workspace-skeleton-page-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin: 4px 0 22px; }
+.workspace-skeleton-heading { width: min(270px, 52vw); height: 20px; }
+.workspace-skeleton-heading-short { width: 150px; height: 10px; }
+.workspace-skeleton-copy { width: 70%; height: 10px; margin-top: 14px; }
+.workspace-skeleton-panel-title { width: 42%; height: 13px; margin-bottom: 18px; }
+
+.workspace-skeleton-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.workspace-skeleton-stat-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 88px;
+  padding: 16px;
+  box-sizing: border-box;
+  border: 1px solid var(--skeleton-line);
+  border-radius: 14px;
+  background: var(--skeleton-surface);
+}
+
+.workspace-skeleton-stat-icon { width: 28px; height: 28px; border-radius: 9px; }
+.workspace-skeleton-stat-copy { flex: 1; }
+.workspace-skeleton-stat-label { width: 70%; height: 8px; }
+.workspace-skeleton-stat-value { width: 45%; height: 18px; margin-top: 9px; }
+.workspace-skeleton-stat-note { width: 58%; height: 7px; margin-top: 8px; }
+
+.workspace-skeleton-card-grid,
+.workspace-skeleton-hazard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+  gap: 18px;
+}
+
+.workspace-skeleton-card-grid--wide { grid-template-columns: minmax(0, 1.5fr) minmax(300px, 0.7fr); }
+.workspace-skeleton-panel { min-width: 0; padding: 18px; border: 1px solid var(--skeleton-line); border-radius: 16px; background: var(--skeleton-surface); }
+.workspace-skeleton-panel--map { min-height: 300px; }
+.workspace-skeleton-map { min-height: 246px; border-radius: 12px; background: linear-gradient(135deg, color-mix(in srgb, var(--skeleton-accent) 9%, #dbeafe), #e2e8f0); }
+.workspace-skeleton-content-rows { display: grid; gap: 13px; }
+.workspace-skeleton-content-row { display: flex; align-items: center; gap: 10px; min-height: 28px; }
+.workspace-skeleton-row-dot { width: 10px; height: 10px; border-radius: 50%; }
+.workspace-skeleton-row-main { flex: 1; height: 10px; }
+.workspace-skeleton-row-meta { width: 56px; height: 8px; }
+
+.workspace-skeleton-stepper {
+  display: flex;
+  gap: 10px;
+  padding: 14px clamp(18px, 3vw, 40px);
+  border-bottom: 1px solid var(--skeleton-line);
+  background: var(--skeleton-surface);
+}
+
+.workspace-skeleton-step { width: 150px; height: 9px; border-radius: 99px; }
+.workspace-skeleton-step.is-complete { background: color-mix(in srgb, var(--skeleton-accent) 45%, var(--skeleton-line)); }
+.workspace-skeleton-step.is-active { width: 190px; background: color-mix(in srgb, var(--skeleton-accent) 20%, var(--skeleton-line)); }
+.workspace-skeleton-workspace--survey { display: grid; grid-template-columns: minmax(260px, 0.42fr) minmax(0, 1fr); }
+.workspace-skeleton-workspace--survey .workspace-skeleton-panel--controls { min-height: 520px; }
+.workspace-skeleton-workspace--survey .workspace-skeleton-panel--preview { min-height: 520px; }
+.workspace-skeleton-field { width: 100%; height: 42px; margin-top: 16px; border-radius: 8px; }
+.workspace-skeleton-field--tall { height: 72px; }
+.workspace-skeleton-button-row { margin-top: 18px; }
+.workspace-skeleton-button-row .workspace-skeleton-block { flex: 1; height: 38px; border-radius: 7px; }
+.workspace-skeleton-button { width: 120px; height: 40px; margin-top: 18px; border-radius: 7px; }
+.workspace-skeleton-preview-toolbar { margin-bottom: 18px; }
+.workspace-skeleton-preview-toolbar .workspace-skeleton-block { width: 76px; height: 28px; border-radius: 6px; }
+.workspace-skeleton-preview-sheet { min-height: 430px; border-radius: 8px; background: linear-gradient(135deg, #f8fafc, #e2e8f0); }
+.workspace-skeleton-action-row { margin-bottom: 18px; overflow: hidden; }
+.workspace-skeleton-action-row .workspace-skeleton-block { flex: 1; min-width: 120px; height: 48px; border-radius: 10px; }
+
+.workspace-skeleton-block {
+  display: block;
+  overflow: hidden;
+  position: relative;
+  flex: 0 0 auto;
+  border-radius: 5px;
+  background: var(--skeleton-line);
+}
+
+.workspace-skeleton-block::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.64), transparent);
+  animation: workspace-skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+.workspace-skeleton-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+@keyframes workspace-skeleton-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+@media (max-width: 900px) {
+  .workspace-skeleton-sidebar { width: 180px; min-width: 180px; }
+  .workspace-skeleton-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .workspace-skeleton-card-grid,
+  .workspace-skeleton-card-grid--wide,
+  .workspace-skeleton-hazard-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .workspace-skeleton-topbar { min-height: 62px; padding-inline: 14px; }
+  .workspace-skeleton-topbar-pill { display: none; }
+  .workspace-skeleton-workspace { display: block; padding: 16px 12px 28px; }
+  .workspace-skeleton-sidebar { display: none; }
+  .workspace-skeleton-page-heading { display: block; }
+  .workspace-skeleton-heading-short { margin-top: 12px; }
+  .workspace-skeleton-stat-grid { gap: 8px; }
+  .workspace-skeleton-stat-card { min-height: 78px; padding: 12px; }
+  .workspace-skeleton-workspace--survey { display: block; }
+  .workspace-skeleton-workspace--survey .workspace-skeleton-panel--preview { margin-top: 14px; min-height: 360px; }
+  .workspace-skeleton-workspace--survey .workspace-skeleton-panel--controls { min-height: 380px; }
+  .workspace-skeleton-preview-sheet { min-height: 280px; }
+  .workspace-skeleton-action-row { display: grid; grid-template-columns: 1fr 1fr; }
+  .workspace-skeleton-action-row .workspace-skeleton-block { min-width: 0; }
+  .workspace-skeleton-step { width: 28%; }
+  .workspace-skeleton-step.is-active { width: 36%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-skeleton-block::after { animation: none; }
+}
+
 /* Shown only once a route's chunk has been loading for several seconds straight through - gives
    the person a way out instead of an unexplained, indefinite spinner (the common case being a
    deploy mid-restart on the server). Inline-safe colours rather than a shared button class, since

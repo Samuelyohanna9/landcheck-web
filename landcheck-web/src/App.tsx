@@ -5,6 +5,7 @@ import ContextualTooltips from "./components/ContextualTooltips";
 import SeoRouteMeta from "./components/SeoRouteMeta";
 import HazardLoadingAnimation from "./components/HazardLoadingAnimation";
 import GreenLoadingAnimation from "./components/GreenLoadingAnimation";
+import WorkspaceLoadingSkeleton, { type WorkspaceSkeletonVariant } from "./components/WorkspaceLoadingSkeleton";
 import { getGreenAuthSession, isGreenAuthed, isSponsorGreenSession } from "./auth/greenAuth";
 import { isWorkAuthed } from "./auth/workAuth";
 import { isSurveyAuthed } from "./auth/surveyAuth";
@@ -322,11 +323,28 @@ function RouteLoadingFallback() {
   }, [pathname]);
 
   const path = pathname.toLowerCase().replace(/\/+$/, "") || "/";
-  const isEstateRoute = path.startsWith("/estates") || path.startsWith("/estate-admin") || path.startsWith("/agents");
-  const isGreenWorkRoute = path.startsWith("/green-work");
-  const isSurveyRoute = path.startsWith("/survey") || path.startsWith("/dashboard");
+  const isEstateWorkspaceRoute =
+    path.startsWith("/estate-admin") ||
+    path.startsWith("/agents") ||
+    /^\/estates\/(workspace|payments|reconciliation|commissions|integrations|documents|billing|legal|\d+)/.test(path);
+  const isGreenWorkRoute = path === "/green-work";
+  const isGreenRoute = path === "/green";
+  const isSurveyRoute = path === "/survey-plan" || path.startsWith("/dashboard");
+  const isHazardRoute = path === "/hazard-analysis";
+  const isEstateRoute = isEstateWorkspaceRoute;
   const useCompactMark = isEstateRoute || isGreenWorkRoute || isSurveyRoute;
-  const showsOwnAnimation = !["/survey", "/survey/guides", "/flood", "/green-partners"].includes(path);
+  const workspaceVariant: WorkspaceSkeletonVariant | null = isSurveyRoute
+    ? "survey"
+    : isEstateWorkspaceRoute
+      ? "estate"
+      : isGreenWorkRoute
+        ? "work"
+        : isGreenRoute
+          ? "green"
+          : isHazardRoute
+            ? "hazard"
+            : null;
+  const showsOwnAnimation = !["/survey", "/survey/guides", "/flood", "/green-partners"].includes(path) && !workspaceVariant;
 
   let Animation: typeof GreenLoadingAnimation | null = null;
   if (showsOwnAnimation) {
@@ -339,11 +357,11 @@ function RouteLoadingFallback() {
     }
   }
 
-  if (!Animation && !stuck) return null;
+  if (!workspaceVariant && !Animation && !stuck) return null;
 
   return (
     <div className="route-loading-fallback">
-      {Animation && <Animation size={useCompactMark ? "small" : "large"} className={useCompactMark ? "estate-loading-animation" : undefined} />}
+      {workspaceVariant ? <WorkspaceLoadingSkeleton variant={workspaceVariant} /> : Animation && <Animation size={useCompactMark ? "small" : "large"} className={useCompactMark ? "estate-loading-animation" : undefined} />}
       {stuck && (
         <div className="route-loading-stuck-hint" role="status">
           <p>Taking longer than usual to load.</p>

@@ -592,9 +592,9 @@
 /* Appearance drawers keep their own dark defaults for the GIS theme. Rebuild the drawer as an
    Estate-style white surface in light mode, including the backdrop so the plan stays legible. */
 :root[data-workspace-theme="light"] .survey-container .appearance-panel-backdrop {
-  background: rgba(15, 23, 42, 0.18);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  background: rgba(15, 23, 42, 0.1);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 :root[data-workspace-theme="light"] .survey-container .appearance-panel {
