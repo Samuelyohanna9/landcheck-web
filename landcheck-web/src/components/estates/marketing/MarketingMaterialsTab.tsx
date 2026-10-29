@@ -8,7 +8,7 @@ import canvaIcon from "../../../assets/canva-icon.svg";
 
 type Campaign = { id: number; code: string; name: string; channel: string; assigned_agent_subject_id?: string | null };
 type CanvaDesign = { id: number; title: string; status: string; imported: boolean; source_format: string; source_style: string; r2_content_type?: string | null; created_at?: string; imported_at?: string | null; last_error?: string | null };
-type CanvaState = { configured: boolean; connection: { connected: boolean; id?: number; status?: string; last_error?: string | null }; designs: CanvaDesign[] };
+type CanvaState = { configured: boolean; autofill_configured?: boolean; autofill_ready?: boolean; connection: { connected: boolean; id?: number; status?: string; last_error?: string | null }; designs: CanvaDesign[] };
 
 function CanvaMark() {
   return <img src={canvaIcon} alt="" aria-hidden="true" style={{ width: 20, height: 20, marginRight: 8, flex: "0 0 auto" }} />;
@@ -188,6 +188,38 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
     }
   };
 
+  const editPdfWithCanva = async () => {
+    if (style !== "luxury") {
+      toast.error("PDF element import is currently available for the Luxury flyer only.");
+      return;
+    }
+    const canvaTab = window.open("about:blank", "_blank");
+    if (!canvaTab) { toast.error("Please allow pop-ups to open Canva in a new tab."); return; }
+    setBusy("canva-pdf");
+    try {
+      const response = await api.post<{ edit_url: string }>(`/estates/${estateId}/marketing/canva/pdf-import`, { style: "luxury", campaign_id: campaignId ? Number(campaignId) : null });
+      canvaTab.opener = null;
+      canvaTab.location.assign(response.data.edit_url);
+    } catch (error) {
+      canvaTab.close();
+      toast.error(await extractApiErrorMessage(error, "The PDF could not be opened in Canva."));
+    } finally { setBusy(null); }
+  };
+
+  const autofillWithCanva = async () => {
+    const canvaTab = window.open("about:blank", "_blank");
+    if (!canvaTab) { toast.error("Please allow pop-ups to open Canva in a new tab."); return; }
+    setBusy("canva-autofill");
+    try {
+      const response = await api.post<{ edit_url: string }>(`/estates/${estateId}/marketing/canva/autofill`, { campaign_id: campaignId ? Number(campaignId) : null });
+      canvaTab.opener = null;
+      canvaTab.location.assign(response.data.edit_url);
+    } catch (error) {
+      canvaTab.close();
+      toast.error(await extractApiErrorMessage(error, "The Canva template could not be prepared."));
+    } finally { setBusy(null); }
+  };
+
   const refreshCanva = async () => {
     setBusy("canva-refresh");
     await loadCanva();
@@ -267,18 +299,21 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
         </div>
         <div className="edash-mk-canva" style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--edash-line, #dce6e1)" }}>
           <div className="edash-card-head" style={{ marginBottom: 6 }}>
-            <div><strong>Edit a flyer in Canva</strong><p className="edash-mk-hint" style={{ margin: "4px 0 0" }}>LandCheck sends the generated flyer to Canva as one editable image. Canva opens in a new tab, so keep this dashboard tab open. When you finish, return to this tab and refresh the Canva designs list.</p></div>
+            <div><strong>Edit a flyer in Canva</strong><p className="edash-mk-hint" style={{ margin: "4px 0 0" }}>Choose the image fallback, the Luxury PDF import, or the editable LandCheck template. Canva opens in a new tab, so keep this dashboard tab open. When you finish, return here and refresh the designs list.</p></div>
             {canva?.connection?.connected ? <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}><button type="button" className="edash-btn-outline" disabled={busy === "canva-refresh"} onClick={() => void refreshCanva()}>{busy === "canva-refresh" ? "Refreshing..." : "Refresh designs"}</button><span className="edash-status-pill tone-good">Canva connected</span></div> : null}
           </div>
           {!canva?.connection?.connected ? (
             <button type="button" className="edash-btn-outline" disabled={!canva?.configured || busy === "canva-connect"} onClick={() => void connectCanva()}><CanvaMark />{busy === "canva-connect" ? "Opening Canva..." : canva?.configured ? "Connect Canva" : "Canva setup required"}</button>
           ) : (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button type="button" className="edash-btn-primary" disabled={busy === "canva-edit"} onClick={() => void editWithCanva()}><CanvaMark />{busy === "canva-edit" ? "Opening Canva..." : "Edit current flyer with Canva"}</button>
+              <button type="button" className="edash-btn-primary" disabled={busy === "canva-edit"} onClick={() => void editWithCanva()}><CanvaMark />{busy === "canva-edit" ? "Opening Canva..." : "Edit image flyer"}</button>
+              <button type="button" className="edash-btn-outline" disabled={style !== "luxury" || busy === "canva-pdf"} title={style === "luxury" ? "Import the existing Luxury PDF into Canva for possible element-level editing." : "Switch to the Luxury style for PDF import."} onClick={() => void editPdfWithCanva()}><CanvaMark />{busy === "canva-pdf" ? "Preparing PDF..." : "Edit Luxury PDF elements"}</button>
+              <button type="button" className="edash-btn-outline" disabled={!canva?.autofill_ready || busy === "canva-autofill"} title={canva?.autofill_ready ? "Populate the LandCheck Canva template with current estate data." : "Configure a Canva Autofill brand template and reconnect Canva."} onClick={() => void autofillWithCanva()}><CanvaMark />{busy === "canva-autofill" ? "Preparing template..." : "Create editable template flyer"}</button>
               <button type="button" className="edash-btn-outline" onClick={() => void disconnectCanva()}>Disconnect Canva</button>
             </div>
           )}
           {canva?.connection?.status === "needs_reconnect" && <p className="edash-mk-hint" style={{ color: "#a25b00" }}>Canva needs to be connected again before a design can be opened. {canva.connection.last_error || ""}</p>}
+          {canva?.connection?.connected && !canva.autofill_ready && <p className="edash-mk-hint" style={{ marginTop: 8 }}>Template flyer is unavailable until the Canva Autofill brand template and its permissions are configured. The image flyer and Luxury PDF import remain available.</p>}
         </div>
       </div></div>
 
