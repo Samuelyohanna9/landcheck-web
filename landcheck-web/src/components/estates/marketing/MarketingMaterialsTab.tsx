@@ -14,6 +14,26 @@ function CanvaMark() {
   return <img src={canvaIcon} alt="" aria-hidden="true" style={{ width: 20, height: 20, marginRight: 8, flex: "0 0 auto" }} />;
 }
 
+function CanvaDesignPreview({ estateId, designId, title }: { estateId: string; designId: number; title: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    let created: string | null = null;
+    fetchBlobUrl(`/estates/${estateId}/marketing/canva/designs/${designId}/image`).then((value) => {
+      if (cancelled) { URL.revokeObjectURL(value); return; }
+      created = value;
+      setUrl(value);
+    }).catch(() => { if (!cancelled) setError("Preview unavailable. Try importing the design again."); });
+    return () => { cancelled = true; if (created) URL.revokeObjectURL(created); };
+  }, [estateId, designId]);
+  return (
+    <div className="edash-mk-preview" style={{ flex: "1 1 100%", order: 3, width: "100%", minHeight: 160, maxHeight: 260, background: "#f6faf8", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+      {url ? <img src={url} alt={`${title} imported Canva preview`} style={{ width: "100%", height: "100%", maxHeight: 260, objectFit: "contain" }} /> : error ? <span style={{ padding: 16, fontSize: ".78rem", color: "#9a4c00", textAlign: "center" }}>{error}</span> : <span style={{ padding: 16, fontSize: ".78rem" }}>Loading preview...</span>}
+    </div>
+  );
+}
+
 function AdPreview({ path, params, alt, className = "edash-mk-preview" }: { path: string; params?: Record<string, unknown>; alt: string; className?: string }) {
   const [url, setUrl] = useState<string | null>(null);
   const [failedReason, setFailedReason] = useState<string | null>(null);
@@ -128,11 +148,15 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
   };
 
   const connectCanva = async () => {
+    const canvaTab = window.open("about:blank", "_blank");
+    if (!canvaTab) { toast.error("Please allow pop-ups to open Canva in a new tab."); return; }
     setBusy("canva-connect");
     try {
       const response = await api.post<{ url: string }>(`/estates/${estateId}/marketing/canva/connect`);
-      window.location.assign(response.data.url);
+      canvaTab.opener = null;
+      canvaTab.location.assign(response.data.url);
     } catch (error) {
+      canvaTab.close();
       toast.error(await extractApiErrorMessage(error, "Canva could not be connected."));
       setBusy(null);
     }
@@ -149,14 +173,24 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
   };
 
   const editWithCanva = async () => {
+    const canvaTab = window.open("about:blank", "_blank");
+    if (!canvaTab) { toast.error("Please allow pop-ups to open Canva in a new tab."); return; }
     setBusy("canva-edit");
     try {
       const response = await api.post<{ edit_url: string }>(`/estates/${estateId}/marketing/canva/designs`, { format: "post", style });
-      window.location.assign(response.data.edit_url);
+      canvaTab.opener = null;
+      canvaTab.location.assign(response.data.edit_url);
     } catch (error) {
+      canvaTab.close();
       toast.error(await extractApiErrorMessage(error, "The flyer could not be opened in Canva."));
       setBusy(null);
     }
+  };
+
+  const refreshCanva = async () => {
+    setBusy("canva-refresh");
+    await loadCanva();
+    setBusy(null);
   };
 
   const importCanvaDesign = async (designId: number, format: "png" | "jpg") => {
@@ -232,8 +266,8 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
         </div>
         <div className="edash-mk-canva" style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--edash-line, #dce6e1)" }}>
           <div className="edash-card-head" style={{ marginBottom: 6 }}>
-            <div><strong>Edit a flyer in Canva</strong><p className="edash-mk-hint" style={{ margin: "4px 0 0" }}>LandCheck sends the generated flyer to Canva as one editable image. You can move, resize or replace it, then return a PNG for your social posts.</p></div>
-            {canva?.connection?.connected ? <span className="edash-status-pill tone-good">Canva connected</span> : null}
+            <div><strong>Edit a flyer in Canva</strong><p className="edash-mk-hint" style={{ margin: "4px 0 0" }}>LandCheck sends the generated flyer to Canva as one editable image. Canva opens in a new tab, so keep this dashboard tab open. When you finish, return to this tab and refresh the Canva designs list.</p></div>
+            {canva?.connection?.connected ? <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}><button type="button" className="edash-btn-outline" disabled={busy === "canva-refresh"} onClick={() => void refreshCanva()}>{busy === "canva-refresh" ? "Refreshing..." : "Refresh designs"}</button><span className="edash-status-pill tone-good">Canva connected</span></div> : null}
           </div>
           {!canva?.connection?.connected ? (
             <button type="button" className="edash-btn-outline" disabled={!canva?.configured || busy === "canva-connect"} onClick={() => void connectCanva()}><CanvaMark />{busy === "canva-connect" ? "Opening Canva..." : canva?.configured ? "Connect Canva" : "Canva setup required"}</button>
@@ -250,11 +284,12 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
       {canva?.connection?.connected && canva.designs.length > 0 && (
         <div className="edash-card"><div className="edash-card-inner">
           <div className="edash-card-head"><h3 className="edash-card-title">Canva designs returned to LandCheck</h3></div>
-          <p className="edash-mk-hint">Import the finished PNG, then open Social posts to write, schedule or publish it through the existing Facebook and Instagram workflow.</p>
+          <p className="edash-mk-hint">Finished editing in Canva? Come back to this dashboard tab and click Refresh designs. Import PNG or JPG to preview it here, then send it to Social posts for scheduling or publishing.</p>
           <div className="edash-mk-stack">
             {canva.designs.map((design) => (
               <div key={design.id} className="edash-sp-account">
-                <div><strong>{design.title}</strong><small>{design.status === "imported" ? `${design.r2_content_type === "image/jpeg" ? "JPG" : "PNG"} imported` : design.status === "import_failed" ? (design.last_error || "Import failed") : "Ready to import"}</small></div>
+                <div style={{ flex: "1 1 260px", minWidth: 0 }}><strong>{design.title}</strong><small>{design.status === "imported" ? `${design.r2_content_type === "image/jpeg" ? "JPG" : "PNG"} imported — preview below` : design.status === "import_failed" ? (design.last_error || "Import failed — try again") : "Ready to import — import a PNG or JPG to preview"}</small></div>
+                {design.imported && <CanvaDesignPreview key={`${design.id}-${design.r2_content_type || "preview"}`} estateId={estateId} designId={design.id} title={design.title} />}
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginLeft: "auto" }}>
                   <button type="button" className={design.imported ? "edash-btn-outline" : "edash-btn-primary"} disabled={busy === `canva-import-png-${design.id}`} onClick={() => void importCanvaDesign(design.id, "png")}>{busy === `canva-import-png-${design.id}` ? "Importing..." : "Import PNG"}</button>
                   <button type="button" className="edash-btn-outline" disabled={busy === `canva-import-jpg-${design.id}`} onClick={() => void importCanvaDesign(design.id, "jpg")}>{busy === `canva-import-jpg-${design.id}` ? "Importing..." : "Import JPG"}</button>
