@@ -39,6 +39,7 @@ describe("Survey draft authentication handoff", () => {
         { station: "C", lng: 7.2, lat: 9.3 },
       ],
       meta: { scale_text: "1 : 2500", paper_size: "A3" },
+      hasCompletedSurveyPreview: true,
     };
     await saveSurveyPlanDraft("active", state, anonymousScope);
 

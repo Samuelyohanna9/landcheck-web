@@ -5239,6 +5239,60 @@ select.field-error {
   line-height: 1.55;
 }
 
+.draft-recovery-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(11, 29, 27, 0.62);
+  backdrop-filter: blur(5px);
+}
+
+.draft-recovery-modal {
+  width: min(100%, 34rem);
+  padding: 1.75rem;
+  border: 1px solid rgba(210, 172, 84, 0.45);
+  border-radius: 20px;
+  background: #fffdf7;
+  box-shadow: 0 24px 70px rgba(8, 30, 26, 0.32);
+  color: #17362e;
+}
+
+.draft-recovery-modal h2 {
+  margin: 0.7rem 0 0;
+  font-size: clamp(1.35rem, 3vw, 1.7rem);
+  line-height: 1.2;
+}
+
+.draft-recovery-modal p {
+  margin: 0.8rem 0 0;
+  color: #5d6f69;
+  line-height: 1.55;
+}
+
+.draft-recovery-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.35rem;
+}
+
+@media (max-width: 640px) {
+  .draft-recovery-modal {
+    padding: 1.3rem;
+  }
+
+  .draft-recovery-actions {
+    flex-direction: column-reverse;
+  }
+
+  .draft-recovery-actions button {
+    width: 100%;
+  }
+}
+
 .draft-banner-btn,
 .back-btn,
 .reset-btn,

@@ -329,6 +329,10 @@ type SurveyPlanDraftState = {
   areaSize: string;
   meta: PlotMeta;
   hasManualScaleOverride: boolean;
+  // Persists that the survey-plan preview was successfully rendered. The preview image itself is
+  // a transient blob URL, so this flag prevents a returning user from being asked to accept the
+  // automatic scale recommendation again after reopening the saved workspace.
+  hasCompletedSurveyPreview?: boolean;
   subdivisionMethod: SubdivisionMethod;
   subdivisionCountDraft: string;
   subdivisionTargetAreaDraft: string;
@@ -867,6 +871,7 @@ export default function SurveyPlan() {
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [restoredDraftUpdatedAt, setRestoredDraftUpdatedAt] = useState<string | null>(null);
   const [showDraftRecoveryBanner, setShowDraftRecoveryBanner] = useState(false);
+  const [showDraftRecoveryChoice, setShowDraftRecoveryChoice] = useState(false);
   // Georeference's new top bar has no room for (and per the redesign, deliberately drops) the
   // large "Draft restored" banner every other workflow still shows - a small dismissible toast
   // carries the same information without dominating the interface.
@@ -983,6 +988,7 @@ export default function SurveyPlan() {
   };
   const [scaleDraft, setScaleDraft] = useState<string>("");
   const [scaleDraftDirty, setScaleDraftDirty] = useState(false);
+  const [hasCompletedSurveyPreview, setHasCompletedSurveyPreview] = useState(false);
   const [newRoadWidth, setNewRoadWidth] = useState<string>("10");
   const [showFeatureEditor, setShowFeatureEditor] = useState(false);
   const featureEditsPendingRef = useRef(false);
@@ -1300,9 +1306,20 @@ export default function SurveyPlan() {
           Boolean(saved.featureEditorOpen) &&
           (restoredWorkflowMode === "survey" || restoredWorkflowMode === "subdivision") &&
           restoredStep >= 2;
+        const hasSavedCoordinates = Array.isArray(saved.manualPoints) && saved.manualPoints.some(
+          (point) => Number(point?.lng) !== 0 || Number(point?.lat) !== 0,
+        );
+        const hasResumableDraft = Boolean(
+          restoredWorkflowMode ||
+          saved.plotId ||
+          saved.georefSessionId ||
+          hasSavedCoordinates ||
+          restoredStep > 1,
+        );
         if (!isEstateLayoutImport) {
           setRestoredDraftUpdatedAt(record.updatedAt || null);
-          setShowDraftRecoveryBanner(true);
+          setShowDraftRecoveryBanner(hasResumableDraft);
+          setShowDraftRecoveryChoice(hasResumableDraft);
         }
         restoreActionsAppliedRef.current = false;
         if (saved.workflowMode && !isEstateLayoutImport) setWorkflowMode(saved.workflowMode);
@@ -1346,6 +1363,11 @@ export default function SurveyPlan() {
         if (saved.areaSize) setAreaSize(saved.areaSize);
         if (saved.meta) setMeta({ ...buildDefaultPlotMeta(), ...saved.meta });
         setHasManualScaleOverride(Boolean(saved.hasManualScaleOverride));
+        // `hasManualScaleOverride` was already persisted after a successful preview in older
+        // drafts. Accept it as the migration fallback while newer drafts use the explicit flag.
+        setHasCompletedSurveyPreview(Boolean(
+          saved.hasCompletedSurveyPreview ?? (saved.hasManualScaleOverride && restoredStep >= 2),
+        ));
         if (saved.subdivisionMethod) setSubdivisionMethod(saved.subdivisionMethod);
         if (typeof saved.subdivisionCountDraft === "string") setSubdivisionCountDraft(saved.subdivisionCountDraft);
         if (typeof saved.subdivisionTargetAreaDraft === "string") setSubdivisionTargetAreaDraft(saved.subdivisionTargetAreaDraft);
@@ -1827,6 +1849,7 @@ export default function SurveyPlan() {
       areaSize,
       meta,
       hasManualScaleOverride,
+      hasCompletedSurveyPreview,
       subdivisionMethod,
       subdivisionCountDraft,
       subdivisionTargetAreaDraft,
@@ -1899,6 +1922,7 @@ export default function SurveyPlan() {
     areaSize,
     meta,
     hasManualScaleOverride,
+    hasCompletedSurveyPreview,
     subdivisionMethod,
     subdivisionCountDraft,
     subdivisionTargetAreaDraft,
@@ -2852,7 +2876,7 @@ export default function SurveyPlan() {
       if (requestId !== previewRequestId.current || planGeneration !== planGenerationRef.current) return;
       // The first survey-plan render always gets the server's automatic scale/paper
       // recommendation. Manual values from an older local draft must not bypass that step.
-      if (!acceptedRecommendation && !previewUrl) {
+      if (!acceptedRecommendation && !previewUrl && !hasCompletedSurveyPreview) {
         const recommendationResponse = await api.post<ScaleRecommendation>(
           `/plots/${activePlotId}/scale-recommendation`,
           {
@@ -2926,6 +2950,7 @@ export default function SurveyPlan() {
       } else {
         markServerSynced();
       }
+      setHasCompletedSurveyPreview(true);
     } catch (err) {
       if (controller.signal.aborted || planGeneration !== planGenerationRef.current) return;
       console.error("Preview error:", err);
@@ -2961,6 +2986,7 @@ export default function SurveyPlan() {
     areaFont,
     areaSize,
     ensureServerPlot,
+    hasCompletedSurveyPreview,
     hasManualScaleOverride,
     effectiveRenderScaleText,
     previewUrl,
@@ -3744,6 +3770,7 @@ export default function SurveyPlan() {
     restoreActionsAppliedRef.current = false;
     setRestoredDraftUpdatedAt(null);
     setShowDraftRecoveryBanner(false);
+    setShowDraftRecoveryChoice(false);
     setPendingFeatureEditorRestore(false);
     setShowFeatureEditor(false);
     setWorkflowMode(null);
@@ -3805,6 +3832,7 @@ export default function SurveyPlan() {
     setSubdivisionCleanCopyDownloadBatchId(null);
     setMeta(buildDefaultPlotMeta());
     setHasManualScaleOverride(false);
+    setHasCompletedSurveyPreview(false);
     setLastServerSyncAt(null);
     setLastServerSyncSignature(null);
     setHasUnsyncedServerChanges(false);
@@ -5457,6 +5485,25 @@ export default function SurveyPlan() {
               </button>
             </div>
           </div>
+          )}
+          {showDraftRecoveryChoice && restoredDraftUpdatedAt && (
+            <div className="draft-recovery-backdrop" role="dialog" aria-modal="true" aria-labelledby="draft-recovery-title">
+              <section className="draft-recovery-modal">
+                <span className="survey-restore-kicker">Saved workspace found</span>
+                <h2 id="draft-recovery-title">Continue your {workflowMode === "subdivision" ? "subdivision" : workflowMode === "georeference" ? "georeference" : "survey plan"}?</h2>
+                <p>
+                  You were working on this {workflowMode === "subdivision" ? "subdivision" : workflowMode === "georeference" ? "georeference session" : "survey plan"}. It was saved on this device {formatDraftUpdatedAt(restoredDraftUpdatedAt)}.
+                </p>
+                <div className="draft-recovery-actions">
+                  <button type="button" className="draft-banner-btn draft-banner-btn--ghost" onClick={handleStartNewPlan}>
+                    Start a new plan
+                  </button>
+                  <button type="button" className="draft-banner-btn draft-banner-btn--primary" onClick={() => setShowDraftRecoveryChoice(false)}>
+                    Return to this work
+                  </button>
+                </div>
+              </section>
+            </div>
           )}
           {!workflowMode && (
             <div className="mode-select-shell">
