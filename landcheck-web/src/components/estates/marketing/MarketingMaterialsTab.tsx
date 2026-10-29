@@ -119,6 +119,7 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
   }, [share, plotSearch]);
   const selectedPlot = share?.plots.find((plot) => plot.id === plotId) || null;
   const safeName = estateName.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "") || "estate";
+  const latestCanvaDesign = canva?.designs?.[0] || null;
 
   const download = async (key: string, path: string, filename: string, extra?: Record<string, unknown>) => {
     setBusy(key);
@@ -281,12 +282,12 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
         </div>
       </div></div>
 
-      {canva?.connection?.connected && canva.designs.length > 0 && (
+      {canva?.connection?.connected && latestCanvaDesign && (
         <div className="edash-card"><div className="edash-card-inner">
           <div className="edash-card-head"><h3 className="edash-card-title">Canva designs returned to LandCheck</h3></div>
-          <p className="edash-mk-hint">Finished editing in Canva? Come back to this dashboard tab and click Refresh designs. Import PNG or JPG to preview it here, then send it to Social posts for scheduling or publishing.</p>
+          <p className="edash-mk-hint">Showing the latest Canva design only. Finished editing? Come back to this dashboard tab and click Refresh designs. Import PNG or JPG to preview it here, then send it to Social posts for scheduling or publishing.</p>
           <div className="edash-mk-stack">
-            {canva.designs.map((design) => (
+            {[latestCanvaDesign].map((design) => (
               <div key={design.id} className="edash-sp-account">
                 <div style={{ flex: "1 1 260px", minWidth: 0 }}><strong>{design.title}</strong><small>{design.status === "imported" ? `${design.r2_content_type === "image/jpeg" ? "JPG" : "PNG"} imported — preview below` : design.status === "import_failed" ? (design.last_error || "Import failed — try again") : "Ready to import — import a PNG or JPG to preview"}</small></div>
                 {design.imported && <CanvaDesignPreview key={`${design.id}-${design.r2_content_type || "preview"}`} estateId={estateId} designId={design.id} title={design.title} />}
