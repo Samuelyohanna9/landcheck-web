@@ -357,6 +357,7 @@ const DEFAULT_CERTIFICATION_STATEMENT =
 const SCALE_PRESETS = [250, 500, 1000, 1250, 2000, 2500, 5000, 10000, 12500, 20000, 25000, 50000];
 const MIN_SCALE_DENOMINATOR = 100;
 const MAX_SCALE_DENOMINATOR = 50000;
+const DEFAULT_ROAD_COLOR = "#68737D";
 const DEFAULT_TEMPLATE_NAME: PlotMeta["template_name"] = "";
 const DEFAULT_ADAMAWA_AUTHORITY_TITLE = "SURVEYOR GENERAL";
 const DEFAULT_ADAMAWA_AUTHORITY_DATE = "November, 2024";
@@ -955,7 +956,7 @@ export default function SurveyPlan() {
   const [boundaryColor, setBoundaryColor] = useState<string>("#ff0000");
   const [gridColor, setGridColor] = useState<string>("#0000ff");
   const [textColor, setTextColor] = useState<string>("#000000");
-  const [roadColor, setRoadColor] = useState<string>("#000000");
+  const [roadColor, setRoadColor] = useState<string>(DEFAULT_ROAD_COLOR);
   const [riverColor, setRiverColor] = useState<string>("#0000ff");
   const [buildingColor, setBuildingColor] = useState<string>("#000000");
   const [buildingHatchType, setBuildingHatchType] = useState<BuildingHatchType>("diagonal");
@@ -1345,7 +1346,11 @@ export default function SurveyPlan() {
         if (saved.boundaryColor) setBoundaryColor(saved.boundaryColor);
         if (saved.gridColor) setGridColor(saved.gridColor);
         if (saved.textColor) setTextColor(saved.textColor);
-        if (saved.roadColor) setRoadColor(saved.roadColor);
+        if (saved.roadColor) {
+          // Older drafts stored the previous black default. Migrate that default to the lighter
+          // cartographic road tone while preserving any intentional custom color choice.
+          setRoadColor(saved.roadColor.trim().toLowerCase() === "#000000" ? DEFAULT_ROAD_COLOR : saved.roadColor);
+        }
         if (saved.riverColor) setRiverColor(saved.riverColor);
         if (saved.buildingColor) setBuildingColor(saved.buildingColor);
         if (saved.buildingHatchType) setBuildingHatchType(saved.buildingHatchType);
