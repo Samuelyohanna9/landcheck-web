@@ -271,14 +271,14 @@ const renderPage = (template, page) => {
     : removeMeta(removeMeta(html, "property", "og:image:width"), "property", "og:image:height");
 
   html = html.replace(/\s*<link rel="canonical"[^>]*>/gi, "");
+  // LandCheck currently publishes one English/Nigeria version of each public page. Keep the
+  // generated HTML free of stale or unsupported hreflang alternates until distinct locale pages
+  // exist and can link to one another reciprocally.
   html = html.replace(/\s*<link rel="alternate" hreflang="[^"]+"[^>]*>/gi, "");
   const isNoIndex = String(page.robots || "").includes("noindex");
   const isSelfCanonical = canonicalPath(page.path) === page.canonicalPath;
   const canonicalTag = !isNoIndex || !isSelfCanonical ? `<link rel="canonical" href="${url}" />` : "";
-  const hreflang = isNoIndex
-    ? ""
-    : `\n<link rel="alternate" hreflang="en-ng" href="${url}" />\n<link rel="alternate" hreflang="en" href="${url}" />\n<link rel="alternate" hreflang="x-default" href="${url}" />`;
-  html = html.replace("</head>", `${canonicalTag}${hreflang}\n</head>`);
+  html = html.replace("</head>", `${canonicalTag}\n</head>`);
   const bodyHtml = page.bodyHtml || (!String(page.robots || "").includes("noindex") ? renderSeoShell(page) : "");
   if (bodyHtml) {
     html = html.replace('<div id="root"></div>', `<div id="root">${bodyHtml}</div>`);

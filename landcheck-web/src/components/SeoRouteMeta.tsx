@@ -72,17 +72,6 @@ const removeCanonical = () => {
   if (link) link.remove();
 };
 
-const upsertAlternateLinks = (href: string) => {
-  document.head.querySelectorAll('link[rel="alternate"][hreflang]').forEach((link) => link.remove());
-  for (const hreflang of ["en-ng", "en", "x-default"]) {
-    const link = document.createElement("link");
-    link.setAttribute("rel", "alternate");
-    link.setAttribute("hreflang", hreflang);
-    link.setAttribute("href", href);
-    document.head.appendChild(link);
-  }
-};
-
 const removeAlternateLinks = () => {
   document.head.querySelectorAll('link[rel="alternate"][hreflang]').forEach((link) => link.remove());
 };
@@ -268,8 +257,9 @@ export default function SeoRouteMeta() {
     } else {
       upsertCanonical(canonicalUrl);
     }
-    if (isNoIndex) removeAlternateLinks();
-    else upsertAlternateLinks(canonicalUrl);
+    // Only one English/Nigeria version is currently published. Remove any stale alternates
+    // instead of advertising locale variants that do not exist yet.
+    removeAlternateLinks();
 
     upsertMetaByProperty("og:locale", "en_NG");
     upsertMetaByProperty("og:title", seo.title);

@@ -431,8 +431,8 @@
     "ogImage": "https://landcheck.online/flood-background.jpg"
   },
   "/survey": {
-    "title": "Survey Plan Production Nigeria | Professional Survey Plans Online | LandCheck",
-    "description": "Generate true-scale professional survey plans in Nigeria from coordinate input. Export PDF, DWG, orthophoto, computation sheets, and topographic maps. No CAD software required.",
+    "title": "Online Survey Plan Generator Nigeria | LandCheck Survey",
+    "description": "Create professional survey plans from boundary coordinates in Nigeria. Upload Excel or CSV files, use AI-assisted coordinate extraction, georeference scanned layouts, subdivide parcels, and export PDF, DWG, orthophoto and topographic maps.",
     "keywords": "survey plan Nigeria, survey plan production Nigeria, digital survey plan Nigeria, online survey plan generator, professional survey plan PDF Nigeria, DWG survey plan Nigeria, survey plan coordinates",
     "canonicalPath": "/survey/",
     "ogType": "website",
@@ -458,7 +458,7 @@
         "@type": "Country",
         "name": "Nigeria"
       },
-      "description": "Professional survey plan production for Nigeria. Generate true-scale PDF, DWG, orthophoto, and computation sheets from coordinate input. No CAD required.",
+      "description": "Professional survey plan production for Nigeria. Create plans from boundary coordinates, spreadsheet files, or scanned layouts, then export PDF, DWG, orthophoto, and topographic outputs.",
       "url": "https://landcheck.online/survey/"
     }
   },
