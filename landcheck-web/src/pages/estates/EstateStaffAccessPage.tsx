@@ -65,6 +65,9 @@ export default function EstateStaffAccessPage() {
   const [roles, setRoles] = useState<StaffRole[]>([]);
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [orgEstates, setOrgEstates] = useState<Array<{ id: number; name: string }>>([]);
+  const [scopedEstateIds, setScopedEstateIds] = useState<Set<number>>(new Set());
+  const [scopesBusy, setScopesBusy] = useState(false);
 
   const [roleModalOpen, setRoleModalOpen] = useState<StaffRole | null | "new">(null);
   const [roleName, setRoleName] = useState("");
@@ -150,7 +153,27 @@ export default function EstateStaffAccessPage() {
   const openEditStaff = (member: StaffMember) => {
     setStaffName(member.full_name); setStaffEmail(member.email || ""); setStaffPhone(member.phone || "");
     setStaffRoleId(member.role_id || ""); setStaffPermissions(new Set(member.permissions));
+    setScopedEstateIds(new Set());
     setStaffModalOpen(member);
+    if (organizationId) {
+      if (!orgEstates.length) api.get("/estates").then((response) => setOrgEstates((response.data || []).map((estate: any) => ({ id: estate.id, name: estate.name })))).catch(() => undefined);
+      api.get(`/estates/organizations/${organizationId}/staff/${member.member_id}/estate-scopes`).then((response) => setScopedEstateIds(new Set(response.data?.estate_ids || []))).catch(() => undefined);
+    }
+  };
+  const toggleEstateScope = (estateId: number) => {
+    setScopedEstateIds((current) => { const next = new Set(current); if (next.has(estateId)) next.delete(estateId); else next.add(estateId); return next; });
+  };
+  const saveEstateScopes = async () => {
+    if (!organizationId || staffModalOpen === "new" || !staffModalOpen) return;
+    setScopesBusy(true);
+    try {
+      await api.put(`/estates/organizations/${organizationId}/staff/${staffModalOpen.member_id}/estate-scopes`, { estate_ids: Array.from(scopedEstateIds) });
+      toast.success(scopedEstateIds.size ? "Restricted to the selected estates." : "Unrestricted - this member can now see every estate again.");
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "Could not save estate access."));
+    } finally {
+      setScopesBusy(false);
+    }
   };
   const toggleStaffPermission = (key: string) => {
     setStaffPermissions((current) => {
@@ -347,6 +370,17 @@ export default function EstateStaffAccessPage() {
             <span>Role name</span>
             <input value={roleName} maxLength={120} autoFocus onChange={(event) => setRoleName(event.target.value)} placeholder="e.g. Sales lead, Site manager" />
           </label>
+          {roleModalOpen === "new" && !roleName.trim() && rolePermissions.size === 0 && (
+            <button
+              type="button"
+              className="edash-card-link"
+              style={{ marginBottom: 14 }}
+              title="Fills in a ready-made Architect role: plots, documents and construction, no access to customers or payments"
+              onClick={() => { setRoleName("Architect"); setRolePermissions(new Set(["estate.read", "plot.read", "document.read", "document.manage", "construction.read", "construction.manage"])); }}
+            >
+              Use the Architect template
+            </button>
+          )}
           <PermissionChecklist groups={groups} selected={rolePermissions} onToggle={toggleRolePermission} />
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
             <button type="button" className="edash-btn-outline" disabled={roleBusy} onClick={() => setRoleModalOpen(null)}>Cancel</button>
@@ -394,6 +428,20 @@ export default function EstateStaffAccessPage() {
           </label>
           <p className="edash-field-note" style={{ marginBottom: 6 }}>Access (starts from the role above, editable):</p>
           <PermissionChecklist groups={groups} selected={staffPermissions} onToggle={toggleStaffPermission} />
+          {staffModalOpen !== "new" && (
+            <div style={{ marginTop: 16 }}>
+              <p className="edash-field-note" style={{ marginBottom: 6 }}>Restrict to specific estates (leave all unticked for unrestricted access to every estate - useful for a collaborator like an architect who should only see the one they're working on):</p>
+              <div className="edash-permission-group-items">
+                {orgEstates.map((estate) => (
+                  <label key={estate.id} className="edash-checkbox-row">
+                    <input type="checkbox" checked={scopedEstateIds.has(estate.id)} onChange={() => toggleEstateScope(estate.id)} />
+                    <span>{estate.name}</span>
+                  </label>
+                ))}
+              </div>
+              <button type="button" className="edash-btn-outline" style={{ marginTop: 8 }} disabled={scopesBusy} onClick={() => void saveEstateScopes()}>{scopesBusy ? "Saving..." : "Save estate access"}</button>
+            </div>
+          )}
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
             <button type="button" className="edash-btn-outline" disabled={staffBusy} onClick={() => setStaffModalOpen(null)}>Cancel</button>
             <button type="button" className="edash-btn-primary" disabled={staffBusy} onClick={() => void saveStaff()}>

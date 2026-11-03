@@ -6,6 +6,7 @@ import { getEstateAuthSession } from "../../auth/estateAuth";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import { getEstateQueryScope, invalidateEstateMutation, useEstatePlotsQuery } from "../../query/estateQueries";
+import { developmentStatusColor, PlotStatusBadge } from "../../components/estates/plotStatusColors";
 
 const STATUS_LABELS: Record<string, string> = {
   not_started: "Not started",
@@ -67,7 +68,7 @@ export default function EstateDevelopmentPage() {
       <EstateRibbon tabs={ribbonTabs} />
       <div className="edash-stats-row edash-stats-row--five">
         {Object.entries(STATUS_LABELS).map(([key, label]) => (
-          <div key={key} className="edash-stat-card">
+          <div key={key} className="edash-stat-card" style={{ borderTop: `3px solid ${developmentStatusColor(key)}` }}>
             <div className="edash-stat-body">
               <p className="edash-stat-label">{label}</p>
               <p className="edash-stat-value">{counts[key] || 0}</p>
@@ -86,11 +87,14 @@ export default function EstateDevelopmentPage() {
                   {plots.map((plot) => (
                     <tr key={plot.id}>
                       <td data-label="Plot No.">{plot.plot_number}</td>
-                      <td data-label="Commercial status" style={{ textTransform: "capitalize" }}>{plot.commercial_status.replaceAll("_", " ")}</td>
+                      <td data-label="Commercial status"><PlotStatusBadge status={plot.commercial_status} /></td>
                       <td data-label="Development status">
-                        <select className="edash-map-select" value={plot.development_status || "not_started"} onChange={(event) => void updateStatus(plot.id, event.target.value)}>
-                          {Object.entries(STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                        </select>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                          <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: "50%", background: developmentStatusColor(plot.development_status), flexShrink: 0 }} />
+                          <select className="edash-map-select" value={plot.development_status || "not_started"} onChange={(event) => void updateStatus(plot.id, event.target.value)}>
+                            {Object.entries(STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                          </select>
+                        </span>
                       </td>
                     </tr>
                   ))}

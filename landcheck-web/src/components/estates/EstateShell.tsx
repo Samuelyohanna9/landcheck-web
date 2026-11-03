@@ -17,7 +17,7 @@ import "../../styles/estate-legal.css";
 
 export type EstateNavKey =
   | "dashboard" | "map" | "plots" | "customers" | "inspections" | "approvals" | "payments" | "commissions" | "marketing" | "whatsapp" | "sms" | "survey" | "staking"
-  | "documents" | "development" | "hazard" | "soil" | "reports" | "audit" | "public_site" | "settings" | "notifications" | "integrations"
+  | "documents" | "development" | "construction" | "hazard" | "soil" | "reports" | "audit" | "public_site" | "settings" | "notifications" | "integrations"
   | "access";
 
 // A sub-view belonging to its parent's own page (a real tab inside that same route, reached via
@@ -60,6 +60,7 @@ export const estateNavItems: Array<{ key: EstateNavKey; label: string; icon: Est
   { key: "documents", label: "Documents", icon: "documents", path: () => "/estates/documents", description: "Store and share estate documents like titles and agreements" },
   { key: "integrations", label: "Data Connect", icon: "upload", path: () => "/estates/integrations", description: "Import customers, plots, sales and payments from a spreadsheet" },
   { key: "development", label: "Development", icon: "development", path: (id) => `/estates/${id}/development`, description: "Track construction and infrastructure progress on site" },
+  { key: "construction", label: "Construction", icon: "house", path: (id) => `/estates/${id}/construction`, description: "Track per-plot build budgets, contractors and draw payments" },
   { key: "hazard", label: "Hazard Analysis", icon: "hazard", path: (id) => `/estates/${id}/hazards`, description: "Check flood, erosion and other environmental risks for this estate" },
   { key: "soil", label: "Soil Analysis", icon: "layers", path: (id) => `/estates/${id}/soil-analysis`, description: "Review soil composition and suitability for this estate" },
   { key: "reports", label: "Reports", icon: "reports", path: (id) => `/estates/${id}/reports`, description: "Generate sales, financial and activity reports" },
@@ -92,6 +93,7 @@ const NAV_PERMISSION: Partial<Record<EstateNavKey, string>> = {
   documents: "document.read",
   integrations: "integration.read",
   development: "infrastructure.read",
+  construction: "construction.read",
   hazard: "plot.read",
   soil: "plot.read",
   reports: "report.read",

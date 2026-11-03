@@ -54,3 +54,40 @@ export function PlotStatusBadge({ status, style }: { status: string | null | und
     </span>
   );
 }
+
+// The same canonical-color treatment for EstatePlot.development_status (a separate lifecycle from
+// commercial_status - a plot can be "allocated" and "under_construction" at the same time). "developed"
+// intentionally reuses PLOT_STATUS_COLORS.developed - same end state, same color, in both systems.
+export const DEVELOPMENT_STATUS_COLORS = {
+  not_started: "#667085",
+  site_cleared: "#b07d2c",
+  foundation: "#d9622a",
+  under_construction: "#2a78d6",
+  developed: "#0f8b8d",
+} as const;
+
+export const DEVELOPMENT_STATUS_LABELS: Record<string, string> = {
+  not_started: "Not started",
+  site_cleared: "Site cleared",
+  foundation: "Foundation",
+  under_construction: "Under construction",
+  developed: "Developed",
+};
+
+export function developmentStatusColor(status: string | null | undefined): string {
+  return (DEVELOPMENT_STATUS_COLORS as Record<string, string>)[String(status || "not_started")] || DEVELOPMENT_STATUS_COLORS.not_started;
+}
+
+export function developmentStatusLabel(status: string | null | undefined): string {
+  const key = String(status || "not_started");
+  return DEVELOPMENT_STATUS_LABELS[key] || key.replaceAll("_", " ") || "Not started";
+}
+
+export function DevelopmentStatusBadge({ status, style }: { status: string | null | undefined; style?: CSSProperties }) {
+  const color = developmentStatusColor(status);
+  return (
+    <span className="edash-plot-status-pill" style={{ color, background: `${color}1f`, borderColor: `${color}55`, ...style }}>
+      {developmentStatusLabel(status)}
+    </span>
+  );
+}
