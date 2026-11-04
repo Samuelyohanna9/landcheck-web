@@ -90,6 +90,12 @@ export default function EstateSocialPostsPage() {
   const previousScopeRef = useRef<Scope>(scope);
   const [clearingAll, setClearingAll] = useState(false);
   const [clearProgress, setClearProgress] = useState<{ done: number; total: number } | null>(null);
+  // A synchronous guard, not just the `busy` state's disabled-button rendering: checked and set in
+  // the same tick a click handler runs, before React has had any chance to re-render the button as
+  // disabled - the only way to be certain a fast double-click (or a double-tap on mobile, which
+  // often fires before the first tap's re-render paints) can never start the same action twice.
+  const inFlightRef = useRef<Set<string>>(new Set());
+  const [justActed, setJustActed] = useState<Record<string, true>>({});
 
   const load = useCallback(async () => {
     if (!estateId) return;
@@ -126,8 +132,78 @@ export default function EstateSocialPostsPage() {
   }, [posts]);
 
   const run = async (key: string, work: () => Promise<void>, fallback: string) => {
+    if (inFlightRef.current.has(key)) return; // already running - a fast double-click/tap landed before the disabled button could paint
+    inFlightRef.current.add(key);
     setBusy(key);
-    try { await work(); await load(); } catch (error) { toast.error(await extractApiErrorMessage(error, fallback)); await load(); } finally { setBusy(null); }
+    try { await work(); await load(); } catch (error) { toast.error(await extractApiErrorMessage(error, fallback)); await load(); } finally { setBusy(null); inFlightRef.current.delete(key); }
+  };
+  // Updates one channel's stats on one post in local state only - no reload. Used by the optimistic
+  // actions below so the UI reflects the click instantly instead of waiting for a full posts refetch.
+  const updateStats = (postId: number, channel: string, updater: (stats: Stats) => Stats) => {
+    setPosts((current) => current.map((post) => {
+      if (post.id !== postId) return post;
+      const result = post.results?.[channel];
+      const baseStats: Stats = result?.stats || { likes: 0, comments: 0 };
+      return { ...post, results: { ...post.results, [channel]: { ...result, status: result?.status || "ok", stats: updater(baseStats) } } };
+    }));
+  };
+  // Optimistic + fire-in-background: the like lands in the UI the instant it's clicked, same as
+  // every real social app does, while the actual request to Facebook/Instagram (which genuinely
+  // takes a couple of seconds) runs behind it. Reverted with an error toast only if it truly fails.
+  const likeTarget = async (post: Post, channel: string, targetId?: string) => {
+    const key = `like-${post.id}-${channel}-${targetId || "post"}`;
+    if (inFlightRef.current.has(key)) return;
+    inFlightRef.current.add(key);
+    setJustActed((current) => ({ ...current, [key]: true }));
+    if (targetId) {
+      updateStats(post.id, channel, (stats) => ({ ...stats, comment_list: (stats.comment_list || []).map((comment) => (comment.id === targetId ? { ...comment, likes: (comment.likes || 0) + 1 } : comment)) }));
+    } else {
+      updateStats(post.id, channel, (stats) => ({ ...stats, likes: (stats.likes || 0) + 1 }));
+    }
+    try {
+      await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/like`, targetId ? { target_id: targetId } : {});
+    } catch (error) {
+      // Revert the optimistic bump - it didn't actually happen.
+      if (targetId) {
+        updateStats(post.id, channel, (stats) => ({ ...stats, comment_list: (stats.comment_list || []).map((comment) => (comment.id === targetId ? { ...comment, likes: Math.max(0, (comment.likes || 1) - 1) } : comment)) }));
+      } else {
+        updateStats(post.id, channel, (stats) => ({ ...stats, likes: Math.max(0, (stats.likes || 1) - 1) }));
+      }
+      toast.error(await extractApiErrorMessage(error, "The like could not be added."));
+    } finally {
+      inFlightRef.current.delete(key);
+      setTimeout(() => setJustActed((current) => { const next = { ...current }; delete next[key]; return next; }), 2000);
+    }
+  };
+  const postComment = async (post: Post, channel: string, message: string, replyToId?: string) => {
+    const draftKeyLocal = `${post.id}-${channel}-${replyToId || "post"}`;
+    const key = `comment-${draftKeyLocal}`;
+    if (inFlightRef.current.has(key) || !message.trim()) return;
+    inFlightRef.current.add(key);
+    setBusy(key);
+    // Insert the comment into the feed immediately, under a temporary id, and clear the composer -
+    // exactly what posting a comment on a real social app feels like. Reconciled with the real
+    // Facebook/Instagram-assigned comment (and its own like count) by the background refresh-stats
+    // call below once the request actually completes.
+    const tempId = `temp-${Date.now()}`;
+    const authorName = session?.user.full_name || "You";
+    updateStats(post.id, channel, (stats) => ({ ...stats, comments: (stats.comments || 0) + 1, comment_list: [...(stats.comment_list || []), { id: tempId, name: authorName, message, created_time: new Date().toISOString() }] }));
+    setCommentDraft((current) => ({ ...current, [draftKeyLocal]: "" }));
+    setReplyingTo(null);
+    try {
+      await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/comment`, { message, reply_to_id: replyToId || null });
+      toast.success(replyToId ? "Reply posted." : "Comment posted.");
+      // Background reconciliation only - never blocks the UI that's already showing the comment.
+      void api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/refresh-stats`).then(load).catch(() => undefined);
+    } catch (error) {
+      // It didn't actually post - remove the optimistic comment and put the draft back so nothing's lost.
+      updateStats(post.id, channel, (stats) => ({ ...stats, comments: Math.max(0, (stats.comments || 1) - 1), comment_list: (stats.comment_list || []).filter((comment) => comment.id !== tempId) }));
+      setCommentDraft((current) => ({ ...current, [draftKeyLocal]: message }));
+      toast.error(await extractApiErrorMessage(error, "The comment could not be posted."));
+    } finally {
+      setBusy(null);
+      inFlightRef.current.delete(key);
+    }
   };
   const save = (post: Post) => draft && run(`save-${post.id}`, async () => {
     const payload: Record<string, unknown> = {};
@@ -162,17 +238,6 @@ export default function EstateSocialPostsPage() {
     }
   }, "The post could not be deleted.");
   const removeFromDashboardOnly = (post: Post, channel: string) => window.confirm(`Remove this from LandCheck's dashboard? The live post is NOT deleted from ${CHANNEL_SHORT[channel] || channel} - this only clears LandCheck's own record.`) && run(`remove-${post.id}-${channel}`, async () => { await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/remove-from-dashboard`); toast.success("Removed from LandCheck's dashboard."); }, "Could not remove this from the dashboard.");
-  const likeTarget = (post: Post, channel: string, targetId?: string) => run(`like-${post.id}-${channel}-${targetId || "post"}`, async () => {
-    await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/like`, targetId ? { target_id: targetId } : {});
-    toast.success(targetId ? "Comment liked." : "Post liked.");
-  }, "The like could not be added.");
-  const postComment = (post: Post, channel: string, message: string, replyToId?: string) => run(`comment-${post.id}-${channel}-${replyToId || "post"}`, async () => {
-    await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/comment`, { message, reply_to_id: replyToId || null });
-    toast.success(replyToId ? "Reply posted." : "Comment posted.");
-    setCommentDraft((current) => ({ ...current, [`${post.id}-${channel}-${replyToId || "post"}`]: "" }));
-    setReplyingTo(null);
-    await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/refresh-stats`);
-  }, "The comment could not be posted.");
   const refreshStats = (post: Post, channel: string) => run(`stats-${post.id}-${channel}`, async () => { await api.post(`/estates/marketing/social/posts/${post.id}/channels/${channel}/refresh-stats`); }, "Engagement stats could not be loaded.");
 
   if (!estateId) return null;
@@ -310,7 +375,7 @@ export default function EstateSocialPostsPage() {
                   </div>
                   {canManage && (
                     <div className="edash-sp-feed-actions">
-                      {channel === "facebook" && <button type="button" className="edash-btn-outline" title="Like this post on your live Facebook Page" disabled={busy === `like-${post.id}-${channel}-post`} onClick={() => void likeTarget(post, channel)}>Like</button>}
+                      {channel === "facebook" && <button type="button" className="edash-btn-outline" title="Like this post on your live Facebook Page" disabled={!!justActed[`like-${post.id}-${channel}-post`]} onClick={() => void likeTarget(post, channel)}>{justActed[`like-${post.id}-${channel}-post`] ? "Liked ✓" : "Like"}</button>}
                       <button type="button" className="edash-btn-outline is-danger" title={`Remove this post from your live ${CHANNEL_SHORT[channel]} account - this can't be undone`} disabled={busy === `delete-${post.id}-${channel}`} onClick={() => void deleteFromChannel(post, channel)}>{busy === `delete-${post.id}-${channel}` ? "Deleting..." : "Delete"}</button>
                       <button type="button" className="edash-card-link" title={`Remove this from LandCheck's dashboard only - the live post on ${CHANNEL_SHORT[channel]} is NOT deleted`} disabled={busy === `remove-${post.id}-${channel}`} onClick={() => void removeFromDashboardOnly(post, channel)}>{busy === `remove-${post.id}-${channel}` ? "Removing..." : "Hide from dashboard"}</button>
                     </div>
@@ -324,7 +389,7 @@ export default function EstateSocialPostsPage() {
                             <strong>{comment.name}</strong> <span>{comment.message}</span>
                             {comment.id && canManage && (
                               <div className="edash-sp-feed-comment-actions">
-                                {channel === "facebook" && <button type="button" className="edash-sp-link-btn" title="Like this commenter's comment on your live Facebook Page" onClick={() => void likeTarget(post, channel, comment.id)}>Like</button>}
+                                {channel === "facebook" && <button type="button" className="edash-sp-link-btn" title="Like this commenter's comment on your live Facebook Page" disabled={!!justActed[`like-${post.id}-${channel}-${comment.id}`]} onClick={() => void likeTarget(post, channel, comment.id)}>{justActed[`like-${post.id}-${channel}-${comment.id}`] ? "Liked ✓" : "Like"}</button>}
                                 <button type="button" className="edash-sp-link-btn" title={`Write and publish a reply to ${comment.name}'s comment on your live ${CHANNEL_SHORT[channel]} post`} onClick={() => setReplyingTo(replyingTo === replyKey ? null : replyKey)}>Reply</button>
                               </div>
                             )}
@@ -421,7 +486,7 @@ export default function EstateSocialPostsPage() {
                                           {result.stats.comment_list?.map((comment, index) => (
                                             <div key={index}>
                                               <div className="edash-sp-engagement-row"><strong>{comment.name}</strong><span>{comment.message}</span>{comment.created_time && <small>{formatLagos(comment.created_time, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</small>}{comment.id && (key === "facebook" || key === "instagram") && (<>
-{key === "facebook" && <button type="button" className="edash-sp-link-btn" title="Like this commenter's comment on your live Facebook Page" onClick={() => void likeTarget(post, key, comment.id)}>Like</button>}<button type="button" className="edash-sp-link-btn" title={`Write and publish a reply to ${comment.name}'s comment, visible on your live ${CHANNEL_SHORT[key] || key} post`} onClick={() => setReplyingTo(replyingTo === `${post.id}-${key}-${comment.id}` ? null : `${post.id}-${key}-${comment.id}`)}>Reply</button>
+{key === "facebook" && <button type="button" className="edash-sp-link-btn" title="Like this commenter's comment on your live Facebook Page" disabled={!!justActed[`like-${post.id}-${key}-${comment.id}`]} onClick={() => void likeTarget(post, key, comment.id)}>{justActed[`like-${post.id}-${key}-${comment.id}`] ? "Liked ✓" : "Like"}</button>}<button type="button" className="edash-sp-link-btn" title={`Write and publish a reply to ${comment.name}'s comment, visible on your live ${CHANNEL_SHORT[key] || key} post`} onClick={() => setReplyingTo(replyingTo === `${post.id}-${key}-${comment.id}` ? null : `${post.id}-${key}-${comment.id}`)}>Reply</button>
 </>)}</div>
                                               {comment.id && replyingTo === `${post.id}-${key}-${comment.id}` && (
                                                 <div className="edash-sp-comment-box edash-sp-reply-box">
@@ -452,7 +517,7 @@ export default function EstateSocialPostsPage() {
                                   {automatic && result.status === "ok" && canManage && (
                                     <span className="edash-sp-result-actions">
                                       <button type="button" className="edash-sp-link-btn" title={`Fetch the latest likes, comments and shares for this post from your live ${CHANNEL_SHORT[key] || key} account`} disabled={busy === `stats-${post.id}-${key}`} onClick={() => void refreshStats(post, key)}>{busy === `stats-${post.id}-${key}` ? "Loading..." : result.stats ? "Refresh stats" : "Load stats"}</button>
-                                      {key === "facebook" && <button type="button" className="edash-sp-link-btn" title="Like this post on your live Facebook Page" disabled={busy === `like-${post.id}-${key}-post`} onClick={() => void likeTarget(post, key)}>Like post</button>}
+                                      {key === "facebook" && <button type="button" className="edash-sp-link-btn" title="Like this post on your live Facebook Page" disabled={!!justActed[`like-${post.id}-${key}-post`]} onClick={() => void likeTarget(post, key)}>{justActed[`like-${post.id}-${key}-post`] ? "Liked ✓" : "Like post"}</button>}
                                   <button type="button" className="edash-sp-link-btn is-danger" title={`Remove this post from your live ${CHANNEL_SHORT[key] || key} account - this can't be undone`} disabled={busy === `delete-${post.id}-${key}`} onClick={() => void deleteFromChannel(post, key)}>{busy === `delete-${post.id}-${key}` ? "Deleting..." : "Delete"}</button>
                                     </span>
                                   )}

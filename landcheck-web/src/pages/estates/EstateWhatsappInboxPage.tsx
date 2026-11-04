@@ -76,6 +76,10 @@ export default function EstateWhatsappInboxPage() {
   const [entitled, setEntitled] = useState<boolean | null>(null);
   const threadEndRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  // Synchronous, not just the `sending` state's disabled-button rendering - checked and set in the
+  // same tick Send is clicked, before React has repainted the button as disabled, so a fast
+  // double-click (or double-tap) can never fire the same reply twice.
+  const sendingRef = useRef(false);
 
   const loadConversations = useCallback(async () => {
     if (!estateId) return;
@@ -155,7 +159,8 @@ export default function EstateWhatsappInboxPage() {
 
   const startWithTemplate = async () => {
     const target = active?.customer_id ? { id: active.customer_id } : newChatContact ? { id: newChatContact.id } : null;
-    if (!estateId || !target || !templateKey) return;
+    if (!estateId || !target || !templateKey || sendingRef.current) return;
+    sendingRef.current = true;
     setStartingChat(true);
     try {
       await api.post(`/estates/${estateId}/marketing/social/whatsapp/conversations/new`, { customer_id: target.id, preset: templateKey, detail: templateDetail.trim() || undefined });
@@ -167,29 +172,45 @@ export default function EstateWhatsappInboxPage() {
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "The message could not be sent."));
     } finally {
+      sendingRef.current = false;
       setStartingChat(false);
     }
   };
 
   const sendReply = async () => {
-    if (!estateId || !activePhone) return;
+    if (!estateId || !activePhone || sendingRef.current) return;
     if (attachedFile) { await sendMediaReply(); return; }
-    if (!reply.trim()) return;
+    const body = reply.trim();
+    if (!body) return;
+    sendingRef.current = true;
     setSending(true);
+    // Optimistic: the message appears in the thread (and the sidebar preview) the instant Send is
+    // clicked, same as a real chat app - the actual WhatsApp delivery, which genuinely takes a
+    // moment, runs behind it. A background reload reconciles the temporary message with the real
+    // one (and its real delivery ticks) once the request completes; a failure removes it and
+    // restores the draft so nothing typed is lost.
+    const tempId = -Date.now();
+    const optimisticMessage: Message = { id: tempId, direction: "out", type: "text", body, has_media: false, status: "sent", created_at: new Date().toISOString() };
+    setMessages((current) => [...current, optimisticMessage]);
+    setConversations((current) => current.map((item) => (item.phone_digits === activePhone ? { ...item, last_message: { direction: "out", type: "text", body, created_at: optimisticMessage.created_at } } : item)));
+    setReply("");
     try {
-      await api.post(`/estates/${estateId}/marketing/social/whatsapp/conversations/${activePhone}/reply`, { body: reply.trim() });
-      setReply("");
-      await loadThread(activePhone);
-      await loadConversations();
+      await api.post(`/estates/${estateId}/marketing/social/whatsapp/conversations/${activePhone}/reply`, { body });
+      void loadThread(activePhone);
+      void loadConversations();
     } catch (error) {
+      setMessages((current) => current.filter((item) => item.id !== tempId));
+      setReply(body);
       toast.error(await extractApiErrorMessage(error, "The reply could not be sent."));
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   };
 
   const sendMediaReply = async () => {
-    if (!estateId || !activePhone || !attachedFile) return;
+    if (!estateId || !activePhone || !attachedFile || sendingRef.current) return;
+    sendingRef.current = true;
     setSending(true);
     try {
       const form = new FormData();
@@ -204,6 +225,7 @@ export default function EstateWhatsappInboxPage() {
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "The file could not be sent."));
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   };
