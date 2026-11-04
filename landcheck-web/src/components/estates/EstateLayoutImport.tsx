@@ -31,7 +31,7 @@ type Props = {
 };
 
 export const LAYOUT_IMPORT_METHODS: Array<{ key: EstateLayoutMethod; icon: import("./EstateIcon").EstateIconName; title: string; description: string; accept: string }> = [
-  { key: "csv", icon: "documents", title: "Spreadsheet", description: "CSV or Excel-style coordinate rows", accept: ".csv,.txt,text/csv,text/plain" },
+  { key: "csv", icon: "documents", title: "Spreadsheet", description: "CSV or Excel coordinate rows", accept: ".csv,.txt,.xlsx,.xls,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" },
   { key: "geojson", icon: "map", title: "GIS file", description: "Digital layout from your mapping software", accept: ".json,.geojson,application/geo+json" },
   { key: "dxf", icon: "development", title: "CAD drawing", description: "Digital drawing from your surveyor or designer", accept: ".dxf,application/dxf" },
   { key: "scanned-layout", icon: "image", title: "Scanned plan", description: "Image of a paper layout", accept: ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" },

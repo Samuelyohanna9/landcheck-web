@@ -1236,7 +1236,13 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
       // The upload itself can succeed (200) while every row in the file failed validation - don't
       // tell the user it's "ready to review" right above a review card that says 0 usable.
       const hasUsable = Number(response.data?.valid_count || 0) > 0;
-      const text = hasUsable ? "Your layout is ready to review below." : "No usable shapes were found in this file - see the details below.";
+      const suggestedBoundary = kind === "csv" && Boolean(response.data?.suggest_boundary);
+      if (suggestedBoundary) setImportAsBoundary(true);
+      const text = suggestedBoundary
+        ? "We found one coordinate outline and selected Estate boundary mode. Review it below, then set it as the Estate boundary."
+        : hasUsable
+          ? "Your layout is ready to review below."
+          : "No usable shapes were found in this file - see the details below.";
       setLayoutMessage(text, hasUsable ? "good" : "danger");
       if (hasUsable) toast.success(text); else toast.error(text);
     } catch (error) {
