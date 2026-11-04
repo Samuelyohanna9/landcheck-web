@@ -293,6 +293,19 @@ ${indexablePages.map((page) => `  <url>\n    <loc>${escapeHtml(absoluteUrl(page.
 `;
 
 const template = await readFile(path.join(DIST_DIR, "index.html"), "utf8");
+
+// The loop below overwrites dist/index.html with the HOME PAGE's own SEO-rendered variant
+// (its specific <h1>/meta content baked straight into #root for crawlers and for a direct "/"
+// request). But dist/index.html is *also* the SPA catch-all every unmatched path falls back to
+// (public/_redirects: "/* ... 200") - every private, dynamically-ID'd app route (e.g.
+// /estates/42/construction/measure/17) has no generated page of its own, so a hard refresh on
+// any of them was serving the home page's baked-in heading for an instant before React mounted
+// and replaced it with that route's own loading skeleton. Keep one untouched copy of the blank
+// template around as the real SPA fallback so a refresh on an app route never flashes the
+// marketing homepage's content first; public/_redirects points its catch-all at this file
+// instead of at dist/index.html.
+await writeFile(path.join(DIST_DIR, "app-shell.html"), template);
+
 const articles = await loadNewsArticles();
 const routePages = Object.entries(routeMetadata)
   .map(([pagePath, page]) => ({ path: pagePath, canonicalPath: canonicalPath(page.canonicalPath || pagePath), ...page }));
