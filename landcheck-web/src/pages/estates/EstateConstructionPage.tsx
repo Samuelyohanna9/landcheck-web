@@ -6,7 +6,6 @@ import { getEstateAuthSession } from "../../auth/estateAuth";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateRibbon, { type EstateRibbonTab } from "../../components/estates/EstateRibbon";
 import EstateModal from "../../components/estates/EstateModal";
-import DrawingMeasureTool from "../../components/estates/DrawingMeasureTool";
 import { money } from "../../components/estates/FinancialComponents";
 import { getEstateQueryScope, useEstatePlotsQuery } from "../../query/estateQueries";
 
@@ -71,7 +70,10 @@ export default function EstateConstructionPage() {
   const [newDrawingSupersedes, setNewDrawingSupersedes] = useState("");
   const drawingFileRef = useRef<HTMLInputElement | null>(null);
   const boqFileRef = useRef<HTMLInputElement | null>(null);
-  const [measureDoc, setMeasureDoc] = useState<Drawing | null>(null);
+  const openMeasureTool = (drawing: Drawing) => {
+    const params = new URLSearchParams({ filename: drawing.filename, title: `Measure - ${drawing.filename}` });
+    window.open(`/estates/${estateId}/construction/measure/${drawing.document_id}?${params.toString()}`, "_blank", "noopener,noreferrer");
+  };
   const [rfiAnswerDrafts, setRfiAnswerDrafts] = useState<Record<number, string>>({});
 
   const load = () => {
@@ -404,7 +406,7 @@ export default function EstateConstructionPage() {
                         <td>{drawing.approval_status ? <span className={`edash-status-pill tone-${STATUS_TONE[drawing.approval_status] || "neutral"}`}>{drawing.approval_status.replaceAll("_", " ")}</span> : <span className="edash-mk-hint">Not submitted</span>}</td>
                         <td>
                           <span style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                            {isMeasurable(drawing.filename) && <button type="button" className="edash-btn-outline" title="Open the live measure and markup tool" onClick={() => setMeasureDoc(drawing)}>Measure</button>}
+                            {isMeasurable(drawing.filename) && <button type="button" className="edash-btn-outline" title="Open the live measure and markup tool in a new tab" onClick={() => openMeasureTool(drawing)}>Measure</button>}
                             {drawing.approval_status === "submitted" && (
                               <>
                                 <button type="button" className="edash-card-link" disabled={busy === `review-drawing-${drawing.document_id}`} onClick={() => void reviewDrawing(drawing.document_id, "approved")}>Approve</button>
@@ -600,7 +602,6 @@ export default function EstateConstructionPage() {
         </EstateModal>
       )}
 
-      {measureDoc && <DrawingMeasureTool documentId={measureDoc.document_id} filename={measureDoc.filename} title={`Measure - ${measureDoc.filename}`} onClose={() => setMeasureDoc(null)} />}
     </EstateShell>
   );
 }

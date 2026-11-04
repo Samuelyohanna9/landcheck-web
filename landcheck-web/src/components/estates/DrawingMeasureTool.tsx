@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import toast from "react-hot-toast";
+import * as stylex from "@stylexjs/stylex";
 import * as pdfjsLib from "pdfjs-dist";
 // Vite's `?url` import gives the worker its own bundled file URL - the standard, documented way to
 // wire pdfjs-dist into a Vite app without a manual public/ copy step.
@@ -9,14 +10,311 @@ import { api, extractApiErrorMessage } from "../../api/client";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 
-// A full-screen, premium work surface for live measurement and markup on a drawing - the same
+// A full-page, premium work surface for live measurement and markup on a drawing - the same
 // calibrate-then-measure pattern every real architecture/construction tool uses (Bluebeam Revu,
 // PlanRadar SiteView): click two points of a KNOWN real-world length, enter that length, and every
 // later click-to-click distance or traced-polygon area converts through that scale. Works on raster
 // images directly and on PDF plan sets via pdf.js (each page rendered to a canvas at high
 // resolution, then treated exactly like an uploaded image for the rest of the tool - one pipeline,
 // not two). DWG/DXF stay upload/version/approval-only elsewhere; there's no in-browser CAD engine
-// here to put a canvas over.
+// here to put a canvas over. Meant to be opened in its own browser tab (EstateDrawingMeasurePage),
+// not embedded inline - the design below assumes it owns the full viewport.
+
+const ink = {
+  canvas: "#0b0d10",
+  surface: "#14171b",
+  surfaceRaised: "#1b2025",
+  line: "rgba(255,255,255,0.08)",
+  lineStrong: "rgba(255,255,255,0.14)",
+  text: "#eef1f4",
+  textMuted: "#9aa3ad",
+  textFaint: "#6b7480",
+  accent: "#5b9cf6",
+  accentDim: "rgba(91,156,246,0.14)",
+  good: "#49c98b",
+  warn: "#e0a13a",
+  danger: "#f0665b",
+} as const;
+
+const styles = stylex.create({
+  page: {
+    position: "fixed",
+    inset: 0,
+    display: "flex",
+    flexDirection: "column",
+    background: ink.canvas,
+    color: ink.text,
+    fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+    overflow: "hidden",
+  },
+  head: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 16,
+    padding: "14px 22px",
+    borderBottom: `1px solid ${ink.line}`,
+    background: ink.surface,
+    flexShrink: 0,
+  },
+  headTitleBlock: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 2,
+    minWidth: 0,
+  },
+  headTitle: {
+    margin: 0,
+    fontSize: 15,
+    fontWeight: 600,
+    letterSpacing: "-0.01em",
+    color: ink.text,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  headMeta: {
+    fontSize: 12.5,
+    color: ink.textMuted,
+    fontVariantNumeric: "tabular-nums",
+  },
+  closeBtn: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    border: `1px solid ${ink.line}`,
+    background: "transparent",
+    color: ink.textMuted,
+    fontSize: 15,
+    cursor: "pointer",
+    flexShrink: 0,
+    transition: "background 0.12s ease, color 0.12s ease, border-color 0.12s ease",
+    ":hover": {
+      background: "rgba(240,102,91,0.12)",
+      borderColor: "rgba(240,102,91,0.4)",
+      color: ink.danger,
+    },
+  },
+  toolbar: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "10px 22px",
+    borderBottom: `1px solid ${ink.line}`,
+    background: ink.surface,
+    flexWrap: "wrap",
+    flexShrink: 0,
+  },
+  toolBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    height: 34,
+    padding: "0 14px",
+    borderRadius: 8,
+    border: `1px solid ${ink.line}`,
+    background: "transparent",
+    color: ink.textMuted,
+    fontSize: 13,
+    fontWeight: 500,
+    cursor: "pointer",
+    transition: "background 0.12s ease, color 0.12s ease, border-color 0.12s ease",
+    ":hover": {
+      background: ink.surfaceRaised,
+      color: ink.text,
+      borderColor: ink.lineStrong,
+    },
+  },
+  toolBtnActive: {
+    background: ink.accentDim,
+    borderColor: "rgba(91,156,246,0.5)",
+    color: ink.accent,
+  },
+  divider: {
+    width: 1,
+    height: 22,
+    background: ink.line,
+    margin: "0 4px",
+  },
+  pageNav: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 10,
+    fontSize: 12.5,
+    color: ink.textMuted,
+    fontVariantNumeric: "tabular-nums",
+  },
+  pageNavBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    height: 28,
+    padding: "0 10px",
+    borderRadius: 6,
+    border: `1px solid ${ink.line}`,
+    background: "transparent",
+    color: ink.text,
+    fontSize: 12.5,
+    cursor: "pointer",
+    ":disabled": {
+      opacity: 0.35,
+      cursor: "default",
+    },
+  },
+  zoom: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 2,
+    marginLeft: "auto",
+  },
+  zoomBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    border: `1px solid ${ink.line}`,
+    background: "transparent",
+    color: ink.text,
+    fontSize: 15,
+    cursor: "pointer",
+  },
+  zoomValue: {
+    minWidth: 46,
+    textAlign: "center",
+    fontSize: 12.5,
+    color: ink.textMuted,
+    fontVariantNumeric: "tabular-nums",
+  },
+  scaleBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 7,
+    height: 30,
+    padding: "0 12px",
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: 600,
+    letterSpacing: "0.01em",
+    marginLeft: 10,
+  },
+  scaleBadgeOn: {
+    background: "rgba(73,201,139,0.12)",
+    color: ink.good,
+    border: "1px solid rgba(73,201,139,0.3)",
+  },
+  scaleBadgeOff: {
+    background: "rgba(224,161,58,0.1)",
+    color: ink.warn,
+    border: "1px solid rgba(224,161,58,0.28)",
+  },
+  scaleDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 999,
+    background: "currentColor",
+  },
+  body: {
+    flex: 1,
+    display: "flex",
+    minHeight: 0,
+  },
+  canvasArea: {
+    flex: 1,
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "center",
+    overflow: "auto",
+    padding: 28,
+    background: `radial-gradient(circle at 50% 0%, #15191e 0%, ${ink.canvas} 70%)`,
+  },
+  canvasFrame: {
+    boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+    borderRadius: 4,
+    overflow: "hidden",
+    lineHeight: 0,
+  },
+  statusText: {
+    color: ink.textMuted,
+    padding: 32,
+    fontSize: 13.5,
+  },
+  statusTextError: {
+    color: ink.danger,
+    padding: 32,
+    fontSize: 13.5,
+  },
+  sidePanel: {
+    width: 300,
+    flexShrink: 0,
+    borderLeft: `1px solid ${ink.line}`,
+    background: ink.surface,
+    padding: "20px 18px",
+    overflowY: "auto",
+  },
+  sidePanelHeading: {
+    margin: "0 0 10px",
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    color: ink.textFaint,
+  },
+  sidePanelHeadingSpaced: {
+    marginTop: 22,
+  },
+  annotationRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    padding: "9px 10px",
+    borderRadius: 8,
+    marginBottom: 4,
+    cursor: "default",
+    transition: "background 0.12s ease",
+    ":hover": {
+      background: ink.surfaceRaised,
+    },
+  },
+  annotationLabel: {
+    fontSize: 13,
+    color: ink.text,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    fontVariantNumeric: "tabular-nums",
+  },
+  annotationDelete: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    border: "none",
+    background: "transparent",
+    color: ink.textFaint,
+    fontSize: 12,
+    cursor: "pointer",
+    flexShrink: 0,
+    transition: "background 0.12s ease, color 0.12s ease",
+    ":hover": {
+      background: "rgba(240,102,91,0.14)",
+      color: ink.danger,
+    },
+  },
+  emptyHint: {
+    fontSize: 12.5,
+    color: ink.textFaint,
+    lineHeight: 1.5,
+    margin: 0,
+  },
+});
 
 type Point = { x: number; y: number };
 type Annotation = { id: number; document_id: number; kind: "calibration" | "measurement" | "markup"; data: any; label: string | null; created_at: string };
@@ -220,73 +518,82 @@ export default function DrawingMeasureTool({ documentId, filename, title, onClos
     return item.label || "Measurement";
   };
 
+  const measurements = pageAnnotations.filter((item) => item.kind !== "calibration");
+  const calibrations = pageAnnotations.filter((item) => item.kind === "calibration");
+
   return (
-    <div className="edash-drawing-workspace-overlay">
-      <div className="edash-drawing-workspace-head">
-        <div>
-          <h2>{title}</h2>
-          <small>{filename}{isPdf && pageCount > 1 ? ` · page ${pageNum} of ${pageCount}` : ""}</small>
+    <div {...stylex.props(styles.page)}>
+      <div {...stylex.props(styles.head)}>
+        <div {...stylex.props(styles.headTitleBlock)}>
+          <h2 {...stylex.props(styles.headTitle)}>{title}</h2>
+          <small {...stylex.props(styles.headMeta)}>{filename}{isPdf && pageCount > 1 ? ` · page ${pageNum} of ${pageCount}` : ""}</small>
         </div>
-        <button type="button" className="edash-drawing-workspace-close" onClick={onClose} aria-label="Close">✕</button>
+        <button type="button" {...stylex.props(styles.closeBtn)} onClick={onClose} aria-label="Close">✕</button>
       </div>
 
-      <div className="edash-drawing-toolbar">
-        <button type="button" className={`edash-drawing-tool-btn${mode === "calibrate" ? " is-active" : ""}`} onClick={() => { setMode("calibrate"); setPendingPoints([]); }} title="Click two points of a known real-world length, then enter that length">Calibrate</button>
-        <button type="button" className={`edash-drawing-tool-btn${mode === "distance" ? " is-active" : ""}`} onClick={() => { setMode("distance"); setPendingPoints([]); }} title="Click two points to measure the distance between them">Measure distance</button>
-        <button type="button" className={`edash-drawing-tool-btn${mode === "area" ? " is-active" : ""}`} onClick={() => { setMode("area"); setPendingPoints([]); }} title="Click each corner of an area, then click Finish area">Measure area</button>
-        <button type="button" className={`edash-drawing-tool-btn${mode === "markup" ? " is-active" : ""}`} onClick={() => { setMode("markup"); setPendingPoints([]); }} title="Click a point to pin a note there">Add note</button>
-        {mode === "area" && <button type="button" className="edash-drawing-tool-btn is-active" onClick={finishArea}>Finish area ({pendingPoints.length} pts)</button>}
-        {mode !== "view" && <button type="button" className="edash-drawing-tool-btn" onClick={() => { setMode("view"); setPendingPoints([]); }}>Cancel</button>}
+      <div {...stylex.props(styles.toolbar)}>
+        <button type="button" {...stylex.props(styles.toolBtn, mode === "calibrate" && styles.toolBtnActive)} onClick={() => { setMode("calibrate"); setPendingPoints([]); }} title="Click two points of a known real-world length, then enter that length">Calibrate</button>
+        <button type="button" {...stylex.props(styles.toolBtn, mode === "distance" && styles.toolBtnActive)} onClick={() => { setMode("distance"); setPendingPoints([]); }} title="Click two points to measure the distance between them">Measure distance</button>
+        <button type="button" {...stylex.props(styles.toolBtn, mode === "area" && styles.toolBtnActive)} onClick={() => { setMode("area"); setPendingPoints([]); }} title="Click each corner of an area, then click Finish area">Measure area</button>
+        <button type="button" {...stylex.props(styles.toolBtn, mode === "markup" && styles.toolBtnActive)} onClick={() => { setMode("markup"); setPendingPoints([]); }} title="Click a point to pin a note there">Add note</button>
+        {mode === "area" && <button type="button" {...stylex.props(styles.toolBtn, styles.toolBtnActive)} onClick={finishArea}>Finish area ({pendingPoints.length} pts)</button>}
+        {mode !== "view" && <button type="button" {...stylex.props(styles.toolBtn)} onClick={() => { setMode("view"); setPendingPoints([]); }}>Cancel</button>}
 
         {isPdf && pageCount > 1 && (
-          <span className="edash-drawing-page-nav">
-            <button type="button" disabled={pageNum <= 1} onClick={() => setPageNum((current) => Math.max(1, current - 1))}>‹ Prev</button>
-            Page {pageNum} / {pageCount}
-            <button type="button" disabled={pageNum >= pageCount} onClick={() => setPageNum((current) => Math.min(pageCount, current + 1))}>Next ›</button>
-          </span>
+          <>
+            <span {...stylex.props(styles.divider)} />
+            <span {...stylex.props(styles.pageNav)}>
+              <button type="button" {...stylex.props(styles.pageNavBtn)} disabled={pageNum <= 1} onClick={() => setPageNum((current) => Math.max(1, current - 1))}>‹ Prev</button>
+              Page {pageNum} / {pageCount}
+              <button type="button" {...stylex.props(styles.pageNavBtn)} disabled={pageNum >= pageCount} onClick={() => setPageNum((current) => Math.min(pageCount, current + 1))}>Next ›</button>
+            </span>
+          </>
         )}
 
-        <span className="edash-drawing-zoom">
-          <button type="button" onClick={() => setZoom((current) => Math.max(25, current - 25))}>−</button>
-          <span>{zoom}%</span>
-          <button type="button" onClick={() => setZoom((current) => Math.min(400, current + 25))}>+</button>
+        <span {...stylex.props(styles.zoom)}>
+          <button type="button" {...stylex.props(styles.zoomBtn)} onClick={() => setZoom((current) => Math.max(25, current - 25))}>−</button>
+          <span {...stylex.props(styles.zoomValue)}>{zoom}%</span>
+          <button type="button" {...stylex.props(styles.zoomBtn)} onClick={() => setZoom((current) => Math.min(400, current + 25))}>+</button>
         </span>
 
-        <span className="edash-drawing-scale-badge">{scale ? `Calibrated · 1px = ${(scale * 1000).toFixed(1)}mm` : "Not calibrated"}</span>
+        <span {...stylex.props(styles.scaleBadge, scale ? styles.scaleBadgeOn : styles.scaleBadgeOff)}>
+          <span {...stylex.props(styles.scaleDot)} />
+          {scale ? `Calibrated · 1px = ${(scale * 1000).toFixed(1)}mm` : "Not calibrated"}
+        </span>
       </div>
 
-      <div className="edash-drawing-body">
-        <div className="edash-drawing-canvas-area">
+      <div {...stylex.props(styles.body)}>
+        <div {...stylex.props(styles.canvasArea)}>
           {imageUrl ? (
-            <>
+            <div {...stylex.props(styles.canvasFrame)}>
               <img ref={imageRef} src={imageUrl} alt={title} style={{ display: "none" }} onLoad={redraw} />
-              <canvas ref={canvasRef} onClick={handleCanvasClick} style={{ width: `${zoom}%`, cursor: mode === "view" ? "default" : "crosshair" }} />
-            </>
+              <canvas ref={canvasRef} onClick={handleCanvasClick} style={{ width: `${zoom}%`, display: "block", cursor: mode === "view" ? "default" : "crosshair" }} />
+            </div>
           ) : loadError ? (
-            <p style={{ color: "#ff8a80", padding: 24 }}>{loadError}</p>
+            <p {...stylex.props(styles.statusTextError)}>{loadError}</p>
           ) : (
-            <p style={{ color: "rgba(255,255,255,0.6)", padding: 24 }}>{isPdf ? "Rendering PDF page..." : "Loading drawing..."}</p>
+            <p {...stylex.props(styles.statusText)}>{isPdf ? "Rendering PDF page..." : "Loading drawing..."}</p>
           )}
         </div>
-        <div className="edash-drawing-side-panel">
-          <h4>Measurements & notes</h4>
-          {pageAnnotations.filter((item) => item.kind !== "calibration").length ? (
-            pageAnnotations.filter((item) => item.kind !== "calibration").map((item) => (
-              <div key={item.id} className="edash-drawing-annotation-row" onMouseEnter={() => setHighlightId(item.id)} onMouseLeave={() => setHighlightId(null)}>
-                <span>{annotationSummary(item)}</span>
-                <button type="button" onClick={() => void deleteAnnotation(item.id)} title="Delete">✕</button>
+        <div {...stylex.props(styles.sidePanel)}>
+          <h4 {...stylex.props(styles.sidePanelHeading)}>Measurements & notes</h4>
+          {measurements.length ? (
+            measurements.map((item) => (
+              <div key={item.id} {...stylex.props(styles.annotationRow)} onMouseEnter={() => setHighlightId(item.id)} onMouseLeave={() => setHighlightId(null)}>
+                <span {...stylex.props(styles.annotationLabel)}>{annotationSummary(item)}</span>
+                <button type="button" {...stylex.props(styles.annotationDelete)} onClick={() => void deleteAnnotation(item.id)} title="Delete">✕</button>
               </div>
             ))
-          ) : <p className="edash-drawing-empty">Nothing measured on this page yet.</p>}
-          <h4 style={{ marginTop: 18 }}>Calibration</h4>
-          {pageAnnotations.filter((item) => item.kind === "calibration").length ? (
-            pageAnnotations.filter((item) => item.kind === "calibration").map((item) => (
-              <div key={item.id} className="edash-drawing-annotation-row" onMouseEnter={() => setHighlightId(item.id)} onMouseLeave={() => setHighlightId(null)}>
-                <span>{item.label}</span>
-                <button type="button" onClick={() => void deleteAnnotation(item.id)} title="Delete">✕</button>
+          ) : <p {...stylex.props(styles.emptyHint)}>Nothing measured on this page yet.</p>}
+          <h4 {...stylex.props(styles.sidePanelHeading, styles.sidePanelHeadingSpaced)}>Calibration</h4>
+          {calibrations.length ? (
+            calibrations.map((item) => (
+              <div key={item.id} {...stylex.props(styles.annotationRow)} onMouseEnter={() => setHighlightId(item.id)} onMouseLeave={() => setHighlightId(null)}>
+                <span {...stylex.props(styles.annotationLabel)}>{item.label}</span>
+                <button type="button" {...stylex.props(styles.annotationDelete)} onClick={() => void deleteAnnotation(item.id)} title="Delete">✕</button>
               </div>
             ))
-          ) : <p className="edash-drawing-empty">No calibration set for this page - measurements show pixels only until you calibrate.</p>}
+          ) : <p {...stylex.props(styles.emptyHint)}>No calibration set for this page - measurements show pixels only until you calibrate.</p>}
         </div>
       </div>
     </div>
