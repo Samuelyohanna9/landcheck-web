@@ -331,6 +331,10 @@
         color: #102a27;
         font-family: "Aptos", "Segoe UI", Arial, sans-serif;
       }
+      /* Generated public SEO shells remain crawlable in the raw response, but do not flash their
+         heading while React is taking over the route in a real browser. The class is added only
+         by the generated-page boot script, so no-JavaScript crawlers still see the content. */
+      html.landcheck-seo-shell-boot #root > :first-child { visibility: hidden; }
       .lc-seo-shell__inner {
         width: min(100%, 760px);
         margin: 0 auto;

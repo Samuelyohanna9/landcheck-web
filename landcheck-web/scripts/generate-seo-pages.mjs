@@ -282,6 +282,13 @@ const renderPage = (template, page) => {
   const bodyHtml = page.bodyHtml || (!String(page.robots || "").includes("noindex") ? renderSeoShell(page) : "");
   if (bodyHtml) {
     html = html.replace('<div id="root"></div>', `<div id="root">${bodyHtml}</div>`);
+    // Hide the generated shell during the browser's first paint. It remains in the raw response
+    // for crawlers and is shown when JavaScript is disabled; App removes the class after React
+    // commits the real route.
+    html = html.replace(
+      "</head>",
+      `<script>document.documentElement.classList.add("landcheck-seo-shell-boot");</script>\n</head>`,
+    );
   }
   // dist/index.html (page.path === "/") is also the SPA's catch-all fallback (public/_redirects:
   // "/* /index.html 200") for every private, dynamically-ID'd app route that has no generated

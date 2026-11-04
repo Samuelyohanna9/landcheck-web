@@ -413,6 +413,7 @@ export default function App() {
     // marker could run before a concurrent React commit and show the fatal fallback over a healthy
     // app on slower devices.
     root.dataset.landcheckReactMounted = "true";
+    document.documentElement.classList.remove("landcheck-seo-shell-boot");
     document.getElementById("landcheck-boot-fallback")?.classList.remove("is-visible");
   }, []);
 
