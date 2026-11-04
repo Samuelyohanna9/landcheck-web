@@ -283,6 +283,21 @@ const renderPage = (template, page) => {
   if (bodyHtml) {
     html = html.replace('<div id="root"></div>', `<div id="root">${bodyHtml}</div>`);
   }
+  // dist/index.html (page.path === "/") is also the SPA's catch-all fallback (public/_redirects:
+  // "/* /index.html 200") for every private, dynamically-ID'd app route that has no generated
+  // page of its own (e.g. /estates/42/construction/measure/17) - so this exact file gets served,
+  // unmodified, for those URLs too. Without this guard, a hard refresh on one of them would
+  // paint the home page's baked-in <main class="lc-seo-shell"> heading for an instant before
+  // React mounted and replaced it with that route's own loading state. This inline script runs
+  // synchronously as the parser reaches it, immediately after the div it is guarding and before
+  // anything else on the page, so it clears that content before the browser gets a chance to
+  // paint it for any URL other than the real "/".
+  if (bodyHtml && page.path === "/") {
+    html = html.replace(
+      `<div id="root">${bodyHtml}</div>`,
+      `<div id="root">${bodyHtml}</div>\n    <script>if (location.pathname !== "/") document.getElementById("root").textContent = "";</script>`,
+    );
+  }
   return html;
 };
 
@@ -293,25 +308,6 @@ ${indexablePages.map((page) => `  <url>\n    <loc>${escapeHtml(absoluteUrl(page.
 `;
 
 const template = await readFile(path.join(DIST_DIR, "index.html"), "utf8");
-
-// The loop below overwrites dist/index.html with the HOME PAGE's own SEO-rendered variant
-// (its specific <h1>/meta content baked straight into #root for crawlers and for a direct "/"
-// request). But dist/index.html is *also* the SPA catch-all every unmatched path falls back to
-// (public/_redirects: "/* ... 200") - every private, dynamically-ID'd app route (e.g.
-// /estates/42/construction/measure/17) has no generated page of its own, so a hard refresh on
-// any of them was serving the home page's baked-in heading for an instant before React mounted
-// and replaced it with that route's own loading skeleton. Keep one untouched copy of the blank
-// template around as the real SPA fallback so a refresh on an app route never flashes the
-// marketing homepage's content first; public/_redirects points its catch-all at this file
-// instead of at dist/index.html. Written as app-shell/index.html (not app-shell.html) because
-// Cloudflare Pages 308-redirects any non-index ".html" request to its extensionless form
-// (/app-shell.html -> /app-shell) - which then re-matches the very same "/* -> ..." catch-all
-// rule and redirect-loops forever (ERR_TOO_MANY_REDIRECTS). An index.html inside its own
-// directory is never redirected, the same reason every other generated page below is written
-// as <path>/index.html instead of <path>.html.
-await mkdir(path.join(DIST_DIR, "app-shell"), { recursive: true });
-await writeFile(path.join(DIST_DIR, "app-shell", "index.html"), template);
-
 const articles = await loadNewsArticles();
 const routePages = Object.entries(routeMetadata)
   .map(([pagePath, page]) => ({ path: pagePath, canonicalPath: canonicalPath(page.canonicalPath || pagePath), ...page }));
