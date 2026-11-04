@@ -15,6 +15,7 @@ import { toWGS84, COORDINATE_SYSTEM_GROUPS } from "../utils/coordinateConverter"
 import { checkPolygonClosure } from "../utils/surveyGeometry";
 import { formatArea, type UnitSystem } from "../utils/unitFormat";
 import EstateIcon from "../components/estates/EstateIcon";
+import EstateStatsRow, { type EstateStatCard } from "../components/estates/EstateStatsRow";
 import EstateRibbon, { type EstateRibbonTab } from "../components/estates/EstateRibbon";
 import EstateModal from "../components/estates/EstateModal";
 import { findDuplicateCustomers, DuplicateCustomerModal, type DuplicateCustomerMatch } from "../components/estates/CustomerDuplicateCheck";
@@ -2018,7 +2019,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     if (!dashboard) return null;
     const total = dashboard.total_plots || 0;
     const pct = (value: number) => (total > 0 ? `${((value / total) * 100).toFixed(1)}%` : "0%");
-    const cards: Array<{ label: string; value: number; sub: string; icon: import("../components/estates/EstateIcon").EstateIconName; tone: string }> = [
+    const cards: EstateStatCard[] = [
       { label: "Total Plots", value: total, sub: `${formatArea(Number(dashboard.mapped_area_sqm || 0), unitSystem)} mapped`, icon: "grid", tone: "neutral" },
       { label: "Allocated", value: dashboard.statuses?.allocated || 0, sub: pct(dashboard.statuses?.allocated || 0), icon: "person", tone: "allocated" },
       { label: "Available", value: dashboard.statuses?.available || 0, sub: pct(dashboard.statuses?.available || 0), icon: "house", tone: "available" },
@@ -2026,22 +2027,7 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
       { label: "Under Survey", value: dashboard.awaiting_survey || 0, sub: pct(dashboard.awaiting_survey || 0), icon: "compass", tone: "survey" },
       { label: "Under Staking", value: dashboard.awaiting_staking || 0, sub: pct(dashboard.awaiting_staking || 0), icon: "pin", tone: "staking" },
     ];
-    return (
-      <>
-        <div className="edash-stats-row">
-          {cards.map((card) => (
-            <div key={card.label} className="edash-stat-card">
-              <span className={`edash-stat-icon tone-${card.tone}`}><EstateIcon name={card.icon} /></span>
-              <div className="edash-stat-body">
-                <p className="edash-stat-label">{card.label}</p>
-                <p className="edash-stat-value">{card.value.toLocaleString()}</p>
-                <span className={`edash-stat-sub${card.label === "Total Plots" ? "" : " positive"}`}>{card.sub}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </>
-    );
+    return <EstateStatsRow cards={cards} />;
   }
 
   function fitMapToEstate() {
