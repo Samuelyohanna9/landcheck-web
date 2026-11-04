@@ -65,6 +65,17 @@
     <meta name="twitter:image:alt" content="LandCheck Nigeria - Geospatial Intelligence Platform" />
 
     <script>
+      // `/app-shell` was a short-lived internal fallback path used by an older deployment.
+      // Keep stale tabs/service workers from handing that path to React, where it correctly
+      // appears as a 404. This runs before the app mounts and does not affect any real route.
+      (function () {
+        var path = window.location.pathname || "/";
+        if (path !== "/app-shell" && path !== "/app-shell/") return;
+        window.location.replace("/" + window.location.search + window.location.hash);
+      })();
+    </script>
+
+    <script>
       (function () {
         if (typeof window === "undefined" || !("caches" in window)) return;
         var path = window.location.pathname || "/";
