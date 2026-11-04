@@ -10,6 +10,7 @@ import { getGreenAuthSession, isGreenAuthed, isSponsorGreenSession } from "./aut
 import { isWorkAuthed } from "./auth/workAuth";
 import { isSurveyAuthed } from "./auth/surveyAuth";
 import { getEstateAuthSession, isEstateAuthed } from "./auth/estateAuth";
+import { api } from "./api/client";
 import { CookieConsentProvider } from "./privacy/cookieConsent";
 import { lazyWithChunkRecovery, CHUNK_RECOVERY_STORAGE_KEY } from "./utils/lazyWithChunkRecovery";
 import EstateQueryProvider from "./query/EstateQueryProvider";
@@ -228,6 +229,37 @@ function EstateProtectedRoute({ element }: { element: ReactElement }) {
   // other Estates screen until they set their own, the same forced-first-login pattern most
   // dashboards use for invited accounts.
   if (getEstateAuthSession()?.user.must_change_password) return <Navigate to="/estates/set-new-password" replace />;
+  return element;
+}
+
+function EstateMeasureProtectedRoute({ element }: { element: ReactElement }) {
+  // The Construction page opens the measure tool in a new tab so the dashboard remains intact.
+  // Estate's browser session summary is intentionally kept in sessionStorage, which is scoped to
+  // the original tab. The HttpOnly Estate cookie is shared, so bootstrap only this read-only tool
+  // route from /auth/me instead of sending the user to login before the protected API call can run.
+  const [state, setState] = useState<"checking" | "ready" | "denied">(() => (isEstateAuthed() ? "ready" : "checking"));
+
+  useEffect(() => {
+    if (state !== "checking") return undefined;
+    let active = true;
+    api.get("/estates/auth/me")
+      .then((response) => {
+        if (active) setState(response.data?.authed ? "ready" : "denied");
+      })
+      .catch(() => {
+        if (active) setState("denied");
+      });
+    return () => { active = false; };
+  }, [state]);
+
+  if (state === "checking") {
+    return (
+      <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#0b0d10", color: "#eef1f4", fontFamily: "system-ui, sans-serif" }}>
+        Checking your Estate session...
+      </div>
+    );
+  }
+  if (state === "denied") return <Navigate to="/estates/login" state={{ from: window.location.pathname }} replace />;
   return element;
 }
 
@@ -480,7 +512,7 @@ export default function App() {
               <Route path="/estates/:estateId/staking" element={<EstateProtectedRoute element={<EstateStakingPage />} />} />
               <Route path="/estates/:estateId/development" element={<EstateProtectedRoute element={<EstateDevelopmentPage />} />} />
               <Route path="/estates/:estateId/construction" element={<EstateProtectedRoute element={<EstateConstructionPage />} />} />
-              <Route path="/estates/:estateId/construction/measure/:documentId" element={<EstateProtectedRoute element={<EstateDrawingMeasurePage />} />} />
+              <Route path="/estates/:estateId/construction/measure/:documentId" element={<EstateMeasureProtectedRoute element={<EstateDrawingMeasurePage />} />} />
               <Route path="/estates/:estateId/hazards" element={<EstateProtectedRoute element={<EstateHazardsPage />} />} />
               <Route path="/estates/:estateId/hazards/map" element={<EstateProtectedRoute element={<EstateHazardMapPage />} />} />
               <Route path="/estates/:estateId/soil-analysis" element={<EstateProtectedRoute element={<EstateSoilAnalysisPage />} />} />
