@@ -73,6 +73,34 @@
         if (path !== "/app-shell" && path !== "/app-shell/") return;
         window.location.replace("/" + window.location.search + window.location.hash);
       })();
+
+      // Only application/workspace routes need the preload skeleton. Public marketing pages keep
+      // their crawlable landing content visible immediately.
+      (function () {
+        var path = (window.location.pathname || "/").toLowerCase().replace(/\/+$/, "") || "/";
+        var isAppRoute =
+          path === "/dashboard" ||
+          path === "/survey-plan" ||
+          path === "/hazard-analysis" ||
+          path === "/green" ||
+          path.indexOf("/green/") === 0 ||
+          path === "/green-work" ||
+          path.indexOf("/green-work/") === 0 ||
+          path === "/green-merchant" ||
+          path.indexOf("/green-merchant/") === 0 ||
+          path === "/estate-admin" ||
+          path.indexOf("/estate-admin/") === 0 ||
+          path === "/agents" ||
+          path.indexOf("/agents/") === 0 ||
+          path === "/estates/workspace" ||
+          path.indexOf("/estates/login") === 0 ||
+          path.indexOf("/estates/register") === 0 ||
+          path.indexOf("/estates/forgot-password") === 0 ||
+          path.indexOf("/estates/reset-password") === 0 ||
+          path.indexOf("/estates/set-new-password") === 0 ||
+          /^\/estates\/\d+(\/|$)/.test(path);
+        if (isAppRoute) document.documentElement.classList.add("landcheck-app-route");
+      })();
     </script>
 
     <script>
@@ -221,6 +249,7 @@
          the document for crawlers, but visitors see one stable loading state instead of a flash
          of the homepage heading before the route skeleton mounts. */
       .landcheck-preload-skeleton {
+        display: none;
         position: fixed;
         inset: 0;
         z-index: 2147483646;
@@ -229,6 +258,7 @@
         color: #0f172a;
         font-family: Inter, "Segoe UI", Arial, sans-serif;
       }
+      .landcheck-app-route .landcheck-preload-skeleton { display: block; }
       .landcheck-preload-skeleton__topbar {
         height: 72px;
         border-bottom: 1px solid #e2e8f0;
