@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import stylex from '@stylexjs/unplugin'
+import tailwindcss from '@tailwindcss/vite'
 
 // Hashed files are normally safe to cache forever, but an old SPA shell can survive a deploy
 // and request a previous asset URL. Include the deployment/build id in every generated asset
@@ -12,8 +13,8 @@ const buildId = (process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || `l
 // https://vite.dev/config/
 export default defineConfig({
   // stylex must run before @vitejs/plugin-react's own transform sees the file, same ordering
-  // the official Vite usage example uses.
-  plugins: [stylex.vite(), react()],
+  // the official Vite usage example uses. tailwindcss() has no such ordering requirement.
+  plugins: [stylex.vite(), react(), tailwindcss()],
   build: {
     rollupOptions: {
       output: {
