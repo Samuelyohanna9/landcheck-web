@@ -69,6 +69,16 @@ function labelFor(element: HTMLElement): string {
   const nestedLabel = cleanLabel(element.querySelector("[aria-label]")?.getAttribute("aria-label"));
   if (nestedLabel) return nestedLabel;
 
+  // A <select>'s own textContent is every <option>'s text run together with no separator at all
+  // (e.g. a plot picker became "103plot p-104plot p-105...") - meaningless, and it only gets
+  // longer as the list it's populated from grows. The real label almost always lives in the
+  // wrapping <label>'s leading <span> instead, the "edash-field" pattern used throughout the
+  // Estates dashboard: <label><span>Feature a plot</span><select>...</select></label>.
+  if (element.tagName === "SELECT") {
+    const describedSpan = element.closest("label")?.querySelector("span");
+    return cleanLabel(describedSpan?.textContent);
+  }
+
   return cleanLabel(element.textContent);
 }
 
