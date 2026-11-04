@@ -183,6 +183,7 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
       canvaTab.location.assign(response.data.edit_url);
     } catch (error) {
       canvaTab.close();
+      await loadCanva();
       toast.error(await extractApiErrorMessage(error, "The flyer could not be opened in Canva."));
       setBusy(null);
     }
@@ -202,6 +203,7 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
       canvaTab.location.assign(response.data.edit_url);
     } catch (error) {
       canvaTab.close();
+      await loadCanva();
       toast.error(await extractApiErrorMessage(error, "The PDF could not be opened in Canva."));
     } finally { setBusy(null); }
   };
@@ -216,6 +218,7 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
       canvaTab.location.assign(response.data.edit_url);
     } catch (error) {
       canvaTab.close();
+      await loadCanva();
       toast.error(await extractApiErrorMessage(error, "The Canva template could not be prepared."));
     } finally { setBusy(null); }
   };
@@ -232,7 +235,10 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
       await api.post(`/estates/${estateId}/marketing/canva/designs/${designId}/import`, { format });
       await loadCanva();
       toast.success(`${format.toUpperCase()} imported into LandCheck. You can now use it in Social posts.`);
-    } catch (error) { toast.error(await extractApiErrorMessage(error, "The Canva design could not be imported.")); }
+    } catch (error) {
+      await loadCanva();
+      toast.error(await extractApiErrorMessage(error, "The Canva design could not be imported."));
+    }
     finally { setBusy(null); }
   };
 
@@ -303,7 +309,7 @@ export default function MarketingMaterialsTab({ estateId, estateName, published 
             {canva?.connection?.connected ? <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}><button type="button" className="edash-btn-outline" disabled={busy === "canva-refresh"} onClick={() => void refreshCanva()}>{busy === "canva-refresh" ? "Refreshing..." : "Refresh designs"}</button><span className="edash-status-pill tone-good">Canva connected</span></div> : null}
           </div>
           {!canva?.connection?.connected ? (
-            <button type="button" className="edash-btn-outline" disabled={!canva?.configured || busy === "canva-connect"} onClick={() => void connectCanva()}><CanvaMark />{busy === "canva-connect" ? "Opening Canva..." : canva?.configured ? "Connect Canva" : "Canva setup required"}</button>
+            <button type="button" className="edash-btn-outline" disabled={!canva?.configured || busy === "canva-connect"} onClick={() => void connectCanva()}><CanvaMark />{busy === "canva-connect" ? "Opening Canva..." : canva?.configured ? canva.connection?.status === "needs_reconnect" ? "Reconnect Canva" : "Connect Canva" : "Canva setup required"}</button>
           ) : (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button type="button" className="edash-btn-primary" disabled={busy === "canva-edit"} onClick={() => void editWithCanva()}><CanvaMark />{busy === "canva-edit" ? "Opening Canva..." : "Edit image flyer"}</button>

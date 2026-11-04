@@ -31,7 +31,7 @@ type Props = {
 };
 
 export const LAYOUT_IMPORT_METHODS: Array<{ key: EstateLayoutMethod; icon: import("./EstateIcon").EstateIconName; title: string; description: string; accept: string }> = [
-  { key: "csv", icon: "documents", title: "Spreadsheet", description: "CSV or Excel-style coordinate rows", accept: ".csv,text/csv" },
+  { key: "csv", icon: "documents", title: "Spreadsheet", description: "CSV or Excel-style coordinate rows", accept: ".csv,.txt,text/csv,text/plain" },
   { key: "geojson", icon: "map", title: "GIS file", description: "Digital layout from your mapping software", accept: ".json,.geojson,application/geo+json" },
   { key: "dxf", icon: "development", title: "CAD drawing", description: "Digital drawing from your surveyor or designer", accept: ".dxf,application/dxf" },
   { key: "scanned-layout", icon: "image", title: "Scanned plan", description: "Image of a paper layout", accept: ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" },
@@ -91,7 +91,12 @@ function InvalidRowsList({ review }: { review: ImportReview }) {
 }
 
 export default function EstateLayoutImport({ method, reviews, files, onFileChange, onUpload, onDecision, onStartGeoreference, onOpenGeoreference, message, messageTone = "good", busy = false, asBoundary = false, onAsBoundaryChange }: Props) {
-  const latest = reviews[0];
+  // Reviews are shared by the Estate modal, but a failed CSV import must never be rendered as
+  // the current CAD review (or vice versa).  The previous implementation always used reviews[0],
+  // which made the screenshot show CSV validation rows directly beneath a DXF upload.
+  const sourceType = method === "csv" ? "csv" : method === "geojson" ? "gis" : method === "dxf" ? "cad" : "raster";
+  const methodReviews = reviews.filter((review) => review.source_type === sourceType);
+  const latest = methodReviews[0];
   const usableCount = latest?.candidates?.filter((candidate) => candidate.valid !== false && candidate.geometry?.type === "Polygon").length || 0;
   const selectedMethod = LAYOUT_IMPORT_METHODS.find((item) => item.key === method) || LAYOUT_IMPORT_METHODS[0];
   const file = files[method];
@@ -100,7 +105,7 @@ export default function EstateLayoutImport({ method, reviews, files, onFileChang
   // already added) it must fall through to the upload dropzone below, the same way CSV/GIS/CAD
   // reviews never hide their own upload option. Without the status check here, uploading a second
   // scanned plan after the first was ever completed was permanently impossible.
-  const georeferenceReview = reviews.find((review) => Boolean(review.session_id) && review.status === "review_required");
+  const georeferenceReview = methodReviews.find((review) => Boolean(review.session_id) && review.status === "review_required");
 
   return (
     <div>
