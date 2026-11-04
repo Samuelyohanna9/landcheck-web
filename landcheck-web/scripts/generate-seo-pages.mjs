@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import * as esbuild from "esbuild";
 import routeMetadata from "../src/data/routeMetadata.json" with { type: "json" };
@@ -6,6 +6,21 @@ import routeMetadata from "../src/data/routeMetadata.json" with { type: "json" }
 const SITE_ORIGIN = "https://landcheck.online";
 const DIST_DIR = path.resolve(process.cwd(), "dist");
 const DEFAULT_OG_IMAGE = routeMetadata["/"].ogImage || `${SITE_ORIGIN}/ecf-partnership.jpeg`;
+const PUBLIC_ROUTE_CHUNK_PREFIXES = {
+  "/": "LandingPage",
+  "/estates": "EstateLanding",
+  "/survey": "SurveyPlanLanding",
+  "/survey/guides": "SurveyGuides",
+  "/green-partners": "GreenPartnersLanding",
+  "/sponsor": "GreenPublicSponsor",
+  "/sponsor/calculator": "GreenFootprintCalculator",
+  "/flood": "FloodAnalysisLanding",
+  "/news": "NewsPage",
+  "/career": "CareersPage",
+  "/privacy": "PrivacyPolicy",
+  "/feedback": "Feedback",
+  "/estates/data-processing-agreement": "EstateDpaPreview",
+};
 const PRIVATE_SHELL_PATHS = [
   "/green/login",
   "/green/login/sponsor",
@@ -246,10 +261,14 @@ const renderPage = (template, page) => {
   const schema = pageSchema ? JSON.stringify(pageSchema, null, 2).replaceAll("</", "<\\/") : "";
   const siteSchema = JSON.stringify(buildSiteSchema(), null, 2).replaceAll("</", "<\\/");
   const robots = page.robots || "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1";
+  const routeChunk = routeChunkHref(page.path);
+  const routePreload = routeChunk
+    ? `<link rel="modulepreload" crossorigin href="${routeChunk}">`
+    : "";
   let html = template
     .replace(/<title>[^<]*<\/title>/i, `<title>${escapeHtml(page.title)}</title>`)
     .replace(/\s*<script type="application\/ld\+json"[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace("</head>", `<script type="application/ld+json" data-lc-site-schema>${siteSchema}</script>${schema ? `\n<script type="application/ld+json" data-lc-page-schema>${schema}</script>` : ""}\n</head>`);
+    .replace("</head>", `${routePreload}\n<script type="application/ld+json" data-lc-site-schema>${siteSchema}</script>${schema ? `\n<script type="application/ld+json" data-lc-page-schema>${schema}</script>` : ""}\n</head>`);
 
   html = replaceMeta(html, "name", "description", page.description);
   html = replaceMeta(html, "name", "keywords", page.keywords || "");
@@ -315,6 +334,14 @@ ${indexablePages.map((page) => `  <url>\n    <loc>${escapeHtml(absoluteUrl(page.
 `;
 
 const template = await readFile(path.join(DIST_DIR, "index.html"), "utf8");
+const assetFiles = await readdir(path.join(DIST_DIR, "assets"));
+const routeChunkHref = (pagePath) => {
+  const prefix = pagePath.startsWith("/news/")
+    ? "NewsArticlePage"
+    : PUBLIC_ROUTE_CHUNK_PREFIXES[pagePath];
+  const file = prefix && assetFiles.find((entry) => entry.startsWith(`${prefix}-`) && entry.endsWith(".js"));
+  return file ? `/assets/${file}` : null;
+};
 const articles = await loadNewsArticles();
 const routePages = Object.entries(routeMetadata)
   .map(([pagePath, page]) => ({ path: pagePath, canonicalPath: canonicalPath(page.canonicalPath || pagePath), ...page }));

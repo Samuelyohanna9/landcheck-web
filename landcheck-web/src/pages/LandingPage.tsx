@@ -294,7 +294,7 @@ export default function LandingPage() {
                 autoPlay={index === 0}
                 muted
                 playsInline
-                preload="metadata"
+                preload={index === 0 ? "metadata" : "none"}
                 poster={HERO_VIDEO_POSTER}
                 disablePictureInPicture
                 disableRemotePlayback

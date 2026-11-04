@@ -344,6 +344,99 @@ function RouteScrollManager() {
 // without this the person is left looking at a spinner with no error and no escape hatch.
 const STUCK_LOADING_MS = 7000;
 
+const PUBLIC_LOADING_SHELLS: Record<string, { heading: string; intro: string; links?: Array<{ href: string; label: string }> }> = {
+  "/": {
+    heading: "Geospatial intelligence for development projects",
+    intro: "Environmental monitoring, tree planting sponsorship, field operations, survey plans, and flood risk analysis in one platform for Nigeria.",
+    links: [
+      { href: "/estates/", label: "Explore LandCheck Estates" },
+      { href: "/survey/", label: "Create a survey plan" },
+      { href: "/flood/", label: "Check flood and land risk" },
+      { href: "/green-partners/", label: "Explore LandCheck Green" },
+    ],
+  },
+  "/estates": {
+    heading: "Run your estate from layout to allocation.",
+    intro: "LandCheck Estates connects layouts, plots, customers, reservations, sales, instalments, allocations and survey documents in one workspace for Nigerian real estate developers.",
+    links: [{ href: "/estates/register", label: "Start a 14-day trial" }],
+  },
+  "/survey": {
+    heading: "Professional survey plans from your coordinates.",
+    intro: "Prepare a clear survey plan from coordinate data, with practical export formats for field and office work in Nigeria.",
+    links: [{ href: "/survey-plan/", label: "Open the survey plan tool" }],
+  },
+  "/green-partners": {
+    heading: "Environmental programmes with field evidence.",
+    intro: "LandCheck Green helps organisations plan, verify and report tree planting and environmental field work across Nigeria.",
+    links: [{ href: "/sponsor/", label: "Sponsor a verified tree" }],
+  },
+  "/sponsor": {
+    heading: "Sponsor a tree with a verifiable field record.",
+    intro: "Support tree planting programmes and follow the evidence from field activity to programme reporting.",
+  },
+  "/sponsor/calculator": {
+    heading: "Estimate the trees for your climate impact.",
+    intro: "Use the LandCheck Green calculator to estimate a tree sponsorship quantity from your project, household, or organisation footprint.",
+    links: [{ href: "/sponsor/", label: "Choose a sponsorship project" }],
+  },
+  "/flood": {
+    heading: "Screen land for flood and erosion risk.",
+    intro: "Review practical hazard information for Nigerian land before you buy, design or develop.",
+  },
+  "/survey/guides": {
+    heading: "Survey guidance for practical field and office work.",
+    intro: "Clear guidance for preparing coordinate data, reviewing survey geometry and producing useful plan outputs.",
+  },
+  "/news": {
+    heading: "LandCheck insights.",
+    intro: "Practical writing on land, surveys, estate development and environmental field programmes in Nigeria.",
+  },
+  "/career": {
+    heading: "Build practical geospatial tools with LandCheck.",
+    intro: "Work with a team building useful land, survey, estate and environmental technology for Nigeria.",
+  },
+  "/privacy": {
+    heading: "LandCheck privacy policy.",
+    intro: "How LandCheck handles information when you use our public websites and products.",
+  },
+  "/estates/data-processing-agreement": {
+    heading: "Data processing for LandCheck Estates.",
+    intro: "Review how LandCheck and estate companies handle customer, agent, and staff personal data when using the platform.",
+    links: [{ href: "/estates/", label: "Explore LandCheck Estates" }],
+  },
+  "/feedback": {
+    heading: "Share feedback with LandCheck.",
+    intro: "Tell us what is working, what is unclear and where the product can serve you better.",
+  },
+};
+
+function PublicRouteLoadingFallback({ pathname }: { pathname: string }) {
+  const path = pathname.toLowerCase().replace(/\/+$/, "") || "/";
+  const shell = PUBLIC_LOADING_SHELLS[path] || (path.startsWith("/news/")
+    ? {
+        heading: "LandCheck insights.",
+        intro: "Practical writing on land, surveys, estate development and environmental field programmes in Nigeria.",
+        links: [{ href: "/news/", label: "View all LandCheck insights" }],
+      }
+    : null);
+
+  if (!shell) return null;
+  return (
+    <main className="lc-seo-shell lc-seo-shell--loading" aria-busy="true" aria-labelledby="lc-loading-shell-heading">
+      <div className="lc-seo-shell__inner">
+        <p className="lc-seo-shell__eyebrow">LandCheck Geospatial Technologies</p>
+        <h1 id="lc-loading-shell-heading">{shell.heading}</h1>
+        <p className="lc-seo-shell__intro">{shell.intro}</p>
+        {shell.links?.length ? (
+          <nav className="lc-seo-shell__links" aria-label="Related LandCheck pages">
+            {shell.links.map((link) => <a key={link.href} href={link.href}>{link.label}</a>)}
+          </nav>
+        ) : null}
+      </div>
+    </main>
+  );
+}
+
 function RouteLoadingFallback() {
   const { pathname } = useLocation();
   const [stuck, setStuck] = useState(false);
@@ -390,7 +483,9 @@ function RouteLoadingFallback() {
     }
   }
 
-  if (!workspaceVariant && !Animation && !stuck) return null;
+  if (!workspaceVariant && !Animation && !stuck) {
+    return <PublicRouteLoadingFallback pathname={pathname} />;
+  }
 
   return (
     <div className="route-loading-fallback">
