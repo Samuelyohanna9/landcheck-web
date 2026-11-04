@@ -77,6 +77,7 @@ function LayoutPreview({ review }: { review: ImportReview }) {
 function InvalidRowsList({ review }: { review: ImportReview }) {
   const invalid = (review.candidates || []).filter((candidate) => candidate.valid === false);
   if (!invalid.length) return null;
+  const missingPlotIdentifiers = invalid.every((candidate) => candidate.issues?.some((issue) => issue.toLowerCase().includes("plot_number")));
   return (
     <div className="edash-issue-list">
       <strong>{invalid.length} row{invalid.length === 1 ? "" : "s"} could not be used:</strong>
@@ -86,6 +87,11 @@ function InvalidRowsList({ review }: { review: ImportReview }) {
         ))}
       </ul>
       {invalid.length > 6 && <span>+{invalid.length - 6} more</span>}
+      {missingPlotIdentifiers && (
+        <p className="edash-status-row-desc" style={{ margin: "8px 0 0" }}>
+          This file contains coordinate rows but no plot identifier column. For one estate outline, select <strong>“This file contains only the Estate boundary”</strong> and upload again. For individual plots, add a Plot Number, Plot ID, Parcel or Lot column with at least three coordinate rows per plot.
+        </p>
+      )}
     </div>
   );
 }
