@@ -120,6 +120,17 @@
     </script>
   </head>
   <body>
+    <div id="landcheck-preload-skeleton" class="landcheck-preload-skeleton" aria-hidden="true">
+      <div class="landcheck-preload-skeleton__topbar"></div>
+      <div class="landcheck-preload-skeleton__body">
+        <div class="landcheck-preload-skeleton__heading"></div>
+        <div class="landcheck-preload-skeleton__copy"></div>
+        <div class="landcheck-preload-skeleton__grid">
+          <div class="landcheck-preload-skeleton__block landcheck-preload-skeleton__block--map"></div>
+          <div class="landcheck-preload-skeleton__block"></div>
+        </div>
+      </div>
+    </div>
     <div id="root"></div>
 
     <!-- Last-resort fallback, shown only if nothing has rendered into #root a few seconds after
@@ -206,6 +217,83 @@
         font-weight: 700;
         text-decoration: underline;
       }
+      /* Cover generated SEO HTML while the React route is loading. The SEO content remains in
+         the document for crawlers, but visitors see one stable loading state instead of a flash
+         of the homepage heading before the route skeleton mounts. */
+      .landcheck-preload-skeleton {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483646;
+        overflow: hidden;
+        background: #f8fafc;
+        color: #0f172a;
+        font-family: Inter, "Segoe UI", Arial, sans-serif;
+      }
+      .landcheck-preload-skeleton__topbar {
+        height: 72px;
+        border-bottom: 1px solid #e2e8f0;
+        background: #ffffff;
+      }
+      .landcheck-preload-skeleton__body {
+        width: min(1180px, calc(100% - 40px));
+        margin: 0 auto;
+        padding: 38px 0;
+      }
+      .landcheck-preload-skeleton__heading,
+      .landcheck-preload-skeleton__copy,
+      .landcheck-preload-skeleton__block {
+        border-radius: 8px;
+        background: #e2e8f0;
+        overflow: hidden;
+        position: relative;
+      }
+      .landcheck-preload-skeleton__heading {
+        width: min(330px, 60vw);
+        height: 24px;
+      }
+      .landcheck-preload-skeleton__copy {
+        width: min(620px, 82vw);
+        height: 12px;
+        margin-top: 14px;
+      }
+      .landcheck-preload-skeleton__grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(220px, 0.8fr);
+        gap: 20px;
+        margin-top: 30px;
+      }
+      .landcheck-preload-skeleton__block {
+        min-height: 240px;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+      }
+      .landcheck-preload-skeleton__block--map {
+        min-height: 360px;
+        background: #e8eef2;
+      }
+      .landcheck-preload-skeleton__heading::after,
+      .landcheck-preload-skeleton__copy::after,
+      .landcheck-preload-skeleton__block::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        transform: translateX(-100%);
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.62), transparent);
+        animation: landcheck-preload-shimmer 1.5s ease-in-out infinite;
+      }
+      @keyframes landcheck-preload-shimmer {
+        100% { transform: translateX(100%); }
+      }
+      @media (max-width: 700px) {
+        .landcheck-preload-skeleton__body { width: min(100% - 24px, 560px); padding-top: 24px; }
+        .landcheck-preload-skeleton__grid { grid-template-columns: 1fr; }
+        .landcheck-preload-skeleton__block--map { min-height: 240px; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .landcheck-preload-skeleton__heading::after,
+        .landcheck-preload-skeleton__copy::after,
+        .landcheck-preload-skeleton__block::after { animation: none; }
+      }
       .lc-seo-shell {
         min-height: 100vh;
         padding: clamp(5rem, 12vw, 9rem) 1.25rem;
@@ -271,9 +359,33 @@
         if (typeof window === "undefined") return;
         var STORAGE_KEY = "landcheck.entry-reload-attempted";
 
+        function hidePreloadSkeleton() {
+          var preload = document.getElementById("landcheck-preload-skeleton");
+          if (preload) preload.remove();
+        }
+
+        function revealWhenReactHasMounted() {
+          var root = document.getElementById("root");
+          if (!root || root.dataset.landcheckReactMounted !== "true" || root.children.length === 0) return;
+          if (root.querySelector('[data-lc-seo-shell="true"]')) return;
+          hidePreloadSkeleton();
+        }
+
         function showFallback() {
+          hidePreloadSkeleton();
           var el = document.getElementById("landcheck-boot-fallback");
           if (el) el.classList.add("is-visible");
+        }
+
+        var root = document.getElementById("root");
+        if (root && typeof MutationObserver !== "undefined") {
+          var preloadObserver = new MutationObserver(revealWhenReactHasMounted);
+          preloadObserver.observe(root, {
+            attributes: true,
+            attributeFilter: ["data-landcheckReactMounted"],
+            childList: true,
+          });
+          revealWhenReactHasMounted();
         }
 
         function clearStaleRuntimeState() {
