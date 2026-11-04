@@ -1,5 +1,7 @@
 // Minimal inline icon set for the Estates dashboard - plain stroke SVGs, no icon library
 // dependency, mirroring the convention already used by CadIcon.tsx for the Survey CAD editor.
+import { useId } from "react";
+
 export type EstateIconName =
   | "dashboard"
   | "map"
@@ -68,9 +70,14 @@ export type EstateIconName =
   | "link"
   | "send"
   | "video"
-  | "certificate";
+  | "certificate"
+  | "facebook"
+  | "instagram";
 
 export default function EstateIcon({ name, className = "" }: { name: EstateIconName; className?: string }) {
+  // Only the official Facebook/Instagram marks below need a per-instance id - every other icon
+  // in this file is a plain currentColor stroke with no <defs>, so this is unused for them.
+  const gradientId = useId();
   switch (name) {
     case "dashboard":
       return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.4" stroke="currentColor" strokeWidth="1.6" /><rect x="13" y="3.5" width="7.5" height="4.5" rx="1.4" stroke="currentColor" strokeWidth="1.6" /><rect x="13" y="10.5" width="7.5" height="10" rx="1.4" stroke="currentColor" strokeWidth="1.6" /><rect x="3.5" y="13.5" width="7.5" height="7" rx="1.4" stroke="currentColor" strokeWidth="1.6" /></svg>;
@@ -208,6 +215,30 @@ export default function EstateIcon({ name, className = "" }: { name: EstateIconN
       return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="6.5" width="12" height="11" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="m15.5 10.5 5-3v9l-5-3Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /></svg>;
     case "certificate":
       return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="12.5" rx="1.8" stroke="currentColor" strokeWidth="1.5" /><path d="M7 8h10M7 11.3h6.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /><circle cx="12" cy="18.3" r="2.3" stroke="currentColor" strokeWidth="1.4" /><path d="m10.3 20.2-.8 2.3 2.5-1.1 2.5 1.1-.8-2.3" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" /></svg>;
+    // Official brand marks - fixed brand colors rather than currentColor, per Meta's guidelines
+    // for the Facebook "f" logo and the Instagram glyph.
+    case "facebook":
+      return <svg className={className} viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#1877F2" /><path d="M15.9 12.3h-2.3V20h-3.2v-7.7H8.6V9.6h1.8V7.9c0-1.9 1.1-3.3 3.6-3.3h2.2v2.7h-1.4c-.8 0-1 .4-1 1.1v1.2h2.4l-.3 2.7Z" fill="#fff" /></svg>;
+    case "instagram": {
+      const gradient = `estate-icon-ig-${gradientId}`;
+      return (
+        <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+          <defs>
+            <linearGradient id={gradient} x1="1" y1="23" x2="23" y2="1">
+              <stop offset="0" stopColor="#FFDA77" />
+              <stop offset=".28" stopColor="#F58529" />
+              <stop offset=".55" stopColor="#DD2A7B" />
+              <stop offset=".78" stopColor="#8134AF" />
+              <stop offset="1" stopColor="#515BD4" />
+            </linearGradient>
+          </defs>
+          <rect x="1" y="1" width="22" height="22" rx="6.5" fill={`url(#${gradient})`} />
+          <rect x="6.3" y="6.3" width="11.4" height="11.4" rx="3.6" fill="none" stroke="#fff" strokeWidth="1.6" />
+          <circle cx="12" cy="12" r="3.1" fill="none" stroke="#fff" strokeWidth="1.6" />
+          <circle cx="17.1" cy="6.9" r="1.1" fill="#fff" />
+        </svg>
+      );
+    }
     default:
       return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.6" /></svg>;
   }

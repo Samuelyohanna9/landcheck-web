@@ -160,6 +160,9 @@
 .edash-sp-channel { display: flex; align-items: flex-start; gap: 9px; padding: 9px 11px; border: 1px solid var(--edash-border); border-radius: 8px; cursor: pointer; background: #fff; }
 .edash-sp-channel.is-on { border-color: var(--edash-brand); background: var(--edash-brand-tint); }
 .edash-sp-channel input { margin-top: 3px; accent-color: var(--edash-brand); }
+.edash-sp-channel-icon { width: 20px; height: 20px; flex: none; margin-top: 1px; }
+.edash-card-title--social { display: inline-flex; align-items: center; gap: 6px; }
+.edash-sp-title-icon { width: 18px; height: 18px; flex: none; }
 .edash-sp-channel span { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .edash-sp-channel strong { font-size: .84rem; font-weight: 500; }
 .edash-sp-channel small { color: var(--edash-muted); font-size: .72rem; line-height: 1.3; }

@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { Link, useNavigate } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../../../api/client";
 import { AD_STYLES, adStyleLabel, formatDateTime } from "../../../utils/estateMarketing";
+import EstateIcon from "../EstateIcon";
 import InfoTip from "../InfoTip";
 
 type Channel = { key: string; label: string; automatic: boolean };
@@ -123,9 +124,11 @@ export default function MarketingAutoPlan({ estateId, channels, accounts, metaAv
         <div className="edash-sp-channels">
           {automaticChannels.map((channel) => {
             const ready = metaAvailable && hasAccount(channel.key);
+            const brandIcon = channel.key === "facebook" ? "facebook" : channel.key === "instagram" || channel.key === "instagram_story" ? "instagram" : null;
             return (
               <label key={channel.key} className={`edash-sp-channel${chosen.includes(channel.key) ? " is-on" : ""}${ready ? "" : " is-disabled"}`}>
                 <input type="checkbox" checked={chosen.includes(channel.key)} disabled={!ready} onChange={() => toggleChannel(channel.key)} />
+                {brandIcon && <EstateIcon name={brandIcon} className="edash-sp-channel-icon" />}
                 <span><strong>{channel.label}</strong><small>{ready ? "Connected" : metaAvailable ? "Connect an account first" : "Coming soon"}</small></span>
               </label>
             );

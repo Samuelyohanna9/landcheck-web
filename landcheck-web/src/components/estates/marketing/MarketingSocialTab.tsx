@@ -356,7 +356,7 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
       )}
     <div className="edash-mk-stack">
       <div className="edash-card"><div className="edash-card-inner">
-          <div className="edash-card-head"><h3 className="edash-card-title">Facebook &amp; Instagram</h3>
+          <div className="edash-card-head"><h3 className="edash-card-title edash-card-title--social"><EstateIcon name="facebook" className="edash-sp-title-icon" /><EstateIcon name="instagram" className="edash-sp-title-icon" />Facebook &amp; Instagram</h3>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <Link className="edash-btn-outline" to={`/estates/${estateId}/marketing/posts?view=feed`}>View Facebook &amp; Instagram Feed</Link>
               {canManage && overview?.auto_posting !== false && <button type="button" className="edash-btn-primary" title="Sign in with Facebook and grant LandCheck access to post, read engagement, and manage comments on the Page(s) you choose" disabled={!overview?.meta_available || busy === "connect"} onClick={() => void connectMeta()}>{busy === "connect" ? "Opening Facebook..." : overview?.accounts.length ? "Connect more" : "Connect"}</button>}
@@ -375,7 +375,7 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
                 {account.picture_url ? (
                   <img className="edash-sp-account-avatar" src={account.picture_url} alt="" />
                 ) : (
-                  <span className="edash-sp-account-icon"><EstateIcon name={account.provider === "facebook" ? "share" : "camera"} /></span>
+                  <EstateIcon name={account.provider} className="edash-sp-account-avatar" />
                 )}
                 <div>
                   <strong>{account.name}</strong>
@@ -433,9 +433,11 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
                 {(overview?.channels || []).map((channel) => {
                   const imageOnlyChannel = !includeMedia && (channel.key === "instagram" || channel.key === "instagram_story");
                   const unavailable = channel.automatic && (overview?.auto_posting === false || !overview?.meta_available || !hasAccount(channel.key));
+                  const brandIcon = channel.key === "facebook" ? "facebook" : channel.key === "instagram" || channel.key === "instagram_story" ? "instagram" : null;
                   return (
                     <label key={channel.key} className={`edash-sp-channel${channels.includes(channel.key) ? " is-on" : ""}${imageOnlyChannel ? " is-disabled" : ""}`}>
                       <input type="checkbox" checked={channels.includes(channel.key)} disabled={imageOnlyChannel} onChange={() => toggleChannel(channel.key)} />
+                      {brandIcon && <EstateIcon name={brandIcon} className="edash-sp-channel-icon" />}
                       <span><strong>{channel.label}</strong><small>{imageOnlyChannel ? "Needs an image" : channel.automatic ? (overview?.auto_posting === false ? "Pro plan" : unavailable ? (overview?.meta_available ? "Connect an account below" : "Coming soon") : "Posts automatically") : "You post it - we prepare it and remind you"}</small></span>
                     </label>
                   );
@@ -498,9 +500,10 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
           </div>
           <label className="edash-field is-wide"><span>Caption</span><textarea rows={3} value={customCaption} maxLength={2200} onChange={(event) => setCustomCaption(event.target.value)} style={{ fontFamily: "inherit" }} /></label>
           <div className="is-full edash-sp-channels" style={{ maxWidth: 420 }}>
-            {["facebook", "instagram"].map((key) => (
+            {(["facebook", "instagram"] as const).map((key) => (
               <label key={key} className={`edash-sp-channel${customChannels.includes(key) ? " is-on" : ""}`}>
                 <input type="checkbox" checked={customChannels.includes(key)} onChange={() => toggleCustomChannel(key)} />
+                <EstateIcon name={key} className="edash-sp-channel-icon" />
                 <span><strong>{key === "facebook" ? "Facebook Page" : "Instagram post"}</strong></span>
               </label>
             ))}
