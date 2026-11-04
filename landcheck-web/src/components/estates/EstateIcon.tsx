@@ -72,7 +72,8 @@ export type EstateIconName =
   | "video"
   | "certificate"
   | "facebook"
-  | "instagram";
+  | "instagram"
+  | "whatsapp-brand";
 
 export default function EstateIcon({ name, className = "" }: { name: EstateIconName; className?: string }) {
   // Only the official Facebook/Instagram marks below need a per-instance id - every other icon
@@ -239,6 +240,14 @@ export default function EstateIcon({ name, className = "" }: { name: EstateIconN
         </svg>
       );
     }
+    case "whatsapp-brand":
+      return (
+        <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="12" fill="#25D366" />
+          <path d="M12 5.2a6.8 6.8 0 0 0-5.9 10.2l-.9 3.4 3.5-.9A6.8 6.8 0 1 0 12 5.2Z" fill="#fff" />
+          <path d="M15.8 13.9c-.3-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1-.2.3-.6.8-.8 1-.1.1-.3.1-.5.1-.3-.1-1.1-.4-2-1.3-.8-.7-1.3-1.6-1.4-1.8-.2-.3 0-.4.1-.5l.3-.4c.1-.1.2-.3.2-.4.1-.1 0-.3 0-.4-.1-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.9 1-.9 2.3s.9 2.6 1.1 2.8c.1.2 1.8 2.8 4.5 3.9.6.3 1.1.4 1.5.6.6.2 1.2.1 1.6.1.5-.1 1.5-.6 1.7-1.2.2-.6.2-1 .2-1.2-.1-.1-.3-.2-.5-.3Z" fill="#25D366" />
+        </svg>
+      );
     default:
       return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.6" /></svg>;
   }

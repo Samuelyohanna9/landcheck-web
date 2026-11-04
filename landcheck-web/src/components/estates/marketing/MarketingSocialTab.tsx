@@ -433,7 +433,7 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
                 {(overview?.channels || []).map((channel) => {
                   const imageOnlyChannel = !includeMedia && (channel.key === "instagram" || channel.key === "instagram_story");
                   const unavailable = channel.automatic && (overview?.auto_posting === false || !overview?.meta_available || !hasAccount(channel.key));
-                  const brandIcon = channel.key === "facebook" ? "facebook" : channel.key === "instagram" || channel.key === "instagram_story" ? "instagram" : null;
+                  const brandIcon = channel.key === "facebook" ? "facebook" : channel.key === "instagram" || channel.key === "instagram_story" ? "instagram" : channel.key === "whatsapp_status" ? "whatsapp-brand" : null;
                   return (
                     <label key={channel.key} className={`edash-sp-channel${channels.includes(channel.key) ? " is-on" : ""}${imageOnlyChannel ? " is-disabled" : ""}`}>
                       <input type="checkbox" checked={channels.includes(channel.key)} disabled={imageOnlyChannel} onChange={() => toggleChannel(channel.key)} />
@@ -460,7 +460,7 @@ export default function MarketingSocialTab({ estateId, estateName, canManage, pu
             <div className="edash-sp-actions">
               <button type="button" className="edash-btn-primary" disabled={busy === "save" || !canManage} onClick={() => void savePost()}>{busy === "save" ? "Saving..." : when === "now" ? "Post now" : when === "later" ? "Schedule post" : editingId !== null ? "Save changes" : "Save draft"}</button>
               <button type="button" className="edash-btn-outline" onClick={() => void copyCaption()}><EstateIcon name="documents" />Copy caption</button>
-              <button type="button" className="edash-btn-outline" disabled={busy === "share"} onClick={() => void shareToStatus()}><EstateIcon name="whatsapp" />{busy === "share" ? "Preparing..." : "Share to Status"}</button>
+              <button type="button" className="edash-btn-outline" disabled={busy === "share"} onClick={() => void shareToStatus()}><EstateIcon name="whatsapp-brand" />{busy === "share" ? "Preparing..." : "Share to Status"}</button>
             </div>
             {!canManage && <p className="edash-mk-hint">Only owners, managers and marketers can save or schedule posts. Copy, download and share still work.</p>}
           </div>
