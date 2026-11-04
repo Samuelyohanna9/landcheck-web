@@ -16,7 +16,7 @@ import "../../styles/estate-monday.css";
 import "../../styles/estate-legal.css";
 
 export type EstateNavKey =
-  | "dashboard" | "map" | "plots" | "customers" | "inspections" | "approvals" | "payments" | "commissions" | "marketing" | "whatsapp" | "sms" | "survey" | "staking"
+  | "dashboard" | "map" | "plots" | "customers" | "inspections" | "approvals" | "payments" | "commissions" | "marketing" | "whatsapp" | "sms" | "survey"
   | "documents" | "development" | "construction" | "hazard" | "soil" | "reports" | "audit" | "public_site" | "settings" | "notifications" | "integrations"
   | "access";
 
@@ -55,8 +55,13 @@ export const estateNavItems: Array<{ key: EstateNavKey; label: string; icon: Est
   },
   { key: "whatsapp", label: "WhatsApp", icon: "whatsapp", path: (id) => `/estates/${id}/marketing/whatsapp`, description: "Chat with customers and leads directly on WhatsApp" },
   { key: "sms", label: "SMS", icon: "mail", path: (id) => `/estates/${id}/sms`, description: "Send SMS updates and reminders to customers" },
-  { key: "survey", label: "Survey Plan", icon: "survey", path: (id) => `/estates/${id}/survey`, description: "Upload and view the estate's survey plan and coordinates" },
-  { key: "staking", label: "Staking", icon: "staking", path: (id) => `/estates/${id}/staking`, description: "Record plot staking and beacon placement in the field" },
+  {
+    key: "survey", label: "Survey & Staking", icon: "survey", path: (id) => `/estates/${id}/survey`,
+    description: "Upload and view the estate's survey plan and coordinates, and record plot staking in the field",
+    subViews: [
+      { key: "staking", label: "Staking", icon: "staking", query: "?tab=staking", description: "Record plot staking and beacon placement in the field" },
+    ],
+  },
   { key: "documents", label: "Documents", icon: "documents", path: () => "/estates/documents", description: "Store and share estate documents like titles and agreements" },
   { key: "integrations", label: "Data Connect", icon: "upload", path: () => "/estates/integrations", description: "Import customers, plots, sales and payments from a spreadsheet" },
   { key: "development", label: "Development", icon: "development", path: (id) => `/estates/${id}/development`, description: "Track construction and infrastructure progress on site" },
@@ -77,7 +82,7 @@ export const estateNavItems: Array<{ key: EstateNavKey; label: string; icon: Est
 // the backend (they're plot-scoped analyses, not their own resource), so they share that key here
 // too - keep this in sync with require_estate_access(..., permission=...) call sites if either
 // side changes.
-const NAV_PERMISSION: Partial<Record<EstateNavKey, string>> = {
+const NAV_PERMISSION: Partial<Record<EstateNavKey, string | string[]>> = {
   map: "plot.read",
   plots: "plot.read",
   customers: "customer.read",
@@ -88,8 +93,9 @@ const NAV_PERMISSION: Partial<Record<EstateNavKey, string>> = {
   marketing: "marketing.manage",
   whatsapp: "marketing.manage",
   sms: "customer.manage",
-  survey: "survey.read",
-  staking: "staking.read",
+  // Survey Plan and Staking share one nav item (see estateNavItems below) - someone who can only
+  // do one of the two must still see it, so this is any-of rather than requiring both.
+  survey: ["survey.read", "staking.read"],
   documents: "document.read",
   integrations: "integration.read",
   development: "infrastructure.read",
@@ -535,7 +541,8 @@ export default function EstateShell({
           </Link>
           {estateNavItems.map((item) => {
             const requiredPermission = NAV_PERMISSION[item.key];
-            const locked = Boolean(requiredPermission) && !hasEstatePermission(estateSession?.user.permissions, requiredPermission!);
+            const requiredPermissions = Array.isArray(requiredPermission) ? requiredPermission : requiredPermission ? [requiredPermission] : [];
+            const locked = requiredPermissions.length > 0 && !requiredPermissions.some((permission) => hasEstatePermission(estateSession?.user.permissions, permission));
             const hasSubViews = Boolean(item.subViews?.length);
             const expanded = hasSubViews && expandedNavGroups.has(item.key);
             return (
