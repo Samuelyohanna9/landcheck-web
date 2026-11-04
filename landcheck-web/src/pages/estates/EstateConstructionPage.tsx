@@ -70,6 +70,7 @@ export default function EstateConstructionPage() {
   const [newDrawingType, setNewDrawingType] = useState("building_plan");
   const [newDrawingSupersedes, setNewDrawingSupersedes] = useState("");
   const drawingFileRef = useRef<HTMLInputElement | null>(null);
+  const boqFileRef = useRef<HTMLInputElement | null>(null);
   const [measureDoc, setMeasureDoc] = useState<Drawing | null>(null);
   const [rfiAnswerDrafts, setRfiAnswerDrafts] = useState<Record<number, string>>({});
 
@@ -150,6 +151,34 @@ export default function EstateConstructionPage() {
       toast.success("Budget updated from the BOQ.");
       if (budgetOpen) setBudget((await api.get(`/estates/plots/${workspacePlotId}/construction-budget`)).data);
     } catch (error) { toast.error(await extractApiErrorMessage(error, "Could not apply the BOQ to the budget.")); } finally { setBusy(null); }
+  };
+  const downloadBoqTemplate = async () => {
+    const response = await api.get("/estates/boq/field-template", { responseType: "blob" });
+    const url = URL.createObjectURL(response.data as Blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "landcheck-boq-template.xlsx";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+  const importBoqFile = async () => {
+    const file = boqFileRef.current?.files?.[0];
+    if (!workspacePlotId || !file || !boq) { toast.error("Choose a file first."); return; }
+    setBusy("import-boq");
+    const form = new FormData();
+    form.append("file", file);
+    try {
+      const response = await api.post(`/estates/plots/${workspacePlotId}/boq/import`, form);
+      const imported = (response.data.lines as BOQLine[]).map((line) => ({ ...line, id: null }));
+      setBoq({ ...boq, lines: [...boq.lines, ...imported] });
+      const skipped = response.data.skipped as number;
+      toast.success(`Imported ${imported.length} line${imported.length === 1 ? "" : "s"}${skipped ? ` (${skipped} row${skipped === 1 ? "" : "s"} skipped - missing description/quantity/rate)` : ""}. Review below, then Save BOQ.`);
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "Could not import this file."));
+    } finally {
+      setBusy(null);
+      if (boqFileRef.current) boqFileRef.current.value = "";
+    }
   };
 
   // ── Drawings ─────────────────────────────────────────────────────────────────────────────────
@@ -319,6 +348,11 @@ export default function EstateConstructionPage() {
             {boq && (
               <>
                 <label className="edash-field" style={{ marginBottom: 10 }}><span>Title</span><input value={boq.title || ""} onChange={(event) => setBoq({ ...boq, title: event.target.value })} placeholder="e.g. Main building BOQ" /></label>
+                <div className="edash-sp-actions" style={{ marginBottom: 14, alignItems: "center" }}>
+                  <input ref={boqFileRef} type="file" accept=".xlsx,.xls,.csv" style={{ maxWidth: 220 }} />
+                  <button type="button" className="edash-btn-outline" disabled={busy === "import-boq"} onClick={() => void importBoqFile()}>{busy === "import-boq" ? "Importing..." : "Import Excel/CSV"}</button>
+                  <button type="button" className="edash-card-link" onClick={() => void downloadBoqTemplate()}>Download template</button>
+                </div>
                 {boq.lines.map((line, index) => (
                   <div key={line.id ?? `new-${index}`} className="edash-mk-form-grid" style={{ marginBottom: 8 }}>
                     <label className="edash-field"><span>Category</span><input value={line.category || ""} onChange={(event) => { const lines = [...boq.lines]; lines[index] = { ...line, category: event.target.value }; setBoq({ ...boq, lines }); }} /></label>
