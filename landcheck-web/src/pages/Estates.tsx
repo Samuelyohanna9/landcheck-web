@@ -1225,11 +1225,20 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
     setLayoutUploadBusy(true);
     setLayoutMessage("");
     try {
-      const params = kind === "dxf" || kind === "csv" ? { source_crs: importSourceCrs || estateDetail?.crs || "EPSG:4326" } : undefined;
-      await api.post(`/estates/${estateId}/import-reviews/${kind}`, form, { params });
+      // The CSV parser needs to know up front whether this is one boundary outline (plain,
+      // ungrouped coordinate rows) or per-plot rows (grouped by a plot_number column) - without
+      // it, a boundary CSV has no plot_number column at all and every row was rejected as
+      // invalid, even though the checkbox above was checked. Harmless to send for geojson/dxf
+      // too: neither route declares the param, so FastAPI just ignores it there.
+      const params = kind === "dxf" || kind === "csv" ? { source_crs: importSourceCrs || estateDetail?.crs || "EPSG:4326", as_boundary: importAsBoundary } : undefined;
+      const response = await api.post(`/estates/${estateId}/import-reviews/${kind}`, form, { params });
       await refreshImportReviews();
-      setLayoutMessage("Your layout is ready to review below.");
-      toast.success("Your layout is ready to review below.");
+      // The upload itself can succeed (200) while every row in the file failed validation - don't
+      // tell the user it's "ready to review" right above a review card that says 0 usable.
+      const hasUsable = Number(response.data?.valid_count || 0) > 0;
+      const text = hasUsable ? "Your layout is ready to review below." : "No usable shapes were found in this file - see the details below.";
+      setLayoutMessage(text, hasUsable ? "good" : "danger");
+      if (hasUsable) toast.success(text); else toast.error(text);
     } catch (error) {
       const text = await extractApiErrorMessage(error, "Layout import could not be uploaded.");
       setLayoutMessage(text, "danger");
