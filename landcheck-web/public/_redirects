@@ -9,4 +9,4 @@
 # reload.
 /assets/* /assets/:splat 404
 
-/* /app-shell.html 200
+/* /app-shell/ 200

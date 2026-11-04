@@ -303,8 +303,14 @@ const template = await readFile(path.join(DIST_DIR, "index.html"), "utf8");
 // and replaced it with that route's own loading skeleton. Keep one untouched copy of the blank
 // template around as the real SPA fallback so a refresh on an app route never flashes the
 // marketing homepage's content first; public/_redirects points its catch-all at this file
-// instead of at dist/index.html.
-await writeFile(path.join(DIST_DIR, "app-shell.html"), template);
+// instead of at dist/index.html. Written as app-shell/index.html (not app-shell.html) because
+// Cloudflare Pages 308-redirects any non-index ".html" request to its extensionless form
+// (/app-shell.html -> /app-shell) - which then re-matches the very same "/* -> ..." catch-all
+// rule and redirect-loops forever (ERR_TOO_MANY_REDIRECTS). An index.html inside its own
+// directory is never redirected, the same reason every other generated page below is written
+// as <path>/index.html instead of <path>.html.
+await mkdir(path.join(DIST_DIR, "app-shell"), { recursive: true });
+await writeFile(path.join(DIST_DIR, "app-shell", "index.html"), template);
 
 const articles = await loadNewsArticles();
 const routePages = Object.entries(routeMetadata)
