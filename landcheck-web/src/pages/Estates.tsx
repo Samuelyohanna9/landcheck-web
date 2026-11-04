@@ -1233,18 +1233,25 @@ Open the plans page now?`)) window.location.assign("/estates/billing");
       const params = kind === "dxf" || kind === "csv" ? { source_crs: importSourceCrs || estateDetail?.crs || "EPSG:4326", as_boundary: importAsBoundary } : undefined;
       const response = await api.post(`/estates/${estateId}/import-reviews/${kind}`, form, { params });
       await refreshImportReviews();
+      const detectedSourceCrs = String(response.data?.source_crs || "").trim();
+      const sourceCrsDetected = kind === "csv" && Boolean(response.data?.source_crs_detected);
+      if (sourceCrsDetected && detectedSourceCrs) setImportSourceCrs(detectedSourceCrs);
       // The upload itself can succeed (200) while every row in the file failed validation - don't
       // tell the user it's "ready to review" right above a review card that says 0 usable.
       const hasUsable = Number(response.data?.valid_count || 0) > 0;
       const suggestedBoundary = kind === "csv" && Boolean(response.data?.suggest_boundary);
       if (suggestedBoundary) setImportAsBoundary(true);
+      const crsNotice = sourceCrsDetected
+        ? ` Detected projected coordinates and interpreted them as ${detectedSourceCrs}; confirm the coordinate system before approval.`
+        : "";
       const text = suggestedBoundary
         ? "We found one coordinate outline and selected Estate boundary mode. Review it below, then set it as the Estate boundary."
         : hasUsable
           ? "Your layout is ready to review below."
           : "No usable shapes were found in this file - see the details below.";
-      setLayoutMessage(text, hasUsable ? "good" : "danger");
-      if (hasUsable) toast.success(text); else toast.error(text);
+      const displayText = `${text}${crsNotice}`;
+      setLayoutMessage(displayText, hasUsable ? "good" : "danger");
+      if (hasUsable) toast.success(displayText); else toast.error(displayText);
     } catch (error) {
       const text = await extractApiErrorMessage(error, "Layout import could not be uploaded.");
       setLayoutMessage(text, "danger");

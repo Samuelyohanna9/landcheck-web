@@ -10,7 +10,7 @@ type ImportReview = {
   status: string;
   session_id?: string | null;
   candidate_count: number;
-  candidates?: Array<{ row?: number; plot_number?: string; valid?: boolean; issues?: string[]; geometry?: { type?: string; coordinates?: number[][][] } }>;
+  candidates?: Array<{ row?: number; plot_number?: string; valid?: boolean; issues?: string[]; warnings?: string[]; geometry?: { type?: string; coordinates?: number[][][] } }>;
   created_at?: string;
 };
 
@@ -92,6 +92,19 @@ function InvalidRowsList({ review }: { review: ImportReview }) {
           This file contains coordinate rows but no plot identifier column. For one estate outline, select <strong>“This file contains only the Estate boundary”</strong> and upload again. For individual plots, add a Plot Number, Plot ID, Parcel or Lot column with at least three coordinate rows per plot.
         </p>
       )}
+    </div>
+  );
+}
+
+function ImportWarnings({ review }: { review: ImportReview }) {
+  const warnings = (review.candidates || []).flatMap((candidate) => candidate.warnings || []);
+  if (!warnings.length) return null;
+  return (
+    <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 10, background: "#fff7e6", color: "#7a4b00", border: "1px solid #f2c66d" }} role="status">
+      <strong>Review before approving</strong>
+      <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+        {[...new Set(warnings)].map((warning) => <li key={warning}>{warning}</li>)}
+      </ul>
     </div>
   );
 }
@@ -194,6 +207,7 @@ export default function EstateLayoutImport({ method, reviews, files, onFileChang
                 : (usableCount ? `${usableCount} plot${usableCount === 1 ? "" : "s"} found. Check the preview, then add them to your Estate.` : "No usable plots were found in this file - see the details below.")}
             </p>
             <LayoutPreview review={latest} />
+            <ImportWarnings review={latest} />
             <InvalidRowsList review={latest} />
             {latest.status === "review_required" && (
               <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
