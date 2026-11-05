@@ -334,6 +334,17 @@ function isNavigationRequest(request, url) {
   return true;
 }
 
+function isPrivateNavigationPath(url) {
+  var path = String(url.pathname || "").replace(/\/+$/, "") || "/";
+  if (["/dashboard", "/survey-plan", "/green", "/green-merchant", "/green-work", "/admin", "/estate-admin"].indexOf(path) >= 0) return true;
+  if (["/dashboard", "/survey-plan", "/green", "/green-merchant", "/green-work", "/admin", "/estate-admin"].some(function (prefix) { return path.indexOf(prefix + "/") === 0; })) return true;
+  if (path === "/estates/workspace" || path.indexOf("/estates/workspace/") === 0) return true;
+  if (path.indexOf("/estates/") === 0 && /^\/estates\/\d+(?:\/|$)/.test(path)) return true;
+  if (["/estates/choose-plan", "/estates/billing", "/estates/legal", "/estates/payments", "/estates/reconciliation", "/estates/commissions", "/estates/integrations", "/estates/documents"].some(function (prefix) { return path === prefix || path.indexOf(prefix + "/") === 0; })) return true;
+  if (["/agents", "/agents/dashboard"].indexOf(path) >= 0 || path.indexOf("/agents/") === 0) return true;
+  return false;
+}
+
 function isStaticAssetRequest(request, url) {
   if (url.origin !== self.location.origin) return false;
   return (
@@ -483,6 +494,12 @@ self.addEventListener("fetch", function (event) {
     event.respondWith(
       networkFirst(request, SHELL_CACHE_NAME, {
         fallback: function () {
+          if (isPrivateNavigationPath(url)) {
+            return new Response(
+              '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LandCheck - Offline</title><style>body{font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#0b1f16;color:#efffec;text-align:center}h1{font-size:1.4rem;margin-bottom:0.5rem}p{color:#a0c9a8}</style></head><body><div><h1>Workspace unavailable offline</h1><p>Reconnect to LandCheck to access this protected workspace.</p></div></body></html>',
+              { status: 503, statusText: "Offline", headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } },
+            );
+          }
           return findCachedShell(request).then(function (response) {
             return (
               response ||

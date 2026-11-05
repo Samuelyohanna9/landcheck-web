@@ -1,4 +1,4 @@
-import { Component, Suspense, useEffect, useLayoutEffect, useState, type ErrorInfo, type ReactElement, type ReactNode } from "react";
+import { Component, Suspense, useEffect, useLayoutEffect, useState, type ReactElement, type ReactNode } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import CookieConsentManager from "./components/CookieConsentManager";
 import ContextualTooltips from "./components/ContextualTooltips";
@@ -7,7 +7,7 @@ import HazardLoadingAnimation from "./components/HazardLoadingAnimation";
 import GreenLoadingAnimation from "./components/GreenLoadingAnimation";
 import WorkspaceLoadingSkeleton, { type WorkspaceSkeletonVariant } from "./components/WorkspaceLoadingSkeleton";
 import { getGreenAuthSession, isGreenAuthed, isSponsorGreenSession } from "./auth/greenAuth";
-import { isWorkAuthed } from "./auth/workAuth";
+import { getWorkAuthSession, isWorkAuthed } from "./auth/workAuth";
 import { isSurveyAuthed } from "./auth/surveyAuth";
 import { getEstateAuthSession, isEstateAuthed } from "./auth/estateAuth";
 import { api } from "./api/client";
@@ -129,7 +129,7 @@ class ChunkLoadBoundary extends Component<ChunkLoadBoundaryProps, ChunkLoadBound
     return { hasError: true };
   }
 
-  componentDidCatch(_error: unknown, _info: ErrorInfo) {
+  componentDidCatch() {
     // Intentionally swallow here and render a recovery prompt. The raw error (e.g. "Failed to
     // fetch dynamically imported module: ...") used to be shown on the card itself - it's not
     // something a visitor can act on, so it's dropped rather than displayed.
@@ -208,6 +208,13 @@ class ChunkLoadBoundary extends Component<ChunkLoadBoundaryProps, ChunkLoadBound
 
 function WorkProtectedRoute({ element }: { element: ReactElement }) {
   return isWorkAuthed() ? element : <Navigate to="/green-work/login" replace />;
+}
+
+function SuperAdminProtectedRoute({ element }: { element: ReactElement }) {
+  const session = getWorkAuthSession();
+  const role = String(session?.user?.role_key || session?.user?.role || "").trim().toLowerCase();
+  const allowed = Boolean(session && (session.auth_mode === "env_admin" || role === "super_admin"));
+  return allowed ? element : <Navigate to="/green-work/login" state={{ from: window.location.pathname }} replace />;
 }
 
 function GreenProtectedRoute({ element }: { element: ReactElement }) {
@@ -346,16 +353,16 @@ const STUCK_LOADING_MS = 7000;
 
 function RouteLoadingFallback() {
   const { pathname } = useLocation();
-  const [stuck, setStuck] = useState(false);
+  const [stuckPath, setStuckPath] = useState<string | null>(null);
 
   useEffect(() => {
-    setStuck(false);
-    const handle = window.setTimeout(() => setStuck(true), STUCK_LOADING_MS);
+    const handle = window.setTimeout(() => setStuckPath(pathname), STUCK_LOADING_MS);
     return () => window.clearTimeout(handle);
     // Re-arm the timer per pathname, same scope the recovery guard itself uses.
   }, [pathname]);
 
   const path = pathname.toLowerCase().replace(/\/+$/, "") || "/";
+  const stuck = stuckPath === pathname;
   const isEstateWorkspaceRoute =
     path.startsWith("/estate-admin") ||
     path.startsWith("/agents") ||
@@ -473,7 +480,7 @@ export default function App() {
               <Route path="/green-work/register" element={<GreenWorkRegister />} />
               <Route path="/green-work/email-verified" element={<GreenWorkEmailVerified />} />
               <Route path="/green-work" element={<WorkProtectedRoute element={<GreenWork />} />} />
-              <Route path="/estate-admin/accounting" element={<EstateAdminAccountingPage />} />
+              <Route path="/estate-admin/accounting" element={<SuperAdminProtectedRoute element={<EstateAdminAccountingPage />} />} />
               <Route path="/survey" element={<SurveyPlanLanding />} />
               <Route path="/survey/guides" element={<SurveyGuides />} />
               <Route path="/survey/auth/verify" element={<SurveyAuthVerify />} />
@@ -548,8 +555,8 @@ export default function App() {
               <Route path="/app/claim" element={<AppClaimRedirect />} />
               <Route path="/dashboard" element={<SurveyProtectedRoute element={<Dashboard />} />} />
               <Route path="/feedback" element={<Feedback />} />
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/estate-admin" element={<EstateAdminDashboard />} />
+              <Route path="/admin" element={<SuperAdminProtectedRoute element={<AdminDashboard />} />} />
+              <Route path="/estate-admin" element={<SuperAdminProtectedRoute element={<EstateAdminDashboard />} />} />
               <Route path="*" element={<NotFound />} />
               </Routes>
                 <SeoShellCleanup />
