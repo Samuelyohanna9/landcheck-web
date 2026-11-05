@@ -21,6 +21,18 @@ const PUBLIC_ROUTE_CHUNK_PREFIXES = {
   "/feedback": "Feedback",
   "/estates/data-processing-agreement": "EstateDpaPreview",
 };
+const PUBLIC_ROUTE_STYLE_PREFIXES = {
+  "/": ["NavBar", "LandingPage", "public-landing"],
+  "/estates": ["EstateLanding", "estate-portal", "public-landing"],
+  "/survey": ["SurveyPlanLanding", "public-landing"],
+  "/survey/guides": ["SurveyGuides", "public-landing"],
+  "/green-partners": ["NavBar", "GreenPartnersLanding", "public-landing"],
+  "/sponsor": ["GreenPublicSponsor", "green-public-sponsor", "public-landing"],
+  "/sponsor/calculator": ["GreenFootprintCalculator", "public-landing"],
+  "/flood": ["NavBar", "FloodAnalysisLanding", "public-landing"],
+  "/news": ["NewsPage", "public-landing"],
+  "/career": ["CareersPage", "public-landing"],
+};
 const PRIVATE_SHELL_PATHS = [
   "/green/login",
   "/green/login/sponsor",
@@ -346,102 +358,113 @@ const renderSeoShell = (page) => {
 </main>`;
 };
 
-const CRITICAL_LANDING_STYLE = `<style data-lc-critical-style>
-  .lc-critical-page {
-    min-height: 100vh;
-    background: #f7f7f2;
-    color: #102a27;
-    font-family: Aptos, "Segoe UI", Arial, sans-serif;
-  }
-  .lc-critical-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1.5rem;
-    min-height: 74px;
-    padding: 0.75rem clamp(1rem, 4vw, 4.5rem);
-    border-bottom: 1px solid rgba(16, 42, 39, 0.12);
-    background: rgba(255, 255, 255, 0.96);
-  }
-  .lc-critical-header__brand { display: inline-flex; align-items: center; flex: 0 0 auto; }
-  .lc-critical-header__brand img { display: block; width: 158px; height: auto; }
-  .lc-critical-header__nav { display: flex; align-items: center; gap: clamp(0.75rem, 2vw, 2rem); }
-  .lc-critical-header__nav a,
-  .lc-critical-header__cta { color: #24423d; font-size: 0.88rem; font-weight: 600; text-decoration: none; }
-  .lc-critical-header__nav a:hover,
-  .lc-critical-header__nav a:focus-visible { color: #16816e; }
-  .lc-critical-header__cta { padding: 0.65rem 0.9rem; border: 1px solid #16816e; border-radius: 2px; color: #0d6d5a; }
-  .lc-critical-main { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: clamp(2.5rem, 7vw, 6rem) 0 clamp(3rem, 8vw, 7rem); }
-  .lc-critical-hero { display: grid; grid-template-columns: minmax(0, 0.94fr) minmax(300px, 1.06fr); gap: clamp(2rem, 6vw, 6rem); align-items: center; }
-  .lc-critical-eyebrow,
-  .lc-critical-proof__eyebrow { margin: 0 0 1rem; color: #16816e; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; }
-  .lc-critical-hero h1 { max-width: 14ch; margin: 0; font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif; font-size: clamp(2.5rem, 6vw, 5.25rem); font-weight: 500; line-height: 0.99; letter-spacing: -0.045em; }
-  .lc-critical-hero__intro { max-width: 58ch; margin: 1.35rem 0 0; color: #536963; font-size: clamp(1rem, 1.8vw, 1.18rem); line-height: 1.65; }
-  .lc-critical-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.75rem; }
-  .lc-critical-actions a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0.7rem 1rem; border-radius: 2px; font-size: 0.86rem; font-weight: 700; text-decoration: none; }
-  .lc-critical-actions__primary { background: #168f67; color: #fff; }
-  .lc-critical-actions__secondary { border: 1px solid rgba(16, 42, 39, 0.25); color: #123c34; background: #fff; }
-  .lc-critical-visual { min-height: 300px; overflow: hidden; border-radius: 0.35rem; background: #dfe9e4; box-shadow: 0 18px 44px rgba(16, 42, 39, 0.13); }
-  .lc-critical-visual img { display: block; width: 100%; height: clamp(300px, 42vw, 500px); object-fit: cover; }
-  .lc-critical-proof { margin-top: clamp(3.5rem, 9vw, 8rem); padding-top: 1.4rem; border-top: 1px solid rgba(16, 42, 39, 0.15); }
-  .lc-critical-proof h2 { max-width: 22ch; margin: 0; font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif; font-size: clamp(1.8rem, 3.4vw, 3.2rem); font-weight: 500; line-height: 1.04; letter-spacing: -0.035em; }
-  .lc-critical-proof__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin-top: 2rem; }
-  .lc-critical-proof__item { padding-top: 0.8rem; border-top: 2px solid #168f67; color: #3f5751; font-size: 0.9rem; line-height: 1.45; }
-  @media (max-width: 760px) {
-    .lc-critical-header { align-items: flex-start; padding-top: 0.8rem; padding-bottom: 0.8rem; }
-    .lc-critical-header__brand img { width: 132px; }
-    .lc-critical-header__nav { gap: 0.65rem; }
-    .lc-critical-header__nav a:not(:last-child) { display: none; }
-    .lc-critical-header__nav a, .lc-critical-header__cta { font-size: 0.76rem; }
-    .lc-critical-main { width: min(100% - 1.5rem, 620px); padding-top: 2.5rem; }
-    .lc-critical-hero { grid-template-columns: 1fr; gap: 2rem; }
-    .lc-critical-hero h1 { max-width: 16ch; font-size: clamp(2.55rem, 13vw, 4.25rem); }
-    .lc-critical-visual { min-height: 220px; }
-    .lc-critical-visual img { height: min(68vw, 330px); }
-    .lc-critical-proof__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  }
-  @media (prefers-reduced-motion: reduce) { .lc-critical-page * { scroll-behavior: auto !important; } }
+// Public shells use the same class names and first-viewport structure as the React pages. The
+// shell is not a second landing page: React replaces this exact root content on mount, while the
+// browser can paint the real branded header, hero and first section before JavaScript arrives.
+const STATIC_FIRST_PAINT_STYLE = `<style data-lc-static-style>
+  html { background: #fff; }
+  body { margin: 0; }
+  .lc-static-image { display: block; width: 100%; height: auto; }
+  .lc-static-link { text-decoration: none; }
 </style>`;
 
-const renderCriticalHeader = () => `<header class="lc-critical-header">
-  <a class="lc-critical-header__brand" href="/" aria-label="LandCheck home"><img src="/logo-wordmark-web.png" width="158" height="50" alt="LandCheck" /></a>
-  <nav class="lc-critical-header__nav" aria-label="Main navigation">
-    <a href="/estates/">Products</a>
-    <a href="/career/">Company</a>
-    <a href="/feedback/">Support</a>
-    <a class="lc-critical-header__cta" href="/estates/register/">Get started</a>
+const renderSharedNav = ({ fixed = false, activeRoute = "", ctaHref = "/estates/register/", ctaLabel = "Get started" } = {}) => `<header class="lc-nav lc-nav--light${fixed ? " lc-nav--fixed" : ""}">
+  <a class="lc-nav-brand" href="/" aria-label="LandCheck home"><img src="/logo-wordmark-web.png" width="182" height="58" alt="LandCheck" /></a>
+  <nav class="lc-nav-desktop" aria-label="Main navigation">
+    <a class="lc-nav-link${activeRoute === "/estates" ? " lc-nav-item-active" : ""}" href="/estates/">Products</a>
+    <a class="lc-nav-link${activeRoute === "/career" ? " lc-nav-item-active" : ""}" href="/career/">Company</a>
+    <a class="lc-nav-link" href="mailto:support@landcheck.online?subject=LandCheck%20Support">Support</a>
+    <a class="lc-nav-cta lc-static-link" href="${escapeHtml(ctaHref)}">${escapeHtml(ctaLabel)}</a>
   </nav>
 </header>`;
 
-const renderCriticalLanding = (page) => {
-  const config = CRITICAL_LANDING_CONFIG[page.path];
-  if (!config) return "";
-  const shell = page.seoShell || {};
-  const heading = shell.heading || String(page.title || "LandCheck").split("|")[0].trim();
-  const intro = shell.intro || page.description || "LandCheck geospatial tools for Nigeria.";
-  const proof = config.proof.map((item) => `<li class="lc-critical-proof__item">${escapeHtml(item)}</li>`).join("");
-  return `<div class="lc-critical-page" data-lc-critical-page="true">
-  ${renderCriticalHeader()}
-  <main class="lc-critical-main">
-    <section class="lc-critical-hero" aria-labelledby="lc-critical-heading">
-      <div class="lc-critical-copy">
-        <p class="lc-critical-eyebrow">${escapeHtml(config.eyebrow)}</p>
-        <h1 id="lc-critical-heading">${escapeHtml(heading)}</h1>
-        <p class="lc-critical-hero__intro">${escapeHtml(intro)}</p>
-        <div class="lc-critical-actions">
-          <a class="lc-critical-actions__primary" href="${escapeHtml(config.primary.href)}">${escapeHtml(config.primary.label)}</a>
-          <a class="lc-critical-actions__secondary" href="${escapeHtml(config.secondary.href)}">${escapeHtml(config.secondary.label)}</a>
+const renderHomeLanding = () => `<div class="landcheck-landing public-landing">
+  ${renderSharedNav({ ctaHref: "/estates/register/" })}
+  <main>
+    <section class="lp-hero" style="background-image:url('/thumpnail_public.webp')" aria-labelledby="lp-static-title">
+      <div class="lp-hero-video-wrap" aria-hidden="true" style="background-image:url('/thumpnail_public.webp');background-size:cover;background-position:center;opacity:1"></div>
+      <div class="lp-hero-overlay"></div>
+      <div class="lp-hero-content">
+        <h1 id="lp-static-title">Geospatial Intelligence <br />for Development Projects</h1>
+        <p class="lp-hero-lead">Environmental monitoring, tree planting sponsorship, field operations, survey plans, and flood risk in one platform.</p>
+        <div class="lp-hero-ctas">
+          <a class="lp-hero-btn-primary lc-static-link" href="#products">Our products</a>
+          <a class="lp-hero-btn-outline lc-static-link" href="/sponsor/">Sponsor a tree planting</a>
         </div>
       </div>
-      <div class="lc-critical-visual"><img src="${escapeHtml(config.image)}" width="1200" height="760" alt="${escapeHtml(config.imageAlt)}" loading="eager" fetchpriority="high" decoding="async" /></div>
+      <a href="#landcheck-intro" class="lp-scroll-indicator" aria-label="Scroll to content">⌄</a>
     </section>
-    <section class="lc-critical-proof" aria-labelledby="lc-critical-proof-heading">
-      <p class="lc-critical-proof__eyebrow">${escapeHtml(config.sectionEyebrow)}</p>
-      <h2 id="lc-critical-proof-heading">${escapeHtml(config.sectionTitle)}</h2>
-      <ul class="lc-critical-proof__grid">${proof}</ul>
+    <section id="landcheck-intro" class="lp-intro-section">
+      <div class="lp-intro-inner">
+        <span class="lp-intro-kicker">From Mapping to <span class="lp-motto-accent">Impact</span></span>
+        <h2>We are <strong>LandCheck</strong></h2>
+        <div class="lp-intro-lead-wrap"><p>LandCheck develops web and mobile tools for land documentation, flood hazard analysis, and environmental field monitoring, providing practical tools for surveyors, land owners, NGOs, and government agencies across Nigeria.</p></div>
+      </div>
     </section>
   </main>
 </div>`;
+
+const renderEstateLanding = () => `<main class="estate-portal public-landing">
+  <header class="estate-portal-nav">
+    <a href="/estates/" class="estate-brand" aria-label="LandCheck Estates home"><img src="/logo-wordmark-web.png" alt="LandCheck" width="182" height="58" /><span>ESTATES</span></a>
+    <nav class="estate-portal-nav-links" aria-label="Estate product navigation">
+      <a href="#platform">Platform</a><a href="#overview-video">Watch overview</a><a href="#solutions">Solutions</a><a href="#pricing">Pricing</a>
+      <a href="/agents/login/">For property agents</a><a href="/estates/login/" class="estate-nav-login">Sign in</a><a href="/feedback/" class="estate-nav-cta">Request a demo</a>
+    </nav>
+  </header>
+  <section class="estate-hero" aria-labelledby="estate-intro-title">
+    <p class="estate-kicker estate-hero-kicker">LandCheck Estates</p>
+    <h1 id="estate-intro-title">Run your estate from layout to allocation.</h1>
+    <p class="estate-hero-summary">LandCheck Estates connects layouts, plots, customers, reservations, sales, instalments, allocations and survey documents for Nigerian real estate developers.</p>
+    <div class="estate-intro-actions estate-intro-actions--centered"><a class="estate-button" href="/feedback/">Request a demo</a><a class="estate-button estate-button--outline-light" href="#platform">View platform</a></div>
+    <p class="estate-hero-caption">Every plot. One connected record.</p>
+  </section>
+  <section class="estate-video-section" id="overview-video" aria-labelledby="estate-video-title">
+    <div class="estate-video-copy"><p class="estate-kicker">See it in action</p><h2 id="estate-video-title">One connected workspace for every plot.</h2><p>See how LandCheck Estates connects estate layouts, plot availability, customer records, reservations, payments, allocations and survey documents.</p></div>
+    <div class="estate-video-frame"><img class="lc-static-image" src="/estate-dashboard-map.jpg" width="1200" height="675" alt="LandCheck Estates dashboard showing an estate map, plots and activity" loading="eager" fetchpriority="high" /></div>
+  </section>
+</main>`;
+
+const renderSurveyLanding = () => `<div class="spl-page public-landing">
+  <header class="spl-nav"><a href="/" class="spl-brand" aria-label="LandCheck home"><img src="/logo-wordmark-web.png" alt="LandCheck" width="182" height="58" /><span class="spl-brand-product">Survey</span></a><nav class="spl-nav-links" aria-label="Survey navigation"><a href="/survey/guides/">Guides</a><a href="/estates/">Estates</a><a href="/flood/">Hazard analysis</a><a href="/survey-plan/" class="spl-nav-workspace">Open workspace</a></nav></header>
+  <main><section class="spl-hero" aria-labelledby="spl-hero-title"><div class="spl-hero-device" aria-hidden="true"><img class="spl-hero-laptop" src="/survey-laptop-hand.webp" alt="" loading="eager" fetchpriority="high" /></div><div class="spl-hero-screen" aria-hidden="true"><img src="/survey%20%20plan%20preview.jpg" alt="" loading="eager" fetchpriority="high" /></div><div class="spl-hero-shade"></div><div class="spl-shell spl-hero-shell"><div class="spl-hero-copy"><p class="spl-kicker">LandCheck Survey</p><h1 id="spl-hero-title">Professional survey plans. Ready in minutes.</h1><p class="spl-hero-summary">Convert coordinates or scanned layouts into accurate, export-ready survey plans - from one connected workspace.</p><div class="spl-hero-actions"><a class="spl-hero-btn-primary lc-static-link" href="/survey-plan/">Open survey workspace</a><a href="#workflow" class="spl-hero-btn-outline">See how it works</a></div><div class="spl-hero-stats"><div class="spl-hero-stat"><strong>Faster</strong><span>from data to plan</span></div></div></div></div></section><section id="features" class="spl-section spl-features"><div class="spl-shell spl-features-grid"><div class="spl-feature-card"><h3>Coordinate input</h3><p>Bring in coordinates or scanned layouts and prepare them for review.</p></div><div class="spl-feature-card"><h3>Professional exports</h3><p>Review and export a polished survey plan from one workspace.</p></div><div class="spl-feature-card"><h3>Geospatial tools</h3><p>Use georeferencing, subdivision and map tools as your work develops.</p></div></div></section></main>
+</div>`;
+
+const renderGreenPartnersLanding = () => `<div class="green-partners-page public-landing">
+  ${renderSharedNav({ ctaHref: "/green-work/login/", ctaLabel: "Get Started" })}
+  <section class="gp-new-hero" style="background-image:url('/seeds.JPG')"><div class="gp-new-hero-scrim" aria-hidden="true"></div><div class="gp-shell gp-new-hero-inner"><div class="gp-new-hero-copy"><h1>Tree programmes with proof built in.</h1><p class="gp-new-hero-subheadline">LandCheck Green gives NGOs, CSR teams, and sponsors one verified system for field delivery, GPS evidence, maintenance tracking, and export-ready reporting.</p><div class="gp-new-hero-actions"><a class="gp-btn gp-btn--primary" href="/green-work/login/">Manage your Green Programme</a><a class="gp-btn gp-btn--secondary" href="/sponsor/">Sponsor a Tree</a></div><div class="gp-new-hero-stats gp-new-hero-stats--single"><div class="gp-new-hero-stat-item"><strong>Live</strong><span>Registered partner organisations</span></div></div></div></div></section>
+  <section class="gp-workflow-stage"><div class="gp-shell"><div class="gp-section-intro gp-section-intro--center"><span class="gp-section-eyebrow">Operating flow</span><h2>From programme design to board-ready reporting</h2><p>A short operating sequence with clear review gates and evidence you can defend.</p></div></div></section>
+</div>`;
+
+const renderSponsorLanding = () => `<div class="gps-page public-landing">
+  <header class="gps-topbar"><a href="/" class="gps-topbar-brand"><span class="gps-topbar-logo-badge"><img src="/logo-wordmark-web.png" alt="LandCheck" width="182" height="58" /></span><span class="gps-topbar-product">GREEN</span></a><nav class="gps-topbar-links" aria-label="Sponsor navigation"><a href="#gps-projects">Shop Projects</a><a href="#gps-projects">Track Order</a><a href="/green-partners/">For Organizations</a></nav><div class="gps-topbar-icons"><a href="/green/login/sponsor/" class="gps-topbar-icon-btn" aria-label="Sign in to my account">Sign in</a></div></header>
+  <section class="lp-sponsor-section"><div class="lp-sponsor-inner"><div class="lp-sponsor-text"><span class="lp-sponsor-eyebrow">LANDCHECK GREEN</span><h1>Sponsor a Tree.<br />Track Its Journey.</h1><p>Support verified tree planting projects and monitor your environmental impact through GPS tracking, photo updates, maintenance records, and carbon reporting.</p><ul class="lp-sponsor-bullets"><li class="lp-sponsor-bullet"><strong>GPS Tracking</strong><span>Know exactly where your trees are planted on the map</span></li><li class="lp-sponsor-bullet"><strong>Photo Updates</strong><span>See photo evidence as your tree grows over time</span></li><li class="lp-sponsor-bullet"><strong>Maintenance Records</strong><span>Track watering, pruning, and full care history</span></li><li class="lp-sponsor-bullet"><strong>Carbon Reporting</strong><span>Measure your CO2 offset with verified impact data</span></li></ul><div class="lp-sponsor-ctas"><a class="lp-sponsor-btn-primary lc-static-link" href="#gps-projects">Sponsor</a><a class="lp-sponsor-playstore lc-static-link" href="https://play.google.com/store/apps/details?id=online.landcheck.mobile">Get the Android app</a></div></div><div class="lp-sponsor-visual"><div class="lp-sponsor-phone-wrap"><div class="lp-sponsor-phone-frame"><div class="lp-sponsor-phone-screen"><img src="/sponsor-tree-app.jpeg" alt="LandCheck Green Sponsor a Tree app" width="280" height="560" loading="eager" fetchpriority="high" /></div></div></div></div></div></section>
+  <main class="gps-main"><section class="gps-projects-section" id="gps-projects"><h2 class="gps-public-page-title">Choose the project you want to support</h2><p class="gps-section-sub">Every project below is field-managed, GPS-linked, and built to give you certificate delivery, map proof, and follow-up updates after payment.</p><p class="gps-loading">Loading current sponsorship projects...</p></section></main>
+</div>`;
+
+const renderFloodLanding = () => `<div class="fal-page public-landing">
+  ${renderSharedNav({ fixed: true, ctaHref: "/hazard-analysis/", ctaLabel: "Run Analysis" })}
+  <main><section class="fal-hero"><div class="fal-hero-overlay"></div><div class="fal-hero-content"><span class="fal-hero-eyebrow">LANDCHECK FLOOD RISK</span><h1>Land Hazard Screening<br />for Any Site in Nigeria</h1><p>Instant flood risk assessment, erosion analysis, soil stability, and land use / land cover classification - with a downloadable PDF for any Nigerian land parcel.</p><div class="fal-hero-ctas"><a class="fal-hero-btn-primary lc-static-link" href="/hazard-analysis/">Run Flood Analysis</a><a href="#features" class="fal-hero-btn-outline">See Features</a></div></div></section><section id="features" class="fal-features-section"><div class="fal-features-inner"><div class="fal-section-head"><span class="fal-eyebrow">WHAT WE SCREEN FOR</span><h2>Comprehensive Land Risk Analysis</h2><p>Everything you need to assess hazard risk before buying, building, or financing land in Nigeria.</p></div></div></section></main>
+</div>`;
+
+const renderInformationalLanding = (page) => {
+  const config = CRITICAL_LANDING_CONFIG[page.path];
+  const shell = page.seoShell || {};
+  const heading = shell.heading || String(page.title || "LandCheck").split("|")[0].trim();
+  const intro = shell.intro || page.description || "LandCheck geospatial tools for Nigeria.";
+  return `<main class="public-landing lc-public-first-paint"><header class="lc-nav lc-nav--light"><a class="lc-nav-brand" href="/"><img src="/logo-wordmark-web.png" width="182" height="58" alt="LandCheck" /></a></header><section class="lc-public-first-paint__content"><p>${escapeHtml(config?.eyebrow || "LandCheck Geospatial Technologies")}</p><h1>${escapeHtml(heading)}</h1><p>${escapeHtml(intro)}</p><a href="${escapeHtml(config?.primary?.href || "/")}">${escapeHtml(config?.primary?.label || "Explore LandCheck")}</a></section></main>`;
+};
+
+const renderCriticalLanding = (page) => {
+  switch (page.path) {
+    case "/": return renderHomeLanding();
+    case "/estates": return renderEstateLanding();
+    case "/survey": return renderSurveyLanding();
+    case "/green-partners": return renderGreenPartnersLanding();
+    case "/sponsor": return renderSponsorLanding();
+    case "/flood": return renderFloodLanding();
+    default: return renderInformationalLanding(page);
+  }
 };
 
 const buildSiteSchema = () => ({
@@ -471,6 +494,9 @@ const renderPage = (template, page) => {
   const routePreload = routeChunk
     ? `<link rel="modulepreload" crossorigin href="${routeChunk}">`
     : "";
+  const routeStyles = routeStyleHrefs(page.path)
+    .map((href) => `<link rel="stylesheet" crossorigin href="${href}">`)
+    .join("\n");
   let html = template
     .replace(/<title>[^<]*<\/title>/i, `<title>${escapeHtml(page.title)}</title>`)
     .replace(/\s*<script type="application\/ld\+json"[^>]*>[\s\S]*?<\/script>/gi, "")
@@ -505,7 +531,7 @@ const renderPage = (template, page) => {
   const canonicalTag = !isNoIndex || !isSelfCanonical ? `<link rel="canonical" href="${url}" />` : "";
   html = html.replace("</head>", `${canonicalTag}\n</head>`);
   const isCriticalLanding = Boolean(CRITICAL_LANDING_CONFIG[page.path] && !isNoIndex);
-  if (isCriticalLanding) html = html.replace("</head>", `${CRITICAL_LANDING_STYLE}\n</head>`);
+  if (isCriticalLanding) html = html.replace("</head>", `${STATIC_FIRST_PAINT_STYLE}\n${routeStyles}\n</head>`);
   const bodyHtml = page.bodyHtml || (
     isCriticalLanding
       ? renderCriticalLanding(page)
@@ -554,6 +580,13 @@ const routeChunkHref = (pagePath) => {
     : PUBLIC_ROUTE_CHUNK_PREFIXES[pagePath];
   const file = prefix && assetFiles.find((entry) => entry.startsWith(`${prefix}-`) && entry.endsWith(".js"));
   return file ? `/assets/${file}` : null;
+};
+const routeStyleHrefs = (pagePath) => {
+  const prefixes = PUBLIC_ROUTE_STYLE_PREFIXES[pagePath] || (pagePath.startsWith("/news/") ? ["NewsArticlePage", "news", "public-landing"] : []);
+  return prefixes
+    .map((prefix) => assetFiles.find((entry) => entry.startsWith(`${prefix}-`) && entry.endsWith(".css")))
+    .filter(Boolean)
+    .map((file) => `/assets/${file}`);
 };
 const articles = await loadNewsArticles();
 const routePages = Object.entries(routeMetadata)
