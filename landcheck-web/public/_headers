@@ -60,7 +60,39 @@
   X-Robots-Tag: noindex, nofollow, noarchive
 
 /index.html
-  Cache-Control: public, max-age=0, must-revalidate
+  Cache-Control: public, max-age=60, stale-while-revalidate=86400
+
+# Public route shells contain the real first viewport and are safe to keep briefly at the edge.
+# Private workspaces are intentionally not covered by these rules.
+/
+  Cache-Control: public, max-age=60, stale-while-revalidate=86400
+
+/estates/
+  Cache-Control: public, max-age=60, stale-while-revalidate=86400
+
+/survey/
+  Cache-Control: public, max-age=60, stale-while-revalidate=86400
+
+/survey/guides/
+  Cache-Control: public, max-age=60, stale-while-revalidate=86400
+
+/green-partners/
+  Cache-Control: public, max-age=60, stale-while-revalidate=86400
+
+/sponsor/
+  Cache-Control: public, max-age=60, stale-while-revalidate=86400
+
+/sponsor/calculator/
+  Cache-Control: public, max-age=60, stale-while-revalidate=86400
+
+/flood/
+  Cache-Control: public, max-age=60, stale-while-revalidate=86400
+
+/career/
+  Cache-Control: public, max-age=60, stale-while-revalidate=86400
+
+/news/
+  Cache-Control: public, max-age=60, stale-while-revalidate=86400
 
 /sw.js
   Cache-Control: public, max-age=0, must-revalidate
